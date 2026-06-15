@@ -1,0 +1,32 @@
+export const officerTheme = {
+  background: '#F7FAF3',
+  surface: '#E8FFEE',
+  surfaceLowest: '#FFFFFF',
+  surfaceLow: '#E1FAE8',
+  surfaceVariant: '#D0E9D7',
+  primary: '#004A20',
+  primaryContainer: '#0E6430',
+  onPrimary: '#FFFFFF',
+  onPrimaryContainer: '#8EDE9D',
+  onSurface: '#0A2015',
+  onSurfaceVariant: '#404940',
+  outlineVariant: '#BFC9BD',
+  successGreen: '#2F7D46',
+  error: '#BA1A1A',
+  errorContainer: '#FFDAD6',
+  secondaryContainer: '#AEF682',
+  onSecondaryContainer: '#34720A',
+  tertiary: '#695F00',
+  tertiaryContainer: '#BAAD4F',
+  marginMobile: 20,
+  headerHeight: 56,
+  tabBarHeight: 80,
+} as const;
+
+export const officerShadow = {
+  shadowColor: '#10251A',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.08,
+  shadowRadius: 20,
+  elevation: 4,
+};

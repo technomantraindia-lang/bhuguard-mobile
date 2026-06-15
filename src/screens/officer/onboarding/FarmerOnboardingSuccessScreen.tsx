@@ -1,0 +1,105 @@
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { AppButton } from '../../../components/AppButton';
+import { AppCard } from '../../../components/AppCard';
+import { ScreenHeader } from '../../../components/ScreenHeader';
+import { StatusBadge } from '../../../components/StatusBadge';
+import { useOnboarding } from '../../../context/OnboardingContext';
+import type { FieldOfficerStackParamList } from '../../../navigation/types';
+import { colors } from '../../../theme/colors';
+import { formatFarmerCode } from '../../../utils/onboardingNotes';
+
+type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
+
+function formatDate(iso?: string): string {
+  if (!iso) {
+    return new Date().toLocaleString();
+  }
+
+  try {
+    return new Date(iso).toLocaleString();
+  } catch {
+    return iso;
+  }
+}
+
+export function FarmerOnboardingSuccessScreen() {
+  const navigation = useNavigation<Nav>();
+  const { result, resetDraft } = useOnboarding();
+
+  const farmerName = result?.farmer_name ?? 'Farmer';
+  const mobile = result?.mobile ?? '-';
+  const farmerCode = result?.farmer_id ? formatFarmerCode(result.farmer_id) : '-';
+  const createdAt = formatDate(result?.onboarded_at);
+
+  const goDashboard = () => {
+    resetDraft();
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'FieldOfficerTabs',
+          state: {
+            index: 0,
+            routes: [{ name: 'Home' }],
+          },
+        },
+      ],
+    });
+  };
+
+  const onboardAnother = () => {
+    resetDraft();
+    navigation.navigate('FarmerBasicDetails');
+  };
+
+  const viewFarmer = () => {
+    navigation.navigate('OnboardedFarmerView');
+  };
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <ScreenHeader title="Farmer onboarded" subtitle="Registration completed by field officer" showBack={false} />
+        <View style={styles.successBanner}>
+          <StatusBadge label="Success" tone="success" />
+          <Text style={styles.successTitle}>Farmer onboarded successfully</Text>
+          <Text style={styles.successText}>The farmer account is now active in Bhuguard.</Text>
+        </View>
+        <AppCard title={farmerName} subtitle={`Mobile: ${mobile}`}>
+          <Text style={styles.line}>Farmer code: {farmerCode}</Text>
+          <Text style={styles.line}>Created: {createdAt}</Text>
+          {result?.village ? <Text style={styles.line}>Village: {result.village}</Text> : null}
+          {result?.district ? <Text style={styles.line}>District: {result.district}</Text> : null}
+          {result?.land_survey_number ? (
+            <Text style={styles.line}>
+              Survey: {result.land_survey_number} · {result.land_area} {result.land_area_unit}
+            </Text>
+          ) : null}
+        </AppCard>
+        <AppButton label="View farmer" onPress={viewFarmer} />
+        <AppButton label="Onboard another farmer" onPress={onboardAnother} variant="secondary" />
+        <AppButton label="Back to field officer dashboard" onPress={goDashboard} variant="secondary" />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
+  container: { padding: 20, gap: 16, paddingBottom: 32 },
+  successBanner: {
+    backgroundColor: colors.ecoLight,
+    borderRadius: 12,
+    padding: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.eco,
+  },
+  successTitle: { fontSize: 18, fontWeight: '700', color: colors.eco },
+  successText: { fontSize: 14, color: colors.text, lineHeight: 20 },
+  line: { fontSize: 14, color: colors.text, marginTop: 4 },
+});

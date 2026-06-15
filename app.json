@@ -1,25 +1,59 @@
 {
   "expo": {
-    "name": "bhuguard-mobile",
+    "name": "Bhuguard",
     "slug": "bhuguard-mobile",
+    "scheme": "bhuguard",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.technomantra.bhuguard"
     },
     "android": {
+      "package": "com.technomantra.bhuguard",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-dev-client",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Bhuguard to access your camera for field evidence capture."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Bhuguard to capture farm GPS coordinates during farmer onboarding."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Bhuguard to attach farmer photos during onboarding."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "390d1a75-1bd5-4217-afea-717c64ccb477"
+      }
     }
   }
 }
