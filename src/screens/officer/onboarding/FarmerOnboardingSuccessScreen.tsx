@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton } from '../../../components/AppButton';
 import { AppCard } from '../../../components/AppCard';
+import { OnboardingReviewPhoto } from '../../../components/onboarding/OnboardingReviewPhoto';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useOnboarding } from '../../../context/OnboardingContext';
@@ -28,7 +29,7 @@ function formatDate(iso?: string): string {
 
 export function FarmerOnboardingSuccessScreen() {
   const navigation = useNavigation<Nav>();
-  const { result, resetDraft } = useOnboarding();
+  const { result, draft, resetDraft } = useOnboarding();
 
   const farmerName = result?.farmer_name ?? 'Farmer';
   const mobile = result?.mobile ?? '-';
@@ -70,6 +71,13 @@ export function FarmerOnboardingSuccessScreen() {
           <Text style={styles.successText}>The farmer account is now active in Bhuguard.</Text>
         </View>
         <AppCard title={farmerName} subtitle={`Mobile: ${mobile}`}>
+          <View style={styles.photoWrap}>
+            <OnboardingReviewPhoto
+              file={draft.farmer_photo}
+              remotePhotoUrl={result?.photo_url}
+              label="Profile photo"
+            />
+          </View>
           <Text style={styles.line}>Farmer code: {farmerCode}</Text>
           <Text style={styles.line}>Created: {createdAt}</Text>
           {result?.village ? <Text style={styles.line}>Village: {result.village}</Text> : null}
@@ -101,5 +109,6 @@ const styles = StyleSheet.create({
   },
   successTitle: { fontSize: 18, fontWeight: '700', color: colors.eco },
   successText: { fontSize: 14, color: colors.text, lineHeight: 20 },
+  photoWrap: { alignItems: 'center', marginBottom: 4 },
   line: { fontSize: 14, color: colors.text, marginTop: 4 },
 });

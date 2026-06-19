@@ -3,9 +3,12 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { LandBoundaryVerificationSection } from '../../../components/shared/LandBoundaryVerificationSection';
 import { useOnboarding } from '../../../context/OnboardingContext';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
+import type { AreaUnit } from '../../../utils/boundaryGeometry';
+import { mappedAreaLabelForDraft } from '../../../utils/onboardingBoundary';
 import { validateLandDetails } from '../../../utils/onboardingValidation';
 import { FormField, OnboardingFormScreen } from './OnboardingFormScreen';
 
@@ -56,14 +59,14 @@ export function FarmerLandDetailsScreen() {
       />
       <View style={styles.unitRow}>
         <Text style={styles.unitLabel}>Area unit *</Text>
-        {(['acre', 'hectare'] as const).map((unit) => (
+        {(['acre', 'hectare', 'bigha'] as const).map((unit) => (
           <Pressable
             key={unit}
             style={[styles.unitChip, draft.land_area_unit === unit && styles.unitChipActive]}
             onPress={() => updateDraft({ land_area_unit: unit })}
           >
             <Text style={[styles.unitText, draft.land_area_unit === unit && styles.unitTextActive]}>
-              {unit === 'acre' ? 'Acre' : 'Hectare'}
+              {unit === 'acre' ? 'Acre' : unit === 'hectare' ? 'Hectare' : 'Bigha'}
             </Text>
           </Pressable>
         ))}
@@ -120,7 +123,22 @@ export function FarmerLandDetailsScreen() {
         onChangeText={(v) => updateDraft({ remarks: v })}
         placeholder="Additional land notes"
       />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <LandBoundaryVerificationSection
+        declaredArea={draft.land_area}
+        declaredUnit={(draft.land_area_unit as AreaUnit) || 'acre'}
+        surveyNumber={draft.land_survey_number}
+        village={draft.village_name}
+        taluka={draft.taluka_name}
+        district={draft.district_name}
+        state={draft.state}
+        mappingStatus={draft.boundary_mapping_status}
+        mappedAreaLabel={mappedAreaLabelForDraft(draft) ?? undefined}
+        onStartMapping={() => navigation.navigate('OnboardingBoundaryStart')}
+        error={error && error.includes('mapping') ? error : null}
+      />
+
+      {error && !error.includes('mapping') ? <Text style={styles.error}>{error}</Text> : null}
     </OnboardingFormScreen>
   );
 }

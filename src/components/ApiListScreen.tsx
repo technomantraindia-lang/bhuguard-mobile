@@ -8,6 +8,7 @@ import { colors } from '../theme/colors';
 import type { ApiRecord } from '../utils/apiHelpers';
 import { EMPTY_DATA_MESSAGE, PENDING_API_MESSAGE } from '../utils/apiError';
 import { pickString } from '../utils/apiHelpers';
+import { AppButton } from './AppButton';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import { LoadingState } from './LoadingState';
@@ -22,6 +23,7 @@ interface ApiListScreenProps {
   emptyTitle?: string;
   emptyMessage?: string;
   searchKeys?: string[];
+  headerAction?: { label: string; onPress: () => void };
   onItemPress?: (item: ApiRecord) => void;
   renderItem: (item: ApiRecord, index: number) => ReactNode;
   keyExtractor?: (item: ApiRecord, index: number) => string;
@@ -44,6 +46,7 @@ export function ApiListScreen({
   emptyTitle = 'No records',
   emptyMessage = EMPTY_DATA_MESSAGE,
   searchKeys = ['name', 'title', 'farm_name', 'site_name', 'report_code', 'assignment_code', 'status', 'village', 'district'],
+  headerAction,
   onItemPress,
   renderItem,
   keyExtractor,
@@ -95,6 +98,7 @@ export function ApiListScreen({
         ListHeaderComponent={
           <View style={styles.headerBlock}>
             <ScreenHeader title={title} subtitle={subtitle} />
+            {headerAction ? <AppButton label={headerAction.label} onPress={headerAction.onPress} /> : null}
             <SearchBar value={search} onChangeText={setSearch} placeholder="Search records..." />
             {error ? <Text style={styles.inlineError}>{error}</Text> : null}
           </View>

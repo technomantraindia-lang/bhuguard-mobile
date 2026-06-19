@@ -3,7 +3,9 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { useAddressCascade } from '../../hooks/useAddressCascade';
+import { useAutoAddressPincode } from '../../hooks/useAutoAddressPincode';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
+import { pickAutoPincode } from '../../utils/addressPincodeHelpers';
 import { FormSelect } from '../FormSelect';
 import { OnboardingTextField } from './OnboardingFormFields';
 
@@ -46,6 +48,15 @@ export function OnboardingAddressFields({ value, onChange }: OnboardingAddressFi
     }
   }, [value.taluka_id]);
 
+  useAutoAddressPincode({
+    talukaId: value.taluka_id,
+    villageId: value.village_id,
+    pincode: value.pincode,
+    talukas: address.talukas,
+    villages: address.villages,
+    onPincodeChange: (next) => onChange({ pincode: next }),
+  });
+
   return (
     <View style={styles.wrap}>
       <OnboardingTextField
@@ -73,6 +84,7 @@ export function OnboardingAddressFields({ value, onChange }: OnboardingAddressFi
               taluka_name: '',
               village_id: '',
               village_name: '',
+              pincode: '',
             })
           }
         />
@@ -93,6 +105,7 @@ export function OnboardingAddressFields({ value, onChange }: OnboardingAddressFi
               taluka_name: option.name,
               village_id: '',
               village_name: '',
+              pincode: pickAutoPincode(option.pincode),
             })
           }
         />
@@ -110,22 +123,26 @@ export function OnboardingAddressFields({ value, onChange }: OnboardingAddressFi
           searchable
           searchValue={address.villageSearch}
           onSearchChange={address.setVillageSearch}
-          onSelect={(option) =>
+          onSelect={(option) => {
+            const talukaOption = address.talukas.find((item) => String(item.id) === value.taluka_id);
+
             onChange({
               village_id: String(option.id),
               village_name: option.name,
-            })
-          }
+              pincode: pickAutoPincode(option.pincode, talukaOption?.pincode),
+            });
+          }}
         />
       </View>
 
       <OnboardingTextField
         label="Pincode"
         value={value.pincode}
-        onChangeText={(text) => onChange({ pincode: text.replace(/\D/g, '').slice(0, 6) })}
-        placeholder="6-digit pincode"
+        onChangeText={() => undefined}
+        placeholder="Auto-filled from taluka"
         keyboardType="numeric"
         maxLength={6}
+        editable={false}
         leftIcon={
           <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
             <Path

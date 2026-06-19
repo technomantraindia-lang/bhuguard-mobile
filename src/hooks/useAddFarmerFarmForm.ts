@@ -9,6 +9,7 @@ import {
   mapFarmAreaUnitToApi,
   type FarmerFarmAreaUnit,
 } from '../constants/farmerFarmAreaUnits';
+import { pickString, type ApiRecord } from '../utils/apiHelpers';
 
 export type AddFarmFieldKey =
   | 'name'
@@ -141,16 +142,16 @@ function validateForm(form: AddFarmerFarmFormState): Partial<Record<AddFarmField
     errors.taluka = 'Please select a taluka.';
   }
 
+  if (form.taluka.trim() && !/^\d{6}$/.test(form.pincode.trim())) {
+    errors.pincode = 'Pincode is filled automatically when you select taluka.';
+  }
+
   if (!form.village.trim()) {
     errors.village = 'Please select or type your village name.';
   }
 
   if (!form.state.trim()) {
     errors.state = 'State is required.';
-  }
-
-  if (!/^\d{6}$/.test(form.pincode.trim())) {
-    errors.pincode = 'Enter a valid 6-digit pincode.';
   }
 
   if (form.latitude.trim()) {
@@ -198,9 +199,9 @@ export function useAddFarmerFarmForm() {
     setSubmitError(null);
   }, [clearFieldError]);
 
-  const updateAddress = useCallback((patch: Partial<FarmAddressValue>) => {
+  const updateAddress = useCallback((patch: Partial<FarmAddressValue & { pincode?: string }>) => {
     setForm((current) => ({ ...current, ...patch }));
-    (['state', 'district', 'taluka', 'village'] as AddFarmFieldKey[]).forEach((key) => {
+    (['state', 'district', 'taluka', 'village', 'pincode'] as AddFarmFieldKey[]).forEach((key) => {
       if (key in patch) {
         clearFieldError(key);
       }
@@ -244,7 +245,7 @@ export function useAddFarmerFarmForm() {
     }
   }, [updateField]);
 
-  const submit = useCallback(async (): Promise<boolean> => {
+  const submit = useCallback(async (): Promise<number | false> => {
     const validationErrors = validateForm(form);
     setFieldErrors(validationErrors);
 
@@ -259,7 +260,7 @@ export function useAddFarmerFarmForm() {
       const latitude = form.latitude.trim() ? Number(form.latitude) : undefined;
       const longitude = form.longitude.trim() ? Number(form.longitude) : undefined;
 
-      await createFarmerFarm({
+      const result = (await createFarmerFarm({
         name: form.name.trim(),
         area: Number(form.area),
         area_unit: mapFarmAreaUnitToApi(form.areaUnit),
@@ -274,9 +275,12 @@ export function useAddFarmerFarmForm() {
         latitude,
         longitude,
         notes: form.notes.trim() || undefined,
-      });
+      })) as ApiRecord;
 
-      return true;
+      const farm = (result.farm ?? result) as ApiRecord;
+      const farmId = Number(farm.id);
+
+      return Number.isFinite(farmId) ? farmId : false;
     } catch (err) {
       const apiFieldErrors = extractFieldErrors(err);
 

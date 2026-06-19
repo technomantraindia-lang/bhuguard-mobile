@@ -31,6 +31,16 @@ const STATUS_STYLES: Record<
     text: dashboardTheme.error,
     dot: dashboardTheme.error,
   },
+  submitted: {
+    badge: '#EFF6FF',
+    text: '#2563EB',
+    dot: '#2563EB',
+  },
+  rejected: {
+    badge: '#FEE2E2',
+    text: '#B91C1C',
+    dot: '#B91C1C',
+  },
   draft: {
     badge: dashboardTheme.surfaceContainerLow,
     text: dashboardTheme.textMuted,

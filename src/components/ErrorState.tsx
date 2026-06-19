@@ -1,5 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useTranslation } from '../i18n/I18nContext';
+import { navigateToApiServerSettings } from '../navigation/navigationRef';
 import { colors } from '../theme/colors';
 import { AppButton } from './AppButton';
 
@@ -8,12 +10,31 @@ interface ErrorStateProps {
   onRetry?: () => void;
 }
 
+function isApiReachabilityError(message: string): boolean {
+  return (
+    message.includes('Cannot reach API') ||
+    message.includes('Cannot reach http') ||
+    message.includes('No API URL configured')
+  );
+}
+
 export function ErrorState({ message, onRetry }: ErrorStateProps) {
+  const { t } = useTranslation();
+  const showServerSettings = isApiReachabilityError(message);
+
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>Something went wrong</Text>
+      <Text style={styles.title}>{t('errors.somethingWrong')}</Text>
       <Text style={styles.message}>{message}</Text>
-      {onRetry ? <AppButton label="Try again" onPress={onRetry} style={styles.button} /> : null}
+      {onRetry ? <AppButton label={t('common.retry')} onPress={onRetry} style={styles.button} /> : null}
+      {showServerSettings ? (
+        <AppButton
+          label={t('apiServer.openSettings')}
+          onPress={navigateToApiServerSettings}
+          variant="secondary"
+          style={styles.button}
+        />
+      ) : null}
     </View>
   );
 }

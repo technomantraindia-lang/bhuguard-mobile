@@ -12,6 +12,7 @@ import {
 import { ApiDetailScreen } from '../../components/ApiDetailScreen';
 import { ApiListScreen } from '../../components/ApiListScreen';
 import { AppButton } from '../../components/AppButton';
+import { STITCH_LIST_UPLOAD_ACTIONS } from '../../config/stitchScreenRoutes';
 import { AppCard } from '../../components/AppCard';
 import { DashboardCard } from '../../components/DashboardCard';
 import { ListItemCard } from '../../components/ListItemCard';
@@ -19,6 +20,7 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { SectionTitle } from '../../components/SectionTitle';
 import { StatusBadge } from '../../components/StatusBadge';
 import { colors, spacing } from '../../theme';
+import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { fetchApiData, fetchListItemById } from '../../utils/apiHelpers';
 import { PENDING_API_MESSAGE } from '../../utils/apiError';
 
@@ -26,6 +28,8 @@ interface StitchScreenViewProps {
   screenKey: string;
   itemId?: number;
   stitchRouteName?: string;
+  officerAssignmentId?: number;
+  missingAssignmentMessage?: string;
 }
 
 const DEFAULT_LIST_KEYS = ['data', 'items', 'records', 'results'];
@@ -42,7 +46,13 @@ function resolveListFetcher(screenKey: string, apiPath?: string) {
   return null;
 }
 
-export function StitchScreenView({ screenKey, itemId, stitchRouteName = 'StitchScreen' }: StitchScreenViewProps) {
+export function StitchScreenView({
+  screenKey,
+  itemId,
+  stitchRouteName = 'StitchScreen',
+  officerAssignmentId,
+  missingAssignmentMessage,
+}: StitchScreenViewProps) {
   const navigation = useNavigation<NativeStackNavigationProp<Record<string, object | undefined>>>();
   const config = STITCH_REGISTRY[screenKey];
 
@@ -56,6 +66,25 @@ export function StitchScreenView({ screenKey, itemId, stitchRouteName = 'StitchS
       </SafeAreaView>
     );
   }
+
+  if (missingAssignmentMessage) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <ScrollView contentContainerStyle={styles.container}>
+          <ScreenHeader title={config.title} subtitle="Assignment required" />
+          <AppCard title="No active visit">
+            <Text style={styles.body}>{missingAssignmentMessage}</Text>
+            <AppButton
+              label="Open assigned visits"
+              onPress={() => navigation.navigate('FieldOfficerAssignments' as never)}
+            />
+          </AppCard>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  const listUploadAction = STITCH_LIST_UPLOAD_ACTIONS[screenKey];
 
   if (config.mode === 'hub') {
     return (
@@ -115,15 +144,52 @@ export function StitchScreenView({ screenKey, itemId, stitchRouteName = 'StitchS
         subtitle={config.subtitle ?? config.apiPath}
         fetcher={listFetcher}
         listKeys={[...(config.listKeys ?? []), ...DEFAULT_LIST_KEYS]}
+        headerAction={
+          listUploadAction
+            ? {
+                label: listUploadAction.label,
+                onPress: () => {
+                  if (screenKey === 'evidence_review' || screenKey === 'assigned_verification_list') {
+                    const assignmentId = itemId ?? officerAssignmentId;
+
+                    if (assignmentId) {
+                      (navigation as NativeStackNavigationProp<FieldOfficerStackParamList>).navigate(
+                        'VisitEvidenceUpload',
+                        { assignmentId },
+                      );
+                      return;
+                    }
+                  }
+
+                  navigation.navigate(stitchRouteName, {
+                    screenKey: listUploadAction.targetScreenKey,
+                    itemId: itemId ?? officerAssignmentId,
+                  });
+                },
+              }
+            : undefined
+        }
         onItemPress={
           config.detailApiPath || config.detailScreenKey
-            ? (item) =>
+            ? (item) => {
+                const recordId = Number(item?.id ?? 0);
+
+                if (
+                  (screenKey === 'evidence_review' || screenKey === 'assigned_verification_list') &&
+                  recordId > 0
+                ) {
+                  (navigation as NativeStackNavigationProp<FieldOfficerStackParamList>).navigate(
+                    'VisitEvidenceUpload',
+                    { assignmentId: recordId },
+                  );
+                  return;
+                }
+
                 navigation.navigate(stitchRouteName, {
-                  screenKey:
-                    config.detailScreenKey ??
-                    screenKey.replace('_list', '_detail'),
-                  itemId: Number(item?.id ?? 0),
-                })
+                  screenKey: config.detailScreenKey ?? screenKey.replace('_list', '_detail'),
+                  itemId: recordId,
+                });
+              }
             : undefined
         }
         renderItem={(item) => (

@@ -10,7 +10,10 @@ function normalizePhotoUrl(photoUrl: string | null | undefined): string | null {
   return isLocalImageUri(photoUrl) ? photoUrl : photoUrl.split('?')[0] ?? photoUrl;
 }
 
-export function useProfilePhotoDisplay(photoUrl: string | null | undefined): string | null {
+export function useProfilePhotoDisplay(
+  photoUrl: string | null | undefined,
+  cacheFileName = 'farmer-profile-current.jpg',
+): string | null {
   const stablePhotoUrl = useMemo(() => normalizePhotoUrl(photoUrl), [photoUrl]);
   const [displayUri, setDisplayUri] = useState<string | null>(() => {
     if (stablePhotoUrl && isLocalImageUri(stablePhotoUrl)) {
@@ -35,7 +38,7 @@ export function useProfilePhotoDisplay(photoUrl: string | null | undefined): str
       }
 
       setDisplayUri(null);
-      const cachedUri = await cacheAuthenticatedImage(stablePhotoUrl);
+      const cachedUri = await cacheAuthenticatedImage(stablePhotoUrl, cacheFileName);
 
       if (!cancelled) {
         setDisplayUri(cachedUri);
@@ -47,7 +50,7 @@ export function useProfilePhotoDisplay(photoUrl: string | null | undefined): str
     return () => {
       cancelled = true;
     };
-  }, [stablePhotoUrl]);
+  }, [cacheFileName, stablePhotoUrl]);
 
   return displayUri;
 }

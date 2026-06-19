@@ -1,45 +1,56 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-
-import { colors } from '../theme/colors';
-import { AppButton } from './AppButton';
-import { AppCard } from './AppCard';
+import { LiveEvidenceCaptureCard } from './evidence/LiveEvidenceCaptureCard';
+import { useLiveEvidenceCapture } from '../hooks/useLiveEvidenceCapture';
+import type { LiveCapturedEvidence } from '../utils/liveEvidenceCapture';
 
 interface FilePickerCardProps {
-  title: string;
+  title?: string;
   subtitle?: string;
+  evidence?: LiveCapturedEvidence | null;
+  capturing?: boolean;
+  uploading?: boolean;
+  error?: string | null;
+  onOpenCamera?: () => void;
+  onRetake?: () => void;
+  onUpload?: () => void;
+  uploadLabel?: string;
+  showUploadButton?: boolean;
+  /** @deprecated Use onOpenCamera — kept for legacy call sites. */
+  onPick?: () => void;
+  /** @deprecated Gallery/file picking is disabled for evidence. */
+  pickLabel?: string;
   fileName?: string;
   fileSize?: string;
-  pickLabel: string;
-  onPick: () => void;
   onRemove?: () => void;
 }
 
+/** Camera-only evidence capture card. Gallery and file picker uploads are not supported. */
 export function FilePickerCard({
-  title,
-  subtitle,
-  fileName,
-  fileSize,
-  pickLabel,
+  evidence = null,
+  capturing = false,
+  uploading = false,
+  error = null,
+  onOpenCamera,
+  onRetake,
+  onUpload,
+  uploadLabel,
+  showUploadButton,
   onPick,
-  onRemove,
 }: FilePickerCardProps) {
   return (
-    <View style={styles.wrap}>
-      <AppCard
-        title={title}
-        subtitle={fileName ? `${fileName}${fileSize ? ` · ${fileSize}` : ''}` : subtitle}
-      />
-      <AppButton label={pickLabel} onPress={onPick} variant="secondary" />
-      {fileName && onRemove ? (
-        <Pressable onPress={onRemove}>
-          <Text style={styles.remove}>Remove file</Text>
-        </Pressable>
-      ) : null}
-    </View>
+    <LiveEvidenceCaptureCard
+      evidence={evidence}
+      capturing={capturing}
+      uploading={uploading}
+      error={error}
+      onOpenCamera={onOpenCamera ?? onPick ?? (() => undefined)}
+      onRetake={onRetake ?? onOpenCamera ?? onPick ?? (() => undefined)}
+      onUpload={onUpload}
+      uploadLabel={uploadLabel}
+      showUploadButton={showUploadButton}
+    />
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { gap: 8 },
-  remove: { color: colors.error, fontWeight: '600', textAlign: 'center', paddingVertical: 4 },
-});
+export function useFilePickerEvidence(defaultName?: string) {
+  return useLiveEvidenceCapture({ defaultName });
+}

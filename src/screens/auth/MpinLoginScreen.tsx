@@ -1,31 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { getApiErrorMessage, loginMpin, requestForgotMpinOtp } from '../../api/authApi';
 import { MpinKeypad } from '../../components/auth/MpinKeypad';
 import { MpinPinInput } from '../../components/auth/MpinPinInput';
+import { useTranslation } from '../../i18n/I18nContext';
 import type { RootStackParamList } from '../../navigation/types';
 import { getMpinProfile, saveAuthSession } from '../../storage/authStorage';
 import { colors, spacing } from '../../theme';
+import { getDashboardRoute, isMobileSupportedRole } from '../../utils/authRouting';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MpinLogin'>;
 
 const MPIN_LENGTH = 6;
-
-function getDashboardRoute(userType: string): keyof RootStackParamList | null {
-  switch (userType) {
-    case 'farmer':
-      return 'FarmerApp';
-    case 'company_user':
-      return 'CompanyApp';
-    case 'field_officer':
-      return 'FieldOfficerApp';
-    default:
-      return null;
-  }
-}
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -42,6 +31,8 @@ function getInitials(name: string): string {
 }
 
 export function MpinLoginScreen({ navigation, route }: Props) {
+  const { t } = useTranslation();
+  const selectedRole = route.params?.role;
   const [mobile, setMobile] = useState(route.params?.mobile ?? '');
   const [displayName, setDisplayName] = useState(route.params?.name ?? '');
   const [mpin, setMpin] = useState('');
@@ -72,9 +63,10 @@ export function MpinLoginScreen({ navigation, route }: Props) {
     void loadProfile();
   }, [displayName, mobile]);
 
-  const canSignIn = mpin.length === MPIN_LENGTH && mobile.trim().length === 10 && !loading;
+  const canSignIn =
+    mpin.length === MPIN_LENGTH && /^\d{10}$/.test(mobile.trim()) && !loading;
 
-  const avatarInitials = useMemo(() => getInitials(displayName || 'Bhuguard User'), [displayName]);
+  const avatarInitials = useMemo(() => getInitials(displayName || t('brand.name')), [displayName, t]);
 
   const appendDigit = (digit: string) => {
     if (loading || mpin.length >= MPIN_LENGTH) {
@@ -104,17 +96,33 @@ export function MpinLoginScreen({ navigation, route }: Props) {
 
     try {
       const result = await loginMpin(mobile.trim(), mpin);
+
+      if (!isMobileSupportedRole(result.user_type)) {
+        setError(t('errors.unsupportedAccount'));
+        return;
+      }
+
+      if (selectedRole && result.user_type !== selectedRole) {
+        setError(t('mpinLogin.roleMismatch'));
+        return;
+      }
+
+      if (result.user_type === 'farmer' && !result.user.farmer_profile?.id) {
+        Alert.alert(t('farmerLogin.profileMissingTitle'), t('farmerLogin.profileMissingMessage'));
+        return;
+      }
+
       const dashboardRoute = getDashboardRoute(result.user_type);
 
       if (!dashboardRoute) {
-        setError(`Unsupported role: ${result.user_type}`);
+        setError(t('errors.unsupportedAccount'));
         return;
       }
 
       await saveAuthSession(result.token, result.user, result.user_type);
       navigation.reset({ index: 0, routes: [{ name: dashboardRoute }] });
     } catch (err) {
-      setError(getApiErrorMessage(err, 'MPIN login failed.'));
+      setError(getApiErrorMessage(err, t('errors.invalidMpin')));
       setMpin('');
     } finally {
       setLoading(false);
@@ -123,7 +131,7 @@ export function MpinLoginScreen({ navigation, route }: Props) {
 
   const forgotMpin = async () => {
     if (!/^\d{10}$/.test(mobile.trim())) {
-      Alert.alert('Mobile required', 'Sign in with password first, then reset MPIN from this screen.');
+      Alert.alert(t('errors.mobileRequired'));
       return;
     }
 
@@ -132,9 +140,13 @@ export function MpinLoginScreen({ navigation, route }: Props) {
 
     try {
       await requestForgotMpinOtp(mobile.trim());
-      navigation.navigate('OtpVerification', { mobile: mobile.trim(), purpose: 'forgot_mpin' });
+      navigation.navigate('OtpVerification', {
+        mobile: mobile.trim(),
+        purpose: 'forgot_mpin',
+        flowOrigin: 'auth',
+      });
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to send MPIN reset OTP.'));
+      setError(getApiErrorMessage(err, t('errors.loginFailed')));
     } finally {
       setLoading(false);
     }
@@ -143,7 +155,7 @@ export function MpinLoginScreen({ navigation, route }: Props) {
   return (
     <SafeAreaView style={styles.safe}>
       <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.backIcon}>←</Text>
+        <Text style={styles.backIcon}>← {t('common.back')}</Text>
       </Pressable>
 
       <View style={styles.content}>
@@ -153,38 +165,41 @@ export function MpinLoginScreen({ navigation, route }: Props) {
               <Text style={styles.avatarText}>{avatarInitials}</Text>
             </View>
           </View>
-          <Text style={styles.welcome}>Welcome Back</Text>
-          <Text style={styles.name}>{displayName || 'Bhuguard User'}</Text>
+          <Text style={styles.welcome}>{t('mpinLogin.welcome')}</Text>
+          <Text style={styles.name}>{displayName || t('brand.name')}</Text>
         </View>
 
-        <Text style={styles.instruction}>Enter your 6-digit MPIN</Text>
+        <Text style={styles.label}>{t('mpinLogin.mobileLabel')}</Text>
+        <TextInput
+          value={mobile}
+          onChangeText={(value) => setMobile(value.replace(/\D/g, '').slice(0, 10))}
+          keyboardType="number-pad"
+          maxLength={10}
+          style={styles.mobileInput}
+          placeholder="9876543210"
+        />
+
+        <Text style={styles.instruction}>{t('mpinLogin.instruction')}</Text>
         <MpinPinInput value={mpin} length={MPIN_LENGTH} />
 
-        <Pressable onPress={forgotMpin} disabled={loading}>
-          <Text style={styles.forgotLink}>Forgot MPIN?</Text>
+        <Pressable onPress={() => void forgotMpin()} disabled={loading}>
+          <Text style={styles.forgotLink}>{t('mpinLogin.forgotMpin')}</Text>
         </Pressable>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        {!mobile ? (
-          <Text style={styles.helperText}>Sign in with password once to enable MPIN login for this device.</Text>
-        ) : null}
+        {!mobile ? <Text style={styles.helperText}>{t('mpinLogin.enableHint')}</Text> : null}
 
-        <MpinKeypad
-          onDigit={appendDigit}
-          onBackspace={removeDigit}
-          onBiometric={() => Alert.alert('Coming soon', 'Biometric MPIN unlock will be available in a future update.')}
-          disabled={loading}
-        />
+        <MpinKeypad onDigit={appendDigit} onBackspace={removeDigit} disabled={loading} />
       </View>
 
       <View style={styles.footer}>
         <Pressable
           style={[styles.signInButton, canSignIn ? styles.signInButtonActive : styles.signInButtonDisabled]}
-          onPress={signIn}
+          onPress={() => void signIn()}
           disabled={!canSignIn}
         >
-          <Text style={styles.signInText}>{loading ? 'Signing in...' : 'Sign In'}</Text>
+          <Text style={styles.signInText}>{loading ? t('mpinLogin.signingIn') : t('mpinLogin.signIn')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -202,15 +217,15 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   backIcon: {
-    fontSize: 24,
-    color: colors.text,
+    fontSize: 16,
+    color: colors.primary,
     fontWeight: '600',
   },
   content: {
     flex: 1,
     paddingHorizontal: spacing.xxl,
     paddingTop: spacing.md,
-    gap: 18,
+    gap: 14,
   },
   profileWrap: {
     alignItems: 'center',
@@ -246,6 +261,20 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: colors.text,
     fontWeight: '500',
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  mobileInput: {
+    borderWidth: 1,
+    borderColor: '#D8E8D0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    backgroundColor: colors.white,
   },
   instruction: {
     textAlign: 'center',

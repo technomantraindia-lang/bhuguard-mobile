@@ -8,11 +8,14 @@ import { useBoundaryCapture } from '../../../context/BoundaryCaptureContext';
 import type { FarmerStackParamList } from '../../../navigation/types';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
 import { openGoogleMaps } from '../../../utils/farmMapHelpers';
+import { getBoundaryFlowRoutes } from '../../../utils/boundaryFlowRoutes';
+import { boundaryRouteParams } from '../../../utils/boundaryNavigation';
 
 type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmBoundaryPreview'>;
 
 export function FarmBoundaryPreviewScreen({ navigation }: Props) {
   const boundary = useBoundaryCapture();
+  const routes = getBoundaryFlowRoutes(boundary.sessionMode);
   const center =
     boundary.points[0] != null
       ? { latitude: boundary.points[0].latitude, longitude: boundary.points[0].longitude }
@@ -35,13 +38,29 @@ export function FarmBoundaryPreviewScreen({ navigation }: Props) {
           <Text style={styles.meta}>GPS Accuracy: {boundary.gpsAccuracyLabel}</Text>
         </View>
 
-        <Pressable style={styles.primaryButton} onPress={() => navigation.navigate('FarmBoundarySaveConfirm', { farmId: boundary.farmId! })}>
-          <Text style={styles.primaryButtonText}>Save Boundary</Text>
+        <Pressable
+          style={styles.primaryButton}
+          onPress={() => {
+            const routes = getBoundaryFlowRoutes(boundary.sessionMode);
+            navigation.navigate(routes.confirm as 'FarmBoundarySaveConfirm', boundaryRouteParams(boundary.farmId ?? undefined));
+          }}
+        >
+          <Text style={styles.primaryButtonText}>
+            {boundary.sessionMode === 'onboarding' || boundary.sessionMode === 'prefarm'
+              ? 'Confirm Land Area'
+              : 'Save Boundary'}
+          </Text>
         </Pressable>
-        <Pressable style={styles.outlineButton} onPress={() => navigation.navigate('FarmBoundaryCapture', { farmId: boundary.farmId! })}>
+        <Pressable
+          style={styles.outlineButton}
+          onPress={() => navigation.navigate(routes.capture as 'FarmBoundaryCapture', boundaryRouteParams(boundary.farmId ?? undefined))}
+        >
           <Text style={styles.outlineButtonText}>Edit Points</Text>
         </Pressable>
-        <Pressable style={styles.outlineButton} onPress={() => navigation.navigate('FarmBoundaryStart', { farmId: boundary.farmId! })}>
+        <Pressable
+          style={styles.outlineButton}
+          onPress={() => navigation.navigate(routes.start as 'FarmBoundaryStart', boundaryRouteParams(boundary.farmId ?? undefined))}
+        >
           <Text style={styles.outlineButtonText}>Re-capture</Text>
         </Pressable>
         {center ? (

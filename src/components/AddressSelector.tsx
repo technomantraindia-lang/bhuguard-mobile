@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useAddressCascade } from '../hooks/useAddressCascade';
+import { useAutoAddressPincode } from '../hooks/useAutoAddressPincode';
 import { colors } from '../theme/colors';
+import { pickAutoPincode } from '../utils/addressPincodeHelpers';
 import { AppButton } from './AppButton';
 import { ErrorState } from './ErrorState';
 import { FormSelect } from './FormSelect';
@@ -16,11 +18,14 @@ export interface AddressValue {
   taluka_name: string;
   village_id: string;
   village_name: string;
+  pincode?: string;
 }
 
 interface AddressSelectorProps {
   value: AddressValue;
   onChange: (patch: Partial<AddressValue>) => void;
+  pincode?: string;
+  onPincodeChange?: (pincode: string) => void;
   requireDistrict?: boolean;
   requireTaluka?: boolean;
   requireVillage?: boolean;
@@ -29,6 +34,8 @@ interface AddressSelectorProps {
 export function AddressSelector({
   value,
   onChange,
+  pincode = '',
+  onPincodeChange,
   requireDistrict = true,
   requireTaluka = true,
   requireVillage = true,
@@ -46,6 +53,18 @@ export function AddressSelector({
       void address.loadVillages(Number(value.taluka_id));
     }
   }, [value.taluka_id]);
+
+  useAutoAddressPincode({
+    talukaId: value.taluka_id,
+    villageId: value.village_id,
+    pincode,
+    talukas: address.talukas,
+    villages: address.villages,
+    onPincodeChange: (next) => {
+      onChange({ pincode: next });
+      onPincodeChange?.(next);
+    },
+  });
 
   return (
     <View style={styles.wrap}>
@@ -70,6 +89,7 @@ export function AddressSelector({
             taluka_name: '',
             village_id: '',
             village_name: '',
+            pincode: '',
           })
         }
       />
@@ -86,6 +106,7 @@ export function AddressSelector({
             taluka_name: option.name,
             village_id: '',
             village_name: '',
+            pincode: pickAutoPincode(option.pincode),
           })
         }
       />
@@ -99,12 +120,15 @@ export function AddressSelector({
         searchable
         searchValue={address.villageSearch}
         onSearchChange={address.setVillageSearch}
-        onSelect={(option) =>
+        onSelect={(option) => {
+          const talukaOption = address.talukas.find((item) => String(item.id) === value.taluka_id);
+
           onChange({
             village_id: String(option.id),
             village_name: option.name,
-          })
-        }
+            pincode: pickAutoPincode(option.pincode, talukaOption?.pincode),
+          });
+        }}
       />
       {address.districts.length === 0 && !address.loadingDistricts && !address.error ? (
         <AppButton label="Reload districts" variant="secondary" onPress={() => void address.loadDistricts()} />

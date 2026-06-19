@@ -1,0 +1,197 @@
+{
+  "brand": {
+    "name": "Bhuguard",
+    "tagline": "જલવાયુ ક્રિયા માટે ડિજિટલ MRV"
+  },
+  "preloader": {
+    "loading": "તમારું જલવાયુ વર્કસ્પેસ લોડ થઈ રહ્યું છે…",
+    "loadingData": "તમારું ડેશબોર્ડ તૈયાર થઈ રહ્યું છે…"
+  },
+  "language": {
+    "screenTitle": "ભાષા પસંદ કરો",
+    "title": "તમારી ભાષા પસંદ કરો",
+    "subtitle": "એપ માટે તમારી પસંદગીની ભાષા પસંદ કરો",
+    "gujarati": "Gujarati",
+    "gujaratiNative": "ગુજરાતી",
+    "hindi": "Hindi",
+    "hindiNative": "हिन्दी",
+    "english": "English",
+    "englishNative": "English",
+    "settingsTitle": "ભાષા",
+    "settingsSubtitle": "એપની ભાષા બદલો",
+    "changed": "ભાષા અપડેટ થઈ",
+    "changedMessage": "હવે એપ તમારી પસંદ કરેલી ભાષામાં દેખાશે."
+  },
+  "role": {
+    "screenTitle": "ભૂમિકા પસંદ કરો",
+    "title": "તમારી ભૂમિકા પસંદ કરો",
+    "subtitle": "ખેડૂત અથવા ફીલ્ડ ઓફિસર તરીકે ચાલુ રાખો",
+    "farmerTitle": "ખેડૂત",
+    "farmerDescription": "તમારું ખેતર, પ્રવૃત્તિઓ, રિપોર્ટ અને પ્રોફાઇલ જુઓ",
+    "farmerButton": "ખેડૂત તરીકે ચાલુ રાખો",
+    "fieldOfficerTitle": "ફીલ્ડ ઓફિસર",
+    "fieldOfficerDescription": "ખેડૂત નોંધણી, ખેતર ચકાસણી, જમીન મેપિંગ અને રિપોર્ટ સબમિટ કરો",
+    "fieldOfficerButton": "ફીલ્ડ ઓફિસર તરીકે ચાલુ રાખો",
+    "farmerRegistrationNote": "ખેડૂત નોંધણી ફક્ત ફીલ્ડ ઓફિસર દ્વારા કરવામાં આવે છે."
+  },
+  "farmerLogin": {
+    "screenTitle": "ખેડૂત લોગિન",
+    "title": "ખેડૂત લોગિન",
+    "subtitle": "યુઝરનેમ, પાસવર્ડ, MPIN, OTP અથવા બાયોમેટ્રિકથી લોગિન કરો",
+    "passwordOption": "યુઝરનેમ અને પાસવર્ડ",
+    "passwordDescription": "મોબાઇલ નંબર અથવા ઇમેઇલ અને પાસવર્ડથી લોગિન કરો",
+    "mpinOption": "MPIN લોગિન",
+    "mpinDescription": "નોંધાયેલ મોબાઇલ નંબર અને 6 અંકનો MPIN વાપરો",
+    "otpOption": "મોબાઇલ OTP લોગિન",
+    "otpDescription": "તમારા મોબાઇલ પર એક વખતનો પાસવર્ડ મેળવો",
+    "biometricOption": "બાયોમેટ્રિક લોગિન",
+    "biometricDescription": "ફિંગરપ્રિન્ટ અથવા ફેસ અનલૉક વાપરો",
+    "biometricUnavailable": "એક વાર લોગિન પછી પ્રોફાઇલમાંથી બાયોમેટ્રિક સક્ષમ કરો.",
+    "forgotMpin": "MPIN ભૂલી ગયા?",
+    "contactSupport": "ફીલ્ડ ઓફિસર / સપોર્ટનો સંપર્ક કરો",
+    "noRegistration": "ખેડૂત એકાઉન્ટ તમારા ફીલ્ડ ઓફિસર દ્વારા બનાવવામાં આવે છે.",
+    "profileMissingTitle": "નોંધણી જરૂરી",
+    "profileMissingMessage": "નોંધણી માટે તમારા ફીલ્ડ ઓફિસરનો સંપર્ક કરો."
+  },
+  "fieldOfficerLogin": {
+    "screenTitle": "ફીલ્ડ ઓફિસર લોગિન",
+    "title": "ફીલ્ડ ઓફિસર લોગિન",
+    "subtitle": "ખેતર ચકાસણી અને ખેડૂત નોંધણી માટે લોગિન કરો",
+    "passwordOption": "યુઝરનેમ અને પાસવર્ડ",
+    "mpinOption": "MPIN લોગિન",
+    "biometricOption": "બાયોમેટ્રિક લોગિન",
+    "changeRole": "ભૂમિકા બદલો",
+    "usernameLabel": "મોબાઇલ નંબર અથવા ઇમેઇલ",
+    "passwordLabel": "પાસવર્ડ",
+    "forgotPassword": "પાસવર્ડ ભૂલી ગયા?",
+    "signIn": "લોગિન",
+    "signingIn": "લોગિન થઈ રહ્યું છે…"
+  },
+  "passwordLogin": {
+    "farmerTitle": "ખેડૂત લોગિન",
+    "fieldOfficerTitle": "ફીલ્ડ ઓફિસર લોગિન",
+    "subtitle": "તમારું યુઝરનેમ અને પાસવર્ડ દાખલ કરો",
+    "usernameLabel": "યુઝરનેમ અથવા મોબાઇલ નંબર",
+    "passwordLabel": "પાસવર્ડ",
+    "passwordPlaceholder": "તમારો પાસવર્ડ દાખલ કરો",
+    "forgotPassword": "પાસવર્ડ ભૂલી ગયા?",
+    "signIn": "લોગિન",
+    "signingIn": "લોગિન થઈ રહ્યું છે…"
+  },
+  "mpinLogin": {
+    "title": "MPIN લોગિન",
+    "welcome": "પાછા આવવા પર સ્વાગત છે",
+    "instruction": "તમારો 6 અંકનો MPIN દાખલ કરો",
+    "mobileLabel": "મોબાઇલ નંબર",
+    "forgotMpin": "MPIN ભૂલી ગયા?",
+    "signIn": "લોગિન",
+    "signingIn": "લોગિન થઈ રહ્યું છે…",
+    "enableHint": "આ ડિવાઇસ પર ઝડપી લોગિન માટે એક વાર પાસવર્ડ અથવા MPINથી લોગિન કરો.",
+    "roleMismatch": "આ એકાઉન્ટ પસંદ કરેલી ભૂમિકા માટે નોંધાયેલ નથી."
+  },
+  "otpLogin": {
+    "title": "OTP લોગિન",
+    "subtitle": "તમારો નોંધાયેલ મોબાઇલ નંબર દાખલ કરો",
+    "mobileLabel": "મોબાઇલ નંબર",
+    "sendOtp": "OTP મોકલો",
+    "sendingOtp": "OTP મોકલાઈ રહ્યો છે…",
+    "verifyTitle": "OTP ચકાસો",
+    "verifySubtitle": "{{mobile}} પર મોકલાયેલ 6 અંકનો કોડ દાખલ કરો",
+    "verify": "લોગિન",
+    "verifying": "ચકાસણી થઈ રહી છે…",
+    "resend": "OTP ફરી મોકલો",
+    "resendIn": "{{time}} પછી ફરી મોકલો"
+  },
+  "apiServer": {
+    "title": "સર્વર સેટિંગ્સ",
+    "subtitle": "એપને Bhuguard API સર્વર સાથે કનેક્ટ કરો. બીજા નેટવર્ક પર ક્લાયન્ટને બતાવવા માટે.",
+    "settingsSubtitle": "રિમોટ ડેમો માટે API URL બદલો",
+    "openSettings": "સર્વર સેટિંગ્સ",
+    "offlineTitle": "સર્વર ઉપલબ્ધ નથી",
+    "offlineHint": "પબ્લિક સર્વર URL સેટ કરવા અહીં ટેપ કરો.",
+    "urlLabel": "સર્વર URL",
+    "test": "કનેક્શન ચકાસો",
+    "save": "સાચવો અને ઉપયોગ કરો",
+    "reset": "ડિફૉલ્ટ પર રીસેટ",
+    "emptyUrl": "પહેલા સર્વર URL દાખલ કરો.",
+    "saveFailed": "કનેક્ટ થઈ શક્યું નહીં. URL ચકાસો અને ટનલ ચાલુ રાખો.",
+    "saved": "સર્વર URL સાચવ્યું. હવે લોગિન કરી શકો.",
+    "helpTitle": "ક્લાયન્ટ ડેમો (કોઈ પણ મોબાઇલ નેટવર્ક)",
+    "helpSteps": "1. PC પર public tunnel script ચલાવો\n2. https://....trycloudflare.com URL કૉપી કરો\n3. અહીં પેસ્ટ કરો → Test → Save\n4. ક્લાયન્ટ ઉપયોગ કરે ત્યારે ટનલ વિન્ડો ખુલ્લી રાખો",
+    "example": "ઉદાહરણ ટેક્સ્ટ ન વાપરો — Git Bash માંથી તમારું URL કૉપી કરો",
+    "urlNote": "start-public-api-tunnel.sh ચલાવ્યા પછી Git Bash માં દેખાતી https:// લિંક અહીં પેસ્ટ કરો"
+  },
+  "common": {
+    "continue": "ચાલુ રાખો",
+    "back": "પાછા",
+    "cancel": "રદ કરો",
+    "close": "બંધ કરો",
+    "save": "સાચવો",
+    "submit": "સબમિટ કરો",
+    "logout": "લૉગઆઉટ",
+    "retry": "ફરી પ્રયાસ કરો",
+    "loading": "લોડ થઈ રહ્યું છે…",
+    "login": "લોગિન",
+    "settings": "સેટિંગ્સ",
+    "profile": "પ્રોફાઇલ",
+    "account": "એકાઉન્ટ",
+    "support": "સપોર્ટ",
+    "contactHelp": "મદદ જોઈએ? ફીલ્ડ ઓફિસર / સપોર્ટનો સંપર્ક કરો",
+    "version": "સુરક્ષિત મોબાઇલ એપ"
+  },
+  "tabs": {
+    "farmer": {
+      "home": "હોમ",
+      "farms": "મારા ખેતરો",
+      "activity": "પ્રવૃત્તિ",
+      "reports": "રિપોર્ટ",
+      "profile": "પ્રોફાઇલ"
+    },
+    "officer": {
+      "dashboard": "ડેશબોર્ડ",
+      "visits": "વિઝિટ",
+      "evidence": "પુરાવા",
+      "reports": "રિપોર્ટ",
+      "profile": "પ્રોફાઇલ"
+    }
+  },
+  "profile": {
+    "officerTitle": "ઓફિસર પ્રોફાઇલ",
+    "officerSubtitle": "એકાઉન્ટ, પ્રદેશ અને સુરક્ષા સેટિંગ્સ મેનેજ કરો.",
+    "farmerTitle": "મારી પ્રોફાઇલ",
+    "personalDetails": "વ્યક્તિગત વિગતો",
+    "workInformation": "કાર્ય માહિતી",
+    "documents": "દસ્તાવેજો",
+    "security": "સુરક્ષા",
+    "language": "ભાષા"
+  },
+  "officer": {
+    "dashboard": {
+      "onboardFarmer": "નવો ખેડૂત નોંધણી કરો",
+      "assignedVisits": "સોંપેલી વિઝિટ",
+      "gpsMapping": "GPS મેપિંગ કાર્ય",
+      "checklist": "ચકાસણી ચેકલિસ્ટ",
+      "evidence": "પુરાવા અપલોડ",
+      "reports": "રિપોર્ટ"
+    },
+    "onboarding": {
+      "successTitle": "ખેડૂત નોંધણી સફળ",
+      "registerAnother": "બીજો ખેડૂત નોંધણી કરો",
+      "viewProfile": "ખેડૂત પ્રોફાઇલ જુઓ",
+      "goToDashboard": "ડેશબોર્ડ પર જાઓ",
+      "loginReady": "ખેડૂત હવે MPIN અથવા OTPથી લોગિન કરી શકે છે"
+    }
+  },
+  "errors": {
+    "somethingWrong": "કંઈક ખોટું થયું",
+    "loginFailed": "લોગિન નિષ્ફળ. કૃપા કરીને ફરી પ્રયાસ કરો.",
+    "network": "નેટવર્ક ભૂલ. કનેક્શન તપાસો અને ફરી પ્રયાસ કરો.",
+    "invalidCredentials": "અમાન્ય લોગિન વિગતો.",
+    "invalidMpin": "અમાન્ય MPIN.",
+    "mobileRequired": "માન્ય 10 અંકનો મોબાઇલ નંબર દાખલ કરો.",
+    "otpRequired": "6 અંકનો OTP દાખલ કરો.",
+    "unsupportedAccount": "આ એકાઉન્ટ મોબાઇલ એપમાં ઉપયોગ કરી શકાતો નથી.",
+    "biometricFailed": "બાયોમેટ્રિક ચકાસણી નિષ્ફળ.",
+    "biometricDevice": "આ ડિવાઇસ પર બાયોમેટ્રિક લોગિન સક્ષમ કરવા એક વાર MPIN અથવા પાસવર્ડથી લોગિન કરો."
+  }
+}

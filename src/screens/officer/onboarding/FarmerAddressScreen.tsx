@@ -46,6 +46,7 @@ export function FarmerAddressScreen() {
           village_id: draft.village_id,
           village_name: draft.village_name,
         }}
+        pincode={draft.pincode}
         onChange={(patch) => updateDraft(patch)}
         requireDistrict
         requireTaluka
@@ -54,9 +55,10 @@ export function FarmerAddressScreen() {
       <FormField
         label="Pincode"
         value={draft.pincode}
-        onChangeText={(v) => updateDraft({ pincode: v.replace(/\D/g, '').slice(0, 6) })}
-        placeholder="6-digit pincode"
+        onChangeText={() => undefined}
+        placeholder="Auto-filled from taluka"
         keyboardType="numeric"
+        editable={false}
       />
       <FormField
         label="Address line"

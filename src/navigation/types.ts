@@ -10,7 +10,8 @@ export type ForgotPasswordParams = {
 
 export type OtpVerificationParams = {
   mobile: string;
-  purpose?: 'forgot_password' | 'forgot_mpin';
+  purpose?: 'forgot_password' | 'forgot_mpin' | 'login';
+  role?: AppLoginRole;
   flowOrigin?: SecurityFlowOrigin;
 };
 
@@ -31,18 +32,31 @@ export type SecurityScreensParamList = {
   CreateMpin: CreateMpinParams | undefined;
 };
 
+export type MpinLoginParams = {
+  mobile?: string;
+  name?: string;
+  role?: AppLoginRole;
+};
+
+export type PasswordLoginParams = {
+  role: AppLoginRole;
+};
+
 export type RootStackParamList = {
-  Splash: undefined;
-  Login: { role?: AppLoginRole };
+  Preloader: undefined;
+  LanguageSelection: undefined;
+  RoleSelection: undefined;
+  ApiServerSettings: undefined;
+  FarmerLoginOptions: undefined;
+  FieldOfficerLogin: undefined;
+  PasswordLogin: PasswordLoginParams;
+  FarmerOtpLogin: undefined;
   ForgotPassword: ForgotPasswordParams | undefined;
-  OtpLogin: undefined;
-  MpinLogin: { mobile?: string; name?: string };
+  MpinLogin: MpinLoginParams;
   CreateMpin: CreateMpinParams | undefined;
   OtpVerification: OtpVerificationParams;
   ResetPassword: ResetPasswordParams;
-  RoleSelection: undefined;
   FarmerApp: undefined;
-  CompanyApp: undefined;
   FieldOfficerApp: undefined;
 };
 
@@ -64,8 +78,9 @@ export type CompanyTabParamList = {
 export type FieldOfficerTabParamList = {
   Home: undefined;
   Visits: undefined;
+  Evidence: undefined;
+  Reports: undefined;
   Map: undefined;
-  Farmers: undefined;
   Profile: undefined;
 };
 
@@ -85,7 +100,13 @@ export type FarmerStackParamList = {
   FarmBoundaryPreview: { farmId: number };
   FarmBoundarySaveConfirm: { farmId: number };
   FarmBoundaryUploading: { farmId: number };
-  FarmBoundarySuccess: { farmId: number; areaLabel: string; pointCount: number };
+  FarmBoundarySuccess: { farmId: number; areaLabel: string; pointCount: number; photoCount?: number; captureMethod?: 'gps' | 'camera' };
+  CameraBoundaryStart: { farmId: number };
+  CameraBoundaryLive: { farmId: number };
+  CameraBoundaryPoints: { farmId: number };
+  CameraBoundaryPreview: { farmId: number };
+  CameraBoundaryUploading: { farmId: number };
+  BoundaryPhotoGallery: { farmId: number };
   FarmerAddFarm: undefined;
   FarmerWeeklyUpdates: undefined;
   FarmerWeeklyUpdateDetail: { updateId: number };
@@ -93,7 +114,11 @@ export type FarmerStackParamList = {
   FarmerServiceDetail: { serviceId: number };
   FarmerActivityLogs: undefined;
   FarmerSubmitActivity: { farmId?: number } | undefined;
+  FarmerActivityDetail: { activityId: number };
   FarmerBaselineAssessments: undefined;
+  FarmerAddBaselineAssessment: { farmId?: number } | undefined;
+  FarmerFeedstockCollection: { farmId?: number } | undefined;
+  FarmerBaselineAssessmentDetail: { assessmentId: number };
   FarmerSoilSamples: undefined;
   FarmerVerificationStatus: undefined;
   FarmerCarbonCalculations: undefined;
@@ -130,14 +155,22 @@ export type CompanyStackParamList = {
 };
 
 export type FieldOfficerStackParamList = {
-  FieldOfficerTabs: undefined;
+  FieldOfficerTabs: NavigatorScreenParams<FieldOfficerTabParamList> | undefined;
   StitchScreen: { screenKey: string; itemId?: number };
   FieldOfficerDashboard: undefined;
   FieldOfficerProfile: undefined;
+  FieldOfficerProfileSection: { section: 'personal' | 'work' | 'documents' | 'security' };
+  FieldOfficerPerformance: undefined;
   FieldOfficerSettings: undefined;
   FieldOfficerAssignments: undefined;
   FieldOfficerAssignmentDetail: { assignmentId: number };
   FieldOfficerVerificationReports: undefined;
+  FieldOfficerReports: undefined;
+  FieldOfficerReportDetail: { reportId: number };
+  FieldOfficerReportDraft: undefined;
+  FieldOfficerPendingReports: undefined;
+  FieldOfficerDownloadsCenter: undefined;
+  FieldOfficerDraftReportEditor: { assignmentId: number };
   FieldOfficerVerificationReportDetail: { reportId: number };
   FieldOfficerSoilSamples: undefined;
   FieldOfficerBaselineAssessments: undefined;
@@ -155,8 +188,33 @@ export type FieldOfficerStackParamList = {
   FarmerAddress: undefined;
   FarmerLandDetails: undefined;
   FarmerGpsCapture: undefined;
+  OnboardingBoundaryStart: undefined;
+  OnboardingBoundaryCapture: undefined;
+  OnboardingBoundaryPreview: undefined;
+  OnboardingCameraBoundaryStart: undefined;
+  OnboardingCameraBoundaryLive: undefined;
+  OnboardingCameraBoundaryPoints: undefined;
+  OnboardingCameraBoundaryPreview: undefined;
   FarmerProofUpload: undefined;
   FarmerOnboardingReview: undefined;
   FarmerOnboardingSuccess: undefined;
   OnboardedFarmerView: undefined;
+  OfficerGpsValidation: {
+    latitude: number;
+    longitude: number;
+    accuracyM?: number;
+    distanceKm?: number;
+    verificationId: number;
+  };
+  OfficerFeedstockCorrection: {
+    verificationId: number;
+    initialNotes?: string;
+    initialRequiredChanges?: string;
+  };
+  OfficerFullscreenImage: { uri: string; title?: string };
+  OfficerDocumentViewer: { url: string; title?: string };
+  OfficerGpsVerificationMap: { latitude: number; longitude: number; distanceKm?: number };
+  FieldOfficerFeedstockVerification: { verificationId?: number; gpsVerified?: boolean } | undefined;
+  FieldOfficerBiocharProduction: { farmerId?: number; gpsRecaptured?: boolean; latitude?: number; longitude?: number } | undefined;
+  FieldOfficerInventoryMovement: { farmerId?: number; movementId?: number } | undefined;
 } & SecurityScreensParamList;

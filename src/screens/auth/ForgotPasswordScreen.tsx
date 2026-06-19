@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Svg, { Path } from 'react-native-svg';
 
 import { getApiErrorMessage, requestForgotPasswordOtp } from '../../api/authApi';
+import { useTranslation } from '../../i18n/I18nContext';
 import { AuthBackHeader } from '../../components/auth/AuthBackHeader';
 import type { SecurityScreensParamList } from '../../navigation/types';
 import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTheme';
@@ -12,6 +13,7 @@ import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTh
 type Props = NativeStackScreenProps<SecurityScreensParamList, 'ForgotPassword'>;
 
 export function ForgotPasswordScreen({ navigation, route }: Props) {
+  const { t } = useTranslation();
   const initialMobile = route.params?.mobile ?? '';
   const flowOrigin = route.params?.flowOrigin;
   const [mobile, setMobile] = useState(initialMobile);
@@ -97,7 +99,7 @@ export function ForgotPasswordScreen({ navigation, route }: Props) {
               <View style={styles.helpIcon}>
                 <Text style={styles.helpIconText}>?</Text>
               </View>
-              <Text style={styles.helpText}>Need help? Contact Admin</Text>
+              <Text style={styles.helpText}>{t('common.contactHelp')}</Text>
             </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>

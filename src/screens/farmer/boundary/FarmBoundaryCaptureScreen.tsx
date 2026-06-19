@@ -18,6 +18,8 @@ import {
   haversineMeters,
   hasSelfIntersection,
 } from '../../../utils/boundaryGeometry';
+import { getBoundaryFlowRoutes } from '../../../utils/boundaryFlowRoutes';
+import { boundaryRouteParams } from '../../../utils/boundaryNavigation';
 
 type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmBoundaryCapture'>;
 
@@ -103,7 +105,8 @@ export function FarmBoundaryCaptureScreen({ navigation }: Props) {
       return;
     }
 
-    navigation.navigate('FarmBoundaryPreview', { farmId: boundary.farmId! });
+    const routes = getBoundaryFlowRoutes(boundary.sessionMode);
+    navigation.navigate(routes.preview as 'FarmBoundaryPreview', boundaryRouteParams(boundary.farmId ?? undefined));
   };
 
   const currentLocation =

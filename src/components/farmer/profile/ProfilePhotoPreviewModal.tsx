@@ -7,10 +7,18 @@ interface ProfilePhotoPreviewModalProps {
   visible: boolean;
   photoUri: string | null;
   onClose: () => void;
+  caption?: string;
+  cacheFileName?: string;
 }
 
-export function ProfilePhotoPreviewModal({ visible, photoUri, onClose }: ProfilePhotoPreviewModalProps) {
-  const displayUri = useProfilePhotoDisplay(photoUri);
+export function ProfilePhotoPreviewModal({
+  visible,
+  photoUri,
+  onClose,
+  caption = 'Profile Photo Preview',
+  cacheFileName = 'farmer-profile-current.jpg',
+}: ProfilePhotoPreviewModalProps) {
+  const displayUri = useProfilePhotoDisplay(photoUri, cacheFileName);
 
   if (!photoUri || !visible) {
     return null;
@@ -28,7 +36,7 @@ export function ProfilePhotoPreviewModal({ visible, photoUri, onClose }: Profile
                 <ActivityIndicator size="large" color={dashboardTheme.primaryContainer} />
               </View>
             )}
-            <Text style={styles.caption}>Profile Photo Preview</Text>
+            <Text style={styles.caption}>{caption}</Text>
           </View>
         </Pressable>
         <Pressable style={styles.closeButton} onPress={onClose}>

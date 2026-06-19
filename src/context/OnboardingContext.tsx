@@ -1,6 +1,9 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import { buildOnboardingNotes } from '../utils/onboardingNotes';
+import type { AreaUnit, BoundaryPoint } from '../utils/boundaryGeometry';
+import { buildOnboardingBoundaryPayload } from '../utils/onboardingBoundary';
+import type { MappingStatus } from '../utils/landMappingHelpers';
 
 export interface FileAsset {
   uri: string;
@@ -18,6 +21,7 @@ export interface OnboardingResult {
   district?: string;
   state?: string;
   onboarded_at?: string;
+  photo_url?: string;
   farm_id?: number;
   land_survey_number?: string;
   land_area?: number | string;
@@ -65,6 +69,12 @@ export interface OnboardingDraft {
   farmer_photo: FileAsset | null;
   consent_form: FileAsset | null;
   proof_of_land_ownership: FileAsset | null;
+  boundary_mapping_status: MappingStatus;
+  boundary_unit: AreaUnit;
+  boundary_capture_method: 'gps' | 'camera';
+  boundary_points: BoundaryPoint[];
+  boundary_pending_reason: string;
+  boundary_verification_status: string;
 }
 
 const defaultDraft: OnboardingDraft = {
@@ -108,6 +118,12 @@ const defaultDraft: OnboardingDraft = {
   farmer_photo: null,
   consent_form: null,
   proof_of_land_ownership: null,
+  boundary_mapping_status: 'not_mapped',
+  boundary_unit: 'acre',
+  boundary_capture_method: 'gps',
+  boundary_points: [],
+  boundary_pending_reason: '',
+  boundary_verification_status: 'pending_review',
 };
 
 function appendFile(formData: FormData, key: string, file: FileAsset | null) {
@@ -159,6 +175,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         appendScalar(formData, 'farmer_name', draft.farmer_name);
         appendScalar(formData, 'mobile', draft.mobile);
         appendScalar(formData, 'email', draft.email);
+        appendScalar(formData, 'preferred_language', draft.preferred_language);
         appendScalar(formData, 'address_line', draft.address_line);
         appendScalar(formData, 'state', draft.state || 'Gujarat');
         appendScalar(formData, 'district_id', draft.district_id);
@@ -188,6 +205,11 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         appendFile(formData, 'farmer_photo', draft.farmer_photo);
         appendFile(formData, 'consent_form', draft.consent_form);
         appendFile(formData, 'proof_of_land_ownership', draft.proof_of_land_ownership);
+
+        if (draft.boundary_points.length >= 3) {
+          const mappingPayload = buildOnboardingBoundaryPayload(draft);
+          formData.append('boundary_mapping', JSON.stringify(mappingPayload));
+        }
 
         return formData;
       },

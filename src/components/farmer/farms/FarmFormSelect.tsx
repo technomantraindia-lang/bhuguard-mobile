@@ -15,6 +15,7 @@ import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
 export interface FarmSelectOption {
   id: number;
   name: string;
+  pincode?: string | null;
 }
 
 interface FarmFormSelectProps {

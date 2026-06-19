@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 
@@ -8,14 +8,16 @@ import { getApiErrorMessage } from '../../../api/authApi';
 import { AppCard } from '../../../components/AppCard';
 import { ErrorState } from '../../../components/ErrorState';
 import { LoadingState } from '../../../components/LoadingState';
+import { OnboardingReviewPhoto } from '../../../components/onboarding/OnboardingReviewPhoto';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { useOnboarding } from '../../../context/OnboardingContext';
 import { colors } from '../../../theme/colors';
+import { pickString } from '../../../utils/apiHelpers';
 import { formatFarmerCode } from '../../../utils/onboardingNotes';
 
 export function OnboardedFarmerViewScreen() {
   const navigation = useNavigation();
-  const { result } = useOnboarding();
+  const { result, draft } = useOnboarding();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<Record<string, unknown> | null>(null);
@@ -45,6 +47,7 @@ export function OnboardedFarmerViewScreen() {
   const farmerName = String(detail?.name ?? result?.farmer_name ?? '-');
   const mobile = String(detail?.mobile ?? result?.mobile ?? '-');
   const farmerId = Number(detail?.farmer_id ?? result?.farmer_id ?? 0);
+  const photoUrl = pickString(detail, 'photo_url') !== '-' ? pickString(detail, 'photo_url') : result?.photo_url;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
@@ -54,6 +57,9 @@ export function OnboardedFarmerViewScreen() {
         {error ? <ErrorState message={error} onRetry={() => navigation.goBack()} /> : null}
         {!loading && !error ? (
           <AppCard title={farmerName} subtitle={`Mobile: ${mobile}`}>
+            <View style={styles.photoWrap}>
+              <OnboardingReviewPhoto file={draft.farmer_photo} remotePhotoUrl={photoUrl} />
+            </View>
             <Text style={styles.line}>Farmer code: {farmerId ? formatFarmerCode(farmerId) : '-'}</Text>
             <Text style={styles.line}>Village: {String(detail?.village ?? result?.village ?? '-')}</Text>
             <Text style={styles.line}>Taluka: {String(detail?.taluka ?? result?.taluka ?? '-')}</Text>
@@ -72,5 +78,6 @@ export function OnboardedFarmerViewScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   container: { padding: 20, gap: 16 },
+  photoWrap: { alignItems: 'center', marginBottom: 8 },
   line: { fontSize: 14, color: colors.text, marginTop: 4 },
 });

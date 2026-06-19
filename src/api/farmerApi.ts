@@ -61,8 +61,20 @@ export async function getFarmerFarmBoundary(id: number | string) {
   return fetchApiData(`/farmer/farms/${id}/boundary`);
 }
 
+export async function saveFarmerFarmMapping(id: number | string, payload: ApiRecord) {
+  return postApiData(`/farmer/farms/${id}/mapping`, payload);
+}
+
+export async function getFarmerFarmMapping(id: number | string) {
+  return fetchApiData(`/farmer/farms/${id}/mapping`);
+}
+
 export async function saveFarmerFarmBoundary(id: number | string, payload: ApiRecord) {
   return postApiData(`/farmer/farms/${id}/boundary`, payload);
+}
+
+export async function saveFarmerFarmBoundaryCameraCapture(id: number | string, formData: FormData) {
+  return postApiData(`/farmer/farms/${id}/boundary/camera-capture`, formData);
 }
 
 export async function updateFarmerFarmBoundary(id: number | string, payload: ApiRecord) {
@@ -130,6 +142,10 @@ export async function getFarmerBaselineAssessments() {
   return fetchApiData('/farmer/baseline-assessments');
 }
 
+export async function createFarmerBaselineAssessment(payload: ApiRecord) {
+  return postApiData('/farmer/baseline-assessments', payload);
+}
+
 export async function getFarmerBaselineAssessmentDetail(id: number | string) {
   return fetchListItemById(
     '/farmer/baseline-assessments',
@@ -189,7 +205,7 @@ export async function getFarmerFeedstockCollections() {
   return fetchApiData('/farmer/feedstock-collections');
 }
 
-export async function createFarmerFeedstockCollection(payload: ApiRecord) {
+export async function createFarmerFeedstockCollection(payload: ApiRecord | FormData) {
   return postApiData('/farmer/feedstock-collections', payload);
 }
 

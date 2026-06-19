@@ -13,14 +13,17 @@ import type { AreaUnit } from '../../../utils/boundaryGeometry';
 import { MIN_BOUNDARY_POINTS } from '../../../utils/boundaryGeometry';
 import { getFarmCode } from '../../../utils/farmMapHelpers';
 import { pickString, type ApiRecord } from '../../../utils/apiHelpers';
+import { getBoundaryFlowRoutes } from '../../../utils/boundaryFlowRoutes';
+import { boundaryRouteParams, resolveBoundaryFarmId } from '../../../utils/boundaryNavigation';
 
 type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmBoundaryStart'>;
 
 const UNITS: AreaUnit[] = ['acre', 'hectare', 'bigha'];
 
 export function FarmBoundaryStartScreen({ navigation, route }: Props) {
-  const { farmId } = route.params;
+  const farmId = resolveBoundaryFarmId(route.params);
   const boundary = useBoundaryCapture();
+  const routes = getBoundaryFlowRoutes(boundary.sessionMode);
   const { setFarm, loadExistingBoundary, setCurrentLocation } = boundary;
   const [loading, setLoading] = useState(true);
   const [farmName, setFarmName] = useState('Farm');
@@ -33,6 +36,21 @@ export function FarmBoundaryStartScreen({ navigation, route }: Props) {
       setLoading(true);
 
       try {
+        if (boundary.sessionMode !== 'farm' || !farmId) {
+          if (mounted) {
+            setFarmName(boundary.farmName);
+            setFarmCode(boundary.farmCode);
+          }
+
+          const permission = await Location.requestForegroundPermissionsAsync();
+          if (permission.granted) {
+            const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+            setCurrentLocation(position.coords.latitude, position.coords.longitude, position.coords.accuracy ?? 8);
+          }
+
+          return;
+        }
+
         const data = (await getFarmerFarmDetail(farmId)) as ApiRecord;
         const farm = (data.farm ?? data) as ApiRecord;
         const name = pickString(farm, 'farm_name', 'name');
@@ -123,16 +141,28 @@ export function FarmBoundaryStartScreen({ navigation, route }: Props) {
           ))}
         </View>
 
-        <Pressable style={styles.primaryButton} onPress={() => navigation.navigate('FarmBoundaryCapture', { farmId })}>
+        <Pressable
+          style={styles.primaryButton}
+          onPress={() => navigation.navigate(routes.capture as 'FarmBoundaryCapture', boundaryRouteParams(farmId))}
+        >
           <Text style={styles.primaryButtonText}>Start Mapping</Text>
         </Pressable>
 
+        <Pressable
+          style={styles.outlineButton}
+          onPress={() => navigation.navigate(routes.cameraStart as 'CameraBoundaryStart', boundaryRouteParams(farmId))}
+        >
+          <Text style={styles.outlineButtonText}>Capture Boundary with Camera</Text>
+        </Pressable>
+
+        {farmId ? (
         <Pressable
           style={styles.outlineButton}
           onPress={() => navigation.navigate('FarmerFarmDetail', { farmId })}
         >
           <Text style={styles.outlineButtonText}>View Existing Boundary</Text>
         </Pressable>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

@@ -39,7 +39,11 @@ export type BhuguardIconName =
   | 'co2'
   | 'potted_plant'
   | 'badge'
-  | 'search';
+  | 'search'
+  | 'note_add'
+  | 'lock'
+  | 'description'
+  | 'water_drop';
 
 interface BhuguardMaterialIconProps {
   name: BhuguardIconName;
@@ -277,6 +281,26 @@ function iconPath(name: BhuguardIconName, filled: boolean): { d: string; fill?: 
     case 'search':
       return {
         d: 'M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+        fill: true,
+      };
+    case 'note_add':
+      return {
+        d: 'M14 2H6c-1.1 0-2 .9-2 2v16l8-3 8 3V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H5v-2h4V5h2v4h4v2z',
+        fill: true,
+      };
+    case 'lock':
+      return {
+        d: 'M18 8h-1V6a5 5 0 00-10 0v2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2zm-6 9a2 2 0 110-4 2 2 0 010 4zm3.1-9H8.9V6a3.1 3.1 0 016.2 0v2z',
+        fill: true,
+      };
+    case 'description':
+      return {
+        d: 'M14 2H6c-1.1 0-2 .9-2 2v16l8-3 8 3V4c0-1.1-.9-2-2-2zm-2 14H8v-2h4v2zm0-4H8v-2h4v2zm0-4H8V6h4v2z',
+        fill: true,
+      };
+    case 'water_drop':
+      return {
+        d: 'M12 2c-4 6-8 9.33-8 13a8 8 0 1016 0c0-3.67-4-7-8-13zm0 18a5 5 0 01-5-5c0-2.12 2.08-4.88 5-8.82 2.92 3.94 5 6.7 5 8.82a5 5 0 01-5 5z',
         fill: true,
       };
     default:

@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BhuguardMaterialIcon } from '../../shared/BhuguardMaterialIcon';
 import { dashboardShadow, dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
@@ -6,9 +6,10 @@ import type { FarmerActivitiesSummary } from '../../../utils/farmerActivityHelpe
 
 interface FarmerEvidenceSummarySectionProps {
   summary: FarmerActivitiesSummary;
+  onCaptureEvidence?: () => void;
 }
 
-export function FarmerEvidenceSummarySection({ summary }: FarmerEvidenceSummarySectionProps) {
+export function FarmerEvidenceSummarySection({ summary, onCaptureEvidence }: FarmerEvidenceSummarySectionProps) {
   return (
     <View style={[styles.card, dashboardShadow]}>
       <Text style={styles.title}>Evidence Summary</Text>
@@ -18,6 +19,13 @@ export function FarmerEvidenceSummarySection({ summary }: FarmerEvidenceSummaryS
         <EvidenceTile icon="assignment" label="Documents Uploaded" value={String(summary.documentsUploaded)} />
         <EvidenceTile icon="share_location" label="GPS Captured" value={`${summary.gpsCapturedPercent}%`} wide />
       </View>
+
+      {onCaptureEvidence ? (
+        <Pressable style={styles.captureButton} onPress={onCaptureEvidence}>
+          <BhuguardMaterialIcon name="photo_camera" size={18} color={dashboardTheme.onPrimary} />
+          <Text style={styles.captureButtonText}>Capture Live Evidence</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -91,5 +99,20 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: dashboardTheme.primary,
+  },
+  captureButton: {
+    marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: dashboardTheme.primaryContainer,
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  captureButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: dashboardTheme.onPrimary,
   },
 });

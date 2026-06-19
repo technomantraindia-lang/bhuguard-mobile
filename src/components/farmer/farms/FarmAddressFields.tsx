@@ -3,23 +3,27 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 
 import type { FarmAddressValue } from '../../../hooks/useAddFarmerFarmForm';
 import { useAddressCascade } from '../../../hooks/useAddressCascade';
+import { useAutoAddressPincode } from '../../../hooks/useAutoAddressPincode';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
+import { pickAutoPincode } from '../../../utils/addressPincodeHelpers';
 import { FarmFormField } from './FarmFormField';
 import { FarmFormSelect } from './FarmFormSelect';
 
 
 interface FarmAddressFieldsProps {
   value: FarmAddressValue;
+  pincode?: string;
   errors?: {
     district?: string;
     taluka?: string;
     village?: string;
     state?: string;
+    pincode?: string;
   };
-  onChange: (patch: Partial<FarmAddressValue>) => void;
+  onChange: (patch: Partial<FarmAddressValue & { pincode?: string }>) => void;
 }
 
-export function FarmAddressFields({ value, errors, onChange }: FarmAddressFieldsProps) {
+export function FarmAddressFields({ value, pincode = '', errors, onChange }: FarmAddressFieldsProps) {
   const address = useAddressCascade(value.state || 'Gujarat');
   const [manualVillageText, setManualVillageText] = useState(value.villageManual ? value.village : '');
 
@@ -34,6 +38,15 @@ export function FarmAddressFields({ value, errors, onChange }: FarmAddressFields
       void address.loadVillages(Number(value.talukaId));
     }
   }, [value.talukaId]);
+
+  useAutoAddressPincode({
+    talukaId: value.talukaId,
+    villageId: value.villageId,
+    pincode,
+    talukas: address.talukas,
+    villages: address.villages,
+    onPincodeChange: (next) => onChange({ pincode: next }),
+  });
 
   const enableManualVillage = () => {
     setManualVillageText(value.village);
@@ -75,6 +88,7 @@ export function FarmAddressFields({ value, errors, onChange }: FarmAddressFields
             villageId: '',
             village: '',
             villageManual: false,
+            pincode: '',
           })
         }
       />
@@ -95,6 +109,7 @@ export function FarmAddressFields({ value, errors, onChange }: FarmAddressFields
             villageId: '',
             village: '',
             villageManual: false,
+            pincode: pickAutoPincode(option.pincode),
           })
         }
       />
@@ -121,13 +136,16 @@ export function FarmAddressFields({ value, errors, onChange }: FarmAddressFields
             searchable
             searchValue={address.villageSearch}
             onSearchChange={address.setVillageSearch}
-            onSelect={(option) =>
+            onSelect={(option) => {
+              const talukaOption = address.talukas.find((item) => String(item.id) === value.talukaId);
+
               onChange({
                 villageId: String(option.id),
                 village: option.name,
                 villageManual: false,
-              })
-            }
+                pincode: pickAutoPincode(option.pincode, talukaOption?.pincode),
+              });
+            }}
             onCustomValue={(text) =>
               onChange({
                 villageId: '',
@@ -166,6 +184,14 @@ export function FarmAddressFields({ value, errors, onChange }: FarmAddressFields
           </Pressable>
         </>
       )}
+
+      <FarmFormField
+        label="Pincode"
+        value={pincode}
+        placeholder="Auto-filled from taluka"
+        editable={false}
+        error={errors?.pincode}
+      />
 
       {address.loadingDistricts && address.districts.length === 0 ? (
         <View style={styles.loadingRow}>

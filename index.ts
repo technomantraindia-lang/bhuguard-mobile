@@ -1,8 +1,6 @@
 import { registerRootComponent } from 'expo';
 
-import App from './App';
-
-// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
-// It also ensures that whether you load the app in Expo Go or in a native build,
-// the environment is set up appropriately
-registerRootComponent(App);
+// Load App only after the Expo runtime has initialized. Static imports can pull
+// in expo-camera / expo-location before globalThis.expo is ready and crash with:
+// "Cannot read property 'EventEmitter' of undefined".
+registerRootComponent(require('./App').default);

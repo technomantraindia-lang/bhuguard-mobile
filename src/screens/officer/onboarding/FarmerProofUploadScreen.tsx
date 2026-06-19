@@ -2,13 +2,12 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as DocumentPicker from 'expo-document-picker';
-import * as ImagePicker from 'expo-image-picker';
 
-import { AppButton } from '../../../components/AppButton';
 import { AppCard } from '../../../components/AppCard';
+import { LiveEvidenceCaptureCard } from '../../../components/evidence/LiveEvidenceCaptureCard';
 import type { FileAsset } from '../../../context/OnboardingContext';
 import { useOnboarding } from '../../../context/OnboardingContext';
+import { useLiveEvidenceCapture } from '../../../hooks/useLiveEvidenceCapture';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
 import { OnboardingFormScreen } from './OnboardingFormScreen';
@@ -39,16 +38,12 @@ function FileRow({
   title,
   subtitle,
   file,
-  onPick,
   onRemove,
-  pickLabel,
 }: {
   title: string;
   subtitle: string;
   file: FileAsset | null;
-  onPick: () => void;
   onRemove: () => void;
-  pickLabel: string;
 }) {
   return (
     <View style={styles.fileBlock}>
@@ -56,14 +51,11 @@ function FileRow({
         title={title}
         subtitle={file ? `${file.name}${file.size ? ` · ${formatFileSize(file.size)}` : ''}` : subtitle}
       />
-      <View style={styles.fileActions}>
-        <AppButton label={pickLabel} onPress={onPick} variant="secondary" />
-        {file ? (
-          <Pressable onPress={onRemove}>
-            <Text style={styles.remove}>Remove</Text>
-          </Pressable>
-        ) : null}
-      </View>
+      {file ? (
+        <Pressable onPress={onRemove}>
+          <Text style={styles.remove}>Remove</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -72,108 +64,79 @@ export function FarmerProofUploadScreen() {
   const navigation = useNavigation<Nav>();
   const { draft, updateDraft } = useOnboarding();
   const [error, setError] = useState<string | null>(null);
+  const landProofCapture = useLiveEvidenceCapture({ defaultName: 'land-proof.jpg', allowsEditing: true });
+  const farmerPhotoCapture = useLiveEvidenceCapture({ defaultName: 'farmer-photo.jpg', allowsEditing: true });
 
-  const pickProof = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: ['image/*', 'application/pdf'],
-      copyToCacheDirectory: true,
-    });
+  const applyLandProof = async () => {
+    const captured = await landProofCapture.captureEvidence();
 
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
+    if (captured) {
       updateDraft({
-        proof_of_land_ownership: toAsset(
-          asset.uri,
-          asset.name ?? 'proof.pdf',
-          asset.mimeType ?? 'application/pdf',
-          asset.size,
-        ),
+        proof_of_land_ownership: toAsset(captured.uri, captured.name, captured.type),
       });
     }
   };
 
-  const pickPhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
+  const applyFarmerPhoto = async () => {
+    const captured = await farmerPhotoCapture.captureEvidence();
 
-    if (!permission.granted) {
-      setError('Camera permission is required for farmer photo.');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      quality: 0.8,
-      allowsEditing: true,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
+    if (captured) {
       updateDraft({
-        farmer_photo: toAsset(asset.uri, 'farmer_photo.jpg', asset.mimeType ?? 'image/jpeg', asset.fileSize),
+        farmer_photo: toAsset(captured.uri, captured.name, captured.type),
       });
     }
   };
 
-  const pickPhotoFromGallery = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permission.granted) {
-      setError('Gallery permission is required to pick farmer photo.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      quality: 0.8,
-      allowsEditing: true,
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      updateDraft({
-        farmer_photo: toAsset(
-          asset.uri,
-          asset.fileName ?? 'farmer_photo.jpg',
-          asset.mimeType ?? 'image/jpeg',
-          asset.fileSize,
-        ),
-      });
-    }
-  };
+  const displayError = error ?? landProofCapture.error ?? farmerPhotoCapture.error;
 
   return (
     <OnboardingFormScreen
       stepCurrent={5}
       title="Documents"
-      subtitle="Upload land proof and farmer photo for verification."
+      subtitle="Capture live photos for land proof and farmer verification."
       onNext={() => navigation.navigate('FarmerOnboardingReview')}
     >
       <FileRow
         title="Proof of land ownership"
-        subtitle="Recommended — PDF or image"
+        subtitle="Capture a live photo of the land document"
         file={draft.proof_of_land_ownership}
-        onPick={pickProof}
-        onRemove={() => updateDraft({ proof_of_land_ownership: null })}
-        pickLabel="Upload land proof"
+        onRemove={() => {
+          landProofCapture.clearEvidence();
+          updateDraft({ proof_of_land_ownership: null });
+        }}
       />
+      <LiveEvidenceCaptureCard
+        evidence={landProofCapture.evidence}
+        capturing={landProofCapture.capturing}
+        error={landProofCapture.error}
+        onOpenCamera={() => void applyLandProof()}
+        onRetake={() => void applyLandProof()}
+      />
+
       <FileRow
         title="Farmer photo"
-        subtitle="Optional — camera or gallery"
+        subtitle="Live camera photo for verification"
         file={draft.farmer_photo}
-        onPick={pickPhoto}
-        onRemove={() => updateDraft({ farmer_photo: null })}
-        pickLabel="Capture photo"
+        onRemove={() => {
+          farmerPhotoCapture.clearEvidence();
+          updateDraft({ farmer_photo: null });
+        }}
       />
-      {draft.farmer_photo ? null : (
-        <AppButton label="Pick photo from gallery" onPress={pickPhotoFromGallery} variant="secondary" />
-      )}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <LiveEvidenceCaptureCard
+        evidence={farmerPhotoCapture.evidence}
+        capturing={farmerPhotoCapture.capturing}
+        error={farmerPhotoCapture.error}
+        onOpenCamera={() => void applyFarmerPhoto()}
+        onRetake={() => void applyFarmerPhoto()}
+      />
+
+      {displayError ? <Text style={styles.error}>{displayError}</Text> : null}
     </OnboardingFormScreen>
   );
 }
 
 const styles = StyleSheet.create({
   fileBlock: { gap: 8 },
-  fileActions: { gap: 8 },
   remove: { color: colors.error, fontWeight: '600', textAlign: 'center', paddingVertical: 4 },
   error: { color: colors.error, fontSize: 14 },
 });

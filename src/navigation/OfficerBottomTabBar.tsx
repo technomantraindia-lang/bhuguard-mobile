@@ -2,22 +2,25 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { OfficerMaterialIcon, type OfficerIconName } from './OfficerMaterialIcon';
+import { BhuguardMaterialIcon, type BhuguardIconName } from '../components/shared/BhuguardMaterialIcon';
+import { useTranslation } from '../i18n/I18nContext';
 import { officerShadow, officerTheme } from '../theme/officerDashboardTheme';
 
-const VISIBLE_TABS: Array<{ routeName: string; label: string; icon: OfficerIconName }> = [
-  { routeName: 'Home', label: 'Tasks', icon: 'assignment_turned_in' },
-  { routeName: 'Map', label: 'Map', icon: 'map' },
-  { routeName: 'Farmers', label: 'Farmers', icon: 'group' },
-  { routeName: 'Profile', label: 'Profile', icon: 'account_circle' },
+const TAB_CONFIG: Array<{ routeName: string; labelKey: string; icon: BhuguardIconName }> = [
+  { routeName: 'Home', labelKey: 'tabs.officer.dashboard', icon: 'assignment_turned_in' },
+  { routeName: 'Visits', labelKey: 'tabs.officer.visits', icon: 'event_note' },
+  { routeName: 'Evidence', labelKey: 'tabs.officer.evidence', icon: 'photo_camera' },
+  { routeName: 'Reports', labelKey: 'tabs.officer.reports', icon: 'pending_actions' },
+  { routeName: 'Profile', labelKey: 'tabs.officer.profile', icon: 'account_circle' },
 ];
 
 export function OfficerBottomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      {VISIBLE_TABS.map((tab) => {
+      {TAB_CONFIG.map((tab) => {
         const routeIndex = state.routes.findIndex((route) => route.name === tab.routeName);
 
         if (routeIndex < 0) {
@@ -49,22 +52,24 @@ export function OfficerBottomTabBar({ state, descriptors, navigation }: BottomTa
           >
             {focused ? (
               <View style={styles.activeIconWrap}>
-                <OfficerMaterialIcon
+                <BhuguardMaterialIcon
                   name={tab.icon}
-                  size={22}
+                  size={20}
                   color={officerTheme.onPrimaryContainer}
-                  filled={tab.icon === 'assignment_turned_in' || tab.icon === 'map'}
+                  filled={tab.icon === 'assignment_turned_in' || tab.icon === 'event_note'}
                 />
               </View>
             ) : (
-              <OfficerMaterialIcon
+              <BhuguardMaterialIcon
                 name={tab.icon}
-                size={24}
+                size={22}
                 color={officerTheme.onSurfaceVariant}
                 filled={false}
               />
             )}
-            <Text style={[styles.label, focused && styles.labelActive]}>{tab.label}</Text>
+            <Text style={[styles.label, focused && styles.labelActive]} numberOfLines={1}>
+              {t(tab.labelKey)}
+            </Text>
           </Pressable>
         );
       })}
@@ -82,11 +87,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: officerTheme.outlineVariant,
     paddingTop: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     ...officerShadow,
   },
   item: {
-    width: 64,
+    flex: 1,
+    maxWidth: 72,
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 4,
@@ -99,15 +105,16 @@ const styles = StyleSheet.create({
   activeIconWrap: {
     backgroundColor: officerTheme.primaryContainer,
     borderRadius: 999,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     marginBottom: 2,
   },
   label: {
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 10,
+    lineHeight: 12,
     fontWeight: '500',
     color: officerTheme.onSurfaceVariant,
+    textAlign: 'center',
   },
   labelActive: {
     color: officerTheme.primary,

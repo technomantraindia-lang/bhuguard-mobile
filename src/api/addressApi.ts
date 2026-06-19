@@ -3,6 +3,7 @@ import { fetchApiData } from '../utils/apiHelpers';
 export interface AddressOption {
   id: number;
   name: string;
+  pincode?: string | null;
 }
 
 export async function getStates() {
@@ -34,4 +35,12 @@ export async function getVillages(talukaId: number, search?: string) {
     search: search?.trim() || undefined,
   });
   return data.villages ?? [];
+}
+
+export async function getTalukaPincode(talukaId: number) {
+  const data = await fetchApiData<{ pincode: string | null }>('/address/pincode', {
+    taluka_id: talukaId,
+  });
+
+  return data.pincode ?? '';
 }

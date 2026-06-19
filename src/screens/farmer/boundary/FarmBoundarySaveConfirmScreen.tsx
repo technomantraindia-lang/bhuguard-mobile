@@ -6,11 +6,33 @@ import { BoundaryFlowHeader } from '../../../components/farmer/boundary/Boundary
 import { useBoundaryCapture } from '../../../context/BoundaryCaptureContext';
 import type { FarmerStackParamList } from '../../../navigation/types';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
+import { getBoundaryFlowRoutes } from '../../../utils/boundaryFlowRoutes';
+import { boundaryRouteParams } from '../../../utils/boundaryNavigation';
 
 type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmBoundarySaveConfirm'>;
 
 export function FarmBoundarySaveConfirmScreen({ navigation }: Props) {
   const boundary = useBoundaryCapture();
+  const routes = getBoundaryFlowRoutes(boundary.sessionMode);
+
+  const confirm = () => {
+    if (boundary.sessionMode === 'prefarm') {
+      navigation.navigate('FarmerAddFarm');
+      return;
+    }
+
+    if (boundary.sessionMode === 'onboarding') {
+      navigation.navigate(routes.preview as 'FarmBoundaryPreview', boundaryRouteParams());
+      return;
+    }
+
+    navigation.navigate(routes.uploading as 'FarmBoundaryUploading', boundaryRouteParams(boundary.farmId ?? undefined));
+  };
+
+  const confirmLabel =
+    boundary.sessionMode === 'onboarding' || boundary.sessionMode === 'prefarm'
+      ? 'Confirm Land Area'
+      : 'Confirm & Upload';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -28,11 +50,8 @@ export function FarmBoundarySaveConfirmScreen({ navigation }: Props) {
           This boundary will be saved for farm verification, carbon monitoring and future reports.
         </Text>
 
-        <Pressable
-          style={styles.primaryButton}
-          onPress={() => navigation.navigate('FarmBoundaryUploading', { farmId: boundary.farmId! })}
-        >
-          <Text style={styles.primaryButtonText}>Confirm & Upload</Text>
+        <Pressable style={styles.primaryButton} onPress={confirm}>
+          <Text style={styles.primaryButtonText}>{confirmLabel}</Text>
         </Pressable>
         <Pressable style={styles.cancelButton} onPress={() => navigation.goBack()}>
           <Text style={styles.cancelButtonText}>Cancel</Text>

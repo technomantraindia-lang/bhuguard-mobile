@@ -1,8 +1,8 @@
-import { API_BASE_URL } from '../api/client';
+import { getCachedApiBaseUrl } from '../storage/apiConfigStorage';
 import { pickString, type ApiRecord } from './apiHelpers';
 
 function apiOrigin(): string {
-  return API_BASE_URL.replace(/\/api\/?$/, '');
+  return getCachedApiBaseUrl().replace(/\/api\/?$/, '');
 }
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0']);
@@ -19,7 +19,7 @@ export function resolveMediaUrl(url: string | null | undefined): string | null {
   }
 
   if (trimmed.startsWith('/api/')) {
-    const base = API_BASE_URL.replace(/\/$/, '');
+    const base = getCachedApiBaseUrl().replace(/\/$/, '');
 
     return `${base}${trimmed.slice(4)}`;
   }

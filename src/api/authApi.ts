@@ -46,6 +46,43 @@ export async function loginMpin(mobile: string, mpin: string): Promise<LoginPass
   return { token, user, user_type: user.user_type };
 }
 
+export async function loginBiometricToken(payload: {
+  mobile: string;
+  device_uuid: string;
+  device_name?: string;
+  platform?: string;
+}): Promise<LoginPasswordResult> {
+  const response = await apiClient.post<ApiSuccessResponse<LoginPasswordData>>('/auth/login/biometric-token', {
+    mobile: payload.mobile.trim(),
+    device_uuid: payload.device_uuid,
+    device_name: payload.device_name ?? DEVICE_NAME,
+    platform: payload.platform,
+  });
+  const { token, user } = response.data.data;
+
+  return { token, user, user_type: user.user_type };
+}
+
+export async function requestLoginOtp(mobile: string) {
+  const response = await apiClient.post<ApiSuccessResponse<Record<string, unknown>>>(
+    '/auth/login/request-otp',
+    { mobile: mobile.trim() },
+  );
+
+  return response.data.data;
+}
+
+export async function verifyLoginOtp(mobile: string, otp: string): Promise<LoginPasswordResult> {
+  const response = await apiClient.post<ApiSuccessResponse<LoginPasswordData>>('/auth/login/verify-otp', {
+    mobile: mobile.trim(),
+    otp: otp.trim(),
+    device_name: DEVICE_NAME,
+  });
+  const { token, user } = response.data.data;
+
+  return { token, user, user_type: user.user_type };
+}
+
 export async function getAuthMe() {
   const response = await apiClient.get<ApiSuccessResponse<{ user: LoginPasswordResult['user'] }>>('/auth/me');
   return response.data.data;

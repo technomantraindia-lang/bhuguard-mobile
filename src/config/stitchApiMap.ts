@@ -82,6 +82,8 @@ export const STITCH_DETAIL_FETCHERS: Record<
 export const STITCH_POST_ENDPOINTS: Record<string, string> = {
   add_activity_log: '/farmer/activity-logs',
   add_practice_record: '/farmer/regenerative-practices',
+  add_farmer_evidence: '/farmer/evidence',
+  farmer_evidence_upload: '/farmer/evidence',
   add_feedstock_collection: '/farmer/feedstock-collections',
   add_production_batch: '/farmer/biochar/batches',
   plantation_registration: '/farmer/agroforestry/plantations',

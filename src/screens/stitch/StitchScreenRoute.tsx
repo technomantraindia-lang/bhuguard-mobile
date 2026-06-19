@@ -1,43 +1,98 @@
 import { useEffect } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import type { CompositeNavigationProp } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { STITCH_REGISTRY } from '../../config/stitchRegistry';
+import {
+  STITCH_LIVE_EVIDENCE_FORM_KEYS,
+  STITCH_NAVIGATE_REPLACEMENTS,
+} from '../../config/stitchScreenRoutes';
+import { useFieldOfficerVisitsData } from '../../hooks/useFieldOfficerVisitsData';
+import type { FieldOfficerStackParamList, FarmerStackParamList } from '../../navigation/types';
+import { FarmerLiveEvidenceUploadScreen } from '../shared/FarmerLiveEvidenceUploadScreen';
 import { StitchScreenView } from './StitchScreenView';
-import type { FarmerStackParamList, FarmerTabParamList } from '../../navigation/types';
 
 export type StitchRouteParams = {
   StitchScreen: { screenKey: string; itemId?: number };
 };
 
-type Props = NativeStackScreenProps<StitchRouteParams, 'StitchScreen'>;
+type FarmerProps = NativeStackScreenProps<FarmerStackParamList, 'StitchScreen'>;
+type OfficerProps = NativeStackScreenProps<FieldOfficerStackParamList, 'StitchScreen'>;
+type Props = FarmerProps | OfficerProps;
 
-type FarmerNav = CompositeNavigationProp<
-  NativeStackNavigationProp<FarmerStackParamList>,
-  BottomTabNavigationProp<FarmerTabParamList>
->;
+function isOfficerScreenKey(screenKey: string): boolean {
+  const role = STITCH_REGISTRY[screenKey]?.role;
+  return role === 'officer' || role === 'shared';
+}
+
+function stitchReplace(navigation: Props['navigation'], screen: string, params?: object) {
+  (navigation as { replace: (name: string, params?: object) => void }).replace(screen, params);
+}
+
+function needsAssignment(replacement: (typeof STITCH_NAVIGATE_REPLACEMENTS)[string] | undefined): boolean {
+  return (
+    replacement?.officer === 'VisitCheckIn' ||
+    replacement?.officer === 'VisitEvidenceUpload'
+  );
+}
 
 export function StitchScreenRoute({ route, navigation }: Props) {
-  const farmerNavigation = navigation as unknown as FarmerNav;
   const { screenKey, itemId } = route.params;
+  const replacement = STITCH_NAVIGATE_REPLACEMENTS[screenKey];
+  const registryRole = STITCH_REGISTRY[screenKey]?.role;
+  const officerContext = useFieldOfficerVisitsData();
+  const isOfficer = isOfficerScreenKey(screenKey);
+  const assignmentId = itemId ?? officerContext.primaryAssignmentId ?? undefined;
 
   useEffect(() => {
-    if (screenKey === 'add_activity_log') {
-      farmerNavigation.replace('FarmerSubmitActivity', itemId ? { farmId: itemId } : undefined);
+    if (!replacement) {
+      return;
     }
 
-    if (screenKey === 'add_new_plot') {
-      farmerNavigation.replace('FarmerAddFarm');
-    }
-  }, [farmerNavigation, itemId, screenKey]);
+    const context = { assignmentId };
 
-  if (screenKey === 'add_activity_log' || screenKey === 'add_new_plot') {
+    if (registryRole === 'farmer' && replacement.farmer) {
+      stitchReplace(navigation, replacement.farmer, replacement.buildParams?.(itemId, context));
+      return;
+    }
+
+    if ((registryRole === 'officer' || registryRole === 'shared') && replacement.officer) {
+      if (!assignmentId && needsAssignment(replacement)) {
+        return;
+      }
+
+      stitchReplace(navigation, replacement.officer, replacement.buildParams?.(itemId, context));
+    }
+  }, [assignmentId, itemId, navigation, registryRole, replacement, screenKey]);
+
+  if (replacement?.farmer && registryRole === 'farmer') {
     return null;
   }
 
+  if (replacement?.officer && (registryRole === 'officer' || registryRole === 'shared')) {
+    if (!assignmentId && needsAssignment(replacement)) {
+      return (
+        <StitchScreenView
+          screenKey={screenKey}
+          itemId={itemId}
+          stitchRouteName="StitchScreen"
+          missingAssignmentMessage="Assign a visit before opening this verification screen."
+        />
+      );
+    }
+
+    return null;
+  }
+
+  if (STITCH_LIVE_EVIDENCE_FORM_KEYS.has(screenKey)) {
+    return <FarmerLiveEvidenceUploadScreen screenKey={screenKey} farmId={itemId} />;
+  }
+
   return (
-    <StitchScreenView screenKey={screenKey} itemId={itemId} stitchRouteName="StitchScreen" />
+    <StitchScreenView
+      screenKey={screenKey}
+      itemId={itemId}
+      stitchRouteName="StitchScreen"
+      officerAssignmentId={isOfficer ? assignmentId : undefined}
+    />
   );
 }

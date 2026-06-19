@@ -1,83 +1,44 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
-
-
 import { FieldOfficerDashboard } from '../screens/officer/FieldOfficerDashboard';
-
 import { FieldOfficerProfileScreen } from '../screens/officer/FieldOfficerProfileScreen';
-
-import { OfficerFarmersTabScreen } from '../screens/tabs/OfficerFarmersTabScreen';
-
+import { OfficerEvidenceTabScreen } from '../screens/tabs/OfficerEvidenceTabScreen';
 import { OfficerMapTabScreen } from '../screens/tabs/OfficerMapTabScreen';
-
+import { OfficerReportsTabScreen } from '../screens/tabs/OfficerReportsTabScreen';
 import { OfficerVisitsTabScreen } from '../screens/tabs/OfficerVisitsTabScreen';
-
 import type { FieldOfficerTabParamList } from './types';
-
 import { OfficerBottomTabBar } from './OfficerBottomTabBar';
-
 import { officerTheme } from '../theme/officerDashboardTheme';
-
-
 
 const Tab = createBottomTabNavigator<FieldOfficerTabParamList>();
 
-
-
 export function OfficerTabNavigator() {
-
   return (
-
     <Tab.Navigator
-
       tabBar={(props) => <OfficerBottomTabBar {...props} />}
-
       screenOptions={{
-
         headerShown: false,
-
         tabBarShowLabel: false,
-
+        lazy: true,
         tabBarStyle: {
-
           backgroundColor: officerTheme.surfaceLowest,
-
           borderTopColor: officerTheme.outlineVariant,
-
         },
-
       }}
-
     >
-
-      <Tab.Screen name="Home" component={FieldOfficerDashboard} options={{ tabBarLabel: 'Tasks' }} />
-
-      <Tab.Screen name="Map" component={OfficerMapTabScreen} options={{ tabBarLabel: 'Map' }} />
-
-      <Tab.Screen name="Farmers" component={OfficerFarmersTabScreen} options={{ tabBarLabel: 'Farmers' }} />
-
-      <Tab.Screen name="Profile" component={FieldOfficerProfileScreen} options={{ tabBarLabel: 'Profile' }} />
-
+      <Tab.Screen name="Home" component={FieldOfficerDashboard} />
+      <Tab.Screen name="Visits" component={OfficerVisitsTabScreen} />
+      <Tab.Screen name="Evidence" component={OfficerEvidenceTabScreen} />
+      <Tab.Screen name="Reports" component={OfficerReportsTabScreen} />
+      <Tab.Screen name="Profile" component={FieldOfficerProfileScreen} />
       <Tab.Screen
-
-        name="Visits"
-
-        component={OfficerVisitsTabScreen}
-
+        name="Map"
+        component={OfficerMapTabScreen}
         options={{
-
           tabBarButton: () => null,
-
           tabBarItemStyle: { display: 'none' },
-
         }}
-
       />
-
     </Tab.Navigator>
-
   );
-
 }
-
-

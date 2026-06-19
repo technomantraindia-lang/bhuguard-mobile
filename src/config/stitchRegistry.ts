@@ -39,11 +39,13 @@ export const STITCH_REGISTRY: Record<string, StitchScreenConfig> = {
   farmer_farms_list: { title: 'My Farms', mode: 'list', role: 'farmer', apiPath: '/farmer/farms', listKeys: ['farms'] },
   farmer_weekly_updates_list: { title: 'Weekly Updates', mode: 'list', role: 'farmer', apiPath: '/farmer/weekly-updates', listKeys: ['weekly_updates', 'updates'] },
   farmer_evidence_list: { title: 'Evidence Uploads', mode: 'list', role: 'farmer', apiPath: '/farmer/evidence', listKeys: ['evidence', 'evidence_uploads'] },
+  add_farmer_evidence: { title: 'Capture Evidence', mode: 'form', role: 'farmer', pending: false },
+  farmer_evidence_upload: { title: 'Capture Evidence', mode: 'form', role: 'farmer', pending: false },
   farmer_service_submissions_list: { title: 'Service Submissions', mode: 'list', role: 'farmer', apiPath: '/farmer/service-submissions', listKeys: ['submissions'] },
   farmer_dashboard_info: { title: 'Dashboard Summary', mode: 'info', role: 'farmer', apiPath: '/farmer/dashboard' },
   add_new_plot: { title: 'Add New Farm', mode: 'form', role: 'farmer' },
   gps_polygon_capture: { title: 'GPS Polygon Capture', mode: 'form', role: 'farmer', pending: true },
-  boundary_evidence: { title: 'Boundary Evidence', mode: 'form', role: 'farmer', pending: true },
+  boundary_evidence: { title: 'Boundary Evidence', mode: 'form', role: 'farmer', pending: false },
 
   // Farmer — activity
   farmer_activity_log_list: { title: 'Activity Logs', mode: 'list', role: 'farmer', apiPath: '/farmer/activity-logs', listKeys: ['activity_logs'], detailApiPath: '/farmer/activity-logs/{id}', detailScreenKey: 'activity_detail', detailRootKeys: ['activity_log'] },
@@ -52,7 +54,7 @@ export const STITCH_REGISTRY: Record<string, StitchScreenConfig> = {
 
   // Farmer — baseline & soil
   baseline_assessment_list: { title: 'Baseline Assessments', mode: 'list', role: 'farmer', apiPath: '/farmer/baseline-assessments', listKeys: ['baseline_assessments', 'assessments'], detailScreenKey: 'baseline_detail' },
-  add_baseline_assessment: { title: 'Add Baseline Assessment', mode: 'form', role: 'farmer', pending: true },
+  add_baseline_assessment: { title: 'Add Baseline Assessment', mode: 'form', role: 'farmer', pending: false },
   baseline_detail: {
     title: 'Baseline Detail',
     mode: 'detail',
@@ -61,7 +63,7 @@ export const STITCH_REGISTRY: Record<string, StitchScreenConfig> = {
     detailRootKeys: ['baseline_assessment'],
   },
   soil_sample_list: { title: 'Soil Samples', mode: 'list', role: 'farmer', apiPath: '/farmer/soil-samples', listKeys: ['soil_samples', 'samples'], detailScreenKey: 'soil_sample_detail' },
-  add_soil_sample: { title: 'Add Soil Sample', mode: 'form', role: 'farmer', pending: true },
+  add_soil_sample: { title: 'Add Soil Sample', mode: 'form', role: 'farmer', pending: false },
   soil_sample_detail: {
     title: 'Soil Sample Detail',
     mode: 'detail',
@@ -82,7 +84,7 @@ export const STITCH_REGISTRY: Record<string, StitchScreenConfig> = {
     listSubtitleKeys: ['activity_date', 'crop_name'],
     detailScreenKey: 'practice_detail',
   },
-  add_practice_record: { title: 'Add Practice Record', mode: 'form', role: 'farmer', pending: true },
+  add_practice_record: { title: 'Add Practice Record', mode: 'form', role: 'farmer', pending: false },
   practice_detail: {
     title: 'Practice Detail',
     mode: 'detail',
@@ -147,7 +149,9 @@ export const STITCH_REGISTRY: Record<string, StitchScreenConfig> = {
   },
   feedstock_collection_list: { title: 'Feedstock Collections', mode: 'list', role: 'farmer', apiPath: '/farmer/feedstock-collections', listKeys: ['feedstock_collections'] },
   biochar_feedstock_list: { title: 'Biochar Feedstock', mode: 'list', role: 'farmer', apiPath: '/farmer/biochar/feedstock', listKeys: ['feedstock', 'feedstock_collections'] },
-  add_feedstock_collection: { title: 'Add Feedstock Collection', mode: 'form', role: 'farmer', pending: true },
+  add_feedstock_collection: { title: 'Feedstock Collection', mode: 'form', role: 'farmer' },
+  feedstock_verification: { title: 'Feedstock Verification', mode: 'form', role: 'officer' },
+  officer_biochar_production: { title: 'Biochar Production', mode: 'form', role: 'officer' },
   biochar_quality_test: { title: 'Biochar Quality Test', mode: 'form', role: 'farmer', pending: true },
   biochar_inventory: { title: 'Biochar Inventory', mode: 'list', role: 'farmer', pending: true },
   biochar_application_screen: { title: 'Biochar Application', mode: 'list', role: 'farmer', apiPath: '/farmer/biochar/applications', listKeys: ['applications'] },
@@ -207,7 +211,7 @@ export const STITCH_REGISTRY: Record<string, StitchScreenConfig> = {
 
   // Offline / Sync
   offline_capture: { title: 'Offline Capture', mode: 'form', role: 'shared', pending: true },
-  offline_evidence_capture: { title: 'Offline Evidence', mode: 'form', role: 'shared', pending: true },
+  offline_evidence_capture: { title: 'Offline Evidence', mode: 'form', role: 'shared', pending: false },
   pending_sync_queue: { title: 'Pending Sync Queue', mode: 'list', role: 'shared', pending: true },
   sync_detail: { title: 'Sync Detail', mode: 'detail', role: 'shared', pending: true },
   sync_conflict: { title: 'Sync Conflict', mode: 'info', role: 'shared', pending: true },
@@ -218,8 +222,10 @@ export const STITCH_REGISTRY: Record<string, StitchScreenConfig> = {
   assigned_verification_list: { title: 'Assigned Verifications', mode: 'list', role: 'officer', apiPath: '/field-officer/assignments', listKeys: ['assignments'], detailApiPath: '/field-officer/assignments/{id}', detailScreenKey: 'verification_detail', detailRootKeys: ['assignment'] },
   verification_dashboard: { title: 'Verification Dashboard', mode: 'hub', role: 'officer', hubChildren: ['assigned_verification_list', 'gps_verification', 'photo_verification', 'evidence_review'] },
   verification_detail: { title: 'Verification Detail', mode: 'detail', role: 'officer', detailApiPath: '/field-officer/assignments/{id}', detailRootKeys: ['assignment'] },
-  gps_verification: { title: 'GPS Verification', mode: 'form', role: 'officer', pending: true },
-  photo_verification: { title: 'Photo Verification', mode: 'form', role: 'officer', pending: true },
+  gps_verification: { title: 'GPS Verification', mode: 'form', role: 'officer', pending: false },
+  photo_verification: { title: 'Photo Verification', mode: 'form', role: 'officer', pending: false },
+  monitoring_evidence_upload: { title: 'Monitoring Evidence', mode: 'form', role: 'officer', pending: false },
+  audit_evidence_upload: { title: 'Audit Evidence', mode: 'form', role: 'officer', pending: false },
   evidence_review: { title: 'Evidence Review', mode: 'list', role: 'officer', apiPath: '/field-officer/assignments', listKeys: ['assignments'], detailScreenKey: 'assignment_evidence_detail' },
   assignment_evidence_detail: { title: 'Assignment Evidence', mode: 'detail', role: 'officer', detailApiPath: '/field-officer/assignments/{id}/evidence', detailRootKeys: ['evidence'] },
   officer_farmers_list: { title: 'Onboarded Farmers', mode: 'list', role: 'officer', apiPath: '/field-officer/farmers', listKeys: ['farmers'], detailScreenKey: 'officer_farmer_detail', detailRootKeys: ['farmer'] },
@@ -236,13 +242,13 @@ export const STITCH_REGISTRY: Record<string, StitchScreenConfig> = {
   select_district: { title: 'Select District', mode: 'form', role: 'officer', pending: true },
   select_taluka: { title: 'Select Taluka', mode: 'form', role: 'officer', pending: true },
   select_village: { title: 'Select Village', mode: 'form', role: 'officer', pending: true },
-  consent_legal: { title: 'Consent & Legal', mode: 'form', role: 'officer', pending: true },
-  land_registration: { title: 'Land Registration', mode: 'form', role: 'officer', pending: true },
-  gps_location_capture: { title: 'GPS Location Capture', mode: 'form', role: 'officer', pending: true },
-  proof_of_land_ownership_upload: { title: 'Proof of Land Ownership', mode: 'form', role: 'officer', pending: true },
-  document_uploads: { title: 'Document Uploads', mode: 'form', role: 'officer', pending: true },
-  onboarding_review_stitch: { title: 'Onboarding Review', mode: 'info', role: 'officer', pending: true },
-  onboarding_success_stitch: { title: 'Onboarding Success', mode: 'info', role: 'officer', pending: true },
+  consent_legal: { title: 'Consent & Legal', mode: 'form', role: 'officer', pending: false },
+  land_registration: { title: 'Land Registration', mode: 'form', role: 'officer', pending: false },
+  gps_location_capture: { title: 'GPS Location Capture', mode: 'form', role: 'officer', pending: false },
+  proof_of_land_ownership_upload: { title: 'Proof of Land Ownership', mode: 'form', role: 'officer', pending: false },
+  document_uploads: { title: 'Document Uploads', mode: 'form', role: 'officer', pending: false },
+  onboarding_review_stitch: { title: 'Onboarding Review', mode: 'info', role: 'officer', pending: false },
+  onboarding_success_stitch: { title: 'Onboarding Success', mode: 'info', role: 'officer', pending: false },
 
   // Shared UI demos
   empty_state_demo: { title: 'Empty State', mode: 'info', role: 'shared', pending: true },
@@ -263,6 +269,7 @@ export const STITCH_REGISTRY: Record<string, StitchScreenConfig> = {
       'plot_list',
       'farmer_farms_list',
       'farmer_evidence_list',
+      'add_farmer_evidence',
       'farmer_service_submissions_list',
       'farmer_dashboard_info',
       'satellite_dashboard',
@@ -277,7 +284,7 @@ export const STITCH_REGISTRY: Record<string, StitchScreenConfig> = {
     title: 'DMRV Modules',
     mode: 'hub',
     role: 'officer',
-    hubChildren: ['verification_dashboard', 'officer_farmers_list', 'officer_activity_logs', 'officer_baseline_assessments', 'officer_soil_samples', 'officer_monitoring_reports', 'risk_assessment_dashboard', 'audit_trail', 'qr_scanner', 'ai_photo_verification'],
+    hubChildren: ['verification_dashboard', 'officer_farmers_list', 'officer_activity_logs', 'officer_baseline_assessments', 'officer_soil_samples', 'officer_monitoring_reports', 'photo_verification', 'gps_verification', 'risk_assessment_dashboard', 'audit_trail', 'qr_scanner', 'ai_photo_verification'],
   },
   company_dmrv_hub: {
     title: 'DMRV Modules',

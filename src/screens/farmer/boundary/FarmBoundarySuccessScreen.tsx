@@ -10,18 +10,28 @@ import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
 type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmBoundarySuccess'>;
 
 export function FarmBoundarySuccessScreen({ navigation, route }: Props) {
-  const { farmId, areaLabel, pointCount } = route.params;
+  const { farmId, areaLabel, pointCount, photoCount, captureMethod } = route.params;
   const boundary = useBoundaryCapture();
+  const isCamera = captureMethod === 'camera';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <BoundaryFlowHeader title="Farm Boundary Saved" subtitle="Your farm boundary has been mapped successfully." onBack={() => navigation.popToTop()} />
+      <BoundaryFlowHeader
+        title={isCamera ? 'Farm Boundary Captured' : 'Farm Boundary Saved'}
+        subtitle={
+          isCamera
+            ? 'Your farm boundary has been captured and saved successfully.'
+            : 'Your farm boundary has been mapped successfully.'
+        }
+        onBack={() => navigation.popToTop()}
+      />
 
       <View style={styles.content}>
         <View style={styles.card}>
           <Row label="Farm Name" value={boundary.farmName} />
           <Row label="Area" value={areaLabel} />
-          <Row label="Points" value={String(pointCount)} />
+          <Row label="Total Points" value={String(pointCount)} />
+          {photoCount != null ? <Row label="Total Photos" value={String(photoCount)} /> : null}
           <Row label="Status" value="Mapped" />
           <Row label="Upload" value="Uploaded Successfully" />
         </View>

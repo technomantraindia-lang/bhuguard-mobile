@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   Alert,
   FlatList,
-  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -16,9 +15,11 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Svg, { Path } from 'react-native-svg';
 
 import { FarmerSubmitActivityHeader } from '../../components/farmer/FarmerSubmitActivityHeader';
+import { FarmerActivityTypePicker } from '../../components/farmer/activities/FarmerActivityTypePicker';
+import { BiocharDmrvEngineCard } from '../../components/farmer/activities/BiocharDmrvEngineCard';
 import { SubmitActivityCard } from '../../components/farmer/SubmitActivityCard';
+import { LiveEvidenceCaptureCard } from '../../components/evidence/LiveEvidenceCaptureCard';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
-import { FARMER_ACTIVITY_TYPES } from '../../constants/farmerActivityTypes';
 import { FARMER_ACTIVITY_UNITS } from '../../constants/farmerActivityUnits';
 import { useSubmitActivityForm } from '../../hooks/useSubmitActivityForm';
 import type { FarmerStackParamList } from '../../navigation/types';
@@ -98,20 +99,15 @@ export function FarmerSubmitActivityScreen({ navigation, route }: Props) {
         </SubmitActivityCard>
 
         <SubmitActivityCard title="What activity did you do?">
-          <View style={styles.chipWrap}>
-            {FARMER_ACTIVITY_TYPES.map((option) => {
-              const selected = form.activityType === option.value;
-
-              return (
-                <Pressable
-                  key={option.value}
-                  style={[styles.chip, selected && styles.chipSelected]}
-                  onPress={() => form.setActivityType(option.value)}
-                >
-                  <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{option.label}</Text>
-                </Pressable>
-              );
-            })}
+          <FarmerActivityTypePicker value={form.activityType} onChange={form.setActivityType} />
+          {form.activityType === 'biochar_application' ? (
+            <BiocharDmrvEngineCard value={form.biocharDmrv} onChange={(patch) => form.setBiocharDmrv({ ...form.biocharDmrv, ...patch })} />
+          ) : null}
+          <View style={styles.timestampNote}>
+            <BhuguardMaterialIcon name="schedule" size={16} color={dashboardTheme.onSurfaceVariant} />
+            <Text style={styles.timestampNoteText}>
+              Activity date is saved with your submission time stamp.
+            </Text>
           </View>
         </SubmitActivityCard>
 
@@ -165,38 +161,17 @@ export function FarmerSubmitActivityScreen({ navigation, route }: Props) {
         </SubmitActivityCard>
 
         <SubmitActivityCard>
-          <Text style={styles.cardTitle}>Upload Evidence</Text>
-          <Text style={styles.cardHint}>Add photo, video or document proof for verification.</Text>
-
-          <View style={styles.evidenceRow}>
-            <EvidenceButton label="Camera" icon="photo_camera" onPress={form.pickCameraEvidence} />
-            <EvidenceButton label="Gallery" icon="landscape" onPress={form.pickGalleryEvidence} />
-            <EvidenceButton label="Document" icon="assignment" onPress={form.pickDocumentEvidence} />
-          </View>
-
-          {form.evidence ? (
-            <View style={styles.evidencePreview}>
-              {form.evidence.type.startsWith('image/') ? (
-                <Image source={{ uri: form.evidence.uri }} style={styles.evidenceImage} />
-              ) : (
-                <View style={styles.documentPreview}>
-                  <BhuguardMaterialIcon name="assignment" size={24} color={dashboardTheme.primary} />
-                </View>
-              )}
-              <View style={styles.evidenceMeta}>
-                <Text style={styles.evidenceName} numberOfLines={1}>
-                  {form.evidence.label}
-                </Text>
-                <Pressable onPress={form.clearEvidence}>
-                  <Text style={styles.removeEvidence}>Remove</Text>
-                </Pressable>
-              </View>
-            </View>
-          ) : null}
+          <LiveEvidenceCaptureCard
+            evidence={form.evidence}
+            capturing={form.evidenceCapturing}
+            error={form.evidenceError}
+            onOpenCamera={() => void form.pickCameraEvidence()}
+            onRetake={() => void form.retakeCameraEvidence()}
+          />
 
           <View style={styles.infoBanner}>
             <BhuguardMaterialIcon name="science" size={16} color={dashboardTheme.primary} />
-            <Text style={styles.infoBannerText}>GPS will be captured automatically</Text>
+            <Text style={styles.infoBannerText}>GPS and timestamp are captured with each live photo</Text>
           </View>
         </SubmitActivityCard>
 
@@ -326,23 +301,6 @@ function ChevronDownIcon() {
     <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
       <Path d="M6 9l6 6 6-6" stroke={dashboardTheme.outline} strokeWidth={2} strokeLinecap="round" />
     </Svg>
-  );
-}
-
-function EvidenceButton({
-  label,
-  icon,
-  onPress,
-}: {
-  label: string;
-  icon: 'photo_camera' | 'landscape' | 'assignment';
-  onPress: () => void;
-}) {
-  return (
-    <Pressable style={({ pressed }) => [styles.evidenceButton, pressed && styles.pressed]} onPress={onPress}>
-      <BhuguardMaterialIcon name={icon} size={28} color={dashboardTheme.onSurfaceVariant} />
-      <Text style={styles.evidenceButtonText}>{label}</Text>
-    </Pressable>
   );
 }
 
@@ -481,6 +439,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  timestampNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: dashboardTheme.outlineVariant,
+  },
+  timestampNoteText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+    color: dashboardTheme.onSurfaceVariant,
   },
   chip: {
     paddingHorizontal: 16,

@@ -45,7 +45,10 @@ export function invalidateProfilePhotoCache(remoteUrl?: string | null): void {
   inflightDownloads.delete(cacheKey);
 }
 
-export async function cacheAuthenticatedImage(remoteUrl: string): Promise<string | null> {
+export async function cacheAuthenticatedImage(
+  remoteUrl: string,
+  cacheFileName = 'farmer-profile-current.jpg',
+): Promise<string | null> {
   if (!remoteUrl || isLocalImageUri(remoteUrl)) {
     return remoteUrl || null;
   }
@@ -66,7 +69,6 @@ export async function cacheAuthenticatedImage(remoteUrl: string): Promise<string
   const downloadPromise = (async () => {
     try {
       const token = await getAuthToken();
-      const cacheFileName = 'farmer-profile-current.jpg';
       const cachePath = `${FileSystem.cacheDirectory ?? ''}${cacheFileName}`;
 
       const result = await FileSystem.downloadAsync(remoteUrl, cachePath, {

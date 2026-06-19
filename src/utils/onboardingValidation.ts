@@ -71,8 +71,8 @@ export function validateAddress(draft: OnboardingDraft): string | null {
     return 'Village is required.';
   }
 
-  if (draft.pincode.trim() && !/^\d{6}$/.test(draft.pincode.trim())) {
-    return 'Pincode must be 6 digits.';
+  if (draft.taluka_id && !/^\d{6}$/.test(draft.pincode.trim())) {
+    return 'Pincode is filled automatically when you select taluka.';
   }
 
   return null;
@@ -95,19 +95,24 @@ export function validateLandDetails(draft: OnboardingDraft): string | null {
 }
 
 export function validateGps(draft: OnboardingDraft): string | null {
+  return validateBoundaryMapping(draft);
+}
+
+export function validateBoundaryMapping(draft: OnboardingDraft): string | null {
+  if (draft.boundary_mapping_status === 'draft' && draft.boundary_pending_reason.trim()) {
+    return null;
+  }
+
+  if (draft.boundary_mapping_status !== 'mapped' && draft.boundary_mapping_status !== 'pending_review') {
+    return 'Land boundary mapping is required. Start Mobile Mapping and confirm the mapped land area.';
+  }
+
+  if (draft.boundary_points.length < 3) {
+    return 'At least 3 GPS boundary points are required to complete land mapping.';
+  }
+
   if (!draft.gps_latitude.trim() || !draft.gps_longitude.trim()) {
-    return 'GPS location is required. Capture current location before continuing.';
-  }
-
-  const lat = Number(draft.gps_latitude);
-  const lng = Number(draft.gps_longitude);
-
-  if (Number.isNaN(lat) || lat < -90 || lat > 90) {
-    return 'Latitude must be between -90 and 90.';
-  }
-
-  if (Number.isNaN(lng) || lng < -180 || lng > 180) {
-    return 'Longitude must be between -180 and 180.';
+    return 'Mapped land center GPS is required. Confirm land area after boundary mapping.';
   }
 
   return null;
@@ -122,7 +127,7 @@ export function validateSubmit(draft: OnboardingDraft): string | null {
     validateFarmerProfileStep1(draft)
     ?? validateConsent(draft)
     ?? validateLandDetails(draft)
-    ?? validateGps(draft)
+    ?? validateBoundaryMapping(draft)
     ?? validateDocuments(draft)
   );
 }

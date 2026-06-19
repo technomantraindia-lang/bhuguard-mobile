@@ -21,10 +21,11 @@ function markerColor(tone: OfficerMapMarker['tone']): string {
   }
 }
 
-export function OfficerFieldMapOverview({ markers }: OfficerFieldMapOverviewProps) {
+export function OfficerFieldMapOverview({ markers = [] }: OfficerFieldMapOverviewProps) {
+  const safeMarkers = Array.isArray(markers) ? markers : [];
   const displayMarkers =
-    markers.length > 0
-      ? markers
+    safeMarkers.length > 0
+      ? safeMarkers
       : [
           { id: 'marker-1', label: '1', tone: 'primary' as const, top: 33, left: 25 },
           { id: 'marker-2', label: '!', tone: 'alert' as const, top: 75, left: 67 },

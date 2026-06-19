@@ -3,22 +3,24 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BhuguardMaterialIcon, type BhuguardIconName } from '../components/shared/BhuguardMaterialIcon';
+import { useTranslation } from '../i18n/I18nContext';
 import { dashboardShadowUp, dashboardTheme } from '../theme/bhuguardDashboardTheme';
 
-const VISIBLE_TABS: Array<{ routeName: string; label: string; icon: BhuguardIconName }> = [
-  { routeName: 'Home', label: 'Home', icon: 'home' },
-  { routeName: 'Farms', label: 'Farms', icon: 'potted_plant' },
-  { routeName: 'Activities', label: 'Activity', icon: 'assignment' },
-  { routeName: 'Reports', label: 'Reports', icon: 'analytics' },
-  { routeName: 'Profile', label: 'Profile', icon: 'person' },
+const TAB_CONFIG: Array<{ routeName: string; labelKey: string; icon: BhuguardIconName }> = [
+  { routeName: 'Home', labelKey: 'tabs.farmer.home', icon: 'home' },
+  { routeName: 'Farms', labelKey: 'tabs.farmer.farms', icon: 'potted_plant' },
+  { routeName: 'Activities', labelKey: 'tabs.farmer.activity', icon: 'assignment' },
+  { routeName: 'Reports', labelKey: 'tabs.farmer.reports', icon: 'analytics' },
+  { routeName: 'Profile', labelKey: 'tabs.farmer.profile', icon: 'person' },
 ];
 
 export function FarmerBottomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      {VISIBLE_TABS.map((tab) => {
+      {TAB_CONFIG.map((tab) => {
         const routeIndex = state.routes.findIndex((route) => route.name === tab.routeName);
 
         if (routeIndex < 0) {
@@ -58,7 +60,7 @@ export function FarmerBottomTabBar({ state, descriptors, navigation }: BottomTab
               color={focused ? dashboardTheme.onSecondaryContainer : dashboardTheme.onSurfaceVariant}
               filled={focused && tab.icon === 'home'}
             />
-            <Text style={[styles.label, focused && styles.labelActive]}>{tab.label}</Text>
+            <Text style={[styles.label, focused && styles.labelActive]}>{t(tab.labelKey)}</Text>
           </Pressable>
         );
       })}

@@ -1,43 +1,36 @@
-import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
+import { RoleListCard } from '../../components/auth/RoleListCard';
+import { RoleSelectionBackground } from '../../components/auth/RoleSelectionBackground';
 import { BhuguardLogo } from '../../components/shared/BhuguardLogo';
 import { LOGO_SIZES } from '../../constants/branding';
-import { RoleSelectionBackground } from '../../components/auth/RoleSelectionBackground';
-import { RoleGridCard } from '../../components/auth/RoleGridCard';
-import { SELECTABLE_ROLES, type SelectableRoleId } from '../../config/authRoles';
+import { useTranslation } from '../../i18n/I18nContext';
 import type { RootStackParamList } from '../../navigation/types';
+import { getApiBaseUrl, testApiConnection } from '../../storage/apiConfigStorage';
 import { colors, spacing } from '../../theme';
-import { PENDING_API_MESSAGE } from '../../utils/apiError';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RoleSelection'>;
 
 export function RoleSelectionScreen({ navigation }: Props) {
-  const [selectedRoleId, setSelectedRoleId] = useState<SelectableRoleId | null>(null);
+  const { t } = useTranslation();
+  const [serverOffline, setServerOffline] = useState(false);
 
-  const selectedRole = SELECTABLE_ROLES.find((role) => role.id === selectedRoleId);
-  const canContinue = Boolean(selectedRole?.loginSupported && selectedRole.loginRole);
+  useEffect(() => {
+    void (async () => {
+      const url = await getApiBaseUrl();
 
-  const handleContinue = () => {
-    if (!selectedRole) {
-      return;
-    }
+      if (!url) {
+        setServerOffline(true);
+        return;
+      }
 
-    if (!selectedRole.loginSupported || !selectedRole.loginRole) {
-      Alert.alert('Coming soon', PENDING_API_MESSAGE);
-      return;
-    }
-
-    navigation.navigate('Login', { role: selectedRole.loginRole });
-  };
-
-  const rows = [
-    SELECTABLE_ROLES.slice(0, 2),
-    SELECTABLE_ROLES.slice(2, 4),
-    SELECTABLE_ROLES.slice(4, 6),
-  ];
+      const result = await testApiConnection(url);
+      setServerOffline(!result.ok);
+    })();
+  }, []);
 
   return (
     <View style={styles.root}>
@@ -47,50 +40,50 @@ export function RoleSelectionScreen({ navigation }: Props) {
           <View style={styles.logoWrap}>
             <BhuguardLogo size={LOGO_SIZES.roleSelection} />
           </View>
-          <Text style={styles.title}>Choose Your Role</Text>
-          <Text style={styles.subtitle}>
-            Select your primary operational function to configure your DMRV workspace.
-          </Text>
+          <Text style={styles.title}>{t('role.title')}</Text>
+          <Text style={styles.subtitle}>{t('role.subtitle')}</Text>
 
-          <View style={styles.grid}>
-            {rows.map((row) => (
-              <View key={row.map((role) => role.id).join('-')} style={styles.gridRow}>
-                {row.map((role) => (
-                  <View key={role.id} style={styles.gridCell}>
-                    <RoleGridCard
-                      roleId={role.id}
-                      title={role.title}
-                      description={role.description}
-                      selected={selectedRoleId === role.id}
-                      onPress={() => setSelectedRoleId(role.id)}
-                    />
-                  </View>
-                ))}
-              </View>
-            ))}
+          {serverOffline ? (
+            <Pressable
+              style={styles.serverBanner}
+              onPress={() => navigation.navigate('ApiServerSettings')}
+            >
+              <Text style={styles.serverBannerTitle}>{t('apiServer.offlineTitle')}</Text>
+              <Text style={styles.serverBannerText}>{t('apiServer.offlineHint')}</Text>
+            </Pressable>
+          ) : null}
+
+          <View style={styles.list}>
+            <RoleListCard
+              role="farmer"
+              title={t('role.farmerTitle')}
+              description={t('role.farmerDescription')}
+              buttonLabel={t('role.farmerButton')}
+              onPress={() => navigation.navigate('FarmerLoginOptions')}
+            />
+            <RoleListCard
+              role="field_officer"
+              title={t('role.fieldOfficerTitle')}
+              description={t('role.fieldOfficerDescription')}
+              buttonLabel={t('role.fieldOfficerButton')}
+              onPress={() => navigation.navigate('FieldOfficerLogin')}
+            />
           </View>
 
           <View style={styles.infoBanner}>
             <View style={styles.infoIcon}>
               <Text style={styles.infoIconText}>i</Text>
             </View>
-            <Text style={styles.infoText}>
-              Farmer first-time registration is completed only by an authorized Field Officer.
-            </Text>
+            <Text style={styles.infoText}>{t('role.farmerRegistrationNote')}</Text>
           </View>
-        </ScrollView>
 
-        <View style={styles.footer}>
-          <Pressable
-            style={[styles.continueButton, canContinue ? styles.continueButtonActive : styles.continueButtonDisabled]}
-            onPress={handleContinue}
-            disabled={!canContinue}
-          >
-            <Text style={[styles.continueText, canContinue ? styles.continueTextActive : styles.continueTextDisabled]}>
-              Continue
-            </Text>
+          <Pressable onPress={() => navigation.navigate('LanguageSelection')}>
+            <Text style={styles.languageLink}>{t('language.settingsTitle')}</Text>
           </Pressable>
-        </View>
+          <Pressable onPress={() => navigation.navigate('ApiServerSettings')}>
+            <Text style={styles.languageLink}>{t('apiServer.openSettings')}</Text>
+          </Pressable>
+        </ScrollView>
       </SafeAreaView>
     </View>
   );
@@ -107,36 +100,26 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: spacing.xxl,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.xxxl,
+    gap: spacing.lg,
   },
   logoWrap: {
     alignItems: 'center',
-    marginBottom: spacing.md,
   },
   title: {
     fontSize: 28,
     fontWeight: '800',
     color: colors.text,
-    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 15,
+    lineHeight: 22,
     color: colors.textMuted,
-    marginBottom: spacing.xl,
   },
-  grid: {
-    gap: 12,
-  },
-  gridRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  gridCell: {
-    flex: 1,
+  list: {
+    gap: 14,
   },
   infoBanner: {
-    marginTop: spacing.xl,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
@@ -164,31 +147,28 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     color: '#3F5F4C',
   },
-  footer: {
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xl,
-  },
-  continueButton: {
-    minHeight: 52,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  continueButtonActive: {
-    backgroundColor: colors.primary,
-  },
-  continueButtonDisabled: {
-    backgroundColor: '#D1E7DD',
-  },
-  continueText: {
-    fontSize: 16,
+  languageLink: {
+    textAlign: 'center',
+    color: colors.primary,
+    fontSize: 14,
     fontWeight: '700',
   },
-  continueTextActive: {
-    color: colors.white,
+  serverBanner: {
+    backgroundColor: '#FFF4E5',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#F5C26B',
+    gap: 4,
   },
-  continueTextDisabled: {
-    color: '#7FA892',
+  serverBannerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#9A6700',
+  },
+  serverBannerText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#7A5A00',
   },
 });

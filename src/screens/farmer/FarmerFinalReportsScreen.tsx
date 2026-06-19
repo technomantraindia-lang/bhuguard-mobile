@@ -5,8 +5,6 @@ import { getFarmerFinalReports } from '../../api/farmerApi';
 import { ApiListScreen } from '../../components/ApiListScreen';
 import { ListItemCard } from '../../components/ListItemCard';
 import type { FarmerStackParamList } from '../../navigation/types';
-import { downloadFarmerFinalReport } from '../../utils/reportDownload';
-import { Alert } from 'react-native';
 
 type Nav = NativeStackNavigationProp<FarmerStackParamList>;
 
@@ -34,17 +32,6 @@ export function FarmerFinalReportsScreen() {
             { label: 'Credits', keys: ['estimated_carbon_credit'] },
             { label: 'Generated', keys: ['generated_at'] },
           ]}
-          downloadAvailable
-          onDownload={async () => {
-            const result = await downloadFarmerFinalReport(
-              Number(item.id),
-              String(item.report_number ?? item.service_name ?? item.id),
-            );
-
-            if (!result.success) {
-              Alert.alert('Download failed', result.message ?? 'Unable to download this report.');
-            }
-          }}
         />
       )}
     />

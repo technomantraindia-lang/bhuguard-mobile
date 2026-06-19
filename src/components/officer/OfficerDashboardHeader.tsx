@@ -1,45 +1,44 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { OfficerMaterialIcon } from './OfficerMaterialIcon';
-import { officerShadow, officerTheme } from '../../theme/officerDashboardTheme';
+import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
+import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
 
 interface OfficerDashboardHeaderProps {
   officerName: string;
-  onSyncPress?: () => void;
+  onNotificationsPress?: () => void;
 }
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-
   if (parts.length === 0) {
     return 'FO';
   }
-
   if (parts.length === 1) {
     return parts[0].slice(0, 2).toUpperCase();
   }
-
   return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
 }
 
-export function OfficerDashboardHeader({ officerName, onSyncPress }: OfficerDashboardHeaderProps) {
+export function OfficerDashboardHeader({ officerName, onNotificationsPress }: OfficerDashboardHeaderProps) {
   return (
     <View style={styles.bar}>
       <View style={styles.leading}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{getInitials(officerName)}</Text>
         </View>
+        <View>
+          <Text style={styles.brand}>Bhuguard MRV</Text>
+          <Text style={styles.officerName}>{officerName}</Text>
+        </View>
       </View>
 
-      <Text style={styles.brand}>Bhuguard</Text>
-
       <Pressable
-        style={({ pressed }) => [styles.syncButton, pressed && styles.syncButtonPressed]}
-        onPress={onSyncPress}
+        style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+        onPress={onNotificationsPress}
         accessibilityRole="button"
-        accessibilityLabel="Sync dashboard"
+        accessibilityLabel="Notifications"
       >
-        <OfficerMaterialIcon name="sync" size={22} color={officerTheme.primary} />
+        <BhuguardMaterialIcon name="notifications" size={22} color={officerTheme.primary} />
       </Pressable>
     </View>
   );
@@ -55,44 +54,50 @@ const styles = StyleSheet.create({
     backgroundColor: officerTheme.surfaceLowest,
     borderBottomWidth: 1,
     borderBottomColor: officerTheme.outlineVariant,
-    ...officerShadow,
+    ...officerCardShadow,
   },
   leading: {
-    width: 40,
-    alignItems: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
   },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: officerTheme.surfaceLow,
-    borderWidth: 1,
-    borderColor: officerTheme.outlineVariant,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: officerTheme.secondaryFixed,
+    borderWidth: 2,
+    borderColor: officerTheme.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
   avatarText: {
     color: officerTheme.primary,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
   },
   brand: {
-    fontSize: 24,
-    lineHeight: 32,
-    fontWeight: '600',
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '700',
     color: officerTheme.primary,
-    letterSpacing: -0.24,
   },
-  syncButton: {
+  officerName: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+    color: officerTheme.onSurfaceVariant,
+  },
+  iconButton: {
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 20,
   },
-  syncButtonPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.95 }],
+  pressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.96 }],
   },
 });

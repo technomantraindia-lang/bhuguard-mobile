@@ -63,7 +63,7 @@ export function OfficerTaskQueue({ tasks, onTaskPress }: OfficerTaskQueueProps) 
         ) : (
           tasks.map((task, index) => {
             const badge = statusStyles(task.status);
-            const dueStyles = dueLabelStyles(task.dueLabel);
+            const dueStyles = dueLabelStyles(task.dueLabel ?? task.timeLabel);
             const isDimmed = task.status === 'waiting' && index === tasks.length - 1;
 
             return (
@@ -73,7 +73,7 @@ export function OfficerTaskQueue({ tasks, onTaskPress }: OfficerTaskQueueProps) 
                 onPress={() => onTaskPress?.(task)}
               >
                 <View style={styles.cardTop}>
-                  <Text style={styles.taskTitle}>{task.title}</Text>
+                  <Text style={styles.taskTitle}>{task.title ?? task.farmerName}</Text>
                   <View
                     style={[
                       styles.duePill,
@@ -84,7 +84,7 @@ export function OfficerTaskQueue({ tasks, onTaskPress }: OfficerTaskQueueProps) 
                       },
                     ]}
                   >
-                    <Text style={[styles.dueLabel, { color: dueStyles.color }]}>{task.dueLabel}</Text>
+                    <Text style={[styles.dueLabel, { color: dueStyles.color }]}>{task.dueLabel ?? task.timeLabel}</Text>
                   </View>
                 </View>
 

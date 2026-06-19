@@ -2,25 +2,22 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as DocumentPicker from 'expo-document-picker';
-import * as ImagePicker from 'expo-image-picker';
 
 import { OnboardingConsentLayout } from '../../../components/onboarding/OnboardingConsentLayout';
 import {
   OnboardingSignatureCheckbox,
   OnboardingToggleSwitch,
 } from '../../../components/onboarding/OnboardingConsentControls';
-import { OnboardingDocumentUploadCard } from '../../../components/onboarding/OnboardingDocumentUploadCard';
+import { LiveEvidenceCaptureCard } from '../../../components/evidence/LiveEvidenceCaptureCard';
 import { ONBOARDING_NEXT_LABELS } from '../../../constants/onboardingSteps';
 import type { FileAsset } from '../../../context/OnboardingContext';
 import { useOnboarding } from '../../../context/OnboardingContext';
+import { useLiveEvidenceCapture } from '../../../hooks/useLiveEvidenceCapture';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
 import { validateConsent } from '../../../utils/onboardingValidation';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
-
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
 function toAsset(uri: string, name: string, mimeType: string, size?: number): FileAsset {
   return { uri, name, mimeType, size };
@@ -30,58 +27,23 @@ export function FarmerConsentScreen() {
   const navigation = useNavigation<Nav>();
   const { draft, updateDraft } = useOnboarding();
   const [error, setError] = useState<string | null>(null);
+  const consentCapture = useLiveEvidenceCapture({ defaultName: 'consent-form.jpg', allowsEditing: true });
 
-  const pickConsentForm = async () => {
+  const captureConsentForm = async () => {
     setError(null);
+    const captured = await consentCapture.captureEvidence();
 
-    const result = await DocumentPicker.getDocumentAsync({
-      type: ['application/pdf', 'image/*'],
-      copyToCacheDirectory: true,
-    });
-
-    if (result.canceled || !result.assets[0]) {
-      const gallery = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.85,
-      });
-
-      if (gallery.canceled || !gallery.assets[0]) {
-        return;
-      }
-
-      const asset = gallery.assets[0];
-
-      if (asset.fileSize && asset.fileSize > MAX_FILE_BYTES) {
-        setError('Consent document must be 5MB or smaller.');
-        return;
-      }
-
-      updateDraft({
-        consent_form: toAsset(
-          asset.uri,
-          asset.fileName ?? 'consent.jpg',
-          asset.mimeType ?? 'image/jpeg',
-          asset.fileSize,
-        ),
-      });
-
+    if (!captured) {
       return;
     }
 
-    const asset = result.assets[0];
-
-    if (asset.size && asset.size > MAX_FILE_BYTES) {
-      setError('Consent document must be 5MB or smaller.');
+    if (captured.name.length > 200) {
+      setError('Consent document filename is too long.');
       return;
     }
 
     updateDraft({
-      consent_form: toAsset(
-        asset.uri,
-        asset.name ?? 'consent.pdf',
-        asset.mimeType ?? 'application/pdf',
-        asset.size,
-      ),
+      consent_form: toAsset(captured.uri, captured.name, captured.type),
     });
   };
 
@@ -97,13 +59,15 @@ export function FarmerConsentScreen() {
     navigation.navigate('FarmerLandDetails');
   };
 
+  const displayError = error ?? consentCapture.error;
+
   return (
     <OnboardingConsentLayout
       stepCurrent={2}
       progressLabel="Step 2: Legal Agreements"
       onNext={next}
       nextLabel={ONBOARDING_NEXT_LABELS[2]}
-      footerError={error}
+      footerError={displayError}
     >
       <View style={styles.toggles}>
         <OnboardingToggleSwitch
@@ -128,10 +92,12 @@ export function FarmerConsentScreen() {
 
       <View style={styles.divider} />
 
-      <OnboardingDocumentUploadCard
-        title="Consent Form Upload"
-        file={draft.consent_form}
-        onPress={pickConsentForm}
+      <LiveEvidenceCaptureCard
+        evidence={consentCapture.evidence}
+        capturing={consentCapture.capturing}
+        error={consentCapture.error}
+        onOpenCamera={() => void captureConsentForm()}
+        onRetake={() => void captureConsentForm()}
       />
 
       <OnboardingSignatureCheckbox

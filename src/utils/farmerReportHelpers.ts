@@ -121,8 +121,10 @@ function mapFinalReportStatus(status: string): ReportStatusBadge {
   return 'available';
 }
 
-function catalogDescription(entry: FarmerReportCatalogEntry): string {
-  return entry.description;
+function catalogDescriptionFor(catalogId: string, fallback = 'Official farm verification report'): string {
+  const entry = FARMER_REPORT_CATALOG.find((row) => row.catalogId === catalogId);
+
+  return entry?.description ?? fallback;
 }
 
 export function buildCatalogReports(apiReports: FarmerReportItem[]): FarmerReportItem[] {
@@ -139,6 +141,7 @@ export function buildCatalogReports(apiReports: FarmerReportItem[]): FarmerRepor
         statusBadge: entry.statusBadge === 'verified' || entry.statusBadge === 'updated'
           ? entry.statusBadge
           : apiMatch.statusBadge,
+        downloadAvailable: false,
       };
     }
 
@@ -153,7 +156,7 @@ export function buildCatalogReports(apiReports: FarmerReportItem[]): FarmerRepor
       updatedAt: null,
       statusBadge: entry.statusBadge,
       icon: entry.icon,
-      downloadAvailable: true,
+      downloadAvailable: false,
       iconTone: entry.iconTone,
     };
   });
@@ -229,7 +232,7 @@ export function buildBaselineReportItems(assessments: ApiRecord[]): FarmerReport
         sourceType: 'baseline',
         sourceId: Number(latest.id),
         title: 'Baseline Assessment Report',
-        description: catalogDescription(FARMER_REPORT_CATALOG[1]),
+        description: catalogDescriptionFor('baseline'),
         updatedLabel: formatUpdatedLabel(latest.assessment_date ?? latest.created_at),
         updatedAt: pickString(latest, 'assessment_date', 'created_at'),
         statusBadge: mapBaselineStatus(pickString(latest, 'status')),
@@ -258,7 +261,7 @@ export function buildCarbonReportItems(calculations: ApiRecord[]): FarmerReportI
         sourceType: 'carbon',
         sourceId: Number(latest.id),
         title: 'Monitoring Report',
-        description: catalogDescription(FARMER_REPORT_CATALOG[2]),
+        description: catalogDescriptionFor('monitoring'),
         updatedLabel: formatUpdatedLabel(latest.calculated_at ?? latest.approved_at ?? latest.created_at),
         updatedAt: pickString(latest, 'calculated_at', 'approved_at', 'created_at'),
         statusBadge: pickString(latest, 'status').toLowerCase() === 'approved' ? 'verified' : 'available',
@@ -293,7 +296,7 @@ export function buildVerificationReportItems(assignments: ApiRecord[]): FarmerRe
         sourceType: 'verification',
         sourceId: Number(verified.id),
         title: 'Verification Report',
-        description: catalogDescription(FARMER_REPORT_CATALOG[3]),
+        description: catalogDescriptionFor('verification'),
         updatedLabel: formatUpdatedLabel(
           verificationReport.completed_at ?? checklist.completed_at ?? verified.updated_at ?? verified.created_at,
         ),
@@ -325,7 +328,7 @@ export function buildActivityReportItems(activityLogs: ApiRecord[]): FarmerRepor
         sourceType: 'activity',
         sourceId: Number(latest.id),
         title: 'Activity Submission Report',
-        description: catalogDescription(FARMER_REPORT_CATALOG[4]),
+        description: catalogDescriptionFor('activity', 'Summary of submitted activities'),
         updatedLabel: formatUpdatedLabel(latest.activity_date ?? latest.created_at),
         updatedAt: pickString(latest, 'activity_date', 'created_at'),
         statusBadge: 'updated',
@@ -352,7 +355,7 @@ export function buildSoilHealthReportItems(soilSamples: ApiRecord[], assessments
         sourceType: soilSamples.length > 0 ? 'soil' : 'baseline',
         sourceId: Number(source.id),
         title: 'Soil Health Report',
-        description: catalogDescription(FARMER_REPORT_CATALOG[0]),
+        description: catalogDescriptionFor('soil', 'Latest soil assessment report'),
         updatedLabel: formatUpdatedLabel(source.sample_date ?? source.assessment_date ?? source.created_at),
         updatedAt: pickString(source, 'sample_date', 'assessment_date', 'created_at'),
         statusBadge: 'available',

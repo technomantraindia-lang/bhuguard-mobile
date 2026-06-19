@@ -5,9 +5,15 @@ import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
 
 interface FarmerAddFarmHeaderProps {
   onBack: () => void;
+  title?: string;
+  subtitle?: string;
 }
 
-export function FarmerAddFarmHeader({ onBack }: FarmerAddFarmHeaderProps) {
+export function FarmerAddFarmHeader({
+  onBack,
+  title = 'Add New Farm',
+  subtitle = 'Register your farm or plot details',
+}: FarmerAddFarmHeaderProps) {
   return (
     <View style={styles.wrap}>
       <Pressable style={styles.backButton} onPress={onBack} accessibilityLabel="Go back">
@@ -23,8 +29,8 @@ export function FarmerAddFarmHeader({ onBack }: FarmerAddFarmHeaderProps) {
       </Pressable>
 
       <View style={styles.copy}>
-        <Text style={styles.title}>Add New Farm</Text>
-        <Text style={styles.subtitle}>Register your farm or plot details</Text>
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
     </View>
   );

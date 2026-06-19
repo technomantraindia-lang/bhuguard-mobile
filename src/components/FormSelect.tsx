@@ -15,6 +15,7 @@ import { colors } from '../theme/colors';
 export interface SelectOption {
   id: number;
   name: string;
+  pincode?: string | null;
 }
 
 interface FormSelectProps {

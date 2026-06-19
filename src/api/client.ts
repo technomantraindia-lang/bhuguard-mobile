@@ -1,16 +1,16 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
+import { BUILD_API_BASE_URL } from '../config/apiDefaults';
 import { navigateToLogin } from '../navigation/navigationRef';
 import { clearAuthSession, getAuthToken } from '../storage/authStorage';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.18:8000/api';
+import { getApiBaseUrl, getCachedApiBaseUrl } from '../storage/apiConfigStorage';
 
 if (__DEV__) {
-  console.log('[Bhuguard API] Base URL:', API_BASE_URL);
+  console.log('[Bhuguard API] Build default:', BUILD_API_BASE_URL);
 }
 
 export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: BUILD_API_BASE_URL,
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
@@ -20,6 +20,8 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    config.baseURL = await getApiBaseUrl();
+
     const token = await getAuthToken();
 
     if (token) {
@@ -44,9 +46,10 @@ apiClient.interceptors.response.use(
     }
 
     if (!error.response && error.message === 'Network Error') {
+      const baseUrl = getCachedApiBaseUrl();
       return Promise.reject(
         new Error(
-          'Network error. Check that your phone can reach the API server and EXPO_PUBLIC_API_URL is correct.',
+          `Cannot reach API at ${baseUrl || '(not set)'}. Open Server settings and paste your public https://... URL.`,
         ),
       );
     }
@@ -55,4 +58,5 @@ apiClient.interceptors.response.use(
   },
 );
 
-export { API_BASE_URL };
+/** @deprecated Use getApiBaseUrl() — kept for sync helpers that run after login. */
+export const API_BASE_URL = BUILD_API_BASE_URL;

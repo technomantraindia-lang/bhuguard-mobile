@@ -17,6 +17,9 @@ export interface BoundaryPoint {
   label?: string;
   notes?: string;
   manual?: boolean;
+  photoUri?: string;
+  photoUrl?: string;
+  hasPhoto?: boolean;
 }
 
 export interface BoundaryMetrics {
@@ -209,4 +212,49 @@ export function buildBoundaryUploadPayload(
 function round(value: number, digits: number): number {
   const factor = 10 ** digits;
   return Math.round(value * factor) / factor;
+}
+
+export function buildCameraBoundaryUploadFormData(
+  farmId: number,
+  unit: AreaUnit,
+  points: BoundaryPoint[],
+  gpsAccuracyLabel: string,
+): FormData {
+  const metrics = calculateBoundaryMetrics(boundaryPointsToLatLng(points));
+  const formData = new FormData();
+
+  formData.append('farm_id', String(farmId));
+  formData.append('unit', unit);
+  formData.append('area_acre', String(metrics.areaAcre));
+  formData.append('area_hectare', String(metrics.areaHectare));
+  formData.append('area_bigha', String(metrics.areaBigha));
+  formData.append('perimeter_meter', String(metrics.perimeterMeter));
+  formData.append('gps_accuracy', gpsAccuracyLabel.toLowerCase());
+
+  points.forEach((point, index) => {
+    formData.append(`boundary_points[${index}][point_no]`, String(point.pointNo));
+    formData.append(`boundary_points[${index}][latitude]`, String(point.latitude));
+    formData.append(`boundary_points[${index}][longitude]`, String(point.longitude));
+    formData.append(`boundary_points[${index}][accuracy]`, String(point.accuracy));
+    formData.append(`boundary_points[${index}][timestamp]`, point.timestamp);
+    formData.append(`boundary_points[${index}][is_manual]`, String(point.manual ?? false));
+
+    if (point.label) {
+      formData.append(`boundary_points[${index}][label]`, point.label);
+    }
+
+    if (point.notes) {
+      formData.append(`boundary_points[${index}][notes]`, point.notes);
+    }
+
+    if (point.photoUri) {
+      formData.append(`boundary_points[${index}][photo]`, {
+        uri: point.photoUri,
+        type: 'image/jpeg',
+        name: `point_${point.pointNo}.jpg`,
+      } as unknown as Blob);
+    }
+  });
+
+  return formData;
 }

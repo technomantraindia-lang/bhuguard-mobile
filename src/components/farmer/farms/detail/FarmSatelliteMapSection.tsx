@@ -28,6 +28,9 @@ interface FarmSatelliteMapSectionProps {
   onOpenFullScreen: () => void;
   onRefresh: () => void;
   onEditBoundary?: () => void;
+  onCaptureBoundaryWithCamera?: () => void;
+  onViewBoundaryPhotos?: () => void;
+  onRecaptureBoundary?: () => void;
   mapHeight?: number;
 }
 
@@ -40,6 +43,9 @@ export function FarmSatelliteMapSection({
   onOpenFullScreen,
   onRefresh,
   onEditBoundary,
+  onCaptureBoundaryWithCamera,
+  onViewBoundaryPhotos,
+  onRecaptureBoundary,
   mapHeight = MAP_HEIGHT,
 }: FarmSatelliteMapSectionProps) {
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -164,6 +170,15 @@ export function FarmSatelliteMapSection({
         <MapActionChip icon="landscape" label="Full Screen" onPress={onOpenFullScreen} />
         <MapActionChip icon="location_on" label="Refresh" onPress={onRefresh} />
         {onEditBoundary ? <MapActionChip icon="assignment" label="Edit Boundary" onPress={onEditBoundary} /> : null}
+        {onCaptureBoundaryWithCamera ? (
+          <MapActionChip icon="photo_camera" label="Capture with Camera" onPress={onCaptureBoundaryWithCamera} />
+        ) : null}
+        {onViewBoundaryPhotos ? (
+          <MapActionChip icon="landscape" label="View Photos" onPress={onViewBoundaryPhotos} />
+        ) : null}
+        {onRecaptureBoundary ? (
+          <MapActionChip icon="share_location" label="Re-Capture" onPress={onRecaptureBoundary} />
+        ) : null}
         <MapActionChip
           icon="analytics"
           label="Heatmap"
@@ -181,7 +196,7 @@ function MapActionChip({
   onPress,
   active = false,
 }: {
-  icon: 'map' | 'landscape' | 'location_on' | 'analytics' | 'assignment';
+  icon: 'map' | 'landscape' | 'location_on' | 'analytics' | 'assignment' | 'photo_camera' | 'share_location';
   label: string;
   onPress: () => void;
   active?: boolean;

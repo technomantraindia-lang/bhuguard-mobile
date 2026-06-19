@@ -1,163 +1,338 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
 
-import { getApiErrorMessage, requestForgotMpinOtp } from '../../api/authApi';
-import { getFieldOfficerProfile } from '../../api/fieldOfficerApi';
-import { ProfileManageLayout } from '../../components/profile/ProfileManageLayout';
+import { getApiErrorMessage } from '../../api/authApi';
+import {
+  removeFieldOfficerProfilePhoto,
+  updateFieldOfficerProfilePhoto,
+} from '../../api/fieldOfficerApi';
+import { ErrorState } from '../../components/ErrorState';
+import { LoadingState } from '../../components/LoadingState';
+import { ProfilePhotoBottomSheet } from '../../components/farmer/profile/ProfilePhotoBottomSheet';
+import { ProfilePhotoPreviewModal } from '../../components/farmer/profile/ProfilePhotoPreviewModal';
+import { OfficerProfileAppBar } from '../../components/officer/profile/OfficerProfileAppBar';
+import { OfficerProfileMenuRow } from '../../components/officer/profile/OfficerProfileMenuRow';
+import { OfficerProfilePerformanceSection } from '../../components/officer/profile/OfficerProfilePerformanceSection';
+import { OfficerProfileSummaryCard } from '../../components/officer/profile/OfficerProfileSummaryCard';
+import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
+import { useFieldOfficerProfileData } from '../../hooks/useFieldOfficerProfileData';
 import { useLogout } from '../../hooks/useLogout';
-import type { FieldOfficerStackParamList } from '../../navigation/types';
-import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
-import { isNetworkError, NETWORK_ERROR_MESSAGE } from '../../utils/apiError';
-import { pickString, type ApiRecord } from '../../utils/apiHelpers';
+import { useTranslation } from '../../i18n/I18nContext';
+import type { FieldOfficerStackParamList, FieldOfficerTabParamList } from '../../navigation/types';
+import { officerTheme } from '../../theme/officerDashboardTheme';
+import { invalidateProfilePhotoCache } from '../../utils/profilePhotoCache';
 
-type Navigation = NativeStackNavigationProp<FieldOfficerStackParamList>;
+type Nav = CompositeNavigationProp<
+  BottomTabNavigationProp<FieldOfficerTabParamList, 'Profile'>,
+  NativeStackNavigationProp<FieldOfficerStackParamList>
+>;
 
-function ProfileDetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value || '—'}</Text>
-    </View>
-  );
+async function pickProfileImage(source: 'camera' | 'gallery'): Promise<{ uri: string; mimeType: string } | null> {
+  if (source === 'camera') {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert('Permission required', 'Camera access is needed to take a profile photo.');
+      return null;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+
+    if (result.canceled || !result.assets?.[0]?.uri) {
+      return null;
+    }
+
+    const asset = result.assets[0];
+
+    return {
+      uri: asset.uri,
+      mimeType: asset.mimeType ?? 'image/jpeg',
+    };
+  }
+
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+  if (!permission.granted) {
+    Alert.alert('Permission required', 'Gallery access is needed to choose a profile photo.');
+    return null;
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    aspect: [1, 1],
+    quality: 0.85,
+  });
+
+  if (result.canceled || !result.assets?.[0]?.uri) {
+    return null;
+  }
+
+  const asset = result.assets[0];
+
+  return {
+    uri: asset.uri,
+    mimeType: asset.mimeType ?? 'image/jpeg',
+  };
+}
+
+function buildPhotoFormData(uri: string, mimeType = 'image/jpeg'): FormData {
+  const extension = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg';
+  const formData = new FormData();
+
+  formData.append('photo', {
+    uri,
+    name: `profile.${extension}`,
+    type: mimeType,
+  } as unknown as Blob);
+
+  return formData;
 }
 
 export function FieldOfficerProfileScreen() {
-  const navigation = useNavigation<Navigation>();
+  const navigation = useNavigation<Nav>();
   const logout = useLogout();
-  const [data, setData] = useState<ApiRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [mpinLoading, setMpinLoading] = useState(false);
-  const fetcherRef = useRef(getFieldOfficerProfile);
-  fetcherRef.current = getFieldOfficerProfile;
+  const { t } = useTranslation();
+  const { data, loading, error, reload, updatePhotoUrl } = useFieldOfficerProfileData();
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const [photoSheetOpen, setPhotoSheetOpen] = useState(false);
+  const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
+  const [photoUpdating, setPhotoUpdating] = useState(false);
 
-    try {
-      const result = await fetcherRef.current();
-      setData(result);
-    } catch (err) {
-      if (isNetworkError(err)) {
-        setError(NETWORK_ERROR_MESSAGE);
-      } else {
-        setError(getApiErrorMessage(err, 'Failed to load profile.'));
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const openPerformance = () => navigation.navigate('FieldOfficerPerformance');
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const user = (data?.user ?? data ?? {}) as ApiRecord;
-  const officer = (user.field_officer_profile ?? user.field_officer ?? user) as ApiRecord;
-  const mobile = pickString(user, 'mobile').replace(/\D/g, '').slice(-10);
-
-  const changePassword = () => {
-    navigation.navigate('ForgotPassword', {
-      mobile,
-      flowOrigin: 'profile',
-    });
+  const openSection = (section: 'personal' | 'work' | 'documents' | 'security') => {
+    navigation.navigate('FieldOfficerProfileSection', { section });
   };
 
-  const changeMpin = async () => {
-    if (!/^\d{10}$/.test(mobile)) {
-      setError('Unable to read your registered mobile number.');
+  const handlePhotoPress = () => {
+    if (data?.photoUrl) {
+      setPhotoPreviewOpen(true);
       return;
     }
 
-    setMpinLoading(true);
+    setPhotoSheetOpen(true);
+  };
+
+  const handleSelectPhoto = async (source: 'camera' | 'gallery') => {
+    setPhotoSheetOpen(false);
+    const picked = await pickProfileImage(source);
+
+    if (!picked) {
+      return;
+    }
+
+    setPhotoUpdating(true);
 
     try {
-      await requestForgotMpinOtp(mobile);
-      navigation.navigate('OtpVerification', {
-        mobile,
-        purpose: 'forgot_mpin',
-        flowOrigin: 'profile',
-      });
+      await updateFieldOfficerProfilePhoto(buildPhotoFormData(picked.uri, picked.mimeType));
+      invalidateProfilePhotoCache(data?.photoUrl);
+      updatePhotoUrl(picked.uri);
+      await reload();
+      Alert.alert('Profile photo updated', 'Your profile photo has been saved.');
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to send OTP for MPIN reset.'));
+      Alert.alert('Photo update failed', getApiErrorMessage(err, 'Failed to update profile photo.'));
     } finally {
-      setMpinLoading(false);
+      setPhotoUpdating(false);
     }
   };
 
+  const handleRemovePhoto = async () => {
+    setPhotoSheetOpen(false);
+    setPhotoUpdating(true);
+
+    try {
+      await removeFieldOfficerProfilePhoto();
+      invalidateProfilePhotoCache(data?.photoUrl);
+      updatePhotoUrl(null);
+      await reload();
+      Alert.alert('Profile photo removed', 'Your profile photo has been removed.');
+    } catch (err) {
+      Alert.alert('Photo update failed', getApiErrorMessage(err, 'Failed to remove profile photo.'));
+    } finally {
+      setPhotoUpdating(false);
+    }
+  };
+
+  if (loading && !data) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <LoadingState message="Loading officer profile..." />
+      </SafeAreaView>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <ErrorState message={error} onRetry={reload} />
+      </SafeAreaView>
+    );
+  }
+
+  const profile = data!;
+
   return (
-    <ProfileManageLayout
-      title="Manage Your Profile"
-      subtitle="Update your personal details and security settings for your DMRV account."
-      loading={loading}
-      error={error}
-      onRetry={load}
-      steps={[
-        {
-          id: 'personal-info',
-          label: 'Personal Info',
-          icon: 'person',
-          onPress: () => undefined,
-        },
-        {
-          id: 'change-password',
-          label: 'Change Password',
-          icon: 'lock',
-          onPress: changePassword,
-        },
-        {
-          id: 'security-pin',
-          label: 'Security PIN',
-          icon: 'pin',
-          onPress: changeMpin,
-          loading: mpinLoading,
-        },
-      ]}
-      profileDetails={
-        <>
-          <ProfileDetailRow label="Name" value={pickString(user, 'name')} />
-          <ProfileDetailRow
-            label="Officer Code"
-            value={pickString(officer, 'officer_code', 'field_officer_code')}
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <OfficerProfileAppBar
+        onBack={() => navigation.navigate('Home')}
+        onNotificationsPress={() => navigation.navigate('FieldOfficerNotifications')}
+      />
+
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={reload} tintColor={officerTheme.primary} />
+        }
+      >
+        <View style={styles.pageHeader}>
+          <Text style={styles.pageTitle}>{t('profile.officerTitle')}</Text>
+          <Text style={styles.pageSubtitle}>{t('profile.officerSubtitle')}</Text>
+        </View>
+
+        <OfficerProfileSummaryCard
+          officerName={profile.officerName}
+          officerCode={profile.officerCode}
+          roleLabel={profile.roleLabel}
+          regionLabel={profile.regionLabel}
+          statusLabel={profile.statusLabel}
+          isActive={profile.isActive}
+          photoUri={profile.photoUrl}
+          onPhotoPress={handlePhotoPress}
+        />
+
+        {photoUpdating ? <Text style={styles.updatingText}>Updating profile photo…</Text> : null}
+
+        <OfficerProfilePerformanceSection
+          visitsCompleted={profile.performance.visitsCompleted}
+          accuracyPercent={profile.performance.accuracyPercent}
+          onViewFull={openPerformance}
+          onVisitsPress={openPerformance}
+          onAccuracyPress={openPerformance}
+        />
+
+        <View style={styles.menuList}>
+          <OfficerProfileMenuRow
+            icon="person"
+            iconBackground={officerTheme.secondaryContainer}
+            iconColor={officerTheme.onSecondaryContainer}
+            title={t('profile.personalDetails')}
+            subtitle="Contact info, address"
+            onPress={() => openSection('personal')}
           />
-          <ProfileDetailRow label="Mobile" value={pickString(user, 'mobile')} />
-          <ProfileDetailRow label="Email" value={pickString(user, 'email')} />
-          <ProfileDetailRow label="Zone" value={pickString(officer, 'zone', 'district')} />
-          <ProfileDetailRow label="Assigned Area" value={pickString(officer, 'assigned_area')} />
-          <ProfileDetailRow label="Status" value={pickString(user, 'status')} />
-        </>
-      }
-      footerAction={{
-        label: 'Logout',
-        onPress: logout,
-        variant: 'danger',
-      }}
-    />
+          <OfficerProfileMenuRow
+            icon="support_agent"
+            title={t('profile.workInformation')}
+            subtitle="Region, talukas, dates"
+            onPress={() => openSection('work')}
+          />
+          <OfficerProfileMenuRow
+            icon="description"
+            title={t('profile.documents')}
+            subtitle="ID proof, letters"
+            onPress={() => openSection('documents')}
+          />
+          <OfficerProfileMenuRow
+            icon="lock"
+            title={t('profile.security')}
+            subtitle="Password, MPIN, Biometrics"
+            onPress={() => openSection('security')}
+          />
+          <OfficerProfileMenuRow
+            icon="description"
+            title={t('common.settings')}
+            subtitle={t('language.settingsSubtitle')}
+            onPress={() => navigation.navigate('FieldOfficerSettings')}
+          />
+        </View>
+
+        <View style={styles.dangerZone}>
+          <Pressable style={styles.logoutButton} onPress={logout}>
+            <BhuguardMaterialIcon name="sync" size={20} color={officerTheme.error} />
+            <Text style={styles.logoutText}>{t('common.logout')}</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+
+      <ProfilePhotoBottomSheet
+        visible={photoSheetOpen}
+        hasPhoto={Boolean(profile.photoUrl)}
+        onTakePhoto={() => void handleSelectPhoto('camera')}
+        onChooseGallery={() => void handleSelectPhoto('gallery')}
+        onRemovePhoto={() => void handleRemovePhoto()}
+        onClose={() => setPhotoSheetOpen(false)}
+      />
+
+      <ProfilePhotoPreviewModal
+        visible={photoPreviewOpen}
+        photoUri={profile.photoUrl}
+        onClose={() => setPhotoPreviewOpen(false)}
+        cacheFileName="field-officer-profile-current.jpg"
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-    paddingVertical: 6,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: dashboardTheme.outlineVariant,
-  },
-  detailLabel: {
-    fontSize: 13,
-    color: dashboardTheme.onSurfaceVariant,
+  safe: {
     flex: 1,
+    backgroundColor: officerTheme.background,
   },
-  detailValue: {
-    fontSize: 13,
+  content: {
+    padding: officerTheme.marginMobile,
+    gap: 24,
+    paddingBottom: 96,
+  },
+  pageHeader: {
+    gap: 4,
+  },
+  pageTitle: {
+    fontSize: 24,
     fontWeight: '600',
-    color: dashboardTheme.onSurface,
-    flex: 1,
-    textAlign: 'right',
+    color: officerTheme.onSurface,
+  },
+  pageSubtitle: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: officerTheme.onSurfaceVariant,
+  },
+  updatingText: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: officerTheme.onSurfaceVariant,
+    marginTop: -12,
+  },
+  menuList: {
+    gap: 12,
+  },
+  dangerZone: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(191, 201, 190, 0.3)',
+    paddingTop: 24,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  logoutText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: officerTheme.error,
   },
 });

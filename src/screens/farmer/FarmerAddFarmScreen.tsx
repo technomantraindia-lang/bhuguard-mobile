@@ -7,16 +7,22 @@ import { FarmAddressFields } from '../../components/farmer/farms/FarmAddressFiel
 import { FarmAreaUnitPicker } from '../../components/farmer/farms/FarmAreaUnitPicker';
 import { FarmFormField } from '../../components/farmer/farms/FarmFormField';
 import { FarmSuccessModal } from '../../components/farmer/farms/FarmSuccessModal';
+import { saveFarmerFarmMapping } from '../../api/farmerApi';
 import { FarmerAddFarmHeader } from '../../components/farmer/farms/FarmerAddFarmHeader';
 import { SubmitActivityCard } from '../../components/farmer/SubmitActivityCard';
+import { LandBoundaryVerificationSection } from '../../components/shared/LandBoundaryVerificationSection';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
+import { useBoundaryCapture } from '../../context/BoundaryCaptureContext';
 import { useAddFarmerFarmForm } from '../../hooks/useAddFarmerFarmForm';
 import type { FarmerStackParamList } from '../../navigation/types';
 import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTheme';
+import { buildBoundaryUploadPayload, type AreaUnit } from '../../utils/boundaryGeometry';
+import { mapFarmAreaUnitToApi } from '../../constants/farmerFarmAreaUnits';
 
 type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmerAddFarm'>;
 
 export function FarmerAddFarmScreen({ navigation }: Props) {
+  const boundary = useBoundaryCapture();
   const {
     form,
     addressValue,
@@ -30,11 +36,46 @@ export function FarmerAddFarmScreen({ navigation }: Props) {
     submit,
   } = useAddFarmerFarmForm();
   const [successVisible, setSuccessVisible] = useState(false);
+  const mapped = boundary.points.length >= 3;
+  const mappingStatus = mapped ? 'mapped' : boundary.points.length > 0 ? 'draft' : 'not_mapped';
+
+  const startPrefarmMapping = () => {
+    if (!form.area.trim()) {
+      return;
+    }
+
+    boundary.setSession({
+      sessionMode: 'prefarm',
+      farmId: null,
+      farmName: form.name.trim() || 'New Farm',
+      farmCode: 'Draft',
+      declaredArea: form.area,
+      declaredUnit: mapFarmAreaUnitToApi(form.areaUnit) as AreaUnit,
+      unit: mapFarmAreaUnitToApi(form.areaUnit) as AreaUnit,
+    });
+
+    navigation.navigate('FarmBoundaryStart', { farmId: 0 });
+  };
 
   const handleSubmit = async () => {
-    const ok = await submit();
+    const result = await submit();
 
-    if (ok) {
+    if (typeof result === 'number') {
+      try {
+        if (boundary.points.length >= 3) {
+          const payload = {
+            ...buildBoundaryUploadPayload(result, boundary.unit, boundary.points, boundary.gpsAccuracyLabel),
+            declared_area: form.area,
+            declared_unit: form.areaUnit,
+            mapping_status: 'mapped',
+            verification_status: 'pending_review',
+          };
+          await saveFarmerFarmMapping(result, payload);
+        }
+      } catch {
+        // Farm created; mapping can be retried from farm detail.
+      }
+
       setSuccessVisible(true);
     }
   };
@@ -42,6 +83,14 @@ export function FarmerAddFarmScreen({ navigation }: Props) {
   const handleSuccessClose = () => {
     setSuccessVisible(false);
     navigation.navigate('FarmerTabs', { screen: 'Farms' });
+  };
+
+  const handleCaptureBoundaryAfterSave = async () => {
+    const result = await submit();
+
+    if (typeof result === 'number') {
+      navigation.navigate('CameraBoundaryStart', { farmId: result });
+    }
   };
 
   return (
@@ -89,23 +138,17 @@ export function FarmerAddFarmScreen({ navigation }: Props) {
         <SubmitActivityCard title="Location">
           <FarmAddressFields
             value={addressValue}
+            pincode={form.pincode}
             errors={{
               district: fieldErrors.district,
               taluka: fieldErrors.taluka,
               village: fieldErrors.village,
               state: fieldErrors.state,
+              pincode: fieldErrors.pincode,
             }}
             onChange={updateAddress}
           />
 
-          <FarmFormField
-            label="Pincode"
-            value={form.pincode}
-            onChangeText={(value) => updateField('pincode', value)}
-            placeholder="382110"
-            keyboardType="number-pad"
-            error={fieldErrors.pincode}
-          />
           <FarmFormField
             label="Full Address"
             value={form.address}
@@ -115,6 +158,18 @@ export function FarmerAddFarmScreen({ navigation }: Props) {
             error={fieldErrors.address}
           />
         </SubmitActivityCard>
+
+        <LandBoundaryVerificationSection
+          declaredArea={form.area}
+          declaredUnit={form.areaUnit}
+          village={form.village}
+          taluka={form.taluka}
+          district={form.district}
+          state={form.state}
+          mappingStatus={mappingStatus}
+          mappedAreaLabel={mapped ? boundary.areaLabel : undefined}
+          onStartMapping={startPrefarmMapping}
+        />
 
         <SubmitActivityCard title="GPS Location">
           <FarmFormField
@@ -165,13 +220,28 @@ export function FarmerAddFarmScreen({ navigation }: Props) {
             submitting && styles.submitButtonDisabled,
           ]}
           onPress={() => void handleSubmit()}
+          disabled={submitting || !mapped}
+        >
+          <Text style={styles.submitButtonText}>
+            {submitting ? 'Saving Farm…' : mapped ? 'Add Farm' : 'Map land boundary first'}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [styles.cameraButton, dashboardShadow, (submitting || pressed) && styles.pressed]}
+          onPress={() => void handleCaptureBoundaryAfterSave()}
           disabled={submitting}
         >
-          <Text style={styles.submitButtonText}>{submitting ? 'Saving Farm…' : 'Add Farm'}</Text>
+          <BhuguardMaterialIcon name="photo_camera" size={20} color={dashboardTheme.primaryContainer} />
+          <Text style={styles.cameraButtonText}>Capture Boundary with Camera</Text>
         </Pressable>
       </ScrollView>
 
-      <FarmSuccessModal visible={successVisible} onClose={handleSuccessClose} />
+      <FarmSuccessModal
+        visible={successVisible}
+        message="Farm added successfully. You can now capture the farm boundary with camera."
+        onClose={handleSuccessClose}
+      />
     </SafeAreaView>
   );
 }
@@ -222,6 +292,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: dashboardTheme.onPrimary,
+  },
+  cameraButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: dashboardTheme.surfaceLowest,
+    borderRadius: 12,
+    paddingVertical: 15,
+    borderWidth: 1,
+    borderColor: dashboardTheme.primaryContainer,
+  },
+  cameraButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: dashboardTheme.primaryContainer,
   },
   pressed: {
     opacity: 0.92,

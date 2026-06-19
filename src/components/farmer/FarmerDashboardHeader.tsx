@@ -98,8 +98,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: dashboardTheme.marginMobile,
-    paddingVertical: 12,
+    paddingTop: 14,
+    paddingBottom: 12,
     backgroundColor: dashboardTheme.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: dashboardTheme.outlineVariant,
   },
   left: {
     flexDirection: 'row',
@@ -114,8 +117,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   greeting: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 17,
+    lineHeight: 24,
     fontWeight: '700',
     color: dashboardTheme.headingGreen,
   },
@@ -124,6 +127,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: '500',
     color: dashboardTheme.textMuted,
+    marginTop: 1,
   },
   actions: {
     flexDirection: 'row',
@@ -136,6 +140,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: dashboardTheme.background,
+    borderWidth: 1,
+    borderColor: dashboardTheme.outlineVariant,
   },
   iconPressed: {
     backgroundColor: `${dashboardTheme.secondaryContainer}80`,

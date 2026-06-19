@@ -31,7 +31,15 @@ export async function fetchListItemById(
   return wrapperKey ? { [wrapperKey]: match } : match;
 }
 
-export function extractList(data: ApiRecord, keys: string[]): ApiRecord[] {
+export function extractList(data: ApiRecord | ApiRecord[] | null | undefined, keys: string[]): ApiRecord[] {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (!data || typeof data !== 'object') {
+    return [];
+  }
+
   for (const key of keys) {
     const value = data[key];
 

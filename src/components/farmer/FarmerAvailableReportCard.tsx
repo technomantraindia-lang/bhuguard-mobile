@@ -6,9 +6,7 @@ import type { FarmerReportItem, ReportStatusBadge } from '../../utils/farmerRepo
 
 interface FarmerAvailableReportCardProps {
   report: FarmerReportItem;
-  downloading?: boolean;
   onView: () => void;
-  onDownload: () => void;
 }
 
 function statusStyles(status: ReportStatusBadge) {
@@ -37,19 +35,14 @@ function statusLabel(status: ReportStatusBadge): string {
   }
 }
 
-export function FarmerAvailableReportCard({
-  report,
-  downloading = false,
-  onView,
-  onDownload,
-}: FarmerAvailableReportCardProps) {
+export function FarmerAvailableReportCard({ report, onView }: FarmerAvailableReportCardProps) {
   const badge = statusStyles(report.statusBadge);
   const iconBackground =
     report.iconTone === 'verified' ? dashboardTheme.surfaceLow : dashboardTheme.surfaceContainerLow;
   const iconColor = report.iconTone === 'verified' ? dashboardTheme.primaryContainer : dashboardTheme.primary;
 
   return (
-    <View style={[styles.card, dashboardShadow]}>
+    <Pressable style={({ pressed }) => [styles.card, dashboardShadow, pressed && styles.pressed]} onPress={onView}>
       <View style={styles.topRow}>
         <View style={[styles.iconWrap, { backgroundColor: iconBackground }]}>
           <BhuguardMaterialIcon name={report.icon} size={24} color={iconColor} filled />
@@ -71,23 +64,10 @@ export function FarmerAvailableReportCard({
       </View>
 
       <View style={styles.actions}>
-        <Pressable style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]} onPress={onView}>
-          <BhuguardMaterialIcon name="fact_check" size={18} color={dashboardTheme.primary} />
-          <Text style={styles.actionText}>View</Text>
-        </Pressable>
-
-        <View style={styles.divider} />
-
-        <Pressable
-          style={({ pressed }) => [styles.actionButton, pressed && styles.pressed, downloading && styles.disabled]}
-          onPress={onDownload}
-          disabled={downloading}
-        >
-          <BhuguardMaterialIcon name="upload" size={18} color={dashboardTheme.primary} />
-          <Text style={styles.actionText}>{downloading ? 'Downloading…' : 'Download PDF'}</Text>
-        </Pressable>
+        <Text style={styles.actionText}>View Report</Text>
+        <BhuguardMaterialIcon name="chevron_right" size={18} color={dashboardTheme.primary} />
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -155,34 +135,18 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     borderTopWidth: 1,
     borderTopColor: `${dashboardTheme.outlineVariant}33`,
     paddingTop: 12,
   },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 8,
-  },
   actionText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: dashboardTheme.primary,
   },
-  divider: {
-    width: 1,
-    alignSelf: 'stretch',
-    backgroundColor: `${dashboardTheme.outlineVariant}33`,
-    marginVertical: 4,
-  },
   pressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
-  },
-  disabled: {
-    opacity: 0.6,
+    opacity: 0.92,
+    transform: [{ scale: 0.99 }],
   },
 });

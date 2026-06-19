@@ -15,7 +15,7 @@ import { FarmerActivitiesQuickActionCard } from '../../components/farmer/activit
 import { FarmerActivitiesSummaryGrid } from '../../components/farmer/activities/FarmerActivitiesSummaryGrid';
 import { FarmerActivityProgressSection } from '../../components/farmer/activities/FarmerActivityProgressSection';
 import { FarmerActivitySearchBar } from '../../components/farmer/activities/FarmerActivitySearchBar';
-import { FarmerActivityTimelineCard } from '../../components/farmer/activities/FarmerActivityTimelineCard';
+import { FarmerActivityListCard } from '../../components/farmer/activities/FarmerActivityListCard';
 import { FarmerActivityVerificationCard } from '../../components/farmer/activities/FarmerActivityVerificationCard';
 import { FarmerEvidenceSummarySection } from '../../components/farmer/activities/FarmerEvidenceSummarySection';
 import { useFarmerActivitiesData } from '../../hooks/useFarmerActivitiesData';
@@ -46,10 +46,11 @@ export function FarmerMyActivitiesScreen() {
   };
 
   const openActivityDetail = (activityId: number) => {
-    navigation.navigate('StitchScreen', {
-      screenKey: 'activity_detail',
-      itemId: activityId,
-    });
+    navigation.navigate('FarmerActivityDetail', { activityId });
+  };
+
+  const openCaptureEvidence = () => {
+    navigation.navigate('StitchScreen', { screenKey: 'add_farmer_evidence' });
   };
 
   const openActivityReport = () => {
@@ -114,16 +115,16 @@ export function FarmerMyActivitiesScreen() {
             </View>
           ) : (
             <View style={styles.timeline}>
-              {activities.map((activity, index) => (
-                <FarmerActivityTimelineCard
+              {activities.map((activity) => (
+                <FarmerActivityListCard
                   key={activity.id}
                   activity={activity}
-                  isLast={index === activities.length - 1}
                   onViewDetails={() => openActivityDetail(activity.id)}
                   onDownloadReport={
                     activity.status === 'approved' ? () => openActivityReport() : undefined
                   }
-                  onFixResubmit={
+                  onEditActivity={activity.status === 'draft' ? () => openEditActivity(activity.farmId) : undefined}
+                  onResubmit={
                     activity.status === 'correction_required'
                       ? () => openEditActivity(activity.farmId)
                       : undefined
@@ -135,7 +136,7 @@ export function FarmerMyActivitiesScreen() {
         </View>
 
         <FarmerActivityProgressSection summary={activitySummary} />
-        <FarmerEvidenceSummarySection summary={activitySummary} />
+        <FarmerEvidenceSummarySection summary={activitySummary} onCaptureEvidence={openCaptureEvidence} />
         <FarmerActivityVerificationCard
           summary={activitySummary}
           onViewReport={() => navigation.navigate('FarmerVerificationStatus')}

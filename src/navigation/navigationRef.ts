@@ -12,3 +12,9 @@ export function navigateToLogin(): void {
     });
   }
 }
+
+export function navigateToApiServerSettings(): void {
+  if (navigationRef.isReady()) {
+    navigationRef.navigate('ApiServerSettings');
+  }
+}

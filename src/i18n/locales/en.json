@@ -1,0 +1,197 @@
+{
+  "brand": {
+    "name": "Bhuguard",
+    "tagline": "Digital MRV for Climate Action"
+  },
+  "preloader": {
+    "loading": "Loading your climate workspace…",
+    "loadingData": "Preparing your dashboard…"
+  },
+  "language": {
+    "screenTitle": "Select Language",
+    "title": "Choose Your Language",
+    "subtitle": "Select your preferred language for the app",
+    "gujarati": "Gujarati",
+    "gujaratiNative": "ગુજરાતી",
+    "hindi": "Hindi",
+    "hindiNative": "हिन्दी",
+    "english": "English",
+    "englishNative": "English",
+    "settingsTitle": "Language",
+    "settingsSubtitle": "Change app display language",
+    "changed": "Language updated",
+    "changedMessage": "The app will now use your selected language."
+  },
+  "role": {
+    "screenTitle": "Select Role",
+    "title": "Select Your Role",
+    "subtitle": "Continue as farmer or field officer",
+    "farmerTitle": "Farmer",
+    "farmerDescription": "Access your farm, activities, reports and profile",
+    "farmerButton": "Continue as Farmer",
+    "fieldOfficerTitle": "Field Officer",
+    "fieldOfficerDescription": "Register farmers, verify farms, capture land mapping and submit reports",
+    "fieldOfficerButton": "Continue as Field Officer",
+    "farmerRegistrationNote": "Farmer registration is completed only by a Field Officer."
+  },
+  "farmerLogin": {
+    "screenTitle": "Farmer Login",
+    "title": "Farmer Login",
+    "subtitle": "Login using username, password, MPIN, OTP or biometric",
+    "passwordOption": "Username & Password",
+    "passwordDescription": "Login with your mobile number or email and password",
+    "mpinOption": "MPIN Login",
+    "mpinDescription": "Use your registered mobile number and 6-digit MPIN",
+    "otpOption": "Mobile OTP Login",
+    "otpDescription": "Receive a one-time password on your mobile",
+    "biometricOption": "Biometric Login",
+    "biometricDescription": "Use fingerprint or face unlock",
+    "biometricUnavailable": "Enable biometric login from your profile after signing in once.",
+    "forgotMpin": "Forgot MPIN?",
+    "contactSupport": "Contact Field Officer / Support",
+    "noRegistration": "Farmer accounts are created by your Field Officer.",
+    "profileMissingTitle": "Registration required",
+    "profileMissingMessage": "Please contact your Field Officer for registration."
+  },
+  "fieldOfficerLogin": {
+    "screenTitle": "Field Officer Login",
+    "title": "Field Officer Login",
+    "subtitle": "Login to verify farms and register farmers",
+    "passwordOption": "Username & Password",
+    "mpinOption": "MPIN Login",
+    "biometricOption": "Biometric Login",
+    "changeRole": "Change role",
+    "usernameLabel": "Mobile number or email",
+    "passwordLabel": "Password",
+    "forgotPassword": "Forgot Password?",
+    "signIn": "Login",
+    "signingIn": "Signing in…"
+  },
+  "passwordLogin": {
+    "farmerTitle": "Farmer Login",
+    "fieldOfficerTitle": "Field Officer Login",
+    "subtitle": "Enter your username and password",
+    "usernameLabel": "Username or mobile number",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "forgotPassword": "Forgot Password?",
+    "signIn": "Login",
+    "signingIn": "Signing in…"
+  },
+  "mpinLogin": {
+    "title": "MPIN Login",
+    "welcome": "Welcome Back",
+    "instruction": "Enter your 6-digit MPIN",
+    "mobileLabel": "Mobile Number",
+    "forgotMpin": "Forgot MPIN?",
+    "signIn": "Login",
+    "signingIn": "Signing in…",
+    "enableHint": "Sign in with password or MPIN once to enable quick login on this device.",
+    "roleMismatch": "This account is not registered as the selected role."
+  },
+  "otpLogin": {
+    "title": "OTP Login",
+    "subtitle": "Enter your registered mobile number",
+    "mobileLabel": "Mobile Number",
+    "sendOtp": "Send OTP",
+    "sendingOtp": "Sending OTP…",
+    "verifyTitle": "Verify OTP",
+    "verifySubtitle": "Enter the 6-digit code sent to {{mobile}}",
+    "verify": "Login",
+    "verifying": "Verifying…",
+    "resend": "Resend OTP",
+    "resendIn": "Resend in {{time}}"
+  },
+  "apiServer": {
+    "title": "Server settings",
+    "subtitle": "Connect the app to your Bhuguard API server. Use this when testing with a client on another network.",
+    "settingsSubtitle": "Change API server URL for remote demo / client testing",
+    "openSettings": "Server settings",
+    "offlineTitle": "Server not reachable",
+    "offlineHint": "Tap here to set the public server URL (required for other networks).",
+    "urlLabel": "Server URL",
+    "test": "Test connection",
+    "save": "Save & use",
+    "reset": "Reset to default",
+    "emptyUrl": "Enter the server URL first.",
+    "saveFailed": "Could not connect. Check the URL and make sure the server tunnel is running.",
+    "saved": "Server URL saved. You can log in now.",
+    "helpTitle": "For client demo (any mobile network)",
+    "helpSteps": "1. On your PC run the public tunnel script\n2. Copy the https://....trycloudflare.com URL\n3. Paste it here and tap Test, then Save\n4. Keep the tunnel window open while the client uses the app",
+    "example": "Do NOT use the example text — copy YOUR URL from Git Bash",
+    "urlNote": "Copy the full https:// link shown in Git Bash after running start-public-api-tunnel.sh"
+  },
+  "common": {
+    "continue": "Continue",
+    "back": "Back",
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save",
+    "submit": "Submit",
+    "logout": "Logout",
+    "retry": "Retry",
+    "loading": "Loading…",
+    "login": "Login",
+    "settings": "Settings",
+    "profile": "Profile",
+    "account": "Account",
+    "support": "Support",
+    "contactHelp": "Need help? Contact Field Officer / Support",
+    "version": "Secure mobile app"
+  },
+  "tabs": {
+    "farmer": {
+      "home": "Home",
+      "farms": "Farms",
+      "activity": "Activity",
+      "reports": "Reports",
+      "profile": "Profile"
+    },
+    "officer": {
+      "dashboard": "Dashboard",
+      "visits": "Visits",
+      "evidence": "Evidence",
+      "reports": "Reports",
+      "profile": "Profile"
+    }
+  },
+  "profile": {
+    "officerTitle": "Officer Profile",
+    "officerSubtitle": "Manage your account, region and security settings.",
+    "farmerTitle": "My Profile",
+    "personalDetails": "Personal Details",
+    "workInformation": "Work Information",
+    "documents": "Documents",
+    "security": "Security",
+    "language": "Language"
+  },
+  "officer": {
+    "dashboard": {
+      "onboardFarmer": "Onboard New Farmer",
+      "assignedVisits": "Assigned Visits",
+      "gpsMapping": "GPS Mapping Tasks",
+      "checklist": "Verification Checklist",
+      "evidence": "Evidence Upload",
+      "reports": "Reports"
+    },
+    "onboarding": {
+      "successTitle": "Farmer Registration Success",
+      "registerAnother": "Register Another Farmer",
+      "viewProfile": "View Farmer Profile",
+      "goToDashboard": "Go to Dashboard",
+      "loginReady": "Farmer can now login using MPIN or OTP"
+    }
+  },
+  "errors": {
+    "somethingWrong": "Something went wrong",
+    "loginFailed": "Login failed. Please try again.",
+    "network": "Network error. Check your connection and try again.",
+    "invalidCredentials": "Invalid login credentials.",
+    "invalidMpin": "Invalid MPIN.",
+    "mobileRequired": "Enter a valid 10-digit mobile number.",
+    "otpRequired": "Enter the 6-digit OTP.",
+    "unsupportedAccount": "This account cannot be used in the mobile app.",
+    "biometricFailed": "Biometric verification failed.",
+    "biometricDevice": "Sign in once with MPIN or password to enable biometric login on this device."
+  }
+}

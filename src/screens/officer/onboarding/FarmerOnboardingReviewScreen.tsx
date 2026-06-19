@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createFarmerOnboarding } from '../../../api/fieldOfficerApi';
 import { getApiErrorMessage } from '../../../api/authApi';
 import { AppCard } from '../../../components/AppCard';
+import { OnboardingReviewPhoto } from '../../../components/onboarding/OnboardingReviewPhoto';
 import { useOnboarding, type OnboardingResult } from '../../../context/OnboardingContext';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
@@ -55,6 +56,7 @@ export function FarmerOnboardingReviewScreen() {
         district: farmer.district ? String(farmer.district) : draft.district_name,
         state: farmer.state ? String(farmer.state) : draft.state,
         onboarded_at: farmer.onboarded_at ? String(farmer.onboarded_at) : undefined,
+        photo_url: farmer.photo_url ? String(farmer.photo_url) : undefined,
         farm_id: farmer.farm_id ? Number(farmer.farm_id) : undefined,
         land_survey_number: farmer.land_survey_number ? String(farmer.land_survey_number) : draft.land_survey_number,
         land_area: farmer.land_area != null ? String(farmer.land_area) : draft.land_area,
@@ -84,6 +86,7 @@ export function FarmerOnboardingReviewScreen() {
       footerError={error}
     >
       <ReviewSection title="Farmer profile" onEdit={() => edit('FarmerBasicDetails')}>
+        <OnboardingReviewPhoto file={draft.farmer_photo} />
         <Line label="Name" value={draft.farmer_name} />
         <Line label="Mobile" value={draft.mobile} />
         <Line label="Language" value={draft.preferred_language} />
@@ -92,7 +95,6 @@ export function FarmerOnboardingReviewScreen() {
         <Line label="Taluka" value={draft.taluka_name} />
         <Line label="Village" value={draft.village_name} />
         <Line label="Pincode" value={draft.pincode} />
-        <Line label="Photo" value={draft.farmer_photo?.name} />
       </ReviewSection>
       <ReviewSection title="Consent" onEdit={() => edit('FarmerConsent')}>
         <Line label="Data usage" value={draft.data_usage_consent ? 'Accepted' : 'Pending'} />
@@ -119,7 +121,6 @@ export function FarmerOnboardingReviewScreen() {
       </ReviewSection>
       <ReviewSection title="Documents" onEdit={() => edit('FarmerProofUpload')}>
         <Line label="Land proof" value={draft.proof_of_land_ownership?.name} />
-        <Line label="Farmer photo" value={draft.farmer_photo?.name} />
         <Line label="Consent" value={draft.consent_form?.name} />
       </ReviewSection>
     </OnboardingFormScreen>

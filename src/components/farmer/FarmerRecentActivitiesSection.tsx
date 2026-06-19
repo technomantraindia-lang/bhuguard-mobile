@@ -39,7 +39,8 @@ export function FarmerRecentActivitiesSection({
               <Text style={styles.emoji}>{activity.emoji}</Text>
               <View style={styles.copy}>
                 <Text style={styles.title}>{activity.title}</Text>
-                <Text style={styles.subtitle}>{activity.farmName}</Text>
+                <Text style={styles.subtitle}>{activity.activityId}</Text>
+                <Text style={styles.farmName}>{activity.farmName}</Text>
               </View>
               <Text style={styles.date}>{activity.dateLabel}</Text>
             </View>
@@ -105,6 +106,12 @@ const styles = StyleSheet.create({
     color: dashboardTheme.onSurface,
   },
   subtitle: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
+    color: dashboardTheme.onSurfaceVariant,
+  },
+  farmName: {
     fontSize: 12,
     lineHeight: 16,
     color: dashboardTheme.textMuted,

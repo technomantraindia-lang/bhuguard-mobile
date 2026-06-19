@@ -1,5 +1,5 @@
-import { FieldOfficerAssignmentsScreen } from '../officer/FieldOfficerAssignmentsScreen';
+import { FieldOfficerAssignedVisitsScreen } from '../officer/FieldOfficerAssignedVisitsScreen';
 
 export function OfficerVisitsTabScreen() {
-  return <FieldOfficerAssignmentsScreen />;
+  return <FieldOfficerAssignedVisitsScreen />;
 }

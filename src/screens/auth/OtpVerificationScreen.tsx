@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -7,22 +7,29 @@ import {
   getApiErrorMessage,
   requestForgotMpinOtp,
   requestForgotPasswordOtp,
+  requestLoginOtp,
   verifyForgotMpinOtp,
   verifyForgotPasswordOtp,
+  verifyLoginOtp,
 } from '../../api/authApi';
 import { AuthBackHeader } from '../../components/auth/AuthBackHeader';
 import { PinBoxInput } from '../../components/auth/PinBoxInput';
-import type { SecurityScreensParamList } from '../../navigation/types';
+import { useTranslation } from '../../i18n/I18nContext';
+import type { RootStackParamList } from '../../navigation/types';
+import { saveAuthSession } from '../../storage/authStorage';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
+import { getDashboardRoute, isMobileSupportedRole } from '../../utils/authRouting';
 import { formatMobileDisplay } from '../../utils/securityFlow';
 
 const RESEND_SECONDS = 45;
 
-type Props = NativeStackScreenProps<SecurityScreensParamList, 'OtpVerification'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'OtpVerification'>;
 
 export function OtpVerificationScreen({ navigation, route }: Props) {
+  const { t } = useTranslation();
   const mobile = route.params?.mobile ?? '';
   const purpose = route.params?.purpose ?? 'forgot_password';
+  const role = route.params?.role;
   const flowOrigin = route.params?.flowOrigin;
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,9 +49,36 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
     return () => clearInterval(timer);
   }, [secondsLeft]);
 
+  const completeLogin = async (userType: string, token: string, user: Parameters<typeof saveAuthSession>[1]) => {
+    if (!isMobileSupportedRole(userType)) {
+      setError(t('errors.unsupportedAccount'));
+      return;
+    }
+
+    if (role && userType !== role) {
+      setError(t('mpinLogin.roleMismatch'));
+      return;
+    }
+
+    if (userType === 'farmer' && !user.farmer_profile?.id) {
+      Alert.alert(t('farmerLogin.profileMissingTitle'), t('farmerLogin.profileMissingMessage'));
+      return;
+    }
+
+    const dashboardRoute = getDashboardRoute(userType);
+
+    if (!dashboardRoute) {
+      setError(t('errors.unsupportedAccount'));
+      return;
+    }
+
+    await saveAuthSession(token, user, userType);
+    navigation.reset({ index: 0, routes: [{ name: dashboardRoute }] });
+  };
+
   const verify = async () => {
     if (otp.trim().length !== 6) {
-      setError('Enter the 6-digit OTP.');
+      setError(t('errors.otpRequired'));
       return;
     }
 
@@ -52,6 +86,12 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
     setError(null);
 
     try {
+      if (purpose === 'login') {
+        const result = await verifyLoginOtp(mobile, otp.trim());
+        await completeLogin(result.user_type, result.token, result.user);
+        return;
+      }
+
       if (purpose === 'forgot_mpin') {
         await verifyForgotMpinOtp(mobile, otp.trim());
         navigation.navigate('CreateMpin', { mobile, flowOrigin });
@@ -60,7 +100,7 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
         navigation.navigate('ResetPassword', { mobile, flowOrigin });
       }
     } catch (err) {
-      setError(getApiErrorMessage(err, 'OTP verification failed.'));
+      setError(getApiErrorMessage(err, t('errors.loginFailed')));
     } finally {
       setLoading(false);
     }
@@ -75,7 +115,9 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
     setError(null);
 
     try {
-      if (purpose === 'forgot_mpin') {
+      if (purpose === 'login') {
+        await requestLoginOtp(mobile);
+      } else if (purpose === 'forgot_mpin') {
         await requestForgotMpinOtp(mobile);
       } else {
         await requestForgotPasswordOtp(mobile);
@@ -84,32 +126,30 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
       setSecondsLeft(RESEND_SECONDS);
       setOtp('');
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to resend OTP.'));
+      setError(getApiErrorMessage(err, t('errors.loginFailed')));
     } finally {
       setResendLoading(false);
     }
-  }, [mobile, purpose, resendLoading, secondsLeft]);
+  }, [mobile, purpose, resendLoading, secondsLeft, t]);
 
   const timerLabel = `${String(Math.floor(secondsLeft / 60)).padStart(2, '0')}:${String(secondsLeft % 60).padStart(2, '0')}`;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <AuthBackHeader />
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Text style={styles.title}>Verify OTP</Text>
+            <Text style={styles.title}>
+              {purpose === 'login' ? t('otpLogin.verifyTitle') : t('otpLogin.verifyTitle')}
+            </Text>
             <Text style={styles.subtitle}>
-              Enter the 6-digit code sent to{' '}
-              <Text style={styles.mobile}>{formatMobileDisplay(mobile)}</Text>
+              {t('otpLogin.verifySubtitle', { mobile: formatMobileDisplay(mobile) })}
             </Text>
           </View>
 
           <PinBoxInput
-            label="One-time password"
+            label={t('otpLogin.verifyTitle')}
             value={otp}
             onChange={setOtp}
             masked={false}
@@ -121,11 +161,9 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
 
           <View style={styles.resendBlock}>
             {secondsLeft > 0 ? (
-              <Text style={styles.timerText}>
-                Resend code in <Text style={styles.timerValue}>{timerLabel}</Text>
-              </Text>
+              <Text style={styles.timerText}>{t('otpLogin.resendIn', { time: timerLabel })}</Text>
             ) : (
-              <Text style={styles.timerText}>You can resend the code now.</Text>
+              <Text style={styles.timerText}>{t('otpLogin.resend')}</Text>
             )}
             <Pressable
               onPress={resend}
@@ -133,27 +171,20 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
               style={({ pressed }) => [styles.resendLink, pressed && styles.resendPressed]}
             >
               <Text style={[styles.resendText, secondsLeft > 0 && styles.resendDisabled]}>
-                {resendLoading ? 'Sending…' : 'Resend Code'}
+                {resendLoading ? t('otpLogin.sendingOtp') : t('otpLogin.resend')}
               </Text>
             </Pressable>
           </View>
 
           <Pressable
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, loading && styles.buttonDisabled]}
-            onPress={verify}
+            onPress={() => void verify()}
             disabled={loading}
           >
-            <Text style={styles.buttonText}>{loading ? 'Verifying…' : 'Verify & Proceed'}</Text>
+            <Text style={styles.buttonText}>
+              {loading ? t('otpLogin.verifying') : purpose === 'login' ? t('otpLogin.verify') : t('common.continue')}
+            </Text>
           </Pressable>
-
-          {flowOrigin !== 'profile' ? (
-            <Pressable
-              style={styles.changeMobile}
-              onPress={() => navigation.navigate('ForgotPassword', { flowOrigin })}
-            >
-              <Text style={styles.changeMobileText}>Change Mobile Number</Text>
-            </Pressable>
-          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -189,10 +220,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: dashboardTheme.onSurfaceVariant,
   },
-  mobile: {
-    fontWeight: '700',
-    color: dashboardTheme.onSurface,
-  },
   error: {
     fontSize: 13,
     color: dashboardTheme.error,
@@ -205,10 +232,6 @@ const styles = StyleSheet.create({
   timerText: {
     fontSize: 14,
     color: dashboardTheme.onSurfaceVariant,
-  },
-  timerValue: {
-    fontWeight: '700',
-    color: dashboardTheme.primary,
   },
   resendLink: {
     paddingVertical: 4,
@@ -243,15 +266,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: dashboardTheme.onPrimary,
-  },
-  changeMobile: {
-    alignSelf: 'center',
-    paddingVertical: 8,
-  },
-  changeMobileText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: dashboardTheme.primary,
-    textDecorationLine: 'underline',
   },
 });

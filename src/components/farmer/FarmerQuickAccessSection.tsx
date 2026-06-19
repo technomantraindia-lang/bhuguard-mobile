@@ -15,7 +15,7 @@ interface FarmerQuickAccessSectionProps {
   onViewFarms: () => void;
 
   onSubmitActivity: () => void;
-
+  onBaselineAssessment: () => void;
   onVerificationStatus: () => void;
 
   onCarbonProgress: () => void;
@@ -82,6 +82,8 @@ export function FarmerQuickAccessSection({
 
   onSubmitActivity,
 
+  onBaselineAssessment,
+
   onVerificationStatus,
 
   onCarbonProgress,
@@ -133,6 +135,15 @@ export function FarmerQuickAccessSection({
         </DashboardPressable>
 
       </DashboardPressable>
+
+
+
+      <QuickAccessRow
+        icon="science"
+        label="Baseline Assessment"
+        buttonLabel="Add Baseline"
+        onPress={onBaselineAssessment}
+      />
 
 
 

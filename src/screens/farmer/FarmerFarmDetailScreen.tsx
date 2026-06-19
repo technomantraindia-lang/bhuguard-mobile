@@ -76,6 +76,9 @@ export function FarmerFarmDetailScreen({ navigation, route }: Props) {
           onOpenFullScreen={() => navigation.navigate('FarmerFarmMapFullScreen', { farmId })}
           onRefresh={() => void reload()}
           onEditBoundary={() => navigation.navigate('FarmBoundaryStart', { farmId })}
+          onCaptureBoundaryWithCamera={() => navigation.navigate('CameraBoundaryStart', { farmId })}
+          onViewBoundaryPhotos={() => navigation.navigate('BoundaryPhotoGallery', { farmId })}
+          onRecaptureBoundary={() => navigation.navigate('CameraBoundaryStart', { farmId })}
         />
 
         <FarmSummaryCard
@@ -121,6 +124,7 @@ export function FarmerFarmDetailScreen({ navigation, route }: Props) {
           onOpenGoogleMaps={openMaps}
           onEditFarm={() => navigation.navigate('FarmerEditFarm', { farmId })}
           onAddActivity={() => navigation.navigate('FarmerSubmitActivity', { farmId })}
+          onAddBaseline={() => navigation.navigate('FarmerAddBaselineAssessment', { farmId })}
           onViewReports={() => navigation.navigate('FarmerFinalReports')}
         />
       </ScrollView>

@@ -10,13 +10,19 @@ import {
   formatAreaByUnit,
   formatGpsAccuracy,
 } from '../utils/boundaryGeometry';
+import type { BoundarySessionMode } from '../utils/boundaryFlowRoutes';
 
 interface BoundaryCaptureState {
+  sessionMode: BoundarySessionMode;
   farmId: number | null;
   farmName: string;
   farmCode: string;
+  farmerName: string;
+  declaredArea: string;
+  declaredUnit: AreaUnit;
   unit: AreaUnit;
   points: BoundaryPoint[];
+  captureMethod: 'gps' | 'camera';
   paused: boolean;
   satelliteMode: boolean;
   currentAccuracy: number | null;
@@ -29,7 +35,9 @@ interface BoundaryCaptureContextValue extends BoundaryCaptureState {
   areaLabel: string;
   gpsAccuracyLabel: string;
   setFarm: (farmId: number, farmName: string, farmCode: string) => void;
+  setSession: (session: Partial<Pick<BoundaryCaptureState, 'sessionMode' | 'farmId' | 'farmName' | 'farmCode' | 'farmerName' | 'declaredArea' | 'declaredUnit' | 'unit'>>) => void;
   setUnit: (unit: AreaUnit) => void;
+  setCaptureMethod: (method: 'gps' | 'camera') => void;
   setCurrentLocation: (latitude: number, longitude: number, accuracy: number) => void;
   setPoints: (points: BoundaryPoint[]) => void;
   addPoint: (point: Omit<BoundaryPoint, 'id' | 'pointNo'>) => void;
@@ -43,11 +51,16 @@ interface BoundaryCaptureContextValue extends BoundaryCaptureState {
 }
 
 const defaultState: BoundaryCaptureState = {
+  sessionMode: 'farm',
   farmId: null,
   farmName: 'Farm',
   farmCode: 'BG-FARM-000',
+  farmerName: 'Farmer',
+  declaredArea: '',
+  declaredUnit: 'acre',
   unit: 'acre',
   points: [],
+  captureMethod: 'gps',
   paused: false,
   satelliteMode: true,
   currentAccuracy: null,
@@ -76,8 +89,16 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
     setState((current) => ({ ...current, farmId, farmName, farmCode }));
   }, []);
 
+  const setSession = useCallback((session: Partial<Pick<BoundaryCaptureState, 'sessionMode' | 'farmId' | 'farmName' | 'farmCode' | 'farmerName' | 'declaredArea' | 'declaredUnit' | 'unit'>>) => {
+    setState((current) => ({ ...current, ...session }));
+  }, []);
+
   const setUnit = useCallback((unit: AreaUnit) => {
     setState((current) => ({ ...current, unit }));
+  }, []);
+
+  const setCaptureMethod = useCallback((captureMethod: 'gps' | 'camera') => {
+    setState((current) => ({ ...current, captureMethod }));
   }, []);
 
   const setCurrentLocation = useCallback((latitude: number, longitude: number, accuracy: number) => {
@@ -159,6 +180,12 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
           point.notes = notes;
         }
 
+        const photoUrl = pickString(record, 'photo_url');
+        if (photoUrl !== '-') {
+          point.photoUrl = photoUrl;
+          point.hasPhoto = Boolean(record.has_photo ?? true);
+        }
+
         return Number.isFinite(point.latitude) && Number.isFinite(point.longitude) ? point : null;
       })
       .filter((point): point is BoundaryPoint => point !== null);
@@ -166,6 +193,7 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
     setState((current) => ({
       ...current,
       unit: (pickString(boundary, 'unit') as AreaUnit) || current.unit,
+      captureMethod: (pickString(boundary, 'capture_method') as 'gps' | 'camera') || current.captureMethod,
       points,
     }));
   }, []);
@@ -181,7 +209,9 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
       areaLabel,
       gpsAccuracyLabel,
       setFarm,
+      setSession,
       setUnit,
+      setCaptureMethod,
       setCurrentLocation,
       setPoints,
       addPoint,
@@ -199,7 +229,9 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
       areaLabel,
       gpsAccuracyLabel,
       setFarm,
+      setSession,
       setUnit,
+      setCaptureMethod,
       setCurrentLocation,
       setPoints,
       addPoint,
