@@ -1,7 +1,5 @@
 import type { BhuguardIconName } from '../components/shared/BhuguardMaterialIcon';
 import {
-  DEFAULT_REPORT_HISTORY,
-  DESIGN_REPORT_SUMMARY,
   FARMER_REPORT_CATALOG,
   type FarmerReportCatalogEntry,
 } from '../constants/farmerReportCatalog';
@@ -128,38 +126,29 @@ function catalogDescriptionFor(catalogId: string, fallback = 'Official farm veri
 }
 
 export function buildCatalogReports(apiReports: FarmerReportItem[]): FarmerReportItem[] {
-  return FARMER_REPORT_CATALOG.map((entry) => {
-    const apiMatch = apiReports.find((report) => report.catalogId === entry.catalogId);
+  const catalogById = new Map(FARMER_REPORT_CATALOG.map((entry) => [entry.catalogId, entry]));
 
-    if (apiMatch) {
+  return apiReports
+    .filter((report) => report.sourceId > 0)
+    .map((report) => {
+      const entry = catalogById.get(report.catalogId);
+
+      if (!entry) {
+        return report;
+      }
+
       return {
-        ...apiMatch,
+        ...report,
         title: entry.title,
         description: entry.description,
         icon: entry.icon,
-        iconTone: entry.iconTone ?? apiMatch.iconTone,
-        statusBadge: entry.statusBadge === 'verified' || entry.statusBadge === 'updated'
-          ? entry.statusBadge
-          : apiMatch.statusBadge,
-        downloadAvailable: false,
+        iconTone: entry.iconTone ?? report.iconTone,
+        statusBadge:
+          entry.statusBadge === 'verified' || entry.statusBadge === 'updated'
+            ? entry.statusBadge
+            : report.statusBadge,
       };
-    }
-
-    return {
-      id: `catalog-${entry.catalogId}`,
-      catalogId: entry.catalogId,
-      sourceType: entry.sourceType,
-      sourceId: 0,
-      title: entry.title,
-      description: entry.description,
-      updatedLabel: 'Updated: —',
-      updatedAt: null,
-      statusBadge: entry.statusBadge,
-      icon: entry.icon,
-      downloadAvailable: false,
-      iconTone: entry.iconTone,
-    };
-  });
+    });
 }
 
 function withCatalogMeta(item: FarmerReportItem, catalogId: string): FarmerReportItem {
@@ -414,17 +403,11 @@ export function buildReportHistory(
     });
   }
 
-  if (history.length >= 3) {
-    return history.slice(0, 3);
+  if (history.length === 0) {
+    return [];
   }
 
-  return DEFAULT_REPORT_HISTORY.map((item, index) => ({
-    id: item.id,
-    title: item.title,
-    dateLabel: item.dateLabel,
-    isPrimary: item.isPrimary,
-    sortKey: 1000 - index,
-  }));
+  return history.sort((left, right) => right.sortKey - left.sortKey).slice(0, 3);
 }
 
 export function buildReportsSummary(
@@ -439,14 +422,13 @@ export function buildReportsSummary(
     .filter((item) => pickString(item, 'status').toLowerCase() === 'approved')
     .reduce((total, item) => total + parseNumber(item.estimated_carbon_credit ?? item.estimated_co2e), 0);
 
-  const estimatedGenerated =
-    estimatedGeneratedRaw > 0 ? estimatedGeneratedRaw : DESIGN_REPORT_SUMMARY.estimatedGenerated;
+  const estimatedGenerated = estimatedGeneratedRaw;
   const targetGenerated =
-    estimatedGeneratedRaw > 0 ? Math.max(25, Math.ceil(estimatedGenerated * 1.7)) : DESIGN_REPORT_SUMMARY.targetGenerated;
+    estimatedGeneratedRaw > 0 ? Math.max(25, Math.ceil(estimatedGenerated * 1.7)) : 0;
   const progressPercent =
-    estimatedGeneratedRaw > 0
+    targetGenerated > 0
       ? Math.min(100, Math.round((estimatedGenerated / targetGenerated) * 100))
-      : DESIGN_REPORT_SUMMARY.progressPercent;
+      : 0;
 
   const downloadable = reports.filter((report) => report.downloadAvailable).length;
   const estimatedCreditsRaw = Math.round(estimatedGeneratedRaw * 100);
@@ -456,16 +438,13 @@ export function buildReportsSummary(
     estimatedGenerated,
     targetGenerated,
     progressPercent,
-    isActive: true,
-    totalReports: reports.length > 0 ? Math.max(reports.length, DESIGN_REPORT_SUMMARY.totalReports) : DESIGN_REPORT_SUMMARY.totalReports,
-    downloadedCount: downloadable > 0 ? downloadable : DESIGN_REPORT_SUMMARY.downloadedCount,
-    pendingCount: DESIGN_REPORT_SUMMARY.pendingCount,
-    estimatedCredits: estimatedCreditsRaw > 0 ? estimatedCreditsRaw : DESIGN_REPORT_SUMMARY.estimatedCredits,
-    approvedCredits: approvedCreditsRaw > 0 ? approvedCreditsRaw : DESIGN_REPORT_SUMMARY.approvedCredits,
-    pendingCredits:
-      estimatedCreditsRaw > 0
-        ? Math.max(0, estimatedCreditsRaw - approvedCreditsRaw)
-        : DESIGN_REPORT_SUMMARY.pendingCredits,
+    isActive: reports.length > 0 || calculations.length > 0,
+    totalReports: reports.length,
+    downloadedCount: downloadable,
+    pendingCount: Math.max(0, reports.length - downloadable),
+    estimatedCredits: estimatedCreditsRaw,
+    approvedCredits: approvedCreditsRaw,
+    pendingCredits: Math.max(0, estimatedCreditsRaw - approvedCreditsRaw),
   };
 }
 

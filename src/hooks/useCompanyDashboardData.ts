@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { getApiErrorMessage } from '../api/authApi';
 import {
-  getCompanyCarbonCalculations,
   getCompanyDashboard,
   getCompanyProfile,
   getCompanyServiceSubmissions,
@@ -12,7 +11,7 @@ import { extractList, pickString, type ApiRecord } from '../utils/apiHelpers';
 
 export interface CompanyOperationalStat {
   id: string;
-  icon: 'group' | 'agriculture' | 'pending_actions';
+  icon: 'group' | 'agriculture' | 'pending_actions' | 'description' | 'science' | 'co2';
   value: number;
   label: string;
   tone?: 'default' | 'alert';
@@ -27,12 +26,27 @@ export interface CompanyPendingApproval {
   targetId?: number;
 }
 
+export interface CompanyRecentSubmission {
+  id: number;
+  title: string;
+  subtitle: string;
+  status: string;
+}
+
 export interface CompanyDashboardViewModel {
   companyName: string;
   totalCarbonCredits: string;
   activeProjects: number;
+  sitesCount: number;
+  wasteRecordsCount: number;
+  biocharRecordsCount: number;
+  industrialCarbonRecordsCount: number;
+  evidenceUploadsCount: number;
+  pendingVerificationCount: number;
+  finalReportsCount: number;
   operationalStats: CompanyOperationalStat[];
   pendingApprovals: CompanyPendingApproval[];
+  recentSubmissions: CompanyRecentSubmission[];
   taskProgressPercent: number;
   tasksCompleted: number;
   tasksTotal: number;
@@ -56,10 +70,6 @@ function formatCredits(total: number): string {
   return total > 0 ? String(Math.round(total)) : '0';
 }
 
-function sumCarbonCredits(calculations: ApiRecord[]): number {
-  return calculations.reduce((total, item) => total + parseNumber(item.estimated_carbon_credit), 0);
-}
-
 function buildPendingApprovals(submissions: ApiRecord[]): CompanyPendingApproval[] {
   const pending = submissions.filter((item) => {
     const status = pickString(item, 'status').toLowerCase();
@@ -68,17 +78,34 @@ function buildPendingApprovals(submissions: ApiRecord[]): CompanyPendingApproval
   });
 
   return pending.slice(0, 4).map((item) => {
-    const serviceName = pickString(item, 'service_name') !== '-'
-      ? pickString(item, 'service_name')
-      : pickString(item, 'service.name');
+    const serviceName =
+      pickString(item, 'service_name') !== '-'
+        ? pickString(item, 'service_name')
+        : pickString(item, 'service.name');
 
     return {
       id: `submission-${pickString(item, 'id')}`,
       title: serviceName !== '-' ? serviceName : `Submission ${pickString(item, 'submission_code', 'id')}`,
       subtitle: `${pickString(item, 'company_site.site_name', 'site_name') !== '-' ? pickString(item, 'company_site.site_name', 'site_name') : 'Company site'} • ${pickString(item, 'status')}`,
-      icon: serviceName.toLowerCase().includes('soil') ? 'science' : 'map',
+      icon: serviceName.toLowerCase().includes('waste') ? 'science' : 'map',
       targetRoute: 'submission',
       targetId: parseNumber(item.id) || undefined,
+    };
+  });
+}
+
+function buildRecentSubmissions(submissions: ApiRecord[]): CompanyRecentSubmission[] {
+  return submissions.slice(0, 5).map((item) => {
+    const serviceName =
+      pickString(item, 'service_name') !== '-'
+        ? pickString(item, 'service_name')
+        : pickString(item, 'service.name');
+
+    return {
+      id: parseNumber(item.id),
+      title: serviceName !== '-' ? serviceName : pickString(item, 'submission_code', 'id'),
+      subtitle: pickString(item, 'company_site.site_name', 'site_name'),
+      status: pickString(item, 'status'),
     };
   });
 }
@@ -101,11 +128,10 @@ export function useCompanyDashboardData() {
     setError(null);
 
     try {
-      const [user, dashboardData, profileData, carbonData, submissionsData] = await Promise.all([
+      const [user, dashboardData, profileData, submissionsData] = await Promise.all([
         getAuthUser(),
-        loadOptional(() => getCompanyDashboard(), { dashboard: {} }),
+        getCompanyDashboard(),
         loadOptional(() => getCompanyProfile(), { profile: {} }),
-        loadOptional(() => getCompanyCarbonCalculations(), {}),
         loadOptional(() => getCompanyServiceSubmissions(), {}),
       ]);
 
@@ -113,10 +139,23 @@ export function useCompanyDashboardData() {
       const profileRoot = (profileData.profile ?? profileData) as ApiRecord;
       const company = (profileRoot.company ?? profileRoot) as ApiRecord;
       const verification = (dashboard.verification_status ?? {}) as ApiRecord;
-      const calculations = extractList(carbonData as ApiRecord, ['carbon_calculations']);
-      const submissions = extractList(submissionsData as ApiRecord, ['service_submissions', 'submissions', 'data']);
+      const carbonSummary = (dashboard.carbon_calculation_status ?? {}) as ApiRecord;
+      const submissions = extractList(submissionsData as ApiRecord, [
+        'service_submissions',
+        'submissions',
+        'data',
+      ]);
 
-      const totalCredits = sumCarbonCredits(calculations);
+      const sitesCount = parseNumber(dashboard.sites_count);
+      const activeProjects = parseNumber(dashboard.active_service_submissions_count);
+      const wasteRecordsCount = parseNumber(dashboard.waste_records_count);
+      const biocharRecordsCount = parseNumber(dashboard.biochar_records_count);
+      const industrialCarbonRecordsCount = parseNumber(dashboard.industrial_carbon_records_count);
+      const evidenceUploadsCount = parseNumber(dashboard.evidence_uploads_count);
+      const pendingVerificationCount = parseNumber(dashboard.pending_verification_count);
+      const finalReportsCount = parseNumber(dashboard.final_reports_count);
+
+      const totalCredits = parseNumber(carbonSummary.completed) + parseNumber(carbonSummary.approved);
       const pendingQueue =
         parseNumber(verification.pending) +
         parseNumber(verification.submitted_to_admin) +
@@ -146,32 +185,33 @@ export function useCompanyDashboardData() {
             ? pickString(company, 'company_name', 'name')
             : user?.name ?? 'Company Admin',
         totalCarbonCredits: formatCredits(totalCredits),
-        activeProjects: parseNumber(dashboard.active_service_submissions_count),
+        activeProjects,
+        sitesCount,
+        wasteRecordsCount,
+        biocharRecordsCount,
+        industrialCarbonRecordsCount,
+        evidenceUploadsCount,
+        pendingVerificationCount,
+        finalReportsCount,
         operationalStats: [
-          {
-            id: 'sites',
-            icon: 'group',
-            value: parseNumber(dashboard.sites_count),
-            label: 'Active Sites',
-          },
-          {
-            id: 'submissions',
-            icon: 'agriculture',
-            value: parseNumber(dashboard.active_service_submissions_count),
-            label: 'Active Programs',
-          },
+          { id: 'sites', icon: 'group', value: sitesCount, label: 'Active Sites' },
+          { id: 'submissions', icon: 'agriculture', value: activeProjects, label: 'Active Submissions' },
+          { id: 'waste', icon: 'description', value: wasteRecordsCount, label: 'Waste Records' },
+          { id: 'biochar', icon: 'science', value: biocharRecordsCount, label: 'Biochar Records' },
+          { id: 'industrial', icon: 'co2', value: industrialCarbonRecordsCount, label: 'Industrial Carbon' },
           {
             id: 'queue',
             icon: 'pending_actions',
-            value: pendingQueue,
-            label: 'Verification Queue',
-            tone: pendingQueue > 0 ? 'alert' : 'default',
+            value: pendingVerificationCount || pendingQueue,
+            label: 'Pending Verification',
+            tone: pendingVerificationCount > 0 ? 'alert' : 'default',
           },
         ],
         pendingApprovals,
+        recentSubmissions: buildRecentSubmissions(submissions),
         taskProgressPercent,
         tasksCompleted,
-        tasksTotal: tasksTotal || parseNumber(dashboard.active_service_submissions_count),
+        tasksTotal: tasksTotal || activeProjects,
       });
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load company dashboard.'));

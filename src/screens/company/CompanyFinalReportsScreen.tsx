@@ -1,10 +1,10 @@
-import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { getCompanyFinalReports } from '../../api/companyApi';
 import { ApiListScreen } from '../../components/ApiListScreen';
 import { ListItemCard } from '../../components/ListItemCard';
+import { ReportListDownloadActions } from '../../components/reports/ReportListDownloadActions';
 import type { CompanyStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<CompanyStackParamList>;
@@ -15,7 +15,7 @@ export function CompanyFinalReportsScreen() {
   return (
     <ApiListScreen
       title="Final Reports"
-      subtitle="GET /company/final-reports"
+      subtitle="View and download your reports"
       fetcher={getCompanyFinalReports}
       listKeys={['final_reports']}
       onItemPress={(item) =>
@@ -30,8 +30,7 @@ export function CompanyFinalReportsScreen() {
             { label: 'Site', keys: ['site_name'] },
             { label: 'Generated', keys: ['generated_at'] },
           ]}
-          downloadAvailable={item.download_available === true}
-          onDownload={() => Alert.alert('Download', 'Use GET /company/final-reports/{id}/download in next build.')}
+          renderFooter={() => <ReportListDownloadActions role="company_user" item={item} />}
         />
       )}
     />

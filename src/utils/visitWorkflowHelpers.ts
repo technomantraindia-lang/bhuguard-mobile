@@ -4,13 +4,17 @@ import {
   acceptVisit,
   checkInVisit,
   completeVisit,
+  getAssignmentChecklist,
   getVisitAssignmentDetail,
   startVerification,
   startVisit,
+  submitChecklist,
 } from '../api/fieldOfficerApi';
 
 import type { ApiRecord } from './apiHelpers';
+import { isApiNotFound } from './apiError';
 import { countVisitEvidenceUploads } from './visitChecklistHelpers';
+import { buildMrvChecklistPayload, enrichMrvStateFromAssignmentEvidence, parseMrvVerificationState } from './mrvVerificationHelpers';
 
 export type VisitVerificationStepKey =
   | 'accept'
@@ -134,6 +138,26 @@ async function refreshAssignment(assignmentId: number | string): Promise<ApiReco
   return unwrapAssignmentRecord(detail as ApiRecord);
 }
 
+export async function ensureVisitReadyForGpsCheckIn(
+  assignmentId: number | string,
+): Promise<ApiRecord> {
+  let assignment = await refreshAssignment(assignmentId);
+  let status = getAssignmentStatus(assignment);
+
+  if (status === 'assigned') {
+    await acceptVisit(assignmentId);
+    assignment = await refreshAssignment(assignmentId);
+    status = getAssignmentStatus(assignment);
+  }
+
+  if (status === 'accepted') {
+    await startVisit(assignmentId);
+    assignment = await refreshAssignment(assignmentId);
+  }
+
+  return assignment;
+}
+
 export async function ensureAssignmentReadyForReportSubmit(
   assignmentId: number | string,
 ): Promise<ApiRecord> {
@@ -187,4 +211,42 @@ export async function ensureAssignmentReadyForReportSubmit(
   }
 
   return assignment;
+}
+
+export async function ensureChecklistCompletedForReport(
+  assignmentId: number | string,
+): Promise<void> {
+  const assignment = await refreshAssignment(assignmentId);
+  const embeddedChecklist = assignment.verification_checklist ?? assignment.checklist;
+
+  if (
+    embeddedChecklist &&
+    typeof embeddedChecklist === 'object' &&
+    (embeddedChecklist as ApiRecord).completed_at
+  ) {
+    return;
+  }
+
+  let checklistRecord: ApiRecord | null =
+    embeddedChecklist && typeof embeddedChecklist === 'object'
+      ? (embeddedChecklist as ApiRecord)
+      : null;
+
+  if (!checklistRecord) {
+    try {
+      const checklistData = await getAssignmentChecklist(assignmentId);
+      const record = (checklistData as ApiRecord).checklist ?? checklistData;
+      checklistRecord = record && typeof record === 'object' ? (record as ApiRecord) : null;
+    } catch (error) {
+      if (!isApiNotFound(error)) {
+        throw error;
+      }
+    }
+  }
+
+  const parsed = enrichMrvStateFromAssignmentEvidence(
+    parseMrvVerificationState(assignment, checklistRecord),
+    assignment,
+  );
+  await submitChecklist(assignmentId, buildMrvChecklistPayload(parsed, true));
 }

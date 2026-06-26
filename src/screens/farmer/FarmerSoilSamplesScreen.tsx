@@ -19,10 +19,7 @@ export function FarmerSoilSamplesScreen() {
       listKeys={['soil_samples', 'samples']}
       emptyTitle="No soil samples"
       onItemPress={(item) =>
-        navigation.navigate('StitchScreen', {
-          screenKey: 'soil_sample_detail',
-          itemId: Number(item?.id ?? 0),
-        })
+        navigation.navigate('FarmerSoilSampleDetail', { sampleId: Number(item?.id ?? 0) })
       }
       renderItem={(item) => (
         <ListItemCard

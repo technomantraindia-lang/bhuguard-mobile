@@ -6,7 +6,6 @@ import {
   getFieldOfficerFarmers,
   getFieldOfficerProfile,
   getMonitoringReports,
-  getSoilSamples,
   getVisitAssignments,
 } from '../api/fieldOfficerApi';
 import { getAuthUser } from '../storage/authStorage';
@@ -23,6 +22,7 @@ export interface OfficerDashboardVisit {
   status: OfficerTaskStatus;
   statusLabel: string;
   assignmentId?: number;
+  farmerPhone?: string | null;
   /** @deprecated use farmerName */
   title?: string;
   /** @deprecated use timeLabel */
@@ -38,10 +38,13 @@ export interface OfficerDashboardActivity {
 
 export interface OfficerMapMarker {
   id: string;
-  label: string;
+  assignmentId?: number;
+  farmName: string;
+  location: string;
+  latitude: number;
+  longitude: number;
+  statusLabel: string;
   tone: 'primary' | 'alert' | 'warning';
-  top: number;
-  left: number;
 }
 
 export interface FieldOfficerDashboardViewModel {
@@ -52,6 +55,9 @@ export interface FieldOfficerDashboardViewModel {
   isActive: boolean;
   visitsTodayCount: number;
   assignedVisitsCount: number;
+  pendingVisitsCount: number;
+  checkedInVisitsCount: number;
+  completedVisitsCount: number;
   todayTargetsCount: number;
   pendingReportsCount: number;
   monthDoneCount: number;
@@ -72,6 +78,11 @@ export interface FieldOfficerDashboardViewModel {
   visits: OfficerDashboardVisit[];
   recentActivities: OfficerDashboardActivity[];
   mapMarkers: OfficerMapMarker[];
+  primaryFarmerPhone: string | null;
+  dueBiocharCount: number;
+  overdueFarmersCount: number;
+  draftBiocharCount: number;
+  submittedBiocharCount: number;
 }
 
 const PENDING_STATUSES = new Set(['assigned', 'accepted', 'correction_requested']);
@@ -183,6 +194,71 @@ function mapVisitStatus(status: string): { status: OfficerTaskStatus; label: str
   return { status: 'pending', label: 'Pending' };
 }
 
+function extractFarmerPhone(assignment: ApiRecord): string | null {
+  const candidates = [
+    pickNestedString(assignment, 'farmer.mobile'),
+    pickNestedString(assignment, 'farmer.phone'),
+    pickString(assignment, 'farmer_mobile'),
+  ];
+
+  for (const raw of candidates) {
+    if (raw === '-' || !raw.trim()) {
+      continue;
+    }
+
+    const digits = raw.replace(/\D/g, '');
+
+    if (digits.length >= 10) {
+      return digits.slice(-10);
+    }
+  }
+
+  return null;
+}
+
+function extractAssignmentCoordinates(assignment: ApiRecord): { latitude: number; longitude: number } | null {
+  const farm = (assignment.farm ?? {}) as ApiRecord;
+  const site = (assignment.site ?? {}) as ApiRecord;
+
+  const candidates: Array<[unknown, unknown]> = [
+    [assignment.target_latitude, assignment.target_longitude],
+    [assignment.latitude, assignment.longitude],
+    [farm.latitude, farm.longitude],
+    [site.latitude, site.longitude],
+  ];
+
+  for (const [latRaw, lngRaw] of candidates) {
+    const latitude = Number(latRaw);
+    const longitude = Number(lngRaw);
+
+    if (
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude) &&
+      Math.abs(latitude) <= 90 &&
+      Math.abs(longitude) <= 180 &&
+      !(latitude === 0 && longitude === 0)
+    ) {
+      return { latitude, longitude };
+    }
+  }
+
+  return null;
+}
+
+function mapMarkerTone(status: string): OfficerMapMarker['tone'] {
+  const normalized = status.toLowerCase();
+
+  if (normalized === 'assigned' || normalized === 'correction_requested') {
+    return 'alert';
+  }
+
+  if (IN_PROGRESS_STATUSES.has(normalized)) {
+    return 'warning';
+  }
+
+  return 'primary';
+}
+
 function buildVisits(assignments: ApiRecord[]): OfficerDashboardVisit[] {
   return assignments.slice(0, 6).map((assignment) => {
     const status = pickString(assignment, 'assignment_status', 'status');
@@ -208,6 +284,7 @@ function buildVisits(assignments: ApiRecord[]): OfficerDashboardVisit[] {
       status: mapped.status,
       statusLabel: mapped.label,
       assignmentId: parseNumber(assignment.id) || undefined,
+      farmerPhone: extractFarmerPhone(assignment),
     };
   });
 }
@@ -237,36 +314,56 @@ function buildRecentActivities(assignments: ApiRecord[], reports: ApiRecord[]): 
   });
 
   if (items.length === 0) {
-    return [
-      {
-        id: 'default-1',
-        title: 'Dashboard Synced',
-        subtitle: 'Your field data is up to date.',
-        tone: 'neutral',
-      },
-    ];
+    return [];
   }
 
   return items.slice(0, 3);
 }
 
 function buildMapMarkers(assignments: ApiRecord[]): OfficerMapMarker[] {
-  const markers: OfficerMapMarker[] = assignments.slice(0, 3).map((assignment, index) => ({
-    id: `marker-${pickString(assignment, 'id')}`,
-    label: index === 2 ? '!' : String(index + 1),
-    tone: index === 2 ? 'alert' : index === 1 ? 'warning' : 'primary',
-    top: [18, 42, 28][index] ?? 30,
-    left: [16, 52, 72][index] ?? 40,
-  }));
+  const markers: OfficerMapMarker[] = [];
 
-  if (markers.length === 0) {
-    return [
-      { id: 'marker-1', label: '1', tone: 'primary', top: 24, left: 20 },
-      { id: 'marker-2', label: '2', tone: 'warning', top: 38, left: 62 },
-    ];
+  for (const assignment of assignments) {
+    const coords = extractAssignmentCoordinates(assignment);
+
+    if (!coords) {
+      continue;
+    }
+
+    const status = pickString(assignment, 'assignment_status', 'status');
+    const mapped = mapVisitStatus(status);
+    const farmName = pickNestedString(assignment, 'farm.farm_name') !== '-'
+      ? pickNestedString(assignment, 'farm.farm_name')
+      : pickNestedString(assignment, 'site.site_name') !== '-'
+        ? pickNestedString(assignment, 'site.site_name')
+        : 'Visit location';
+    const village = pickNestedString(assignment, 'farmer.village');
+    const district = pickNestedString(assignment, 'farmer.district');
+    const location = [village, district].filter((part) => part !== '-').join(', ') || farmName;
+
+    markers.push({
+      id: `marker-${pickString(assignment, 'id')}`,
+      assignmentId: parseNumber(assignment.id) || undefined,
+      farmName,
+      location,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      statusLabel: mapped.label,
+      tone: mapMarkerTone(status),
+    });
+
+    if (markers.length >= 6) {
+      break;
+    }
   }
 
   return markers;
+}
+
+function countByStatuses(assignments: ApiRecord[], statuses: string[]): number {
+  return assignments.filter((assignment) =>
+    statuses.includes(pickString(assignment, 'assignment_status', 'status').toLowerCase()),
+  ).length;
 }
 
 function countMappedFarmers(farmers: ApiRecord[]): number {
@@ -296,7 +393,7 @@ export function useFieldOfficerDashboardData() {
     try {
       const [user, dashboardData, assignmentsData, farmersData, profileData, monitoringData] = await Promise.all([
         getAuthUser(),
-        loadOptional(() => getFieldOfficerDashboard(), { dashboard: {} }),
+        getFieldOfficerDashboard(),
         loadOptional(() => getVisitAssignments(), {}),
         loadOptional(() => getFieldOfficerFarmers(), {}),
         loadOptional(() => getFieldOfficerProfile(), { user: {} }),
@@ -318,9 +415,10 @@ export function useFieldOfficerDashboardData() {
         ? pickString(fieldOfficer, 'officer_code')
         : pickString(dashboard, 'officer_code') !== '-'
           ? pickString(dashboard, 'officer_code')
-          : 'FO-00021';
+          : '—';
 
-      const district = pickString(fieldOfficer, 'district') !== '-' ? pickString(fieldOfficer, 'district') : 'Assigned Region';
+      const district =
+        pickString(fieldOfficer, 'district') !== '-' ? pickString(fieldOfficer, 'district') : 'Assigned Region';
       const taluka = pickString(fieldOfficer, 'taluka');
       const regionLabel = taluka !== '-' ? `${taluka}, ${district}` : district;
 
@@ -337,6 +435,12 @@ export function useFieldOfficerDashboardData() {
 
       const visitsTodayCount = assignments.filter((assignment) => isToday(assignment)).length;
       const assignedVisitsCount = parseNumber(assignmentStatus.total_assignments) || assignments.length;
+      const pendingVisitsCount = countByStatuses(assignments, ['assigned', 'accepted', 'started']);
+      const checkedInVisitsCount = countByStatuses(assignments, [
+        'checked_in',
+        'verification_in_progress',
+      ]);
+      const completedVisitsCount = countByStatuses(assignments, ['approved', 'submitted_to_admin']);
       const todayTargetsCount = visitsTodayCount || Math.min(8, pendingVerificationsCount);
       const pendingReportsCount =
         parseNumber(assignmentStatus.submitted_to_admin) + parseNumber(assignmentStatus.correction_requested) ||
@@ -355,7 +459,15 @@ export function useFieldOfficerDashboardData() {
 
       const approvedCount = pipeline.approved;
       const totalReports = approvedCount + pipeline.review + pipeline.pending;
+      const accuracyPercent =
+        totalReports > 0 ? Math.round((approvedCount / Math.max(totalReports, 1)) * 100) : 0;
       const reportRateLabel = totalReports > 0 ? `${approvedCount}/${totalReports}` : `${monthDoneCount}/0`;
+      const monthlyRating =
+        totalReports > 0 ? Math.min(5, Math.round((accuracyPercent / 20) * 10) / 10) : 0;
+
+      const visits = buildVisits(assignments);
+      const mapMarkers = buildMapMarkers(assignments);
+      const primaryFarmerPhone = visits.find((visit) => visit.farmerPhone)?.farmerPhone ?? null;
 
       setData({
         officerName,
@@ -365,21 +477,29 @@ export function useFieldOfficerDashboardData() {
         isActive: true,
         visitsTodayCount: todayTargetsCount,
         assignedVisitsCount,
+        pendingVisitsCount,
+        checkedInVisitsCount,
+        completedVisitsCount,
         todayTargetsCount,
         pendingReportsCount,
         monthDoneCount,
         assignedFarmersCount,
         pendingVerificationsCount,
         urgentPendingCount: parseNumber(dashboard.urgent_pending_count),
+        dueBiocharCount: parseNumber(dashboard.due_biochar_updates_count),
+        overdueFarmersCount: parseNumber(dashboard.overdue_farmers_count),
+        draftBiocharCount: parseNumber(dashboard.draft_biochar_production_count),
+        submittedBiocharCount: parseNumber(dashboard.submitted_biochar_production_count),
         pipeline,
         coverageTotal,
         coverageMapped,
-        monthlyRating: 4.8,
-        accuracyPercent: totalReports > 0 ? Math.round((approvedCount / Math.max(totalReports, 1)) * 100) : 97,
+        monthlyRating,
+        accuracyPercent,
         reportRateLabel,
-        visits: buildVisits(assignments),
+        visits,
         recentActivities: buildRecentActivities(assignments, monitoringReports),
-        mapMarkers: buildMapMarkers(assignments),
+        mapMarkers,
+        primaryFarmerPhone,
       });
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load field officer dashboard.'));

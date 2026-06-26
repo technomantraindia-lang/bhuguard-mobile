@@ -26,6 +26,15 @@ function RoleIcon({ role }: { role: MobileLoginRole }) {
     );
   }
 
+  if (role === 'artisan') {
+    return (
+      <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+        <Path d="M12 3L4 9V21H20V9L12 3Z" stroke={tint} strokeWidth={1.8} strokeLinejoin="round" />
+        <Path d="M9 21V12H15V21" stroke={tint} strokeWidth={1.8} />
+      </Svg>
+    );
+  }
+
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
       <Rect x={5} y={4} width={14} height={16} rx={2} stroke={tint} strokeWidth={1.8} />

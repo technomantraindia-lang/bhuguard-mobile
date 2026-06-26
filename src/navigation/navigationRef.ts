@@ -18,3 +18,9 @@ export function navigateToApiServerSettings(): void {
     navigationRef.navigate('ApiServerSettings');
   }
 }
+
+export function navigateToApiHealthCheck(): void {
+  if (__DEV__ && navigationRef.isReady()) {
+    navigationRef.navigate('ApiHealthCheck');
+  }
+}

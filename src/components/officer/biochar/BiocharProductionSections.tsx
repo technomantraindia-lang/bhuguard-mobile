@@ -2,12 +2,12 @@ import React from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
-  BIOCHAR_EVIDENCE_SLOTS,
   BIOCHAR_OUTPUT_UNITS,
   BIOCHAR_VERIFICATION_OPTIONS,
   FEEDSTOCK_QUANTITY_UNITS,
   FEEDSTOCK_TYPES,
   type BiocharEvidenceKey,
+  type BiocharEvidenceSlot,
   type BiocharOutputUnit,
   type BiocharVerificationResult,
 } from '../../../constants/biocharProduction';
@@ -16,15 +16,20 @@ import {
   calculateYieldPercent,
   formatCoordinate,
   formatProductionDuration,
-  formatTodayLabel,
   type ProductionUnitOption,
 } from '../../../utils/biocharProductionHelpers';
+import { formatActivityDisplayDate } from '../../../utils/activityDateHelpers';
 import { BhuguardMaterialIcon, type BhuguardIconName } from '../../shared/BhuguardMaterialIcon';
+import { EvidenceStampedImageFrame } from '../../evidence/EvidenceStampedImageFrame';
 
 export interface BiocharEvidenceAsset {
   uri: string;
   name: string;
   mimeType?: string;
+  capturedAt?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  accuracy?: number | null;
 }
 
 interface CardProps {
@@ -52,6 +57,9 @@ interface ProductionRecordCardProps {
   productionRecordCode: string;
   batchCode: string;
   officerName: string;
+  farmerName?: string;
+  productionDate: string;
+  onProductionDateChange?: (value: string) => void;
   statusLabel: string;
 }
 
@@ -59,6 +67,9 @@ export function ProductionRecordCard({
   productionRecordCode,
   batchCode,
   officerName,
+  farmerName,
+  productionDate,
+  onProductionDateChange,
   statusLabel,
 }: ProductionRecordCardProps) {
   return (
@@ -80,19 +91,35 @@ export function ProductionRecordCard({
           <Text style={styles.metaValue}>Biochar</Text>
         </View>
         <View style={styles.recordCell}>
-          <Text style={styles.metaLabel}>Date</Text>
-          <Text style={styles.metaValue}>{formatTodayLabel()}</Text>
+          <Text style={styles.metaLabel}>Activity Date</Text>
+          {onProductionDateChange ? (
+            <TextInput
+              style={styles.input}
+              value={productionDate}
+              onChangeText={onProductionDateChange}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={officerTheme.outline}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          ) : (
+            <Text style={styles.metaValue}>{formatActivityDisplayDate(productionDate)}</Text>
+          )}
         </View>
         <View style={[styles.recordCell, styles.recordCellFull]}>
-          <Text style={styles.metaLabel}>Officer</Text>
+          <Text style={styles.metaLabel}>Officer / Producer / Operator</Text>
           <View style={styles.officerRow}>
             <BhuguardMaterialIcon name="person" size={18} color={officerTheme.primary} />
-            <Text style={styles.metaValue}>{officerName}</Text>
+            <Text style={styles.metaValue}>{officerName || '—'}</Text>
           </View>
         </View>
         <View style={[styles.recordCell, styles.recordCellFull]}>
           <Text style={styles.metaLabel}>Batch ID</Text>
           <Text style={styles.metaValue}>{batchCode || '—'}</Text>
+        </View>
+        <View style={[styles.recordCell, styles.recordCellFull]}>
+          <Text style={styles.metaLabel}>Farmer Name</Text>
+          <Text style={styles.metaValue}>{farmerName?.trim() ? farmerName : '—'}</Text>
         </View>
       </View>
     </Card>
@@ -101,12 +128,13 @@ export function ProductionRecordCard({
 
 interface ProductionUnitSectionProps {
   units: ProductionUnitOption[];
-  selectedUnitId: number | null;
+  kilnId: string;
   operatorName: string;
   latitude: number | null;
   longitude: number | null;
   accuracyM: number | null;
   gpsCaptured: boolean;
+  onKilnIdChange: (value: string) => void;
   onSelectUnit: (unitId: number) => void;
   onOperatorNameChange: (value: string) => void;
   onRecaptureGps: () => void;
@@ -114,27 +142,43 @@ interface ProductionUnitSectionProps {
 
 export function ProductionUnitSection({
   units,
-  selectedUnitId,
+  kilnId,
   operatorName,
   latitude,
   longitude,
   accuracyM,
   gpsCaptured,
+  onKilnIdChange,
   onSelectUnit,
   onOperatorNameChange,
   onRecaptureGps,
 }: ProductionUnitSectionProps) {
   const [pickerOpen, setPickerOpen] = React.useState(false);
-  const selected = units.find((unit) => unit.id === selectedUnitId);
 
   return (
     <Card>
       <SectionTitle icon="eco" title="Production Unit" />
       <Text style={styles.fieldLabel}>Kiln ID</Text>
-      <Pressable style={styles.selector} onPress={() => setPickerOpen(true)}>
-        <Text style={styles.selectorText}>{selected?.label ?? 'Select kiln'}</Text>
-        <BhuguardMaterialIcon name="chevron_right" size={20} color={officerTheme.onSurfaceVariant} />
-      </Pressable>
+      <View style={styles.kilnInputRow}>
+        <TextInput
+          style={[styles.input, styles.kilnInput]}
+          value={kilnId}
+          onChangeText={onKilnIdChange}
+          placeholder="Enter Kiln ID"
+          placeholderTextColor={officerTheme.outline}
+          autoCapitalize="characters"
+          autoCorrect={false}
+        />
+        {units.length > 0 ? (
+          <Pressable
+            style={styles.kilnSuggestButton}
+            onPress={() => setPickerOpen(true)}
+            accessibilityLabel="Choose kiln from list"
+          >
+            <BhuguardMaterialIcon name="menu" size={20} color={officerTheme.primaryContainer} />
+          </Pressable>
+        ) : null}
+      </View>
 
       <Text style={styles.fieldLabel}>Operator Name</Text>
       <TextInput
@@ -186,6 +230,7 @@ export function ProductionUnitSection({
                   style={styles.modalOption}
                   onPress={() => {
                     onSelectUnit(unit.id);
+                    onKilnIdChange(unit.kilnId || unit.label);
                     setPickerOpen(false);
                   }}
                 >
@@ -272,6 +317,46 @@ export function ProductionBatchSection({
         options={FEEDSTOCK_TYPES.map((item) => ({ value: item.value, label: item.label }))}
         onClose={() => setTypePickerOpen(false)}
         onSelect={onFeedstockTypeChange}
+      />
+    </Card>
+  );
+}
+
+interface MoistureSectionProps {
+  moistureValue: string;
+  moistureNotes: string;
+  onMoistureValueChange: (value: string) => void;
+  onMoistureNotesChange: (value: string) => void;
+  readOnly?: boolean;
+}
+
+export function MoistureSection({
+  moistureValue,
+  moistureNotes,
+  onMoistureValueChange,
+  onMoistureNotesChange,
+  readOnly = false,
+}: MoistureSectionProps) {
+  return (
+    <Card>
+      <SectionTitle icon="water_drop" title="Moisture Details" />
+      <Text style={styles.fieldLabel}>Moisture %</Text>
+      <TextInput
+        style={styles.input}
+        value={moistureValue}
+        onChangeText={onMoistureValueChange}
+        placeholder="e.g. 12.5"
+        keyboardType="decimal-pad"
+        editable={!readOnly}
+      />
+      <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Moisture Notes</Text>
+      <TextInput
+        style={[styles.input, styles.textArea]}
+        value={moistureNotes}
+        onChangeText={onMoistureNotesChange}
+        placeholder="Moisture reading details"
+        multiline
+        editable={!readOnly}
       />
     </Card>
   );
@@ -398,70 +483,74 @@ export function ProcessDataSection({
   );
 }
 
-interface EvidenceCollectionSectionProps {
-  evidence: Partial<Record<BiocharEvidenceKey, BiocharEvidenceAsset>>;
+interface BiocharEvidenceCaptureSectionProps {
+  slot: BiocharEvidenceSlot;
+  evidence?: BiocharEvidenceAsset;
+  readOnly?: boolean;
   onAddEvidence: (key: BiocharEvidenceKey) => void;
   onRemoveEvidence: (key: BiocharEvidenceKey) => void;
   onPreviewEvidence: (key: BiocharEvidenceKey) => void;
 }
 
-export function EvidenceCollectionSection({
+export function BiocharEvidenceCaptureSection({
+  slot,
   evidence,
+  readOnly = false,
   onAddEvidence,
   onRemoveEvidence,
   onPreviewEvidence,
-}: EvidenceCollectionSectionProps) {
-  const uploadedCount = BIOCHAR_EVIDENCE_SLOTS.filter((slot) => evidence[slot.key]).length;
-
+}: BiocharEvidenceCaptureSectionProps) {
   return (
     <Card>
-      <SectionTitle
-        icon="photo_camera"
-        title="Evidence Collection"
-        trailing={<Text style={styles.evidenceCount}>{uploadedCount}/4 Uploaded</Text>}
-      />
-      <View style={styles.evidenceGrid}>
-        {BIOCHAR_EVIDENCE_SLOTS.map((slot) => {
-          const asset = evidence[slot.key];
+      <SectionTitle icon="photo_camera" title={slot.title} />
+      <Text style={styles.evidenceDescription}>{slot.description}</Text>
 
-          if (asset) {
-            return (
-              <View key={slot.key} style={styles.evidenceTile}>
-                <Text style={styles.evidenceLabel}>{slot.label}</Text>
-                <Pressable style={styles.evidencePreview} onPress={() => onPreviewEvidence(slot.key)}>
-                  {slot.kind === 'photo' ? (
-                    <Image source={{ uri: asset.uri }} style={styles.evidenceImage} />
-                  ) : (
-                    <View style={styles.videoPlaceholder}>
-                      <BhuguardMaterialIcon name="photo_camera" size={28} color={officerTheme.primaryContainer} />
-                      <Text style={styles.videoLabel}>Video added</Text>
-                    </View>
-                  )}
-                </Pressable>
-                <View style={styles.evidenceActions}>
-                  <Pressable style={styles.evidenceAction} onPress={() => onAddEvidence(slot.key)}>
-                    <BhuguardMaterialIcon name="note_add" size={16} color={officerTheme.primaryContainer} />
-                  </Pressable>
-                  <Pressable style={[styles.evidenceAction, styles.evidenceDelete]} onPress={() => onRemoveEvidence(slot.key)}>
-                    <BhuguardMaterialIcon name="cloud_off" size={16} color={officerTheme.onPrimary} />
-                  </Pressable>
-                </View>
+      {evidence ? (
+        <View style={styles.singleEvidenceWrap}>
+          {slot.kind === 'photo' ? (
+            <EvidenceStampedImageFrame
+              uri={evidence.uri}
+              onPress={() => onPreviewEvidence(slot.key)}
+              frameStyle={styles.singleEvidencePreview}
+              imageStyle={styles.singleEvidenceImage}
+            />
+          ) : (
+            <Pressable style={styles.singleEvidencePreview} onPress={() => onPreviewEvidence(slot.key)}>
+              <View style={styles.videoPlaceholderLarge}>
+                <BhuguardMaterialIcon name="photo_camera" size={36} color={officerTheme.primaryContainer} />
+                <Text style={styles.videoLabel}>Video captured</Text>
               </View>
-            );
-          }
-
-          return (
-            <View key={slot.key} style={styles.evidenceEmpty}>
-              <Text style={styles.evidenceLabel}>{slot.label}</Text>
-              <BhuguardMaterialIcon name="photo_camera" size={32} color={officerTheme.outlineVariant} />
-              <Pressable style={styles.addEvidenceButton} onPress={() => onAddEvidence(slot.key)}>
-                <BhuguardMaterialIcon name="add_circle" size={14} color={officerTheme.primary} />
-                <Text style={styles.addEvidenceText}>Add</Text>
+            </Pressable>
+          )}
+          {!readOnly ? (
+            <View style={styles.singleEvidenceActions}>
+              <Pressable style={styles.retakeButton} onPress={() => onAddEvidence(slot.key)}>
+                <BhuguardMaterialIcon name="photo_camera" size={18} color={officerTheme.primaryContainer} />
+                <Text style={styles.retakeButtonText}>Retake</Text>
+              </Pressable>
+              <Pressable style={styles.removeEvidenceButton} onPress={() => onRemoveEvidence(slot.key)}>
+                <BhuguardMaterialIcon name="cloud_off" size={18} color={officerTheme.onPrimary} />
+                <Text style={styles.removeEvidenceText}>Remove</Text>
               </Pressable>
             </View>
-          );
-        })}
-      </View>
+          ) : null}
+        </View>
+      ) : (
+        <Pressable
+          style={[styles.captureButton, readOnly && styles.captureButtonDisabled]}
+          onPress={() => onAddEvidence(slot.key)}
+          disabled={readOnly}
+        >
+          <BhuguardMaterialIcon
+            name="photo_camera"
+            size={28}
+            color={officerTheme.onPrimary}
+          />
+          <Text style={styles.captureButtonText}>
+            {slot.kind === 'video' ? 'Record Live Video' : 'Capture Live Image'}
+          </Text>
+        </Pressable>
+      )}
     </Card>
   );
 }
@@ -594,6 +683,8 @@ const styles = StyleSheet.create({
   metaValue: { fontSize: 15, color: officerTheme.onSurface, marginTop: 2 },
   officerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   fieldLabel: { fontSize: 12, fontWeight: '600', color: officerTheme.onSurfaceVariant, marginBottom: 4 },
+  fieldSpacing: { marginTop: 10 },
+  textArea: { minHeight: 72, textAlignVertical: 'top' },
   selector: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -615,6 +706,25 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 15,
     color: officerTheme.onSurface,
+  },
+  kilnInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  kilnInput: {
+    flex: 1,
+    minWidth: 0,
+  },
+  kilnSuggestButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: officerTheme.outlineVariant,
+    backgroundColor: officerTheme.surfaceLow,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   readonlyInput: { backgroundColor: officerTheme.surfaceLow, color: officerTheme.onSurfaceVariant },
   gpsCard: {
@@ -697,6 +807,56 @@ const styles = StyleSheet.create({
   },
   yieldText: { fontSize: 15, color: officerTheme.onSurfaceVariant },
   evidenceCount: { fontSize: 12, color: officerTheme.onSurfaceVariant, fontWeight: '600' },
+  evidenceDescription: { fontSize: 13, color: officerTheme.onSurfaceVariant, marginBottom: 12, lineHeight: 18 },
+  singleEvidenceWrap: { gap: 10, width: '100%', alignSelf: 'stretch' },
+  singleEvidencePreview: {
+    width: '100%',
+    alignSelf: 'stretch',
+    aspectRatio: 4 / 3,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  singleEvidenceImage: { width: '100%', height: '100%', alignSelf: 'center' },
+  videoPlaceholderLarge: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: officerTheme.surfaceLow,
+    gap: 8,
+  },
+  singleEvidenceActions: { flexDirection: 'row', gap: 10 },
+  retakeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#EAF7EF',
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  retakeButtonText: { color: officerTheme.primaryContainer, fontWeight: '700', fontSize: 14 },
+  removeEvidenceButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: officerTheme.error,
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  removeEvidenceText: { color: officerTheme.onPrimary, fontWeight: '700', fontSize: 14 },
+  captureButton: {
+    backgroundColor: officerTheme.primaryContainer,
+    borderRadius: 12,
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  captureButtonDisabled: { opacity: 0.5 },
+  captureButtonText: { color: officerTheme.onPrimary, fontWeight: '700', fontSize: 16 },
   evidenceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   evidenceTile: {
     width: '47%',

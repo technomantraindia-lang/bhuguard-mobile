@@ -19,6 +19,7 @@ export interface PixelPoint {
   y: number;
 }
 
+/** Map center fallback when farm has no GPS coordinates yet — not demo report data. */
 const DEMO_CENTER: LatLng = { latitude: 23.0225, longitude: 72.5714 };
 
 function parseNumber(value: unknown): number | null {

@@ -1,13 +1,13 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { OfficerMapMarker } from '../../hooks/useFieldOfficerDashboardData';
-import { officerShadow, officerTheme } from '../../theme/officerDashboardTheme';
-
-const MAP_IMAGE_URI =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuBbvlBm6ityzuEKTJ3OHLv4IfgoyDNGIM9_cy8HRPuYl8rxce54xeMIgacJNhHEqkK_pHaVwh2-4qRKZG8pgQ3ZERL02nm9VukTD_0PWTEB7K2aMY9sW_TRdEyoY9u1EmG7Ua35MU1CbsGt7dT6Nm0JmyVkR9je8dov1AIhz7O-f_LMkIc7BmlEQjSrs_ucMr2M303qlPawDlf6dA8euR91jBaoyfdHeEfbe-TTAhm-rZPWGp3I_VD9HA';
+import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
+import { officerCardShadow, officerShadow, officerTheme } from '../../theme/officerDashboardTheme';
+import { openGoogleMaps } from '../../utils/officerGpsCapture';
 
 interface OfficerFieldMapOverviewProps {
   markers: OfficerMapMarker[];
+  onMarkerPress?: (marker: OfficerMapMarker) => void;
 }
 
 function markerColor(tone: OfficerMapMarker['tone']): string {
@@ -15,43 +15,70 @@ function markerColor(tone: OfficerMapMarker['tone']): string {
     case 'alert':
       return officerTheme.error;
     case 'warning':
-      return officerTheme.error;
+      return officerTheme.tertiary;
     default:
       return officerTheme.primary;
   }
 }
 
-export function OfficerFieldMapOverview({ markers = [] }: OfficerFieldMapOverviewProps) {
+function formatCoordinate(value: number): string {
+  return value.toFixed(5);
+}
+
+export function OfficerFieldMapOverview({ markers = [], onMarkerPress }: OfficerFieldMapOverviewProps) {
   const safeMarkers = Array.isArray(markers) ? markers : [];
-  const displayMarkers =
-    safeMarkers.length > 0
-      ? safeMarkers
-      : [
-          { id: 'marker-1', label: '1', tone: 'primary' as const, top: 33, left: 25 },
-          { id: 'marker-2', label: '!', tone: 'alert' as const, top: 75, left: 67 },
-        ];
+
+  if (safeMarkers.length === 0) {
+    return (
+      <View style={styles.wrap}>
+        <Text style={styles.title}>Visit GPS Locations</Text>
+        <View style={[styles.emptyCard, officerCardShadow]}>
+          <BhuguardMaterialIcon name="location_on" size={28} color={officerTheme.onSurfaceVariant} />
+          <Text style={styles.emptyTitle}>No GPS-enabled visits available yet.</Text>
+          <Text style={styles.emptyMessage}>
+            Assigned visits with farm or site coordinates will appear here.
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>Field Map Overview</Text>
-      <View style={styles.mapCard}>
-        <Image source={{ uri: MAP_IMAGE_URI }} style={styles.mapImage} resizeMode="cover" />
-
-        {displayMarkers.slice(0, 3).map((marker) => (
-          <View
+      <Text style={styles.title}>Visit GPS Locations</Text>
+      <View style={styles.list}>
+        {safeMarkers.map((marker) => (
+          <Pressable
             key={marker.id}
-            style={[
-              styles.marker,
-              {
-                top: `${marker.top}%`,
-                left: `${marker.left}%`,
-                backgroundColor: markerColor(marker.tone),
-              },
-              marker.tone === 'alert' && styles.markerAlert,
-            ]}
+            style={({ pressed }) => [styles.locationCard, officerCardShadow, pressed && styles.pressed]}
+            onPress={() => onMarkerPress?.(marker)}
           >
-            <Text style={styles.markerText}>{marker.label}</Text>
-          </View>
+            <View style={styles.cardTopRow}>
+              <View style={[styles.statusDot, { backgroundColor: markerColor(marker.tone) }]} />
+              <View style={styles.cardCopy}>
+                <Text style={styles.farmName}>{marker.farmName}</Text>
+                <Text style={styles.locationText}>{marker.location}</Text>
+              </View>
+              <View style={styles.statusBadge}>
+                <Text style={styles.statusBadgeText}>{marker.statusLabel}</Text>
+              </View>
+            </View>
+
+            <View style={styles.coordsRow}>
+              <Text style={styles.coordsLabel}>GPS</Text>
+              <Text style={styles.coordsValue}>
+                {formatCoordinate(marker.latitude)}, {formatCoordinate(marker.longitude)}
+              </Text>
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [styles.mapButton, pressed && styles.pressed]}
+              onPress={() => void openGoogleMaps(marker.latitude, marker.longitude)}
+            >
+              <BhuguardMaterialIcon name="map" size={16} color={officerTheme.primary} />
+              <Text style={styles.mapButtonText}>Open in Maps</Text>
+            </Pressable>
+          </Pressable>
         ))}
       </View>
     </View>
@@ -69,38 +96,110 @@ const styles = StyleSheet.create({
     color: officerTheme.onSurface,
     marginBottom: 16,
   },
-  mapCard: {
-    height: 192,
+  list: {
+    gap: 12,
+  },
+  locationCard: {
+    backgroundColor: officerTheme.surface,
     borderRadius: 12,
-    overflow: 'hidden',
     borderWidth: 1,
     borderColor: officerTheme.outlineVariant,
+    padding: 14,
+    gap: 10,
     ...officerShadow,
-    position: 'relative',
   },
-  mapImage: {
-    width: '100%',
-    height: '100%',
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
   },
-  marker: {
-    position: 'absolute',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 5,
+  },
+  cardCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  farmName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: officerTheme.onSurface,
+  },
+  locationText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: officerTheme.onSurfaceVariant,
+  },
+  statusBadge: {
+    backgroundColor: officerTheme.surfaceContainer,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: officerTheme.primary,
+  },
+  coordsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  coordsLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: officerTheme.onSurfaceVariant,
+    textTransform: 'uppercase',
+  },
+  coordsValue: {
+    flex: 1,
+    fontSize: 12,
+    color: officerTheme.onSurface,
+    fontVariant: ['tabular-nums'],
+  },
+  mapButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: officerTheme.surfaceContainer,
+  },
+  mapButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: officerTheme.primary,
+  },
+  emptyCard: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: officerTheme.onPrimary,
-    ...officerShadow,
+    gap: 8,
+    backgroundColor: officerTheme.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: officerTheme.outlineVariant,
+    padding: 24,
   },
-  markerAlert: {
-    shadowColor: officerTheme.error,
-    shadowOpacity: 0.35,
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: officerTheme.onSurface,
+    textAlign: 'center',
   },
-  markerText: {
-    color: officerTheme.onPrimary,
-    fontSize: 10,
-    lineHeight: 12,
-    fontWeight: '500',
+  emptyMessage: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: officerTheme.onSurfaceVariant,
+    textAlign: 'center',
+  },
+  pressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.99 }],
   },
 });

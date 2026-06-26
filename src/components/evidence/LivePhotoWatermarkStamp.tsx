@@ -10,26 +10,28 @@ interface LivePhotoWatermarkStampProps {
 }
 
 export function LivePhotoWatermarkStamp({ meta, imageWidth, style }: LivePhotoWatermarkStampProps) {
-  const fontSize = Math.max(11, Math.round(imageWidth * 0.032));
-  const lineHeight = Math.round(fontSize * 1.25);
+  const fontSize = Math.max(11, Math.round(imageWidth * 0.028));
+  const lineHeight = Math.round(fontSize * 1.35);
   const padding = Math.max(8, Math.round(imageWidth * 0.02));
 
   return (
     <View pointerEvents="none" style={[styles.wrap, { padding }, style]}>
-      {getLivePhotoWatermarkLines(meta).map((line, index) => (
-        <Text
-          key={`${line}-${index}`}
-          style={[
-            styles.line,
-            {
-              fontSize,
-              lineHeight,
-            },
-          ]}
-        >
-          {line}
-        </Text>
-      ))}
+      <View style={[styles.overlay, { padding }]}>
+        {getLivePhotoWatermarkLines(meta).map((line, index) => (
+          <Text
+            key={`${line}-${index}`}
+            style={[
+              styles.line,
+              {
+                fontSize,
+                lineHeight,
+              },
+            ]}
+          >
+            {line}
+          </Text>
+        ))}
+      </View>
     </View>
   );
 }
@@ -42,6 +44,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'flex-end',
     maxWidth: '92%',
+  },
+  overlay: {
+    borderRadius: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.28)',
+    alignItems: 'flex-end',
   },
   line: {
     color: '#FFFFFF',

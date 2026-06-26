@@ -231,6 +231,8 @@ export function buildCameraBoundaryUploadFormData(
   formData.append('perimeter_meter', String(metrics.perimeterMeter));
   formData.append('gps_accuracy', gpsAccuracyLabel.toLowerCase());
 
+  let hasStampedPhotos = false;
+
   points.forEach((point, index) => {
     formData.append(`boundary_points[${index}][point_no]`, String(point.pointNo));
     formData.append(`boundary_points[${index}][latitude]`, String(point.latitude));
@@ -253,8 +255,13 @@ export function buildCameraBoundaryUploadFormData(
         type: 'image/jpeg',
         name: `point_${point.pointNo}.jpg`,
       } as unknown as Blob);
+      hasStampedPhotos = true;
     }
   });
+
+  if (hasStampedPhotos) {
+    formData.append('client_pre_stamped', '1');
+  }
 
   return formData;
 }

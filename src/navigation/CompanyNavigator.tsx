@@ -6,8 +6,13 @@ import { CompanyCarbonCalculationDetailScreen } from '../screens/company/Company
 import { CompanyCarbonCalculationsScreen } from '../screens/company/CompanyCarbonCalculationsScreen';
 import { CompanyFinalReportDetailScreen } from '../screens/company/CompanyFinalReportDetailScreen';
 import { CompanyFinalReportsScreen } from '../screens/company/CompanyFinalReportsScreen';
+import { CompanyReportPreviewScreen } from '../screens/reports/ReportsCenterScreen';
 import { CompanyIndustrialCarbonRecordDetailScreen } from '../screens/company/CompanyIndustrialCarbonRecordDetailScreen';
 import { CompanyIndustrialCarbonRecordsScreen } from '../screens/company/CompanyIndustrialCarbonRecordsScreen';
+import { CompanyEditSiteScreen } from '../screens/company/CompanyEditSiteScreen';
+import { CompanyEvidenceListScreen } from '../screens/company/CompanyEvidenceListScreen';
+import { CompanyEvidenceUploadScreen } from '../screens/company/CompanyEvidenceUploadScreen';
+import { CompanyCreateRecordScreen } from '../screens/company/CompanyCreateRecordScreen';
 import { CompanyNotificationsScreen } from '../screens/company/CompanyNotificationsScreen';
 import { CompanyProfileScreen } from '../screens/company/CompanyProfileScreen';
 import { CompanyServiceSubmissionDetailScreen } from '../screens/company/CompanyServiceSubmissionDetailScreen';
@@ -44,7 +49,12 @@ export function CompanyNavigator() {
       <Stack.Screen name="CompanyCarbonCalculationDetail" component={CompanyCarbonCalculationDetailScreen} />
       <Stack.Screen name="CompanyFinalReports" component={CompanyFinalReportsScreen} />
       <Stack.Screen name="CompanyFinalReportDetail" component={CompanyFinalReportDetailScreen} />
+      <Stack.Screen name="CompanyReportPreview" component={CompanyReportPreviewScreen} />
       <Stack.Screen name="CompanyNotifications" component={CompanyNotificationsScreen} />
+      <Stack.Screen name="CompanyCreateRecord" component={CompanyCreateRecordScreen} />
+      <Stack.Screen name="CompanyEditSite" component={CompanyEditSiteScreen} />
+      <Stack.Screen name="CompanyEvidenceList" component={CompanyEvidenceListScreen} />
+      <Stack.Screen name="CompanyEvidenceUpload" component={CompanyEvidenceUploadScreen} />
     </Stack.Navigator>
   );
 }

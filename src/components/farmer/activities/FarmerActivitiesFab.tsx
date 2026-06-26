@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
+import { useFabBottomOffset } from '../../../hooks/useTabBarLayout';
 import { BhuguardMaterialIcon } from '../../shared/BhuguardMaterialIcon';
 import { dashboardShadow, dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
 
@@ -8,15 +9,17 @@ interface FarmerActivitiesFabProps {
 }
 
 export function FarmerActivitiesFab({ onPress }: FarmerActivitiesFabProps) {
+  const bottom = useFabBottomOffset();
+
   return (
     <Pressable
-      style={({ pressed }) => [styles.fab, dashboardShadow, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.fab, dashboardShadow, { bottom }, pressed && styles.pressed]}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Add activity"
+      accessibilityLabel="Add Biochar"
     >
       <BhuguardMaterialIcon name="add_circle" size={22} color={dashboardTheme.onPrimary} />
-      <Text style={styles.label}>Activity</Text>
+      <Text style={styles.label}>Add Biochar</Text>
     </Pressable>
   );
 }
@@ -25,7 +28,6 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: dashboardTheme.marginMobile,
-    bottom: 96,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,

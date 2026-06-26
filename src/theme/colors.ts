@@ -22,5 +22,6 @@ export const colors = {
   errorBg: '#FEF2F2',
   info: '#2563EB',
   infoBg: '#EFF6FF',
+  accentYellow: '#D9C94C',
   white: '#FFFFFF',
 };

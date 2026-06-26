@@ -3,6 +3,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
+import type { ReportDownloadFormat } from '../../api/reportsApi';
 import { getApiErrorMessage } from '../../api/authApi';
 import { AppButton } from '../../components/AppButton';
 import { OfficerReportCard } from '../../components/officer/OfficerReportCard';
@@ -19,6 +20,7 @@ export function FieldOfficerDownloadsCenterScreen({ navigation }: Props) {
   const { reports, loading, reload } = useFieldOfficerReportsData();
   const [downloadedIds, setDownloadedIds] = useState<string[]>([]);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [downloadingFormat, setDownloadingFormat] = useState<ReportDownloadFormat | null>(null);
 
   useEffect(() => {
     void getDownloadedReportIds().then(setDownloadedIds);
@@ -34,17 +36,12 @@ export function FieldOfficerDownloadsCenterScreen({ navigation }: Props) {
     [downloadableReports, downloadedIds],
   );
 
-  const handleDownload = async (reportId: number) => {
-    const report = downloadableReports.find((item) => item.id === reportId);
-
-    if (!report) {
-      return;
-    }
-
+  const handleDownload = async (report: (typeof downloadableReports)[number], format: ReportDownloadFormat) => {
     setDownloadingId(report.id);
+    setDownloadingFormat(format);
 
     try {
-      const result = await downloadFieldOfficerReport(report);
+      const result = await downloadFieldOfficerReport(report, format);
 
       if (!result.success) {
         Alert.alert('Download failed', result.message ?? 'Unable to download this report right now.');
@@ -58,6 +55,7 @@ export function FieldOfficerDownloadsCenterScreen({ navigation }: Props) {
       Alert.alert('Download failed', getApiErrorMessage(err, 'Unable to download this report right now.'));
     } finally {
       setDownloadingId(null);
+      setDownloadingFormat(null);
     }
   };
 
@@ -84,9 +82,9 @@ export function FieldOfficerDownloadsCenterScreen({ navigation }: Props) {
                 <OfficerReportCard
                   key={`downloaded-${report.id}`}
                   report={report}
-                  downloading={downloadingId === report.id}
+                  downloadingFormat={downloadingId === report.id ? downloadingFormat : null}
                   onView={() => navigation.navigate('FieldOfficerReportDetail', { reportId: report.id })}
-                  onDownload={() => void handleDownload(report.id)}
+                  onDownload={(format) => void handleDownload(report, format)}
                 />
               ))}
             </View>
@@ -103,9 +101,9 @@ export function FieldOfficerDownloadsCenterScreen({ navigation }: Props) {
               <OfficerReportCard
                 key={`available-${report.id}`}
                 report={report}
-                downloading={downloadingId === report.id}
+                downloadingFormat={downloadingId === report.id ? downloadingFormat : null}
                 onView={() => navigation.navigate('FieldOfficerReportDetail', { reportId: report.id })}
-                onDownload={() => void handleDownload(report.id)}
+                onDownload={(format) => void handleDownload(report, format)}
               />
             ))}
           </View>

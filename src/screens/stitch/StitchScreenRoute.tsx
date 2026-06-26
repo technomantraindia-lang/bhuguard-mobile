@@ -7,7 +7,7 @@ import {
   STITCH_NAVIGATE_REPLACEMENTS,
 } from '../../config/stitchScreenRoutes';
 import { useFieldOfficerVisitsData } from '../../hooks/useFieldOfficerVisitsData';
-import type { FieldOfficerStackParamList, FarmerStackParamList } from '../../navigation/types';
+import type { CompanyStackParamList, FieldOfficerStackParamList, FarmerStackParamList } from '../../navigation/types';
 import { FarmerLiveEvidenceUploadScreen } from '../shared/FarmerLiveEvidenceUploadScreen';
 import { StitchScreenView } from './StitchScreenView';
 
@@ -17,7 +17,8 @@ export type StitchRouteParams = {
 
 type FarmerProps = NativeStackScreenProps<FarmerStackParamList, 'StitchScreen'>;
 type OfficerProps = NativeStackScreenProps<FieldOfficerStackParamList, 'StitchScreen'>;
-type Props = FarmerProps | OfficerProps;
+type CompanyProps = NativeStackScreenProps<CompanyStackParamList, 'StitchScreen'>;
+type Props = FarmerProps | OfficerProps | CompanyProps;
 
 function isOfficerScreenKey(screenKey: string): boolean {
   const role = STITCH_REGISTRY[screenKey]?.role;
@@ -61,6 +62,11 @@ export function StitchScreenRoute({ route, navigation }: Props) {
       }
 
       stitchReplace(navigation, replacement.officer, replacement.buildParams?.(itemId, context));
+      return;
+    }
+
+    if (registryRole === 'company' && replacement.company) {
+      stitchReplace(navigation, replacement.company, replacement.buildParams?.(itemId, context));
     }
   }, [assignmentId, itemId, navigation, registryRole, replacement, screenKey]);
 
@@ -80,6 +86,10 @@ export function StitchScreenRoute({ route, navigation }: Props) {
       );
     }
 
+    return null;
+  }
+
+  if (replacement?.company && registryRole === 'company') {
     return null;
   }
 

@@ -1,12 +1,27 @@
+import { useCallback, useEffect, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { getApiErrorMessage } from '../../api/authApi';
+import { getFarmerSupportInfo } from '../../api/farmerApi';
+import { ErrorState } from '../../components/ErrorState';
+import { LoadingState } from '../../components/LoadingState';
 import { BhuguardMaterialIcon, type BhuguardIconName } from '../../components/shared/BhuguardMaterialIcon';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
+import { pickString, type ApiRecord } from '../../utils/apiHelpers';
 
-const SUPPORT_EMAIL = 'support@bhuguard.com';
-const SUPPORT_PHONE = '1800000000';
+const FALLBACK_SUPPORT = {
+  email: 'support@bhuguard.com',
+  phone: '1800000000',
+  phoneDisplay: '1800-000-000',
+  topics: [
+    'Submitting farming activities',
+    'Field officer verification visits',
+    'Carbon credit eligibility',
+    'Downloading reports',
+  ],
+};
 
 function SupportAction({
   icon,
@@ -33,22 +48,68 @@ function SupportAction({
 }
 
 export function FarmerSupportScreen() {
+  const [support, setSupport] = useState(FALLBACK_SUPPORT);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await getFarmerSupportInfo();
+      const root = (data.support ?? data) as ApiRecord;
+      const topics = Array.isArray(root.topics)
+        ? root.topics.filter((topic): topic is string => typeof topic === 'string' && topic.length > 0)
+        : FALLBACK_SUPPORT.topics;
+
+      setSupport({
+        email: pickString(root, 'email') !== '-' ? pickString(root, 'email') : FALLBACK_SUPPORT.email,
+        phone: pickString(root, 'phone') !== '-' ? pickString(root, 'phone') : FALLBACK_SUPPORT.phone,
+        phoneDisplay:
+          pickString(root, 'phone_display') !== '-'
+            ? pickString(root, 'phone_display')
+            : FALLBACK_SUPPORT.phoneDisplay,
+        topics: topics.length > 0 ? topics : FALLBACK_SUPPORT.topics,
+      });
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to load support information.'));
+      setSupport(FALLBACK_SUPPORT);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  if (loading && !error) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <LoadingState message="Loading support information..." />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
         <ScreenHeader title="Help & Support" subtitle="We are here to help with your farm operations" />
 
+        {error ? <ErrorState message={error} onRetry={load} /> : null}
+
         <SupportAction
           icon="notifications"
           label="Email Support"
-          value={SUPPORT_EMAIL}
-          onPress={() => void Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
+          value={support.email}
+          onPress={() => void Linking.openURL(`mailto:${support.email}`)}
         />
         <SupportAction
           icon="support_agent"
           label="Call Support"
-          value="1800-000-000"
-          onPress={() => void Linking.openURL(`tel:${SUPPORT_PHONE}`)}
+          value={support.phoneDisplay}
+          onPress={() => void Linking.openURL(`tel:${support.phone}`)}
         />
 
         <View style={styles.faqCard}>
@@ -56,10 +117,11 @@ export function FarmerSupportScreen() {
             <BhuguardMaterialIcon name="assignment" size={20} color={dashboardTheme.primaryContainer} />
             <Text style={styles.faqTitle}>Common topics</Text>
           </View>
-          <Text style={styles.faqItem}>• Submitting farming activities</Text>
-          <Text style={styles.faqItem}>• Field officer verification visits</Text>
-          <Text style={styles.faqItem}>• Carbon credit eligibility</Text>
-          <Text style={styles.faqItem}>• Downloading reports</Text>
+          {support.topics.map((topic) => (
+            <Text key={topic} style={styles.faqItem}>
+              • {topic}
+            </Text>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>

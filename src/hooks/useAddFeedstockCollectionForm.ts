@@ -20,6 +20,7 @@ import { todayIsoDate } from '../utils/activityDateHelpers';
 import { extractList, pickString, type ApiRecord } from '../utils/apiHelpers';
 import { formatFarmerCode } from '../utils/farmerActivityHelpers';
 import { getFarmLocationLabel, mapFarmRecord } from '../utils/farmMapHelpers';
+import { appendClientStampMetadata } from '../utils/liveEvidenceCapture';
 
 const FEEDSTOCK_DRAFT_KEY = 'bhuguard_feedstock_collection_draft';
 
@@ -274,6 +275,7 @@ export function useAddFeedstockCollectionForm({ initialFarmId }: UseAddFeedstock
         name: liveEvidence.evidence.name,
         type: liveEvidence.evidence.type,
       } as unknown as Blob);
+      appendClientStampMetadata(formData, liveEvidence.evidence);
     }
 
     return formData;

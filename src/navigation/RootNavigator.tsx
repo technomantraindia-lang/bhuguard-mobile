@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -8,6 +9,10 @@ import type { RootStackParamList } from './types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
+  useEffect(() => {
+    console.log('[Bhuguard] RootNavigator mounted');
+  }, []);
+
   return (
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator initialRouteName="Preloader" screenOptions={{ headerShown: false }}>
@@ -31,6 +36,10 @@ export function RootNavigator() {
         <Stack.Screen
           name="FieldOfficerLogin"
           getComponent={() => require('../screens/auth/FieldOfficerLoginScreen').FieldOfficerLoginScreen}
+        />
+        <Stack.Screen
+          name="ArtisanLogin"
+          getComponent={() => require('../screens/artisan/ArtisanLoginScreen').ArtisanLoginScreen}
         />
         <Stack.Screen
           name="PasswordLogin"
@@ -68,6 +77,16 @@ export function RootNavigator() {
           name="FieldOfficerApp"
           getComponent={() => require('./OfficerNavigator').OfficerNavigator}
         />
+        <Stack.Screen
+          name="ArtisanApp"
+          getComponent={() => require('./ArtisanNavigator').ArtisanNavigator}
+        />
+        {__DEV__ ? (
+          <Stack.Screen
+            name="ApiHealthCheck"
+            getComponent={() => require('../screens/dev/ApiHealthCheckScreen').ApiHealthCheckScreen}
+          />
+        ) : null}
       </Stack.Navigator>
     </NavigationContainer>
   );

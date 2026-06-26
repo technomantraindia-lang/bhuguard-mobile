@@ -1,8 +1,16 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { FarmerDashboardTask } from '../../hooks/useFarmerDashboardData';
 import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
 import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTheme';
+
+export interface FarmerDashboardTask {
+  id: string;
+  title: string;
+  subtitle: string;
+  overdue?: boolean;
+  type: 'soil' | 'plot';
+  targetId?: number;
+}
 
 interface FarmerUpcomingTasksProps {
   tasks: FarmerDashboardTask[];

@@ -9,10 +9,10 @@ import { LOGO_SIZES } from '../../constants/branding';
 import { useTranslation } from '../../i18n/I18nContext';
 import type { RootStackParamList } from '../../navigation/types';
 import { getBiometricLoginEnabled } from '../../storage/biometricPreference';
-import { getMpinProfile, saveAuthSession } from '../../storage/authStorage';
+import { getMpinProfile } from '../../storage/authStorage';
 import { colors, spacing } from '../../theme';
 import { authenticateWithBiometrics, getOrCreateDeviceUuid } from '../../utils/biometricLogin';
-import { isMobileSupportedRole } from '../../utils/authRouting';
+import { finishMobileLogin } from '../../utils/finishMobileLogin';
 import { useEffect, useState } from 'react';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'FieldOfficerLogin'>;
@@ -58,13 +58,16 @@ export function FieldOfficerLoginScreen({ navigation }: Props) {
         device_uuid: deviceUuid,
       });
 
-      if (!isMobileSupportedRole(result.user_type) || result.user_type !== 'field_officer') {
-        Alert.alert(t('errors.unsupportedAccount'), t('mpinLogin.roleMismatch'));
-        return;
-      }
-
-      await saveAuthSession(result.token, result.user, result.user_type);
-      navigation.reset({ index: 0, routes: [{ name: 'FieldOfficerApp' }] });
+      await finishMobileLogin(
+        navigation,
+        { token: result.token, user: result.user, expectedRole: 'field_officer' },
+        {
+          roleMismatch: t('mpinLogin.roleMismatch'),
+          unsupportedAccount: t('errors.unsupportedAccount'),
+          farmerProfileMissingTitle: t('farmerLogin.profileMissingTitle'),
+          farmerProfileMissingMessage: t('farmerLogin.profileMissingMessage'),
+        },
+      );
     } catch (error) {
       Alert.alert(t('errors.loginFailed'), getApiErrorMessage(error, t('errors.biometricDevice')));
     } finally {

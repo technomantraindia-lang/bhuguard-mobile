@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
 import { AppButton } from '../AppButton';
@@ -8,6 +8,7 @@ import {
   hasGpsCapture,
   type LiveCapturedEvidence,
 } from '../../utils/liveEvidenceCapture';
+import { EvidenceStampedImageFrame } from './EvidenceStampedImageFrame';
 
 interface LiveEvidenceCaptureCardProps {
   evidence: LiveCapturedEvidence | null;
@@ -19,6 +20,8 @@ interface LiveEvidenceCaptureCardProps {
   onUpload?: () => void;
   uploadLabel?: string;
   showUploadButton?: boolean;
+  hideInlinePreview?: boolean;
+  onOpenPreview?: (uri: string) => void;
 }
 
 export function LiveEvidenceCaptureCard({
@@ -31,6 +34,8 @@ export function LiveEvidenceCaptureCard({
   onUpload,
   uploadLabel = 'Upload Evidence',
   showUploadButton = false,
+  hideInlinePreview = false,
+  onOpenPreview,
 }: LiveEvidenceCaptureCardProps) {
   const busy = capturing || uploading;
 
@@ -45,11 +50,12 @@ export function LiveEvidenceCaptureCard({
           </View>
         </View>
 
-        {evidence ? (
+        {evidence && !hideInlinePreview ? (
           <View style={styles.previewBlock}>
-            <View style={styles.previewFrame}>
-              <Image source={{ uri: evidence.uri }} style={styles.previewImage} resizeMode="cover" />
-            </View>
+            <EvidenceStampedImageFrame
+              uri={evidence.previewUri}
+              onPress={onOpenPreview ? () => onOpenPreview(evidence.previewUri) : undefined}
+            />
             <View style={styles.badgeRow}>
               {hasGpsCapture(evidence) ? (
                 <View style={styles.badge}>
@@ -68,23 +74,27 @@ export function LiveEvidenceCaptureCard({
             </View>
             {evidence.latitude != null && evidence.longitude != null ? (
               <Text style={styles.coords}>
-                {evidence.watermark.coordinatesLabel}
-                {evidence.accuracy != null ? ` · ±${evidence.accuracy.toFixed(0)}m` : ''}
+                {evidence.watermark.latitudeLabel} · {evidence.watermark.longitudeLabel}
+                {evidence.accuracy != null ? ` · ${evidence.watermark.accuracyLabel}` : ''}
               </Text>
             ) : null}
             <Text style={styles.locationMeta}>
-              {[evidence.watermark.villageLabel, evidence.watermark.divisionLabel, evidence.watermark.stateLabel]
-                .filter((line) => line && line !== '—')
+              {[
+                evidence.watermark.villageLabel,
+                evidence.watermark.talukaLabel,
+                evidence.watermark.districtLabel,
+                evidence.watermark.stateLabel,
+              ]
+                .filter((line) => line && !line.endsWith('—'))
                 .join(' · ')}
             </Text>
-            <Text style={styles.userMeta}>{evidence.watermark.userLabel}</Text>
           </View>
-        ) : (
+        ) : !evidence ? (
           <View style={styles.placeholder}>
             <BhuguardMaterialIcon name="photo_camera" size={36} color={colors.textMuted} />
             <Text style={styles.placeholderText}>No live photo captured yet</Text>
           </View>
-        )}
+        ) : null}
 
         <View style={styles.actions}>
           {!evidence ? (
@@ -149,17 +159,6 @@ const styles = StyleSheet.create({
   },
   placeholderText: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
   previewBlock: { gap: 8 },
-  previewFrame: {
-    width: '100%',
-    height: 200,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: colors.background,
-  },
-  previewImage: {
-    width: '100%',
-    height: '100%',
-  },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   badge: {
     flexDirection: 'row',
@@ -175,7 +174,6 @@ const styles = StyleSheet.create({
   badgeTextMuted: { fontSize: 11, fontWeight: '600', color: colors.textMuted },
   coords: { fontSize: 12, color: colors.textMuted, fontWeight: '500' },
   locationMeta: { fontSize: 12, color: colors.textMuted, fontWeight: '500' },
-  userMeta: { fontSize: 12, color: colors.primary, fontWeight: '700' },
   actions: { gap: 10 },
   error: { color: colors.error, fontSize: 13, lineHeight: 18 },
 });

@@ -2,16 +2,23 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
 import { BUILD_API_BASE_URL } from '../config/apiDefaults';
+import { LOCAL_API_BASE_URL } from '../config/env';
+import { isPlaceholderApiUrl, isTryCloudflareTunnelUrl } from '../config/apiUrlValidation';
+import { formatApiUnreachableMessage } from '../utils/apiError';
 
 const API_BASE_URL_KEY = 'bhuguard_api_base_url';
 
 let cachedApiBaseUrl: string | null = null;
 
+export function getDefaultApiBaseUrl(): string {
+  return BUILD_API_BASE_URL || LOCAL_API_BASE_URL;
+}
+
 export function normalizeApiBaseUrl(input: string): string {
   const trimmed = input.trim().replace(/\/+$/, '');
 
   if (!trimmed) {
-    return BUILD_API_BASE_URL;
+    return getDefaultApiBaseUrl();
   }
 
   if (trimmed.endsWith('/api')) {
@@ -22,23 +29,7 @@ export function normalizeApiBaseUrl(input: string): string {
 }
 
 /** Example URLs from help text — not real servers. */
-export function isPlaceholderApiUrl(url: string): boolean {
-  const host = getUrlHostname(url)?.toLowerCase() ?? '';
-
-  if (!host) {
-    return true;
-  }
-
-  const placeholders = [
-    'something-random.trycloudflare.com',
-    'abcd-xyz.trycloudflare.com',
-    'your-tunnel.trycloudflare.com',
-    'example.com',
-    'your-domain.com',
-  ];
-
-  return placeholders.some((placeholder) => host === placeholder || host.includes('your-tunnel'));
-}
+export { isPlaceholderApiUrl } from '../config/apiUrlValidation';
 
 function getUrlHostname(url: string): string | null {
   try {
@@ -71,21 +62,31 @@ export function isLocalNetworkApiUrl(url: string): boolean {
   return /^172\.(1[6-9]|2\d|3[01])\./.test(host);
 }
 
-function shouldReplaceStoredWithBuild(stored: string, build: string): boolean {
-  if (stored === build) {
+function shouldMigrateStoredApiUrl(stored: string): boolean {
+  if (!stored) {
     return false;
   }
 
-  // Drop stale LAN overrides when the app ships a public HTTPS API.
-  if (isLocalNetworkApiUrl(stored) && build.startsWith('https://')) {
-    return true;
+  // Drop help-text placeholders and expired Cloudflare quick-tunnel URLs saved earlier.
+  return isPlaceholderApiUrl(stored) || isTryCloudflareTunnelUrl(stored);
+}
+
+async function applyStoredApiUrl(stored: string): Promise<string> {
+  const normalized = normalizeApiBaseUrl(stored);
+
+  if (shouldMigrateStoredApiUrl(normalized)) {
+    const fallback = getDefaultApiBaseUrl();
+    cachedApiBaseUrl = fallback;
+    await AsyncStorage.setItem(API_BASE_URL_KEY, fallback);
+    return fallback;
   }
 
-  return stored.startsWith('http://') && build.startsWith('https://');
+  cachedApiBaseUrl = normalized;
+  return normalized;
 }
 
 export function getCachedApiBaseUrl(): string {
-  return cachedApiBaseUrl ?? BUILD_API_BASE_URL;
+  return cachedApiBaseUrl ?? getDefaultApiBaseUrl();
 }
 
 export function setCachedApiBaseUrl(url: string): void {
@@ -100,20 +101,11 @@ export async function getApiBaseUrl(): Promise<string> {
   const stored = await AsyncStorage.getItem(API_BASE_URL_KEY);
 
   if (stored) {
-    const normalized = normalizeApiBaseUrl(stored);
-
-    if (shouldReplaceStoredWithBuild(normalized, BUILD_API_BASE_URL)) {
-      cachedApiBaseUrl = BUILD_API_BASE_URL;
-      await AsyncStorage.setItem(API_BASE_URL_KEY, BUILD_API_BASE_URL);
-      return BUILD_API_BASE_URL;
-    }
-
-    cachedApiBaseUrl = normalized;
-    return normalized;
+    return applyStoredApiUrl(stored);
   }
 
-  cachedApiBaseUrl = BUILD_API_BASE_URL;
-  return BUILD_API_BASE_URL;
+  cachedApiBaseUrl = getDefaultApiBaseUrl();
+  return cachedApiBaseUrl;
 }
 
 export async function saveApiBaseUrl(input: string): Promise<string> {
@@ -124,7 +116,7 @@ export async function saveApiBaseUrl(input: string): Promise<string> {
 }
 
 export async function clearApiBaseUrlOverride(): Promise<void> {
-  cachedApiBaseUrl = BUILD_API_BASE_URL;
+  cachedApiBaseUrl = getDefaultApiBaseUrl();
   await AsyncStorage.removeItem(API_BASE_URL_KEY);
 }
 
@@ -143,7 +135,7 @@ export async function testApiConnection(apiBaseUrl: string): Promise<{ ok: boole
     return {
       ok: false,
       message:
-        'That is the example URL, not your real server. Copy the https://....trycloudflare.com link from Git Bash after running the tunnel script.',
+        'That is an example URL, not a real server. Use https://demo.bhuguard.com for client demo.',
     };
   }
 
@@ -162,19 +154,26 @@ export async function testApiConnection(apiBaseUrl: string): Promise<{ ok: boole
 
     return { ok: false, message: `Server responded with status ${response.status}` };
   } catch {
-    const isTunnel = normalized.includes('trycloudflare.com');
+    const isTunnel = isTryCloudflareTunnelUrl(normalized);
+    const isDemo = normalized.includes('demo.bhuguard.com');
 
     if (isTunnel) {
       return {
         ok: false,
-        message:
-          `Cannot reach ${normalized}. This tunnel URL has expired — close is NOT enough. On your PC, run the tunnel script again in Git Bash, copy the NEW https://....trycloudflare.com URL, and paste it here. Keep that Git Bash window open.`,
+        message: `${formatApiUnreachableMessage(normalized)} Expired tunnel — use ${getApiOrigin(LOCAL_API_BASE_URL)} on same Wi-Fi or tap "Use local PC".`,
+      };
+    }
+
+    if (isDemo) {
+      return {
+        ok: false,
+        message: `${formatApiUnreachableMessage(normalized)} Demo server may be offline — try ${getApiOrigin(LOCAL_API_BASE_URL)} on same Wi-Fi.`,
       };
     }
 
     return {
       ok: false,
-      message: `Cannot reach ${normalized}. Check that Laravel is running and the server URL is correct.`,
+      message: formatApiUnreachableMessage(normalized),
     };
   }
 }
@@ -182,33 +181,12 @@ export async function testApiConnection(apiBaseUrl: string): Promise<{ ok: boole
 /** Load saved API URL on launch — no network test (keeps app startup fast). */
 export async function bootstrapApiBaseUrl(): Promise<string> {
   const stored = await AsyncStorage.getItem(API_BASE_URL_KEY);
-  const buildUrl = BUILD_API_BASE_URL;
+  const defaultUrl = getDefaultApiBaseUrl();
 
   if (stored) {
-    const normalized = normalizeApiBaseUrl(stored);
-
-    if (isPlaceholderApiUrl(normalized)) {
-      await AsyncStorage.removeItem(API_BASE_URL_KEY);
-      cachedApiBaseUrl = buildUrl || null;
-      return buildUrl;
-    }
-
-    if (shouldReplaceStoredWithBuild(normalized, buildUrl)) {
-      if (buildUrl) {
-        cachedApiBaseUrl = buildUrl;
-        await AsyncStorage.setItem(API_BASE_URL_KEY, buildUrl);
-        return buildUrl;
-      }
-
-      await AsyncStorage.removeItem(API_BASE_URL_KEY);
-      cachedApiBaseUrl = null;
-      return buildUrl;
-    }
-
-    cachedApiBaseUrl = normalized;
-    return normalized;
+    return applyStoredApiUrl(stored);
   }
 
-  cachedApiBaseUrl = buildUrl || null;
-  return buildUrl;
+  cachedApiBaseUrl = defaultUrl;
+  return defaultUrl;
 }

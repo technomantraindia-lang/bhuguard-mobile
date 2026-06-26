@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { colors, shadows, spacing } from '../theme';
+import { CARD_RADIUS } from '../theme/layoutMetrics';
 
 interface AppCardProps {
   title: string;
@@ -47,7 +48,7 @@ export function AppCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
-    borderRadius: 16,
+    borderRadius: CARD_RADIUS,
     padding: spacing.card,
     borderWidth: 1,
     borderColor: colors.border,

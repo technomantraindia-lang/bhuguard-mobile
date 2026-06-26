@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
+import { SignatureCaptureModal } from '../../components/officer/SignatureCaptureModal';
 import {
   AvailabilitySummarySection,
   BatchInformationSection,
@@ -33,6 +35,7 @@ export function FieldOfficerInventoryMovementScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<ScreenRoute>();
   const form = useInventoryMovementForm({ farmerId: route.params?.farmerId });
+  const [receiverSignatureModalVisible, setReceiverSignatureModalVisible] = useState(false);
 
   if (form.loading) {
     return (
@@ -188,7 +191,7 @@ export function FieldOfficerInventoryMovementScreen() {
           accuracyM={form.accuracyM}
           gpsVerified={form.gpsVerified}
           onCaptureGps={() => void form.captureGps()}
-          onVerifyLocation={() => void form.captureGps()}
+          onVerifyLocation={() => form.verifyLocation()}
         />
 
         <EvidenceUploadSection
@@ -201,10 +204,13 @@ export function FieldOfficerInventoryMovementScreen() {
           receiverName={form.receiverName}
           receiverMobile={form.receiverMobile}
           receiverConfirmed={form.receiverConfirmed}
+          receiverSignatureCaptured={form.receiverSignature != null}
           quantityMoved={form.quantityMoved}
           onChangeReceiverName={form.setReceiverName}
           onChangeReceiverMobile={form.setReceiverMobile}
           onToggleConfirmed={() => form.setReceiverConfirmed((current) => !current)}
+          onCaptureSignature={() => setReceiverSignatureModalVisible(true)}
+          onClearSignature={form.clearReceiverSignature}
         />
 
         <OfficerRemarksSection value={form.officerRemarks} onChange={form.setOfficerRemarks} />
@@ -230,6 +236,16 @@ export function FieldOfficerInventoryMovementScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      <SignatureCaptureModal
+        visible={receiverSignatureModalVisible}
+        title="Receiver Signature"
+        onClose={() => setReceiverSignatureModalVisible(false)}
+        onCaptured={(uri) => {
+          form.setReceiverSignatureFromUri(uri);
+          setReceiverSignatureModalVisible(false);
+        }}
+      />
     </SafeAreaView>
   );
 }

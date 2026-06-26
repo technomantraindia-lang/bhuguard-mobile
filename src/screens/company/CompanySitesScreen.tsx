@@ -17,6 +17,12 @@ export function CompanySitesScreen() {
       subtitle="Company site locations"
       fetcher={getCompanySites}
       listKeys={['sites']}
+      headerAction={{
+        label: 'Add Site',
+        onPress: () => navigation.navigate('CompanyEditSite', {}),
+      }}
+      emptyTitle="No sites added yet"
+      emptyMessage="Add your first company site to start service submissions and records."
       onItemPress={(item) =>
         navigation.navigate('CompanySiteDetail', { siteId: Number(item.id) })
       }

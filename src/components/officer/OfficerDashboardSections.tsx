@@ -22,6 +22,7 @@ interface OfficerDashboardSectionsProps {
   onFeedstockVerification?: () => void;
   onBiocharProduction?: () => void;
   onInventoryMovement?: () => void;
+  onVerificationChecklist?: () => void;
   onSeeSchedule?: () => void;
   onViewFullMap?: () => void;
   onCallFarmer?: () => void;
@@ -73,9 +74,9 @@ export function OfficerSummaryCard({ dashboard }: { dashboard: FieldOfficerDashb
 export function OfficerStatsGrid({ dashboard }: { dashboard: FieldOfficerDashboardViewModel }) {
   const stats = [
     { label: 'Assigned', value: String(dashboard.assignedVisitsCount), unit: 'Visits', color: officerTheme.primary },
-    { label: 'Today', value: String(dashboard.todayTargetsCount), unit: 'Targets', color: officerTheme.secondary },
-    { label: 'Pending', value: String(dashboard.pendingReportsCount), unit: 'Reports', color: officerTheme.tertiary },
-    { label: 'Month', value: String(dashboard.monthDoneCount), unit: 'Done', color: officerTheme.primary },
+    { label: 'Pending', value: String(dashboard.pendingVisitsCount), unit: 'Visits', color: officerTheme.secondary },
+    { label: 'Checked In', value: String(dashboard.checkedInVisitsCount), unit: 'Visits', color: officerTheme.tertiary },
+    { label: 'Completed', value: String(dashboard.completedVisitsCount), unit: 'Visits', color: officerTheme.primary },
   ];
 
   return (
@@ -100,10 +101,17 @@ export function OfficerQuickActionCards({
   onFeedstockVerification,
   onBiocharProduction,
   onInventoryMovement,
+  onVerificationChecklist,
 }: Required<
   Pick<
     OfficerDashboardSectionsProps,
-    'onStartVerification' | 'onUploadEvidence' | 'onOnboardFarmer' | 'onFeedstockVerification' | 'onBiocharProduction' | 'onInventoryMovement'
+    | 'onStartVerification'
+    | 'onUploadEvidence'
+    | 'onOnboardFarmer'
+    | 'onFeedstockVerification'
+    | 'onBiocharProduction'
+    | 'onInventoryMovement'
+    | 'onVerificationChecklist'
   >
 >) {
   const actions: Array<{
@@ -114,9 +122,16 @@ export function OfficerQuickActionCards({
     onPress: () => void;
   }> = [
     {
+      icon: 'photo_camera',
+      title: 'Upload Evidence',
+      description: 'Capture Biochar visit photos and supporting evidence',
+      ctaLabel: 'Upload Now',
+      onPress: onUploadEvidence,
+    },
+    {
       icon: 'assignment',
       title: 'Start Verification',
-      description: 'Validate MRV data at farmer locations',
+      description: 'Begin Biochar field verification at farmer location',
       ctaLabel: 'Launch Verifier',
       onPress: onStartVerification,
     },
@@ -310,49 +325,92 @@ function PipelineStat({
 export function OfficerMapCoverage({
   dashboard,
   onViewFullMap,
-}: Pick<OfficerDashboardSectionsProps, 'onViewFullMap'> & { dashboard: FieldOfficerDashboardViewModel }) {
+  onVisitPress,
+}: Pick<OfficerDashboardSectionsProps, 'onViewFullMap'> & {
+  dashboard: FieldOfficerDashboardViewModel;
+  onVisitPress?: (assignmentId: number) => void;
+}) {
+  const hasGpsVisits = dashboard.mapMarkers.length > 0;
+
   return (
-    <View style={[styles.mapCard, officerCardShadow]}>
-      <View style={styles.mapImagePlaceholder}>
-        <View style={styles.mapGradient} />
+    <View style={styles.section}>
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>Visit GPS Coverage</Text>
+        {hasGpsVisits ? (
+          <Pressable style={styles.mapButton} onPress={onViewFullMap}>
+            <Text style={styles.mapButtonText}>View All</Text>
+          </Pressable>
+        ) : null}
       </View>
 
-      <View style={styles.mapOverlay}>
-        <View style={styles.mapStatsChip}>
-          <Text style={styles.mapStatsLabel}>Coverage Stats</Text>
-          <View style={styles.mapStatsRow}>
-            <View style={styles.mapStatItem}>
-              <View style={[styles.mapDot, { backgroundColor: officerTheme.primary }]} />
-              <Text style={styles.mapStatText}>{dashboard.coverageTotal} Total</Text>
-            </View>
-            <View style={styles.mapStatItem}>
-              <View style={[styles.mapDot, { backgroundColor: officerTheme.secondary }]} />
-              <Text style={styles.mapStatText}>{dashboard.coverageMapped} Mapped</Text>
-            </View>
+      {hasGpsVisits ? (
+        <View style={styles.gpsList}>
+          {dashboard.mapMarkers.slice(0, 3).map((marker) => (
+            <Pressable
+              key={marker.id}
+              style={({ pressed }) => [styles.gpsCard, officerCardShadow, pressed && styles.mapPressed]}
+              onPress={() => {
+                if (marker.assignmentId) {
+                  onVisitPress?.(marker.assignmentId);
+                }
+              }}
+            >
+              <View style={styles.gpsCardTop}>
+                <Text style={styles.gpsFarmName}>{marker.farmName}</Text>
+                <Text style={styles.gpsStatus}>{marker.statusLabel}</Text>
+              </View>
+              <Text style={styles.gpsLocation}>{marker.location}</Text>
+              <Text style={styles.gpsCoords}>
+                {marker.latitude.toFixed(5)}, {marker.longitude.toFixed(5)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : (
+        <View style={[styles.mapCard, officerCardShadow]}>
+          <Text style={styles.emptyMapTitle}>No GPS-enabled visits available yet.</Text>
+          <Text style={styles.emptyMapMessage}>
+            Assigned visits with farm or site coordinates will appear here.
+          </Text>
+        </View>
+      )}
+
+      <View style={styles.mapStatsChip}>
+        <Text style={styles.mapStatsLabel}>Coverage Stats</Text>
+        <View style={styles.mapStatsRow}>
+          <View style={styles.mapStatItem}>
+            <View style={[styles.mapDot, { backgroundColor: officerTheme.primary }]} />
+            <Text style={styles.mapStatText}>{dashboard.coverageTotal} Total</Text>
+          </View>
+          <View style={styles.mapStatItem}>
+            <View style={[styles.mapDot, { backgroundColor: officerTheme.secondary }]} />
+            <Text style={styles.mapStatText}>{dashboard.coverageMapped} Mapped</Text>
           </View>
         </View>
-
-        <Pressable style={styles.mapButton} onPress={onViewFullMap}>
-          <Text style={styles.mapButtonText}>View Full Map</Text>
-        </Pressable>
       </View>
     </View>
   );
 }
 
 export function OfficerPerformanceSection({ dashboard }: { dashboard: FieldOfficerDashboardViewModel }) {
+  if (dashboard.monthlyRating <= 0 && dashboard.accuracyPercent <= 0) {
+    return null;
+  }
+
   return (
     <View style={styles.performanceWrap}>
-      <View style={[styles.ratingCard, officerShadow]}>
-        <View style={styles.ratingCopy}>
-          <Text style={styles.ratingTitle}>Monthly Rating</Text>
-          <Text style={styles.ratingSubtitle}>Great job! Keep verifying with accuracy.</Text>
+      {dashboard.monthlyRating > 0 ? (
+        <View style={[styles.ratingCard, officerShadow]}>
+          <View style={styles.ratingCopy}>
+            <Text style={styles.ratingTitle}>Monthly Rating</Text>
+            <Text style={styles.ratingSubtitle}>Based on approved verification reports.</Text>
+          </View>
+          <View style={styles.ratingValueWrap}>
+            <Text style={styles.ratingValue}>{dashboard.monthlyRating.toFixed(1)}</Text>
+            <Text style={styles.ratingStars}>★★★★☆</Text>
+          </View>
         </View>
-        <View style={styles.ratingValueWrap}>
-          <Text style={styles.ratingValue}>{dashboard.monthlyRating.toFixed(1)}</Text>
-          <Text style={styles.ratingStars}>★★★★☆</Text>
-        </View>
-      </View>
+      ) : null}
 
       <View style={styles.performanceGrid}>
         <View style={[styles.performanceStat, officerCardShadow]}>
@@ -375,6 +433,9 @@ export function OfficerRecentActivity({ activities = [] }: { activities?: Office
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Recent Activity</Text>
       <View style={styles.activityList}>
+        {safeActivities.length === 0 ? (
+          <Text style={styles.emptyActivity}>No recent verification activity yet.</Text>
+        ) : null}
         {safeActivities.map((activity) => (
           <View key={activity.id} style={styles.activityRow}>
             <View
@@ -603,25 +664,43 @@ const styles = StyleSheet.create({
   },
   pipelineBarSegment: { height: '100%', backgroundColor: officerTheme.secondary, minWidth: 4 },
   mapCard: {
-    minHeight: 160,
+    minHeight: 120,
     borderRadius: 14,
-    overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(191, 201, 190, 0.1)',
-    marginBottom: 16,
-    backgroundColor: officerTheme.secondaryContainer,
+    marginBottom: 12,
+    backgroundColor: officerTheme.surface,
+    padding: 16,
+    justifyContent: 'center',
+    gap: 6,
   },
-  mapImagePlaceholder: { ...StyleSheet.absoluteFill, backgroundColor: '#D8E8D0' },
-  mapGradient: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+  emptyMapTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: officerTheme.onSurface,
+    textAlign: 'center',
   },
-  mapOverlay: {
-    flex: 1,
-    minHeight: 160,
+  emptyMapMessage: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: officerTheme.onSurfaceVariant,
+    textAlign: 'center',
+  },
+  gpsList: { gap: 10, marginBottom: 12 },
+  gpsCard: {
+    backgroundColor: officerTheme.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: officerTheme.outlineVariant,
     padding: 12,
-    justifyContent: 'space-between',
+    gap: 4,
   },
+  gpsCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  gpsFarmName: { flex: 1, fontSize: 14, fontWeight: '700', color: officerTheme.onSurface },
+  gpsStatus: { fontSize: 11, fontWeight: '700', color: officerTheme.primary },
+  gpsLocation: { fontSize: 12, color: officerTheme.onSurfaceVariant },
+  gpsCoords: { fontSize: 12, color: officerTheme.onSurface, fontVariant: ['tabular-nums'] },
+  mapPressed: { opacity: 0.92 },
   mapStatsChip: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.92)',
@@ -635,13 +714,12 @@ const styles = StyleSheet.create({
   mapDot: { width: 8, height: 8, borderRadius: 4 },
   mapStatText: { fontSize: 12, fontWeight: '700', color: officerTheme.onSurface },
   mapButton: {
-    alignSelf: 'center',
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: officerTheme.surfaceContainer,
     borderWidth: 1,
     borderColor: 'rgba(11, 107, 58, 0.2)',
     borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   mapButtonText: { fontSize: 14, fontWeight: '500', color: officerTheme.primary },
   performanceWrap: { gap: 12, marginBottom: 16 },
@@ -671,6 +749,11 @@ const styles = StyleSheet.create({
   performanceLabel: { fontSize: 11, color: officerTheme.onSurfaceVariant },
   performanceValue: { fontSize: 20, fontWeight: '600', color: officerTheme.primary, marginTop: 4 },
   activityList: { gap: 16, paddingLeft: 4 },
+  emptyActivity: {
+    fontSize: 13,
+    color: officerTheme.onSurfaceVariant,
+    paddingVertical: 8,
+  },
   activityRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   activityIcon: {
     width: 22,

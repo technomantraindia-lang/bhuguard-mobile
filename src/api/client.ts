@@ -1,26 +1,24 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
-import { BUILD_API_BASE_URL } from '../config/apiDefaults';
+import { API_BASE_URL } from '../config/apiConfig';
 import { navigateToLogin } from '../navigation/navigationRef';
-import { clearAuthSession, getAuthToken } from '../storage/authStorage';
 import { getApiBaseUrl, getCachedApiBaseUrl } from '../storage/apiConfigStorage';
-
-if (__DEV__) {
-  console.log('[Bhuguard API] Build default:', BUILD_API_BASE_URL);
-}
+import { clearAuthStorage, getAuthToken } from '../utils/authStorage';
+import { extractApiErrorMessage, formatApiUnreachableMessage, isNetworkError, isTimeoutError } from '../utils/apiError';
 
 export const apiClient = axios.create({
-  baseURL: BUILD_API_BASE_URL,
+  baseURL: API_BASE_URL,
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
   },
-  timeout: 45000,
+  timeout: 20000,
 });
 
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    config.baseURL = await getApiBaseUrl();
+    const baseUrl = await getApiBaseUrl();
+    config.baseURL = baseUrl || API_BASE_URL;
 
     const token = await getAuthToken();
 
@@ -41,22 +39,41 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     if (error.response?.status === 401) {
-      await clearAuthSession();
+      await clearAuthStorage();
       navigateToLogin();
+      return Promise.reject(new Error(extractApiErrorMessage(error, 'Session expired. Please log in again.')));
     }
 
-    if (!error.response && error.message === 'Network Error') {
-      const baseUrl = getCachedApiBaseUrl();
-      return Promise.reject(
-        new Error(
-          `Cannot reach API at ${baseUrl || '(not set)'}. Open Server settings and paste your public https://... URL.`,
-        ),
-      );
+    if (isNetworkError(error)) {
+      const baseUrl = getCachedApiBaseUrl() || API_BASE_URL;
+      return Promise.reject(new Error(formatApiUnreachableMessage(baseUrl)));
     }
 
-    return Promise.reject(error);
+    if (isTimeoutError(error)) {
+      return Promise.reject(new Error(extractApiErrorMessage(error, 'Request timed out.')));
+    }
+
+    if (error.response?.status === 403) {
+      return Promise.reject(new Error(extractApiErrorMessage(error, 'You do not have permission to perform this action.')));
+    }
+
+    if (error.response?.status === 422) {
+      return Promise.reject(new Error(extractApiErrorMessage(error, 'Validation failed.')));
+    }
+
+    if ((error.response?.status ?? 0) >= 500) {
+      return Promise.reject(new Error(extractApiErrorMessage(error, 'Server error. Please try again.')));
+    }
+
+    return Promise.reject(new Error(extractApiErrorMessage(error)));
   },
 );
 
-/** @deprecated Use getApiBaseUrl() — kept for sync helpers that run after login. */
-export const API_BASE_URL = BUILD_API_BASE_URL;
+export { API_BASE_URL };
+
+/** Call after saving server settings so axios defaults match the cached URL. */
+export async function syncApiClientBaseUrl(): Promise<string> {
+  const baseUrl = await getApiBaseUrl();
+  apiClient.defaults.baseURL = baseUrl;
+  return baseUrl;
+}

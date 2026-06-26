@@ -10,7 +10,6 @@ import { FarmDetailHeroCard } from '../../components/farmer/farms/detail/FarmDet
 import { FarmSatelliteMapSection } from '../../components/farmer/farms/detail/FarmSatelliteMapSection';
 import {
   FarmActivitySummaryCard,
-  FarmCarbonProgressCard,
   FarmDetailActionButtons,
   FarmProjectInfoSection,
   FarmRecentActivitiesSection,
@@ -106,17 +105,12 @@ export function FarmerFarmDetailScreen({ navigation, route }: Props) {
           onViewActivities={() => navigation.navigate('FarmerActivityLogs')}
         />
 
-        <FarmCarbonProgressCard
-          carbonProgress={detail.carbonProgress}
-          onViewCarbonProgress={() => navigation.navigate('FarmerCarbonCalculations')}
-        />
-
         <FarmVerificationTimeline steps={detail.verificationSteps} />
 
         <FarmRecentActivitiesSection
           activities={detail.recentActivities}
           onActivityPress={(activityId) =>
-            navigation.navigate('StitchScreen', { screenKey: 'activity_detail', itemId: activityId })
+            navigation.navigate('FarmerActivityDetail', { activityId })
           }
         />
 
@@ -124,8 +118,7 @@ export function FarmerFarmDetailScreen({ navigation, route }: Props) {
           onOpenGoogleMaps={openMaps}
           onEditFarm={() => navigation.navigate('FarmerEditFarm', { farmId })}
           onAddActivity={() => navigation.navigate('FarmerSubmitActivity', { farmId })}
-          onAddBaseline={() => navigation.navigate('FarmerAddBaselineAssessment', { farmId })}
-          onViewReports={() => navigation.navigate('FarmerFinalReports')}
+          onBiocharUpdates={() => navigation.navigate('FarmerBiocharUpdates')}
         />
       </ScrollView>
 

@@ -200,24 +200,21 @@ interface FarmDetailActionButtonsProps {
   onOpenGoogleMaps: () => void;
   onEditFarm: () => void;
   onAddActivity: () => void;
-  onAddBaseline: () => void;
-  onViewReports: () => void;
+  onBiocharUpdates: () => void;
 }
 
 export function FarmDetailActionButtons({
   onOpenGoogleMaps,
   onEditFarm,
   onAddActivity,
-  onAddBaseline,
-  onViewReports,
+  onBiocharUpdates,
 }: FarmDetailActionButtonsProps) {
   return (
     <View style={styles.actionGrid}>
       <ActionButton label="Open in Google Maps" icon="map" onPress={onOpenGoogleMaps} variant="outline" />
       <ActionButton label="Edit Farm" icon="assignment" onPress={onEditFarm} variant="outline" />
       <ActionButton label="Add Activity" icon="add_circle" onPress={onAddActivity} variant="solid" />
-      <ActionButton label="Baseline" icon="science" onPress={onAddBaseline} variant="outline" />
-      <ActionButton label="View Reports" icon="analytics" onPress={onViewReports} variant="outline" />
+      <ActionButton label="Biochar Updates" icon="event_note" onPress={onBiocharUpdates} variant="outline" />
     </View>
   );
 }
@@ -229,7 +226,7 @@ function ActionButton({
   variant,
 }: {
   label: string;
-  icon: 'map' | 'assignment' | 'add_circle' | 'analytics' | 'science';
+  icon: 'map' | 'assignment' | 'add_circle' | 'event_note';
   onPress: () => void;
   variant: 'solid' | 'outline';
 }) {

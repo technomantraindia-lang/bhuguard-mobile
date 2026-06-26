@@ -2,8 +2,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { LOGO_SIZES } from '../../../constants/branding';
 import { officerTheme } from '../../../theme/officerDashboardTheme';
-import { BhuguardLogo } from '../../shared/BhuguardLogo';
 import { BhuguardMaterialIcon } from '../../shared/BhuguardMaterialIcon';
+import { ScreenHeader } from '../../ScreenHeader';
 
 interface OfficerBiocharProductionHeaderProps {
   officerName: string;
@@ -27,47 +27,28 @@ export function OfficerBiocharProductionHeader({
   onProfilePress,
 }: OfficerBiocharProductionHeaderProps) {
   return (
-    <View style={styles.bar}>
-      <Pressable style={styles.iconButton} onPress={onBackPress} accessibilityLabel="Go back">
-        <View style={styles.backIcon}>
-          <BhuguardMaterialIcon name="arrow_forward" size={20} color={officerTheme.primary} />
+    <ScreenHeader
+      title="Biochar Activity"
+      showBack
+      showBrandLogo
+      onBackPress={onBackPress}
+      rightSlot={
+        <View style={styles.trailing}>
+          <Pressable style={styles.iconButton} onPress={onNotificationsPress} accessibilityLabel="Notifications">
+            <BhuguardMaterialIcon name="notifications" size={22} color={officerTheme.primaryContainer} />
+          </Pressable>
+          <Pressable style={styles.avatar} onPress={onProfilePress} accessibilityLabel="Profile">
+            <Text style={styles.avatarText}>{getInitials(officerName)}</Text>
+          </Pressable>
         </View>
-      </Pressable>
-
-      <View style={styles.center}>
-        <BhuguardLogo size={LOGO_SIZES.moduleHeader} />
-        <Text style={styles.title}>Biochar Production</Text>
-      </View>
-
-      <View style={styles.trailing}>
-        <Pressable style={styles.iconButton} onPress={onNotificationsPress}>
-          <BhuguardMaterialIcon name="notifications" size={22} color={officerTheme.primary} />
-        </Pressable>
-        <Pressable style={styles.avatar} onPress={onProfilePress}>
-          <Text style={styles.avatarText}>{getInitials(officerName)}</Text>
-        </Pressable>
-      </View>
-    </View>
+      }
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  bar: {
-    minHeight: officerTheme.headerHeight,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: officerTheme.marginMobile,
-    paddingVertical: 8,
-    backgroundColor: officerTheme.surfaceLowest,
-    borderBottomWidth: 1,
-    borderBottomColor: officerTheme.outlineVariant,
-  },
-  center: { flex: 1, alignItems: 'center', gap: 2 },
-  title: { fontSize: 14, fontWeight: '700', color: officerTheme.primary },
-  trailing: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  trailing: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   iconButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  backIcon: { transform: [{ rotate: '180deg' }] },
   avatar: {
     width: 36,
     height: 36,

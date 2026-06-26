@@ -14,9 +14,16 @@ export function CompanyServiceSubmissionsScreen() {
   return (
     <ApiListScreen
       title="Service Submissions"
-      subtitle="GET /company/service-submissions"
+      subtitle="Company service submissions"
       fetcher={getCompanyServiceSubmissions}
       listKeys={['service_submissions', 'submissions']}
+      emptyTitle="No service submissions yet"
+      emptyMessage="Create a submission for Waste Management, Biochar, or Industrial Carbon."
+      headerAction={{
+        label: 'New Submission',
+        onPress: () =>
+          navigation.navigate('CompanyCreateRecord', { formKey: 'company_create_submission' }),
+      }}
       onItemPress={(item) =>
         navigation.navigate('CompanyServiceSubmissionDetail', { id: Number(item.id) })
       }

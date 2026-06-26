@@ -32,20 +32,28 @@ export function OfficerVisitsHeader({
 }: OfficerVisitsHeaderProps) {
   return (
     <View style={styles.bar}>
-      <Pressable
-        style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
-        onPress={onBackPress}
-        accessibilityRole="button"
-        accessibilityLabel="Back to dashboard"
-      >
-        <View style={styles.backIcon}>
-          <BhuguardMaterialIcon name="arrow_forward" size={20} color={officerTheme.primary} />
-        </View>
-      </Pressable>
+      <View style={styles.leading}>
+        {onBackPress ? (
+          <Pressable
+            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+            onPress={onBackPress}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <BhuguardMaterialIcon name="arrow_back" size={22} color={officerTheme.primary} />
+          </Pressable>
+        ) : (
+          <BhuguardLogo size={LOGO_SIZES.moduleHeader} />
+        )}
 
-      <View style={styles.center}>
-        <BhuguardLogo size={LOGO_SIZES.moduleHeader} />
-        <Text style={styles.title}>Assigned Visits</Text>
+        <View style={styles.copy}>
+          <Text style={styles.title} numberOfLines={1}>
+            Assigned Visits
+          </Text>
+          <Text style={styles.subtitle} numberOfLines={1}>
+            Field verification queue
+          </Text>
+        </View>
       </View>
 
       <View style={styles.trailing}>
@@ -78,41 +86,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: officerTheme.marginMobile,
-    paddingVertical: 8,
+    paddingVertical: 10,
     backgroundColor: officerTheme.surfaceLowest,
     borderBottomWidth: 1,
     borderBottomColor: officerTheme.outlineVariant,
   },
-  center: {
+  leading: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
+    minWidth: 0,
+    paddingRight: 8,
+  },
+  copy: {
+    flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   title: {
-    fontSize: 14,
+    fontSize: 17,
+    lineHeight: 22,
     fontWeight: '700',
-    color: officerTheme.primary,
-    letterSpacing: 0.3,
+    color: officerTheme.headingGreen,
+  },
+  subtitle: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '500',
+    color: officerTheme.onSurfaceVariant,
   },
   trailing: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backIcon: {
-    transform: [{ rotate: '180deg' }],
+    backgroundColor: officerTheme.surfaceLow,
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: officerTheme.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
@@ -123,6 +143,7 @@ const styles = StyleSheet.create({
     color: officerTheme.onPrimary,
   },
   pressed: {
-    opacity: 0.75,
+    opacity: 0.85,
+    transform: [{ scale: 0.96 }],
   },
 });

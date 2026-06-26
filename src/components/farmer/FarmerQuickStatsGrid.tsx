@@ -30,6 +30,14 @@ interface FarmerQuickStatsGridProps {
   onPendingPress: () => void;
   onApprovedPress: () => void;
   onVerificationPress: () => void;
+  activeServicesCount?: number;
+  weeklyUpdatesPendingCount?: number;
+  evidenceUploadedCount?: number;
+  reportsAvailableCount?: number;
+  onServicesPress?: () => void;
+  onWeeklyUpdatesPress?: () => void;
+  onEvidencePress?: () => void;
+  onReportsPress?: () => void;
 }
 
 function StatCard({ icon, value, valueSuffix, label, tall, iconBg, iconColor, onPress }: StatItem) {
@@ -73,6 +81,14 @@ export function FarmerQuickStatsGrid({
   onPendingPress,
   onApprovedPress,
   onVerificationPress,
+  activeServicesCount = 0,
+  weeklyUpdatesPendingCount = 0,
+  evidenceUploadedCount = 0,
+  reportsAvailableCount = 0,
+  onServicesPress,
+  onWeeklyUpdatesPress,
+  onEvidencePress,
+  onReportsPress,
 }: FarmerQuickStatsGridProps) {
   return (
     <View style={styles.wrap}>
@@ -100,6 +116,29 @@ export function FarmerQuickStatsGrid({
           iconBg={dashboardTheme.creditsSurface}
           iconColor={dashboardTheme.creditsAccent}
           onPress={onCreditsPress}
+        />
+      </View>
+
+      <View style={styles.compactRow}>
+        <CompactStat
+          label="Active Services"
+          value={String(activeServicesCount)}
+          onPress={onServicesPress ?? onVerificationPress}
+        />
+        <CompactStat
+          label="Pending Weekly Updates"
+          value={String(weeklyUpdatesPendingCount)}
+          onPress={onWeeklyUpdatesPress ?? onActivitiesPress}
+        />
+        <CompactStat
+          label="Evidence Uploaded"
+          value={String(evidenceUploadedCount)}
+          onPress={onEvidencePress ?? onActivitiesPress}
+        />
+        <CompactStat
+          label="Reports Available"
+          value={String(reportsAvailableCount)}
+          onPress={onReportsPress ?? onCarbonPress}
         />
       </View>
 

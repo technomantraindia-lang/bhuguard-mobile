@@ -11,6 +11,7 @@ export interface FarmerReportCatalogEntry {
   iconTone?: 'default' | 'verified';
 }
 
+/** UI labels for farmer report types — metadata only, not fake report rows. */
 export const FARMER_REPORT_CATALOG: FarmerReportCatalogEntry[] = [
   {
     catalogId: 'verification',
@@ -38,21 +39,3 @@ export const FARMER_REPORT_CATALOG: FarmerReportCatalogEntry[] = [
     sourceType: 'baseline',
   },
 ];
-
-export const DEFAULT_REPORT_HISTORY = [
-  { id: 'history-monitoring', title: 'Monitoring Report', dateLabel: '15 Jun 2026', isPrimary: true },
-  { id: 'history-verification', title: 'Verification Report', dateLabel: '02 Jun 2026', isPrimary: false },
-  { id: 'history-soil', title: 'Soil Report', dateLabel: '25 May 2026', isPrimary: false },
-] as const;
-
-export const DESIGN_REPORT_SUMMARY = {
-  estimatedGenerated: 14.8,
-  targetGenerated: 25,
-  progressPercent: 60,
-  totalReports: 12,
-  downloadedCount: 8,
-  pendingCount: 2,
-  estimatedCredits: 1250,
-  approvedCredits: 900,
-  pendingCredits: 350,
-} as const;

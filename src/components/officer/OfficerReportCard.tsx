@@ -2,6 +2,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 
 import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
+import type { ReportDownloadFormat } from '../../api/reportsApi';
 import {
   formatReportStatusLabel,
   formatVerificationDateLabel,
@@ -11,10 +12,10 @@ import {
 
 interface OfficerReportCardProps {
   report: FieldOfficerReportItem;
-  downloading?: boolean;
+  downloadingFormat?: ReportDownloadFormat | null;
   onView: () => void;
   onContinue?: () => void;
-  onDownload?: () => void;
+  onDownload?: (format: ReportDownloadFormat) => void;
   onDeleteDraft?: () => void;
 }
 
@@ -36,7 +37,7 @@ function statusTone(status: FieldOfficerReportStatus): 'success' | 'danger' | 'm
 
 export function OfficerReportCard({
   report,
-  downloading = false,
+  downloadingFormat = null,
   onView,
   onContinue,
   onDownload,
@@ -98,16 +99,25 @@ export function OfficerReportCard({
             <Pressable style={styles.primaryAction} onPress={onView}>
               <Text style={styles.primaryActionText}>View</Text>
             </Pressable>
-            <Pressable style={styles.secondaryAction} onPress={onDownload} disabled={downloading || !onDownload}>
-              {downloading ? (
-                <ActivityIndicator size="small" color={officerTheme.primaryContainer} />
-              ) : (
-                <>
-                  <BhuguardMaterialIcon name="upload" size={18} color={officerTheme.primaryContainer} />
-                  <Text style={styles.secondaryActionText}>PDF</Text>
-                </>
-              )}
-            </Pressable>
+            {(['pdf', 'excel', 'doc'] as ReportDownloadFormat[]).map((format) => {
+              const loading = downloadingFormat === format;
+              const label = format === 'pdf' ? 'PDF' : format === 'excel' ? 'Excel' : 'DOC';
+
+              return (
+                <Pressable
+                  key={format}
+                  style={styles.secondaryAction}
+                  onPress={() => onDownload?.(format)}
+                  disabled={loading || downloadingFormat !== null || !onDownload}
+                >
+                  {loading ? (
+                    <ActivityIndicator size="small" color={officerTheme.primaryContainer} />
+                  ) : (
+                    <Text style={styles.secondaryActionText}>{label}</Text>
+                  )}
+                </Pressable>
+              );
+            })}
           </>
         )}
       </View>
@@ -188,10 +198,12 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: 10,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   primaryAction: {
-    flex: 1,
+    minWidth: '22%',
+    flexGrow: 1,
     backgroundColor: officerTheme.primaryContainer,
     borderRadius: 14,
     paddingVertical: 10,
@@ -204,7 +216,8 @@ const styles = StyleSheet.create({
     color: officerTheme.onPrimary,
   },
   secondaryAction: {
-    flex: 1,
+    minWidth: '22%',
+    flexGrow: 1,
     flexDirection: 'row',
     gap: 6,
     alignItems: 'center',

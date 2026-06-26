@@ -55,7 +55,8 @@ export function AppButton({
 const styles = StyleSheet.create({
   base: {
     borderRadius: 12,
-    paddingVertical: 14,
+    minHeight: 48,
+    paddingVertical: 12,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',

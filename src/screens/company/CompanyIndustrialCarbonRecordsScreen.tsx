@@ -14,9 +14,16 @@ export function CompanyIndustrialCarbonRecordsScreen() {
   return (
     <ApiListScreen
       title="Industrial Carbon Records"
-      subtitle="GET /company/industrial-carbon-records"
+      subtitle="Industrial carbon management records"
       fetcher={getCompanyIndustrialCarbonRecords}
       listKeys={['industrial_carbon_records']}
+      emptyTitle="No industrial carbon records yet"
+      emptyMessage="Add consumption records linked to your service submissions."
+      headerAction={{
+        label: 'Add Record',
+        onPress: () =>
+          navigation.navigate('CompanyCreateRecord', { formKey: 'company_create_industrial' }),
+      }}
       onItemPress={(item) =>
         navigation.navigate('CompanyIndustrialCarbonRecordDetail', { id: Number(item.id) })
       }

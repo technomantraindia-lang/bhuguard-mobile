@@ -1,9 +1,10 @@
 import type { RootStackParamList } from '../navigation/types';
+import { isMobileAppRole } from './authRole';
 
-export type MobileLoginRole = 'farmer' | 'field_officer';
+export type MobileLoginRole = 'farmer' | 'field_officer' | 'artisan';
 
 export function isMobileSupportedRole(userType: string): userType is MobileLoginRole {
-  return userType === 'farmer' || userType === 'field_officer';
+  return isMobileAppRole(userType);
 }
 
 export function getDashboardRoute(userType: string): keyof RootStackParamList | null {
@@ -12,6 +13,8 @@ export function getDashboardRoute(userType: string): keyof RootStackParamList | 
       return 'FarmerApp';
     case 'field_officer':
       return 'FieldOfficerApp';
+    case 'artisan':
+      return 'ArtisanApp';
     default:
       return null;
   }

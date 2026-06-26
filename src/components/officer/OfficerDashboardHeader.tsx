@@ -1,6 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { LOGO_SIZES } from '../../constants/branding';
 import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
+import { BhuguardLogo } from '../shared/BhuguardLogo';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
 
 interface OfficerDashboardHeaderProps {
@@ -23,34 +25,43 @@ export function OfficerDashboardHeader({ officerName, onNotificationsPress }: Of
   return (
     <View style={styles.bar}>
       <View style={styles.leading}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{getInitials(officerName)}</Text>
-        </View>
-        <View>
-          <Text style={styles.brand}>Bhuguard MRV</Text>
-          <Text style={styles.officerName}>{officerName}</Text>
+        <BhuguardLogo size={LOGO_SIZES.dashboardHeader} />
+        <View style={styles.copy}>
+          <Text style={styles.brand} numberOfLines={1}>
+            Bhuguard
+          </Text>
+          <Text style={styles.officerName} numberOfLines={1}>
+            {officerName}
+          </Text>
         </View>
       </View>
 
-      <Pressable
-        style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
-        onPress={onNotificationsPress}
-        accessibilityRole="button"
-        accessibilityLabel="Notifications"
-      >
-        <BhuguardMaterialIcon name="notifications" size={22} color={officerTheme.primary} />
-      </Pressable>
+      <View style={styles.trailing}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{getInitials(officerName)}</Text>
+        </View>
+
+        <Pressable
+          style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+          onPress={onNotificationsPress}
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
+        >
+          <BhuguardMaterialIcon name="notifications" size={22} color={officerTheme.primary} />
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   bar: {
-    height: officerTheme.headerHeight,
+    minHeight: officerTheme.headerHeight,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: officerTheme.marginMobile,
+    paddingVertical: 10,
     backgroundColor: officerTheme.surfaceLowest,
     borderBottomWidth: 1,
     borderBottomColor: officerTheme.outlineVariant,
@@ -61,6 +72,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     flex: 1,
+    minWidth: 0,
+    paddingRight: 8,
+  },
+  copy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  trailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   avatar: {
     width: 40,
@@ -74,11 +97,11 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: officerTheme.primary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
   },
   brand: {
-    fontSize: 16,
+    fontSize: 17,
     lineHeight: 22,
     fontWeight: '700',
     color: officerTheme.primary,
@@ -95,6 +118,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 20,
+    backgroundColor: officerTheme.surfaceLow,
   },
   pressed: {
     opacity: 0.85,

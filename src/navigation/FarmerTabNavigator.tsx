@@ -4,7 +4,6 @@ import { FarmerDashboard } from '../screens/farmer/FarmerDashboard';
 import { FarmerProfileScreen } from '../screens/farmer/FarmerProfileScreen';
 import { FarmerActivitiesTabScreen } from '../screens/tabs/FarmerActivitiesTabScreen';
 import { FarmerFarmsTabScreen } from '../screens/tabs/FarmerFarmsTabScreen';
-import { FarmerReportsTabScreen } from '../screens/tabs/FarmerReportsTabScreen';
 import type { FarmerTabParamList } from './types';
 import { FarmerBottomTabBar } from './FarmerBottomTabBar';
 import { dashboardTheme } from '../theme/bhuguardDashboardTheme';
@@ -27,7 +26,6 @@ export function FarmerTabNavigator() {
       <Tab.Screen name="Home" component={FarmerDashboard} />
       <Tab.Screen name="Farms" component={FarmerFarmsTabScreen} />
       <Tab.Screen name="Activities" component={FarmerActivitiesTabScreen} />
-      <Tab.Screen name="Reports" component={FarmerReportsTabScreen} />
       <Tab.Screen name="Profile" component={FarmerProfileScreen} />
     </Tab.Navigator>
   );

@@ -7,11 +7,10 @@ import { BhuguardMaterialIcon, type BhuguardIconName } from '../../../shared/Bhu
 import type { FarmerStackParamList } from '../../../../navigation/types';
 import { dashboardShadowUp, dashboardTheme } from '../../../../theme/bhuguardDashboardTheme';
 
-const TABS: Array<{ label: string; icon: BhuguardIconName; tab: 'Home' | 'Farms' | 'Activities' | 'Reports' | 'Profile' }> = [
+const TABS: Array<{ label: string; icon: BhuguardIconName; tab: 'Home' | 'Farms' | 'Activities' | 'Profile' }> = [
   { label: 'Home', icon: 'home', tab: 'Home' },
   { label: 'Farms', icon: 'potted_plant', tab: 'Farms' },
   { label: 'Activity', icon: 'assignment', tab: 'Activities' },
-  { label: 'Reports', icon: 'analytics', tab: 'Reports' },
   { label: 'Profile', icon: 'person', tab: 'Profile' },
 ];
 

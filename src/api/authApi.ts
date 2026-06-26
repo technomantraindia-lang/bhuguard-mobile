@@ -1,49 +1,172 @@
 import axios from 'axios';
 
-import type { ApiErrorResponse, ApiSuccessResponse, LoginPasswordResult } from '../types/auth';
+import type { ApiErrorResponse, ApiSuccessResponse, AuthUser, LoginPasswordResult } from '../types/auth';
+import { resolveUserRole } from '../utils/authRole';
+import { clearAuthStorage, saveAuthToken, saveAuthUser } from '../utils/authStorage';
 
 import { apiClient } from './client';
 
-interface LoginPasswordPayload {
-  login: string;
-  password: string;
-  device_name: string;
-}
-
-interface LoginPasswordData {
-  token: string;
-  token_type: string;
-  user: LoginPasswordResult['user'];
-}
-
 const DEVICE_NAME = 'expo-mobile';
 
-export async function loginPassword(login: string, password: string): Promise<LoginPasswordResult> {
-  const payload: LoginPasswordPayload = {
-    login: login.trim(),
-    password,
-    device_name: DEVICE_NAME,
-  };
+export interface LoginPayload {
+  mobile?: string;
+  email?: string;
+  password: string;
+}
 
-  const response = await apiClient.post<ApiSuccessResponse<LoginPasswordData>>('/auth/login/password', payload);
-  const { token, user } = response.data.data;
+export interface NormalizedAuthResponse {
+  token: string;
+  user: AuthUser;
+}
 
-  if (__DEV__) {
-    console.log('[Bhuguard Auth] Login success user_type:', user.user_type);
+function extractToken(body: unknown): string | null {
+  if (!body || typeof body !== 'object') {
+    return null;
   }
 
-  return { token, user, user_type: user.user_type };
+  const root = body as Record<string, unknown>;
+
+  if (typeof root.token === 'string') {
+    return root.token;
+  }
+
+  if (typeof root.access_token === 'string') {
+    return root.access_token;
+  }
+
+  const data = root.data;
+
+  if (data && typeof data === 'object') {
+    const nested = data as Record<string, unknown>;
+
+    if (typeof nested.token === 'string') {
+      return nested.token;
+    }
+
+    if (typeof nested.access_token === 'string') {
+      return nested.access_token;
+    }
+  }
+
+  return null;
+}
+
+function extractUser(body: unknown): AuthUser | null {
+  if (!body || typeof body !== 'object') {
+    return null;
+  }
+
+  const root = body as Record<string, unknown>;
+
+  if (root.user && typeof root.user === 'object') {
+    return root.user as AuthUser;
+  }
+
+  const data = root.data;
+
+  if (data && typeof data === 'object') {
+    const nested = data as Record<string, unknown>;
+
+    if (nested.user && typeof nested.user === 'object') {
+      return nested.user as AuthUser;
+    }
+  }
+
+  return null;
+}
+
+function normalizeAuthResponse(body: unknown): NormalizedAuthResponse {
+  const token = extractToken(body);
+  const user = extractUser(body);
+
+  if (!token || !user) {
+    throw new Error('Invalid login response from server.');
+  }
+
+  const role = resolveUserRole(user);
+
+  if (role) {
+    user.user_type = role;
+  }
+
+  return { token, user };
+}
+
+/**
+ * Password login — Bhuguard backend: POST /auth/login/password
+ * Accepts mobile or email as login identifier.
+ */
+export async function login(payload: LoginPayload): Promise<NormalizedAuthResponse> {
+  const loginId = payload.mobile?.trim() || payload.email?.trim();
+
+  if (!loginId || !payload.password) {
+    throw new Error('Mobile/email and password are required.');
+  }
+
+  const response = await apiClient.post('/auth/login/password', {
+    login: loginId,
+    password: payload.password,
+    device_name: DEVICE_NAME,
+  });
+
+  return normalizeAuthResponse(response.data);
+}
+
+/** Current authenticated user — Bhuguard backend: GET /auth/me */
+export async function getCurrentUser(): Promise<AuthUser> {
+  const response = await apiClient.get('/auth/me');
+  const user = extractUser(response.data);
+
+  if (!user) {
+    throw new Error('Invalid user response from server.');
+  }
+
+  const role = resolveUserRole(user);
+
+  if (role) {
+    user.user_type = role;
+  }
+
+  return user;
+}
+
+/** Logout — Bhuguard backend: POST /auth/logout. Always clears local storage. */
+export async function logout(): Promise<void> {
+  try {
+    await apiClient.post('/auth/logout');
+  } catch {
+    // Local session is always cleared even if server logout fails.
+  } finally {
+    await clearAuthStorage();
+  }
+}
+
+export async function persistAuthSession(token: string, user: AuthUser): Promise<void> {
+  await saveAuthToken(token);
+  await saveAuthUser(user);
+}
+
+export async function loginPassword(loginId: string, password: string): Promise<LoginPasswordResult> {
+  const { token, user } = await login({ mobile: loginId, password });
+  const user_type = resolveUserRole(user) ?? user.user_type;
+
+  if (__DEV__) {
+    console.log('[Bhuguard Auth] Login success user_type:', user_type);
+  }
+
+  return { token, user, user_type };
 }
 
 export async function loginMpin(mobile: string, mpin: string): Promise<LoginPasswordResult> {
-  const response = await apiClient.post<ApiSuccessResponse<LoginPasswordData>>('/auth/login/mpin', {
+  const response = await apiClient.post<ApiSuccessResponse<{ token: string; user: AuthUser }>>('/auth/login/mpin', {
     mobile: mobile.trim(),
     mpin,
     device_name: DEVICE_NAME,
   });
-  const { token, user } = response.data.data;
 
-  return { token, user, user_type: user.user_type };
+  const { token, user } = normalizeAuthResponse(response.data);
+
+  return { token, user, user_type: resolveUserRole(user) ?? user.user_type };
 }
 
 export async function loginBiometricToken(payload: {
@@ -52,15 +175,16 @@ export async function loginBiometricToken(payload: {
   device_name?: string;
   platform?: string;
 }): Promise<LoginPasswordResult> {
-  const response = await apiClient.post<ApiSuccessResponse<LoginPasswordData>>('/auth/login/biometric-token', {
+  const response = await apiClient.post('/auth/login/biometric-token', {
     mobile: payload.mobile.trim(),
     device_uuid: payload.device_uuid,
     device_name: payload.device_name ?? DEVICE_NAME,
     platform: payload.platform,
   });
-  const { token, user } = response.data.data;
 
-  return { token, user, user_type: user.user_type };
+  const { token, user } = normalizeAuthResponse(response.data);
+
+  return { token, user, user_type: resolveUserRole(user) ?? user.user_type };
 }
 
 export async function requestLoginOtp(mobile: string) {
@@ -73,20 +197,22 @@ export async function requestLoginOtp(mobile: string) {
 }
 
 export async function verifyLoginOtp(mobile: string, otp: string): Promise<LoginPasswordResult> {
-  const response = await apiClient.post<ApiSuccessResponse<LoginPasswordData>>('/auth/login/verify-otp', {
+  const response = await apiClient.post('/auth/login/verify-otp', {
     mobile: mobile.trim(),
     otp: otp.trim(),
     device_name: DEVICE_NAME,
   });
-  const { token, user } = response.data.data;
 
-  return { token, user, user_type: user.user_type };
+  const { token, user } = normalizeAuthResponse(response.data);
+
+  return { token, user, user_type: resolveUserRole(user) ?? user.user_type };
 }
 
-export async function getAuthMe() {
-  const response = await apiClient.get<ApiSuccessResponse<{ user: LoginPasswordResult['user'] }>>('/auth/me');
-  return response.data.data;
-}
+/** @deprecated Use getCurrentUser */
+export const getAuthMe = async () => {
+  const user = await getCurrentUser();
+  return { user };
+};
 
 export async function requestForgotPasswordOtp(mobile: string) {
   const response = await apiClient.post<ApiSuccessResponse<Record<string, unknown>>>(
@@ -162,4 +288,18 @@ export function getApiErrorMessage(error: unknown, fallback = 'Login failed. Ple
   }
 
   return fallback;
+}
+
+/** @deprecated Use logout() */
+export async function logoutApi() {
+  await logout();
+  return { success: true, message: 'Logged out' };
+}
+
+export async function logoutAllApi() {
+  try {
+    await apiClient.post('/auth/logout-all');
+  } finally {
+    await clearAuthStorage();
+  }
 }

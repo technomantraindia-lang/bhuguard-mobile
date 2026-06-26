@@ -7,8 +7,10 @@ import type { ProfileDocumentStatus } from '../../../constants/farmerProfileDocu
 interface ProfileDocumentCardProps {
   title: string;
   status: ProfileDocumentStatus;
-  onView: () => void;
-  onReplace: () => void;
+  onView?: () => void;
+  onReplace?: () => void;
+  actionsEnabled?: boolean;
+  unavailableMessage?: string;
 }
 
 function statusLabel(status: ProfileDocumentStatus): string {
@@ -33,7 +35,14 @@ function statusStyle(status: ProfileDocumentStatus) {
   }
 }
 
-export function ProfileDocumentCard({ title, status, onView, onReplace }: ProfileDocumentCardProps) {
+export function ProfileDocumentCard({
+  title,
+  status,
+  onView,
+  onReplace,
+  actionsEnabled = true,
+  unavailableMessage = 'Document upload feature is not available yet.',
+}: ProfileDocumentCardProps) {
   const badge = statusStyle(status);
 
   return (
@@ -50,14 +59,18 @@ export function ProfileDocumentCard({ title, status, onView, onReplace }: Profil
         </View>
       </View>
 
-      <View style={styles.actions}>
-        <Pressable style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]} onPress={onView}>
-          <Text style={styles.actionText}>View Document</Text>
-        </Pressable>
-        <Pressable style={({ pressed }) => [styles.actionButtonOutline, pressed && styles.pressed]} onPress={onReplace}>
-          <Text style={styles.actionTextOutline}>Replace Document</Text>
-        </Pressable>
-      </View>
+      {actionsEnabled ? (
+        <View style={styles.actions}>
+          <Pressable style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]} onPress={onView}>
+            <Text style={styles.actionText}>View Document</Text>
+          </Pressable>
+          <Pressable style={({ pressed }) => [styles.actionButtonOutline, pressed && styles.pressed]} onPress={onReplace}>
+            <Text style={styles.actionTextOutline}>Replace Document</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <Text style={styles.unavailableText}>{unavailableMessage}</Text>
+      )}
     </View>
   );
 }
@@ -134,6 +147,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: dashboardTheme.primary,
+  },
+  unavailableText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: dashboardTheme.onSurfaceVariant,
+    fontStyle: 'italic',
   },
   pressed: {
     opacity: 0.9,

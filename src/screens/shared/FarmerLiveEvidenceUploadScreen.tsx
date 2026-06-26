@@ -5,16 +5,13 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { getApiErrorMessage } from '../../api/authApi';
-import { getFarmerEvidence, getFarmerFarms, uploadFarmerEvidence } from '../../api/farmerApi';
+import { getFarmerEvidence, uploadFarmerEvidence } from '../../api/evidenceApi';
+import { getFarmerFarms } from '../../api/farmerApi';
 import { AppButton } from '../../components/AppButton';
 import { LiveEvidenceCaptureCard } from '../../components/evidence/LiveEvidenceCaptureCard';
+import { EvidenceCapturedPreview } from '../../components/evidence/EvidenceCapturedPreview';
 import { ScreenHeader } from '../../components/ScreenHeader';
-import {
-  FARMER_EVIDENCE_CATEGORY_OPTIONS,
-  getDefaultFarmerEvidenceCategory,
-  getFarmerEvidenceFormTitle,
-  type FarmerEvidenceCategoryKey,
-} from '../../config/stitchScreenRoutes';
+import { FARMER_EVIDENCE_CATEGORY_OPTIONS, getDefaultFarmerEvidenceCategory, getFarmerEvidenceFormTitle, type FarmerEvidenceCategoryKey } from '../../constants/evidenceCategories';
 import { useLiveEvidenceCapture } from '../../hooks/useLiveEvidenceCapture';
 import type { FarmerStackParamList } from '../../navigation/types';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
@@ -212,7 +209,10 @@ export function FarmerLiveEvidenceUploadScreen({
           onUpload={() => void uploadEvidence()}
           uploadLabel="Upload Evidence"
           showUploadButton
+          hideInlinePreview
         />
+
+        {liveEvidence.evidence ? <EvidenceCapturedPreview evidence={liveEvidence.evidence} /> : null}
 
         <TextInput
           style={styles.notesInput}

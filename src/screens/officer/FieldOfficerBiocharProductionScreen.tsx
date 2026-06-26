@@ -7,22 +7,29 @@ import type { RouteProp } from '@react-navigation/native';
 
 import { BiocharProductionSuccessModal } from '../../components/officer/biochar/BiocharProductionSuccessModal';
 import {
-  EvidenceCollectionSection,
+  BiocharEvidenceCaptureSection,
+  MoistureSection,
   OfficerNotesSection,
   ProcessDataSection,
   ProductionBatchSection,
   ProductionRecordCard,
   ProductionTimeSection,
   ProductionUnitSection,
-  VerificationResultSection,
 } from '../../components/officer/biochar/BiocharProductionSections';
 import { OfficerBiocharProductionHeader } from '../../components/officer/biochar/OfficerBiocharProductionHeader';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
+import {
+  BIOCHAR_BATCH_EVIDENCE_SLOT,
+  BIOCHAR_MOISTURE_EVIDENCE_SLOT,
+  BIOCHAR_OPERATOR_EVIDENCE_SLOT,
+  BIOCHAR_OUTPUT_EVIDENCE_SLOT,
+  BIOCHAR_PROCESS_EVIDENCE_SLOTS,
+  type BiocharEvidenceKey,
+} from '../../constants/biocharProduction';
 import { useBiocharProductionForm } from '../../hooks/useBiocharProductionForm';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerTheme } from '../../theme/officerDashboardTheme';
-import type { BiocharEvidenceKey } from '../../constants/biocharProduction';
 import type { FeedstockQuantityUnit, FeedstockTypeValue } from '../../constants/feedstockTypes';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'FieldOfficerBiocharProduction'>;
@@ -31,9 +38,14 @@ type ScreenRoute = RouteProp<FieldOfficerStackParamList, 'FieldOfficerBiocharPro
 export function FieldOfficerBiocharProductionScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<ScreenRoute>();
-  const form = useBiocharProductionForm({ farmerId: route.params?.farmerId });
+  const form = useBiocharProductionForm({
+    farmerId: route.params?.farmerId,
+    batchId: route.params?.batchId,
+    behalfReason: route.params?.behalfReason,
+  });
   const [successVisible, setSuccessVisible] = useState(false);
   const [submittedBatchCode, setSubmittedBatchCode] = useState('');
+  const readOnly = !form.canEdit;
 
   useEffect(() => {
     if (route.params?.gpsRecaptured && route.params.latitude != null && route.params.longitude != null) {
@@ -58,11 +70,6 @@ export function FieldOfficerBiocharProductionScreen() {
   }
 
   const handleSubmit = async () => {
-    if (form.verificationResult === 'draft') {
-      Alert.alert('Select submission status', 'Choose Submit for Review, Mark as Completed, or Correction Required.');
-      return;
-    }
-
     const batchCode = await form.submit();
     if (batchCode) {
       setSubmittedBatchCode(batchCode);
@@ -73,7 +80,7 @@ export function FieldOfficerBiocharProductionScreen() {
   const handleSaveDraft = async () => {
     const ok = await form.saveDraft();
     if (ok) {
-      Alert.alert('Draft saved', 'Biochar production record saved as draft.');
+      Alert.alert('Draft saved', 'Biochar production record saved as draft. You can continue editing later.');
     }
   };
 
@@ -83,41 +90,55 @@ export function FieldOfficerBiocharProductionScreen() {
       return;
     }
 
-    if (key === 'production_video') {
-      Alert.alert('Production video', 'Video evidence captured and ready for upload.');
+    if (key === 'process_video') {
+      Alert.alert('Process video', 'Video evidence captured and ready for upload.');
       return;
     }
 
     navigation.navigate('OfficerFullscreenImage', { uri: asset.uri, title: 'Production Evidence' });
   };
 
+  const renderEvidenceCapture = (slot: typeof BIOCHAR_BATCH_EVIDENCE_SLOT) => (
+    <BiocharEvidenceCaptureSection
+      key={slot.key}
+      slot={slot}
+      evidence={form.evidence[slot.key]}
+      readOnly={readOnly}
+      onAddEvidence={(key) => void form.addEvidence(key)}
+      onRemoveEvidence={form.removeEvidence}
+      onPreviewEvidence={previewEvidence}
+    />
+  );
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <OfficerBiocharProductionHeader
         officerName={form.officerName}
-        onBackPress={() => navigation.navigate('FieldOfficerTabs', { screen: 'Visits' })}
+        onBackPress={() => navigation.navigate('FieldOfficerBiocharProductionList')}
         onNotificationsPress={() => navigation.navigate('FieldOfficerNotifications')}
         onProfilePress={() => navigation.navigate('FieldOfficerProfile')}
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.pageTitle}>Biochar Production</Text>
-
         <ProductionRecordCard
           productionRecordCode={form.productionRecordCode}
           batchCode={form.batchCode}
           officerName={form.officerName}
+          farmerName={form.farmerName}
+          productionDate={form.productionDate}
+          onProductionDateChange={readOnly ? undefined : form.setProductionDate}
           statusLabel={form.statusLabel}
         />
 
         <ProductionUnitSection
           units={form.units}
-          selectedUnitId={form.selectedUnitId}
+          kilnId={form.kilnId}
           operatorName={form.operatorName}
           latitude={form.latitude}
           longitude={form.longitude}
           accuracyM={form.accuracyM}
           gpsCaptured={form.gpsCaptured}
+          onKilnIdChange={form.setKilnId}
           onSelectUnit={form.selectUnit}
           onOperatorNameChange={form.setOperatorName}
           onRecaptureGps={() => void form.recaptureGps()}
@@ -133,6 +154,18 @@ export function FieldOfficerBiocharProductionScreen() {
           onFeedstockUnitChange={(value) => form.setFeedstockUnit(value as FeedstockQuantityUnit)}
           onFeedstockTypeChange={(value) => form.setFeedstockType(value as FeedstockTypeValue)}
         />
+
+        {renderEvidenceCapture(BIOCHAR_BATCH_EVIDENCE_SLOT)}
+
+        <MoistureSection
+          moistureValue={form.moistureValue}
+          moistureNotes={form.moistureNotes}
+          onMoistureValueChange={form.setMoistureValue}
+          onMoistureNotesChange={form.setMoistureNotes}
+          readOnly={readOnly}
+        />
+
+        {renderEvidenceCapture(BIOCHAR_MOISTURE_EVIDENCE_SLOT)}
 
         <ProductionTimeSection
           startTime={form.startTime}
@@ -153,29 +186,32 @@ export function FieldOfficerBiocharProductionScreen() {
           onBiocharOutputUnitChange={form.setBiocharOutputUnit}
         />
 
-        <EvidenceCollectionSection
-          evidence={form.evidence}
-          onAddEvidence={(key) => void form.addEvidence(key)}
-          onRemoveEvidence={form.removeEvidence}
-          onPreviewEvidence={previewEvidence}
-        />
+        {BIOCHAR_PROCESS_EVIDENCE_SLOTS.map(renderEvidenceCapture)}
+
+        {renderEvidenceCapture(BIOCHAR_OUTPUT_EVIDENCE_SLOT)}
+
+        {renderEvidenceCapture(BIOCHAR_OPERATOR_EVIDENCE_SLOT)}
 
         <OfficerNotesSection value={form.officerNotes} onChange={form.setOfficerNotes} />
 
-        <VerificationResultSection value={form.verificationResult} onChange={form.setVerificationResult} />
-
         {form.error ? <Text style={styles.error}>{form.error}</Text> : null}
 
-        <View style={styles.actions}>
-          <Pressable style={styles.primaryButton} onPress={() => void handleSubmit()} disabled={form.submitting}>
-            <Text style={styles.primaryButtonText}>
-              {form.submitting ? 'Submitting...' : 'Submit Production Record'}
-            </Text>
-          </Pressable>
-          <Pressable style={styles.secondaryButton} onPress={() => void handleSaveDraft()} disabled={form.submitting}>
-            <Text style={styles.secondaryButtonText}>Save Draft</Text>
-          </Pressable>
-        </View>
+        {form.canSubmit ? (
+          <View style={styles.actions}>
+            <Pressable style={styles.primaryButton} onPress={() => void handleSubmit()} disabled={form.submitting}>
+              <Text style={styles.primaryButtonText}>
+                {form.submitting ? 'Submitting...' : 'Submit'}
+              </Text>
+            </Pressable>
+            <Pressable style={styles.secondaryButton} onPress={() => void handleSaveDraft()} disabled={form.submitting}>
+              <Text style={styles.secondaryButtonText}>{form.submitting ? 'Saving...' : 'Save as Draft'}</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.readOnlyBanner}>
+            <Text style={styles.readOnlyText}>This record has been submitted and can no longer be edited.</Text>
+          </View>
+        )}
       </ScrollView>
 
       <BiocharProductionSuccessModal
@@ -184,7 +220,7 @@ export function FieldOfficerBiocharProductionScreen() {
         onClose={() => setSuccessVisible(false)}
         onBackToVisits={() => {
           setSuccessVisible(false);
-          navigation.navigate('FieldOfficerTabs', { screen: 'Visits' });
+          navigation.navigate('FieldOfficerBiocharProductionList');
         }}
       />
     </SafeAreaView>
@@ -196,13 +232,8 @@ const styles = StyleSheet.create({
   content: {
     padding: officerTheme.marginMobile,
     gap: 16,
+    paddingTop: 8,
     paddingBottom: 120,
-  },
-  pageTitle: {
-    fontSize: 20,
-    lineHeight: 28,
-    fontWeight: '700',
-    color: officerTheme.onSurface,
   },
   error: { color: officerTheme.error, fontSize: 14 },
   actions: { gap: 10, marginTop: 8, marginBottom: 8 },
@@ -220,4 +251,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondaryButtonText: { color: officerTheme.primaryContainer, fontWeight: '700', fontSize: 16 },
+  readOnlyBanner: {
+    backgroundColor: officerTheme.surfaceLow,
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 8,
+  },
+  readOnlyText: { color: officerTheme.onSurfaceVariant, fontSize: 14, textAlign: 'center' },
 });

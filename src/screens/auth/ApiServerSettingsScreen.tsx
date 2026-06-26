@@ -16,7 +16,9 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthField } from '../../components/auth/AuthField';
 import { BhuguardLogo } from '../../components/shared/BhuguardLogo';
 import { LOGO_SIZES } from '../../constants/branding';
-import { BUILD_API_BASE_URL } from '../../config/apiDefaults';
+import { syncApiClientBaseUrl } from '../../api/client';
+import { API_BASE_URL } from '../../config/apiConfig';
+import { LOCAL_API_BASE_URL } from '../../config/env';
 import { useTranslation } from '../../i18n/I18nContext';
 import type { RootStackParamList } from '../../navigation/types';
 import {
@@ -80,6 +82,7 @@ export function ApiServerSettingsScreen({ navigation }: Props) {
       }
 
       await saveApiBaseUrl(input);
+      await syncApiClientBaseUrl();
       setStatusOk(true);
       setStatusMessage(result.message);
       Alert.alert(t('apiServer.title'), t('apiServer.saved'), [
@@ -90,10 +93,16 @@ export function ApiServerSettingsScreen({ navigation }: Props) {
     }
   };
 
+  const handleUseLocalServer = () => {
+    setInput(getApiOrigin(LOCAL_API_BASE_URL));
+    setStatusMessage(null);
+    setStatusOk(null);
+  };
+
   const handleReset = async () => {
     await clearApiBaseUrlOverride();
-    const fallback = BUILD_API_BASE_URL ? getApiOrigin(BUILD_API_BASE_URL) : '';
-    setInput(fallback);
+    await syncApiClientBaseUrl();
+    setInput(getApiOrigin(API_BASE_URL));
     setStatusMessage(null);
     setStatusOk(null);
   };
@@ -118,6 +127,12 @@ export function ApiServerSettingsScreen({ navigation }: Props) {
             <Text style={styles.helpExample}>{t('apiServer.example')}</Text>
           </View>
 
+          <View style={styles.presetRow}>
+            <Pressable style={styles.presetButton} onPress={handleUseLocalServer}>
+              <Text style={styles.presetButtonText}>{t('apiServer.useLocalPreset')}</Text>
+            </Pressable>
+          </View>
+
           <AuthField
             label={t('apiServer.urlLabel')}
             value={input}
@@ -125,7 +140,7 @@ export function ApiServerSettingsScreen({ navigation }: Props) {
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
-            placeholder="Paste URL from Git Bash terminal"
+            placeholder="http://192.168.1.18:8000"
             editable={!testing && !saving}
           />
 
@@ -159,11 +174,9 @@ export function ApiServerSettingsScreen({ navigation }: Props) {
             )}
           </Pressable>
 
-          {BUILD_API_BASE_URL ? (
-            <Pressable onPress={() => void handleReset()} style={styles.resetLink}>
-              <Text style={styles.resetText}>{t('apiServer.reset')}</Text>
-            </Pressable>
-          ) : null}
+          <Pressable onPress={() => void handleReset()} style={styles.resetLink}>
+            <Text style={styles.resetText}>{t('apiServer.reset')}</Text>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -282,5 +295,23 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
     fontWeight: '600',
+  },
+  presetRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  presetButton: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: '#E8F5ED',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  presetButtonText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

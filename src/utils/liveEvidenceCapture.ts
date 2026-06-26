@@ -3,15 +3,12 @@ import * as Location from 'expo-location';
 import { Platform } from 'react-native';
 
 import { applyLivePhotoWatermark } from '../services/livePhotoWatermarkService';
-import { getAuthUser, getAuthUserType } from '../storage/authStorage';
 import { resolveCaptureLocation } from './livePhotoLocation';
-import {
-  buildLivePhotoWatermarkMeta,
-  type LivePhotoWatermarkMeta,
-} from './livePhotoWatermarkFormat';
+import { buildLivePhotoWatermarkMeta, type LivePhotoWatermarkMeta } from './livePhotoWatermarkFormat';
 
 export interface LiveCapturedEvidence {
   uri: string;
+  previewUri: string;
   name: string;
   type: string;
   label: string;
@@ -65,29 +62,61 @@ export async function captureLivePhotoEvidence(options?: {
 
   const asset = result.assets[0];
   const capturedAt = new Date().toISOString();
-  const [authUser, authUserType] = await Promise.all([getAuthUser(), getAuthUserType()]);
   const location =
     latitude != null && longitude != null
       ? await resolveCaptureLocation(latitude, longitude)
-      : { village: '—', division: '—', state: 'Gujarat' };
+      : { village: '—', taluka: '—', district: '—', state: 'Gujarat' };
 
   const watermark = buildLivePhotoWatermarkMeta({
     capturedAt,
     latitude,
     longitude,
+    accuracy,
     village: location.village,
-    division: location.division,
+    taluka: location.taluka,
+    district: location.district,
     state: location.state,
-    userType: authUserType,
-    userName: authUser?.name,
   });
 
-  const watermarkedUri = await applyLivePhotoWatermark(asset.uri, watermark);
+  const rawUri = asset.uri;
+
+  let stampedUri: string;
+
+  try {
+    stampedUri = await applyLivePhotoWatermark(rawUri, watermark, {
+      uri: rawUri,
+      name: asset.fileName ?? options?.defaultName ?? 'live-evidence.jpg',
+      type: asset.mimeType ?? 'image/jpeg',
+      capturedAt,
+      latitude,
+      longitude,
+      accuracy,
+      village: location.village,
+      taluka: location.taluka,
+      district: location.district,
+      state: location.state,
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      cancelled: false,
+      error: error instanceof Error ? error.message : 'Failed to burn timestamp onto the captured photo.',
+    };
+  }
+
+  if (stampedUri === rawUri) {
+    return {
+      ok: false,
+      cancelled: false,
+      error: 'Evidence stamp could not be applied. Please restart the app and try again.',
+    };
+  }
 
   return {
     ok: true,
     evidence: {
-      uri: watermarkedUri,
+      uri: stampedUri,
+      previewUri: stampedUri,
       name: asset.fileName ?? options?.defaultName ?? 'live-evidence.jpg',
       type: asset.mimeType ?? 'image/jpeg',
       label: asset.fileName ?? 'Live camera photo',
@@ -97,6 +126,24 @@ export async function captureLivePhotoEvidence(options?: {
       capturedAt,
       watermark,
     },
+  };
+}
+
+export async function captureStampedPhotoUri(options?: {
+  defaultName?: string;
+  allowsEditing?: boolean;
+}): Promise<{ uri: string; name: string; type: string; capturedAt: string } | null> {
+  const result = await captureLivePhotoEvidence(options);
+
+  if (!result.ok) {
+    return null;
+  }
+
+  return {
+    uri: result.evidence.uri,
+    name: result.evidence.name,
+    type: result.evidence.type,
+    capturedAt: result.evidence.capturedAt,
   };
 }
 
@@ -122,22 +169,35 @@ export function buildFormDataFilePart(
   };
 }
 
-export function appendVisitEvidenceFields(formData: FormData, evidence: LiveCapturedEvidence): void {
-  formData.append('file', buildFormDataFilePart(evidence.uri, evidence.name, evidence.type) as unknown as Blob);
+export function appendClientStampMetadata(
+  formData: FormData,
+  evidence: Pick<LiveCapturedEvidence, 'capturedAt' | 'latitude' | 'longitude' | 'accuracy'>,
+): void {
+  formData.append('client_pre_stamped', '1');
+  formData.append('captured_at', evidence.capturedAt);
 
   if (evidence.latitude !== null) {
     formData.append('latitude', String(evidence.latitude));
+    formData.append('gps_latitude', String(evidence.latitude));
   }
 
   if (evidence.longitude !== null) {
     formData.append('longitude', String(evidence.longitude));
+    formData.append('gps_longitude', String(evidence.longitude));
   }
 
   if (evidence.accuracy !== null) {
     formData.append('gps_accuracy', String(evidence.accuracy));
+    formData.append('accuracy', String(evidence.accuracy));
   }
+}
 
-  formData.append('captured_at', evidence.capturedAt);
+export function appendVisitEvidenceFields(formData: FormData, evidence: LiveCapturedEvidence): void {
+  formData.append(
+    'file',
+    buildFormDataFilePart(evidence.uri, evidence.name, evidence.type) as unknown as Blob,
+  );
+  appendClientStampMetadata(formData, evidence);
 }
 
 export function appendActivityEvidenceFields(formData: FormData, evidence: LiveCapturedEvidence): void {
@@ -145,38 +205,15 @@ export function appendActivityEvidenceFields(formData: FormData, evidence: LiveC
     'evidence_photo',
     buildFormDataFilePart(evidence.uri, evidence.name, evidence.type) as unknown as Blob,
   );
-
-  if (evidence.latitude !== null) {
-    formData.append('gps_latitude', String(evidence.latitude));
-  }
-
-  if (evidence.longitude !== null) {
-    formData.append('gps_longitude', String(evidence.longitude));
-  }
-
-  if (evidence.accuracy !== null) {
-    formData.append('gps_accuracy', String(evidence.accuracy));
-  }
-
-  formData.append('captured_at', evidence.capturedAt);
+  appendClientStampMetadata(formData, evidence);
 }
 
 export function appendFarmerEvidenceFields(formData: FormData, evidence: LiveCapturedEvidence): void {
-  formData.append('file', buildFormDataFilePart(evidence.uri, evidence.name, evidence.type) as unknown as Blob);
-
-  if (evidence.latitude !== null) {
-    formData.append('latitude', String(evidence.latitude));
-  }
-
-  if (evidence.longitude !== null) {
-    formData.append('longitude', String(evidence.longitude));
-  }
-
-  if (evidence.accuracy !== null) {
-    formData.append('accuracy', String(evidence.accuracy));
-  }
-
-  formData.append('captured_at', evidence.capturedAt);
+  formData.append(
+    'file',
+    buildFormDataFilePart(evidence.uri, evidence.name, evidence.type) as unknown as Blob,
+  );
+  appendClientStampMetadata(formData, evidence);
 }
 
 export function formatCapturedTimestamp(iso: string): string {
@@ -185,4 +222,43 @@ export function formatCapturedTimestamp(iso: string): string {
 
 export function hasGpsCapture(evidence: LiveCapturedEvidence | null): boolean {
   return evidence?.latitude != null && evidence?.longitude != null;
+}
+
+const ALLOWED_DOCUMENT_MIMES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/jpeg',
+  'image/png',
+];
+
+export async function pickDocumentForEvidence(): Promise<{
+  uri: string;
+  name: string;
+  type: string;
+} | null> {
+  try {
+    const DocumentPicker = await import('expo-document-picker');
+    const result = await DocumentPicker.getDocumentAsync({
+      copyToCacheDirectory: true,
+      multiple: false,
+      type: ALLOWED_DOCUMENT_MIMES,
+    });
+
+    if (result.canceled || !result.assets?.[0]) {
+      return null;
+    }
+
+    const asset = result.assets[0];
+
+    return {
+      uri: asset.uri,
+      name: asset.name ?? 'document.pdf',
+      type: asset.mimeType ?? 'application/pdf',
+    };
+  } catch {
+    throw new Error(
+      'Document picker is unavailable. Install with: npx expo install expo-document-picker',
+    );
+  }
 }

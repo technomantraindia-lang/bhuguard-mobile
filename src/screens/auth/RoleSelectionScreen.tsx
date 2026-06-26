@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -9,7 +10,7 @@ import { BhuguardLogo } from '../../components/shared/BhuguardLogo';
 import { LOGO_SIZES } from '../../constants/branding';
 import { useTranslation } from '../../i18n/I18nContext';
 import type { RootStackParamList } from '../../navigation/types';
-import { getApiBaseUrl, testApiConnection } from '../../storage/apiConfigStorage';
+import { bootstrapApiBaseUrl, getApiBaseUrl, testApiConnection } from '../../storage/apiConfigStorage';
 import { colors, spacing } from '../../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RoleSelection'>;
@@ -18,19 +19,24 @@ export function RoleSelectionScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const [serverOffline, setServerOffline] = useState(false);
 
-  useEffect(() => {
-    void (async () => {
-      const url = await getApiBaseUrl();
+  const refreshServerStatus = useCallback(async () => {
+    await bootstrapApiBaseUrl();
+    const url = await getApiBaseUrl();
 
-      if (!url) {
-        setServerOffline(true);
-        return;
-      }
+    if (!url) {
+      setServerOffline(true);
+      return;
+    }
 
-      const result = await testApiConnection(url);
-      setServerOffline(!result.ok);
-    })();
+    const result = await testApiConnection(url);
+    setServerOffline(!result.ok);
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshServerStatus();
+    }, [refreshServerStatus]),
+  );
 
   return (
     <View style={styles.root}>
@@ -67,6 +73,13 @@ export function RoleSelectionScreen({ navigation }: Props) {
               description={t('role.fieldOfficerDescription')}
               buttonLabel={t('role.fieldOfficerButton')}
               onPress={() => navigation.navigate('FieldOfficerLogin')}
+            />
+            <RoleListCard
+              role="artisan"
+              title={t('role.artisanTitle')}
+              description={t('role.artisanDescription')}
+              buttonLabel={t('role.artisanButton')}
+              onPress={() => navigation.navigate('ArtisanLogin')}
             />
           </View>
 

@@ -8,6 +8,7 @@ export type BhuguardIconName =
   | 'fact_check'
   | 'trending_up'
   | 'arrow_forward'
+  | 'arrow_back'
   | 'add_circle'
   | 'photo_camera'
   | 'landscape'
@@ -113,6 +114,11 @@ function iconPath(name: BhuguardIconName, filled: boolean): { d: string; fill?: 
     case 'arrow_forward':
       return {
         d: 'M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z',
+        fill: true,
+      };
+    case 'arrow_back':
+      return {
+        d: 'M20 11H7.83l5.58-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z',
         fill: true,
       };
     case 'add_circle':

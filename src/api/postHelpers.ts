@@ -17,3 +17,8 @@ export async function putFormData<T = ApiRecord>(path: string, payload: FormData
   const response = await apiClient.put<ApiSuccessResponse<T>>(path, payload);
   return response.data.data;
 }
+
+export async function deleteApiData<T = ApiRecord>(path: string): Promise<T> {
+  const response = await apiClient.delete<ApiSuccessResponse<T>>(path);
+  return response.data.data;
+}

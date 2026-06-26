@@ -16,3 +16,11 @@ export const DEFAULT_FARM_AREA_UNIT: FarmerFarmAreaUnit = 'acres';
 export function mapFarmAreaUnitToApi(unit: FarmerFarmAreaUnit): string {
   return unit;
 }
+
+export function mapFarmAreaUnitFromApi(value: string): FarmerFarmAreaUnit {
+  if (value === 'bigha' || value === 'hectare') {
+    return value;
+  }
+
+  return 'acres';
+}

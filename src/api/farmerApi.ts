@@ -1,7 +1,7 @@
-import { fetchApiData, fetchListItemById, type ApiRecord } from '../utils/apiHelpers';
+import { fetchApiData, type ApiRecord } from '../utils/apiHelpers';
 
 import { apiClient } from './client';
-import { postApiData, putApiData } from './postHelpers';
+import { postApiData, putApiData, deleteApiData } from './postHelpers';
 
 export { getNotifications as getFarmerNotifications, markNotificationRead, markAllNotificationsRead } from './notificationsApi';
 
@@ -115,19 +115,13 @@ export async function getFarmerServiceSubmissions() {
 }
 
 export async function getFarmerServiceDetail(id: number | string) {
-  return fetchListItemById('/farmer/services', ['services'], id, 'service');
+  return fetchApiData(`/farmer/services/${id}`);
 }
 
-export async function getFarmerEvidence() {
-  return fetchApiData('/farmer/evidence');
-}
+export { getFarmerEvidence, uploadFarmerEvidence } from './evidenceApi';
 
-export async function uploadFarmerEvidence(formData: FormData) {
-  return postApiData('/farmer/evidence', formData);
-}
-
-export async function getFarmerActivityLogs() {
-  return fetchApiData('/farmer/activity-logs');
+export async function getFarmerActivityLogs(biocharOnly = true) {
+  return fetchApiData('/farmer/activity-logs', { biochar_only: biocharOnly ? 1 : 0 });
 }
 
 export async function getFarmerActivityLogDetail(id: number | string) {
@@ -147,12 +141,7 @@ export async function createFarmerBaselineAssessment(payload: ApiRecord) {
 }
 
 export async function getFarmerBaselineAssessmentDetail(id: number | string) {
-  return fetchListItemById(
-    '/farmer/baseline-assessments',
-    ['baseline_assessments', 'assessments'],
-    id,
-    'baseline_assessment',
-  );
+  return fetchApiData(`/farmer/baseline-assessments/${id}`);
 }
 
 export async function getFarmerSoilSamples() {
@@ -160,7 +149,7 @@ export async function getFarmerSoilSamples() {
 }
 
 export async function getFarmerSoilSampleDetail(id: number | string) {
-  return fetchListItemById('/farmer/soil-samples', ['soil_samples', 'samples'], id, 'soil_sample');
+  return fetchApiData(`/farmer/soil-samples/${id}`);
 }
 
 export async function getFarmerVerificationStatus() {
@@ -259,4 +248,102 @@ export async function createFarmerRegistryExport(payload: ApiRecord) {
 
 export async function getFarmerSocialProfile() {
   return fetchApiData('/farmer/social-profile');
+}
+
+export async function updateFarmerSocialProfile(payload: ApiRecord) {
+  return putApiData('/farmer/social-profile', payload);
+}
+
+export async function updateFarmerWeeklyUpdate(id: number | string, payload: ApiRecord) {
+  return putApiData(`/farmer/weekly-updates/${id}`, payload);
+}
+
+export async function getFarmerBiocharUpdates() {
+  return fetchApiData('/farmer/biochar-updates');
+}
+
+export async function createFarmerBiocharUpdate(payload: ApiRecord) {
+  return postApiData('/farmer/biochar-updates', payload);
+}
+
+export async function getFarmerBiocharActivities(params?: Record<string, string | number | undefined>) {
+  return fetchApiData('/farmer/biochar-activities', params);
+}
+
+export async function getFarmerBiocharActivity(id: number | string) {
+  return fetchApiData(`/farmer/biochar-activities/${id}`);
+}
+
+export async function createFarmerBiocharActivity(payload: FormData) {
+  return postApiData('/farmer/biochar-activities', payload);
+}
+
+export async function saveFarmerBiocharActivityDraft(id: number | string, payload: FormData) {
+  return postApiData(`/farmer/biochar-activities/${id}/save-draft`, payload);
+}
+
+export async function submitFarmerBiocharActivity(id: number | string) {
+  return postApiData(`/farmer/biochar-activities/${id}/submit`, {});
+}
+
+export async function getFarmerWallet() {
+  return fetchApiData('/farmer/wallet');
+}
+
+export async function getFarmerWalletTransactions() {
+  return fetchApiData('/farmer/wallet/transactions');
+}
+
+export async function getFarmerBankDetails() {
+  return fetchApiData('/farmer/bank-details');
+}
+
+export async function saveFarmerBankDetails(payload: ApiRecord) {
+  return postApiData('/farmer/bank-details', payload);
+}
+
+export async function createFarmerBiocharFeedstock(payload: ApiRecord | FormData) {
+  return postApiData('/farmer/biochar/feedstock', payload);
+}
+
+export async function updateFarmerFarmMapping(id: number | string, payload: ApiRecord) {
+  return putApiData(`/farmer/farms/${id}/mapping`, payload);
+}
+
+export async function saveFarmerFarmMappingCameraCapture(id: number | string, formData: FormData) {
+  return postApiData(`/farmer/farms/${id}/mapping/camera-capture`, formData);
+}
+
+export async function deleteFarmerFarmMappingPoint(
+  farmId: number | string,
+  pointId: number | string,
+) {
+  return deleteApiData(`/farmer/farms/${farmId}/mapping/point/${pointId}`);
+}
+
+export async function getFarmerProfilePhotoUrl(): Promise<string> {
+  const base = apiClient.defaults.baseURL ?? '';
+  return `${base}/farmer/profile/photo`;
+}
+
+/** Task-spec aliases (prompt API names) */
+export const getFarms = getFarmerFarms;
+export const getFarmDetail = getFarmerFarmDetail;
+export const createFarm = createFarmerFarm;
+export const updateFarm = updateFarmerFarm;
+export const getWeeklyUpdates = getFarmerWeeklyUpdates;
+export const createWeeklyUpdate = createFarmerWeeklyUpdate;
+export const getWeeklyUpdateDetail = getFarmerWeeklyUpdateDetail;
+export const getFarmerReports = getFarmerFinalReports;
+
+export async function getFarmerProfileDocuments() {
+  return fetchApiData('/farmer/profile/documents');
+}
+
+export async function getFarmerSupportInfo() {
+  return fetchApiData('/farmer/support');
+}
+
+export async function createFarmerServiceSubmission(payload: ApiRecord) {
+  return postApiData('/farmer/service-submissions', payload);
 }

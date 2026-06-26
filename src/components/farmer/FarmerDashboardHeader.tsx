@@ -1,16 +1,15 @@
-import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
 import { BrandedHeaderLogo } from '../shared/BrandedHeaderLogo';
 import { LOGO_SIZES } from '../../constants/branding';
+import { useProfilePhotoDisplay } from '../../hooks/useProfilePhotoDisplay';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
-
-const FARMER_AVATAR_URI =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuCE1Yu-QwiAEZE-RCBWlMqPXqooGk9VcgQqDajZZTq3CkzwESpIHmzcbXuLt2RrEGXG71QOWME9NaSkb1UdyV3sy7OkPrqGIkfQdSUID4TLhaiMrfAyOvFZB439TdTTczxzb_iCVR6nkCDfXq6biXaQF-narwV9t7HQGDZyq0Y2XoNcES2KFv-QmvizXYpb3VBzmpoLSAqAh8ULizJ53BUr2dOsGF0Y-Sj5sGYRJBwKdRSD_LC9lF-9gw';
 
 interface FarmerDashboardHeaderProps {
   firstName: string;
+  fullName?: string;
+  photoUrl?: string | null;
   onNotificationsPress: () => void;
   onProfilePress: () => void;
 }
@@ -43,8 +42,15 @@ function getInitials(name: string): string {
   return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
 }
 
-export function FarmerDashboardHeader({ firstName, onNotificationsPress, onProfilePress }: FarmerDashboardHeaderProps) {
-  const [imageError, setImageError] = useState(false);
+export function FarmerDashboardHeader({
+  firstName,
+  fullName,
+  photoUrl,
+  onNotificationsPress,
+  onProfilePress,
+}: FarmerDashboardHeaderProps) {
+  const displayUri = useProfilePhotoDisplay(photoUrl, 'farmer-dashboard-avatar.jpg');
+  const initialsSource = (fullName ?? firstName).trim() || 'Farmer';
   const displayName = firstName.endsWith('bhai') ? firstName : `${firstName}bhai`;
 
   return (
@@ -75,15 +81,11 @@ export function FarmerDashboardHeader({ firstName, onNotificationsPress, onProfi
           accessibilityRole="button"
           accessibilityLabel="Open profile"
         >
-          {!imageError ? (
-            <Image
-              source={{ uri: FARMER_AVATAR_URI }}
-              style={styles.avatarImage}
-              onError={() => setImageError(true)}
-            />
+          {displayUri ? (
+            <Image source={{ uri: displayUri }} style={styles.avatarImage} />
           ) : (
             <View style={styles.avatarFallback}>
-              <Text style={styles.avatarText}>{getInitials(firstName)}</Text>
+              <Text style={styles.avatarText}>{getInitials(initialsSource)}</Text>
             </View>
           )}
         </Pressable>

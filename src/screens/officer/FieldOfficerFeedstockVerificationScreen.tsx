@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -9,34 +10,78 @@ import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { FeedstockVerificationModals } from '../../components/officer/feedstock/FeedstockVerificationModals';
 import {
-  EvidenceVerificationSection,
-  FarmerCollectionRecordCard,
-  FeedstockChecklistSection,
-  GpsVerificationCard,
-  OfficerRemarksSection,
-  VerificationResultSection,
-  VerificationStatusCard,
-  WeightSlipVerificationCard,
+  CollectionDateVerificationSection,
+  FeedstockTypeVerificationSection,
+  FeedstockVerificationBottomActions,
+  FeedstockVerificationTopCard,
+  FinalVerificationResultSection,
+  GpsVerificationSection,
+  OfficerAdditionalEvidenceSection,
+  PhotosVerificationSection,
+  QuantityVerificationSection,
+  SubmittedFeedstockRecordSection,
+  VerificationSummarySection,
+  WeightSlipVerificationSection,
 } from '../../components/officer/feedstock/FeedstockVerificationSections';
 import { OfficerFeedstockVerificationHeader } from '../../components/officer/feedstock/OfficerFeedstockVerificationHeader';
+import { OfficerScreenBottomNav } from '../../components/officer/OfficerScreenBottomNav';
 import { useFeedstockVerificationForm } from '../../hooks/useFeedstockVerificationForm';
 import { getFieldOfficerProfile } from '../../api/fieldOfficerApi';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerTheme } from '../../theme/officerDashboardTheme';
 import { pickString, type ApiRecord } from '../../utils/apiHelpers';
+import { captureLivePhotoEvidence } from '../../utils/liveEvidenceCapture';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'FieldOfficerFeedstockVerification'>;
 type ScreenRoute = RouteProp<FieldOfficerStackParamList, 'FieldOfficerFeedstockVerification'>;
 
+async function capturePhotoFromCamera(): Promise<string | null> {
+  const result = await captureLivePhotoEvidence({
+    defaultName: 'feedstock-evidence.jpg',
+    allowsEditing: true,
+  });
+
+  if (result.ok) {
+    return result.evidence.uri;
+  }
+
+  if (!result.cancelled && result.error) {
+    Alert.alert('Capture failed', result.error);
+  }
+
+  return null;
+}
+
+async function capturePhotoFromGallery(): Promise<string | null> {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+  if (!permission.granted) {
+    Alert.alert('Gallery permission required', 'Allow gallery access to attach evidence photos.');
+    return null;
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    quality: 0.8,
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+  });
+
+  if (result.canceled || !result.assets[0]?.uri) {
+    return null;
+  }
+
+  return result.assets[0].uri;
+}
+
 export function FieldOfficerFeedstockVerificationScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<ScreenRoute>();
-  const form = useFeedstockVerificationForm(route.params?.verificationId);
-
   const [officerName, setOfficerName] = useState('Field Officer');
+  const form = useFeedstockVerificationForm(route.params?.verificationId, officerName);
+
   const [draftSavedVisible, setDraftSavedVisible] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
   const [rejectConfirmVisible, setRejectConfirmVisible] = useState(false);
+  const [downloadSuccessVisible, setDownloadSuccessVisible] = useState(false);
 
   useEffect(() => {
     void getFieldOfficerProfile().then((data) => {
@@ -53,6 +98,15 @@ export function FieldOfficerFeedstockVerificationScreen() {
     }
   }, [route.params?.gpsVerified, form]);
 
+  const handleBack = () => {
+    if (route.params?.assignmentId) {
+      navigation.navigate('FarmVerificationChecklist', { assignmentId: route.params.assignmentId });
+      return;
+    }
+
+    navigation.navigate('FieldOfficerTabs', { screen: 'Visits' });
+  };
+
   if (form.loading && !form.verification) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -66,7 +120,7 @@ export function FieldOfficerFeedstockVerificationScreen() {
       <SafeAreaView style={styles.safe} edges={['top']}>
         <OfficerFeedstockVerificationHeader
           officerName={officerName}
-          onBackPress={() => navigation.navigate('FieldOfficerTabs', { screen: 'Visits' })}
+          onBackPress={handleBack}
           onNotificationsPress={() => navigation.navigate('FieldOfficerNotifications')}
           onProfilePress={() => navigation.navigate('FieldOfficerProfile')}
         />
@@ -75,16 +129,11 @@ export function FieldOfficerFeedstockVerificationScreen() {
           <Text style={styles.emptyMessage}>
             When an assigned farmer submits feedstock collection, it will appear here for verification.
           </Text>
-          <Pressable style={styles.emptyButton} onPress={() => void form.reload()}>
-            <Text style={styles.emptyButtonText}>Refresh</Text>
-          </Pressable>
-          <Pressable
-            style={styles.emptyLink}
-            onPress={() => navigation.navigate('FieldOfficerTabs', { screen: 'Visits' })}
-          >
-            <Text style={styles.emptyLinkText}>Go to Assigned Visits</Text>
+          <Pressable style={styles.emptyButtonWrap} onPress={() => void form.reload()}>
+            <Text style={styles.emptyButton}>Refresh</Text>
           </Pressable>
         </View>
+        <OfficerScreenBottomNav activeTab="Visits" />
       </SafeAreaView>
     );
   }
@@ -98,6 +147,7 @@ export function FieldOfficerFeedstockVerificationScreen() {
   }
 
   const data = form.verification!;
+  const { formState } = form;
 
   const handleSaveDraft = async () => {
     const ok = await form.saveDraft();
@@ -107,6 +157,11 @@ export function FieldOfficerFeedstockVerificationScreen() {
   };
 
   const handleSubmit = async () => {
+    if (!form.submitReady) {
+      Alert.alert('Cannot Submit Verification', form.submitBlockers.join('\n'));
+      return;
+    }
+
     const ok = await form.submit();
     if (ok) {
       setSuccessVisible(true);
@@ -120,78 +175,103 @@ export function FieldOfficerFeedstockVerificationScreen() {
 
   const confirmReject = async () => {
     setRejectConfirmVisible(false);
-    if (!form.rejectionReason.trim()) {
+
+    if (!formState.rejectionReason.trim()) {
       Alert.alert('Rejection reason required', 'Add a rejection reason before rejecting this record.');
       return;
     }
+
     await handleSubmit();
+  };
+
+  const openGpsMap = () => {
+    if (data.gps.latitude == null || data.gps.longitude == null) {
+      Alert.alert('GPS unavailable', 'This record does not include GPS coordinates.');
+      return;
+    }
+
+    navigation.navigate('OfficerGpsVerificationMap', {
+      latitude: data.gps.latitude,
+      longitude: data.gps.longitude,
+      distanceKm: data.gps.distanceFromFarmKm ?? undefined,
+    });
+  };
+
+  const openGpsValidation = () => {
+    if (data.gps.latitude == null || data.gps.longitude == null) {
+      Alert.alert('GPS unavailable', 'This record does not include GPS coordinates.');
+      return;
+    }
+
+    navigation.navigate('OfficerGpsValidation', {
+      latitude: data.gps.latitude,
+      longitude: data.gps.longitude,
+      accuracyM: data.gps.accuracyM ?? undefined,
+      distanceKm: data.gps.distanceFromFarmKm ?? undefined,
+      verificationId: data.id,
+    });
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <OfficerFeedstockVerificationHeader
         officerName={officerName}
-        onBackPress={() => navigation.navigate('FieldOfficerTabs', { screen: 'Visits' })}
+        onBackPress={handleBack}
         onNotificationsPress={() => navigation.navigate('FieldOfficerNotifications')}
         onProfilePress={() => navigation.navigate('FieldOfficerProfile')}
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>Verify farmer feedstock collection records.</Text>
+        <Text style={styles.subtitle}>Verify feedstock quantity, evidence and collection details.</Text>
 
-        <VerificationStatusCard data={data} />
-        <FarmerCollectionRecordCard data={data} />
-        <FeedstockChecklistSection items={form.checklist} onChange={form.updateChecklistItem} />
+        <FeedstockVerificationTopCard data={data} />
+        <SubmittedFeedstockRecordSection data={data} />
 
-        <GpsVerificationCard
-          gps={data.gps}
-          gpsVerified={form.gpsVerified}
-          gpsFlagged={form.gpsFlagged}
-          onOpenMap={() => {
-            if (data.gps.latitude == null || data.gps.longitude == null) {
-              return;
-            }
-            navigation.navigate('OfficerGpsVerificationMap', {
-              latitude: data.gps.latitude,
-              longitude: data.gps.longitude,
-              distanceKm: data.gps.distanceFromFarmKm ?? undefined,
-            });
-          }}
-          onVerifyGps={() => {
-            if (data.gps.latitude == null || data.gps.longitude == null) {
-              Alert.alert('GPS unavailable', 'This record does not include GPS coordinates.');
-              return;
-            }
-            navigation.navigate('OfficerGpsValidation', {
-              latitude: data.gps.latitude,
-              longitude: data.gps.longitude,
-              accuracyM: data.gps.accuracyM ?? undefined,
-              distanceKm: data.gps.distanceFromFarmKm ?? undefined,
-              verificationId: data.id,
-            });
-          }}
-          onFlagGps={() => {
-            form.setGpsFlagged(true);
-            form.setGpsVerified(false);
-          }}
+        <FeedstockTypeVerificationSection
+          state={formState.sections.typeVerification}
+          onToggleItem={(key) =>
+            form.updateSectionItem('typeVerification', key, !formState.sections.typeVerification.items[key])
+          }
+          onResultChange={(result) => form.updateSectionResult('typeVerification', result)}
+          onRemarksChange={(text) => form.updateSectionRemarks('typeVerification', text)}
         />
 
-        <EvidenceVerificationSection
-          photos={data.photos}
-          photosCount={data.photosCount}
-          onPhotoPress={(_photoId, url) =>
-            navigation.navigate('OfficerFullscreenImage', { uri: url, title: 'Feedstock Evidence' })
+        <QuantityVerificationSection
+          data={data}
+          state={formState.sections.quantityVerification}
+          officerObservedQuantity={formState.officerObservedQuantity}
+          onObservedQuantityChange={form.setOfficerObservedQuantity}
+          onToggleItem={(key) =>
+            form.updateSectionItem('quantityVerification', key, !formState.sections.quantityVerification.items[key])
           }
-          onApprovePhoto={(photoId) =>
-            form.updatePhotoReview(photoId, { approved: true, rejected: false })
-          }
-          onRejectPhoto={(photoId) =>
-            form.updatePhotoReview(photoId, { approved: false, rejected: true })
-          }
+          onResultChange={(result) => form.updateSectionResult('quantityVerification', result)}
+          onRemarksChange={(text) => form.updateSectionRemarks('quantityVerification', text)}
         />
 
-        <WeightSlipVerificationCard
-          weightSlip={data.weightSlip}
+        <CollectionDateVerificationSection
+          data={data}
+          state={formState.sections.collectionDateVerification}
+          onToggleItem={(key) =>
+            form.updateSectionItem(
+              'collectionDateVerification',
+              key,
+              !formState.sections.collectionDateVerification.items[key],
+            )
+          }
+          onResultChange={(result) => form.updateSectionResult('collectionDateVerification', result)}
+          onRemarksChange={(text) => form.updateSectionRemarks('collectionDateVerification', text)}
+        />
+
+        <WeightSlipVerificationSection
+          data={data}
+          state={formState.sections.weightSlipVerification}
+          weightSlipApproved={formState.weightSlipApproved}
+          weightSlipRejectionReason={formState.weightSlipRejectionReason}
+          onToggleItem={(key) =>
+            form.updateSectionItem('weightSlipVerification', key, !formState.sections.weightSlipVerification.items[key])
+          }
+          onResultChange={(result) => form.updateSectionResult('weightSlipVerification', result)}
+          onRemarksChange={(text) => form.updateSectionRemarks('weightSlipVerification', text)}
           onView={() => {
             if (data.weightSlip.url) {
               navigation.navigate('OfficerDocumentViewer', {
@@ -203,73 +283,164 @@ export function FieldOfficerFeedstockVerificationScreen() {
           onDownload={() => {
             if (data.weightSlip.url) {
               void Linking.openURL(data.weightSlip.url);
+              setDownloadSuccessVisible(true);
             }
           }}
           onApprove={() => form.setWeightSlipApproved(true)}
           onReject={() => form.setWeightSlipApproved(false)}
+          onRejectionReasonChange={form.setWeightSlipRejectionReason}
         />
 
-        <OfficerRemarksSection value={form.officerRemarks} onChange={form.setOfficerRemarks} />
+        <GpsVerificationSection
+          data={data}
+          state={formState.sections.gpsVerification}
+          gpsVerified={formState.gpsVerified}
+          gpsFlagged={formState.gpsFlagged}
+          gpsOverrideReason={formState.gpsOverrideReason}
+          gpsOverridePhotoUri={formState.gpsOverridePhotoUri}
+          onToggleItem={(key) =>
+            form.updateSectionItem('gpsVerification', key, !formState.sections.gpsVerification.items[key])
+          }
+          onResultChange={(result) => form.updateSectionResult('gpsVerification', result)}
+          onRemarksChange={(text) => form.updateSectionRemarks('gpsVerification', text)}
+          onOpenMap={openGpsMap}
+          onVerifyGps={openGpsValidation}
+          onFlagGps={() => {
+            form.setGpsFlagged(true);
+            form.setGpsVerified(false);
+          }}
+          onOverrideReasonChange={form.setGpsOverrideReason}
+          onCaptureOverridePhoto={async () => {
+            const uri = await capturePhotoFromCamera();
+            if (uri) {
+              form.setGpsOverridePhotoUri(uri);
+            }
+          }}
+        />
 
-        <VerificationResultSection
-          value={form.verificationResult}
-          onChange={form.setVerificationResult}
-          correctionNotes={form.correctionNotes}
+        <PhotosVerificationSection
+          data={data}
+          state={formState.sections.photosVerification}
+          photoReviews={formState.photoReviews}
+          onToggleItem={(key) =>
+            form.updateSectionItem('photosVerification', key, !formState.sections.photosVerification.items[key])
+          }
+          onResultChange={(result) => form.updateSectionResult('photosVerification', result)}
+          onRemarksChange={(text) => form.updateSectionRemarks('photosVerification', text)}
+          onPhotoPress={(_photoId, url) =>
+            navigation.navigate('OfficerFullscreenImage', { uri: url, title: 'Feedstock Evidence' })
+          }
+          onApprovePhoto={(photoId) =>
+            form.updatePhotoReview(photoId, { approved: true, rejected: false, rejectionReason: '' })
+          }
+          onRejectPhoto={(photoId) =>
+            form.updatePhotoReview(photoId, { approved: false, rejected: true })
+          }
+          onPhotoRemarkChange={(photoId, remark) => form.updatePhotoReview(photoId, { remark })}
+          onPhotoRejectionReasonChange={(photoId, rejectionReason) =>
+            form.updatePhotoReview(photoId, { rejectionReason })
+          }
+          onAddMoreEvidence={async () => {
+            const uri = await capturePhotoFromGallery();
+            if (uri) {
+              form.addOfficerEvidencePhoto(uri);
+            }
+          }}
+        />
+
+        <OfficerAdditionalEvidenceSection
+          evidencePhotos={formState.officerEvidencePhotos}
+          onCaptureFeedstockPhoto={async () => {
+            const uri = await capturePhotoFromCamera();
+            if (uri) {
+              form.addOfficerEvidencePhoto(uri);
+            }
+          }}
+          onUploadAdditionalPhoto={async () => {
+            const uri = await capturePhotoFromGallery();
+            if (uri) {
+              form.addOfficerEvidencePhoto(uri);
+            }
+          }}
+          onCaptureGpsAgain={() => openGpsValidation()}
+          onAddDocument={async () => {
+            const uri = await capturePhotoFromGallery();
+            if (uri) {
+              form.addOfficerEvidencePhoto(uri);
+            }
+          }}
+        />
+
+        <VerificationSummarySection
+          formState={formState}
+          data={data}
+          completionPercent={form.completionPercent}
+        />
+
+        <FinalVerificationResultSection
+          verificationResult={formState.verificationResult}
+          correctionNotes={formState.correctionNotes}
+          requiredChanges={formState.requiredChanges}
+          correctionDueDate={formState.correctionDueDate}
+          rejectionReason={formState.rejectionReason}
+          evidenceNotes={formState.evidenceNotes}
+          finalRemarks={formState.officerRemarks}
+          onSelectResult={form.setVerificationResult}
           onCorrectionNotesChange={form.setCorrectionNotes}
-          requiredChanges={form.requiredChanges}
           onRequiredChangesChange={form.setRequiredChanges}
-          rejectionReason={form.rejectionReason}
+          onCorrectionDueDateChange={form.setCorrectionDueDate}
           onRejectionReasonChange={form.setRejectionReason}
+          onEvidenceNotesChange={form.setEvidenceNotes}
+          onFinalRemarksChange={form.setOfficerRemarks}
         />
 
         {form.error ? <Text style={styles.error}>{form.error}</Text> : null}
 
-        <View style={styles.actions}>
-          <Pressable style={styles.secondaryButton} onPress={() => void handleSaveDraft()} disabled={form.savingDraft}>
-            <Text style={styles.secondaryButtonText}>{form.savingDraft ? 'Saving...' : 'Save Draft'}</Text>
-          </Pressable>
-          <Pressable style={styles.primaryButton} onPress={() => void handleSubmit()} disabled={form.submitting}>
-            <Text style={styles.primaryButtonText}>{form.submitting ? 'Submitting...' : 'Submit Verification'}</Text>
-          </Pressable>
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => {
-              form.setVerificationResult('correction_required');
-              navigation.navigate('OfficerFeedstockCorrection', {
-                verificationId: data.id,
-                initialNotes: form.correctionNotes,
-                initialRequiredChanges: form.requiredChanges,
-              });
-            }}
-          >
-            <Text style={styles.secondaryButtonText}>Request Correction</Text>
-          </Pressable>
-          <Pressable style={[styles.secondaryButton, styles.rejectButton]} onPress={handleReject}>
-            <Text style={[styles.secondaryButtonText, styles.rejectText]}>Reject Record</Text>
-          </Pressable>
-        </View>
+        <FeedstockVerificationBottomActions
+          savingDraft={form.savingDraft}
+          submitting={form.submitting}
+          onSaveDraft={() => void handleSaveDraft()}
+          onSubmitVerification={() => void handleSubmit()}
+          onRequestCorrection={() => {
+            form.setVerificationResult('correction_required');
+            navigation.navigate('OfficerFeedstockCorrection', {
+              verificationId: data.id,
+              initialNotes: formState.correctionNotes,
+              initialRequiredChanges: formState.requiredChanges,
+              initialDueDate: formState.correctionDueDate,
+            });
+          }}
+          onReject={handleReject}
+        />
       </ScrollView>
+
+      <OfficerScreenBottomNav activeTab="Visits" />
 
       <FeedstockVerificationModals
         draftSavedVisible={draftSavedVisible}
         successVisible={successVisible}
         rejectConfirmVisible={rejectConfirmVisible}
+        downloadSuccessVisible={downloadSuccessVisible}
         verificationCode={data.verificationCode}
+        feedstockCode={data.feedstockCode}
         farmerName={data.farmerName}
+        quantityLabel={data.quantityLabel}
         statusLabel={data.verificationStatusLabel}
-        verificationDateLabel={data.verificationDateLabel}
         onCloseDraftSaved={() => setDraftSavedVisible(false)}
         onCloseSuccess={() => setSuccessVisible(false)}
-        onViewNextVerification={() => {
+        onProceedBiocharApplication={() => {
           setSuccessVisible(false);
-          void form.reload();
+          navigation.navigate('BiocharApplicationVerification', {
+            assignmentId: route.params?.assignmentId,
+          });
         }}
-        onGoDashboard={() => {
+        onBackToVisits={() => {
           setSuccessVisible(false);
-          navigation.navigate('FieldOfficerTabs', { screen: 'Home' });
+          navigation.navigate('FieldOfficerTabs', { screen: 'Visits' });
         }}
         onConfirmReject={() => void confirmReject()}
         onCancelReject={() => setRejectConfirmVisible(false)}
+        onCloseDownloadSuccess={() => setDownloadSuccessVisible(false)}
       />
     </SafeAreaView>
   );
@@ -280,7 +451,7 @@ const styles = StyleSheet.create({
   content: {
     padding: officerTheme.marginMobile,
     gap: 16,
-    paddingBottom: 120,
+    paddingBottom: 24,
   },
   subtitle: {
     fontSize: 14,
@@ -289,25 +460,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   error: { color: officerTheme.error, fontSize: 14 },
-  actions: { gap: 10, marginTop: 8 },
-  primaryButton: {
-    backgroundColor: officerTheme.primaryContainer,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  primaryButtonText: { color: officerTheme.onPrimary, fontWeight: '700', fontSize: 16 },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: officerTheme.primaryContainer,
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: 'center',
-    backgroundColor: officerTheme.surfaceLowest,
-  },
-  secondaryButtonText: { color: officerTheme.primaryContainer, fontWeight: '700', fontSize: 15 },
-  rejectButton: { borderColor: officerTheme.error },
-  rejectText: { color: officerTheme.error },
   emptyWrap: {
     flex: 1,
     alignItems: 'center',
@@ -327,24 +479,16 @@ const styles = StyleSheet.create({
     color: officerTheme.onSurfaceVariant,
     textAlign: 'center',
   },
-  emptyButton: {
+  emptyButtonWrap: {
     marginTop: 8,
     backgroundColor: officerTheme.primaryContainer,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 24,
   },
-  emptyButtonText: {
+  emptyButton: {
     color: officerTheme.onPrimary,
     fontWeight: '700',
     fontSize: 15,
-  },
-  emptyLink: {
-    paddingVertical: 8,
-  },
-  emptyLinkText: {
-    color: officerTheme.primaryContainer,
-    fontWeight: '600',
-    fontSize: 14,
   },
 });

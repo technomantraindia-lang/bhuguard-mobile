@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { getApiErrorMessage } from '../../api/authApi';
+import type { ReportDownloadFormat } from '../../api/reportsApi';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { OfficerReportCard } from '../../components/officer/OfficerReportCard';
@@ -17,23 +18,19 @@ type Props = NativeStackScreenProps<FieldOfficerStackParamList, 'FieldOfficerPen
 export function FieldOfficerPendingReportsScreen({ navigation }: Props) {
   const { reports, loading, error, reload } = useFieldOfficerReportsData();
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [downloadingFormat, setDownloadingFormat] = useState<ReportDownloadFormat | null>(null);
 
   const pendingReports = useMemo(
     () => reports.filter((report) => report.status === 'submitted' || report.status === 'pending'),
     [reports],
   );
 
-  const handleDownload = async (reportId: number) => {
-    const report = pendingReports.find((item) => item.id === reportId);
-
-    if (!report) {
-      return;
-    }
-
+  const handleDownload = async (report: (typeof pendingReports)[number], format: ReportDownloadFormat) => {
     setDownloadingId(report.id);
+    setDownloadingFormat(format);
 
     try {
-      const result = await downloadFieldOfficerReport(report);
+      const result = await downloadFieldOfficerReport(report, format);
 
       if (!result.success) {
         Alert.alert('Download failed', result.message ?? 'Unable to download this report right now.');
@@ -45,6 +42,7 @@ export function FieldOfficerPendingReportsScreen({ navigation }: Props) {
       Alert.alert('Download failed', getApiErrorMessage(err, 'Unable to download this report right now.'));
     } finally {
       setDownloadingId(null);
+      setDownloadingFormat(null);
     }
   };
 
@@ -85,9 +83,9 @@ export function FieldOfficerPendingReportsScreen({ navigation }: Props) {
               <OfficerReportCard
                 key={`${report.id}-${report.assignmentId}`}
                 report={report}
-                downloading={downloadingId === report.id}
+                downloadingFormat={downloadingId === report.id ? downloadingFormat : null}
                 onView={() => navigation.navigate('FieldOfficerReportDetail', { reportId: report.id })}
-                onDownload={() => void handleDownload(report.id)}
+                onDownload={(format) => void handleDownload(report, format)}
               />
             ))}
           </View>

@@ -1,14 +1,20 @@
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { FarmerBenefitsSummaryCard } from '../../components/farmer/FarmerBenefitsSummaryCard';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { useFarmerReportsData } from '../../hooks/useFarmerReportsData';
+import type { FarmerStackParamList } from '../../navigation/types';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 
+type Nav = NativeStackNavigationProp<FarmerStackParamList>;
+
 export function FarmerBenefitsScreen() {
+  const navigation = useNavigation<Nav>();
   const { summary, loading, error, reload } = useFarmerReportsData();
 
   if (loading && !summary) {
@@ -40,7 +46,7 @@ export function FarmerBenefitsScreen() {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={reload} tintColor={dashboardTheme.primary} />}
       >
         <ScreenHeader title="Benefits" subtitle="Carbon credits and project incentives" />
-        <FarmerBenefitsSummaryCard summary={summary!} onViewDetails={() => undefined} />
+        <FarmerBenefitsSummaryCard summary={summary!} onViewDetails={() => navigation.navigate('FarmerCarbonCalculations')} />
         <View style={styles.noteCard}>
           <Text style={styles.noteTitle}>How benefits work</Text>
           <Text style={styles.noteText}>

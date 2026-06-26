@@ -4,6 +4,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getFarmerFinalReports } from '../../api/farmerApi';
 import { ApiListScreen } from '../../components/ApiListScreen';
 import { ListItemCard } from '../../components/ListItemCard';
+import { ReportListDownloadActions } from '../../components/reports/ReportListDownloadActions';
 import type { FarmerStackParamList } from '../../navigation/types';
 
 type Nav = NativeStackNavigationProp<FarmerStackParamList>;
@@ -14,7 +15,7 @@ export function FarmerFinalReportsScreen() {
   return (
     <ApiListScreen
       title="Final Reports"
-      subtitle="GET /farmer/final-reports"
+      subtitle="View and download your reports"
       fetcher={getFarmerFinalReports}
       listKeys={['final_reports']}
       emptyTitle="No final reports"
@@ -32,6 +33,7 @@ export function FarmerFinalReportsScreen() {
             { label: 'Credits', keys: ['estimated_carbon_credit'] },
             { label: 'Generated', keys: ['generated_at'] },
           ]}
+          renderFooter={() => <ReportListDownloadActions role="farmer" item={item} />}
         />
       )}
     />

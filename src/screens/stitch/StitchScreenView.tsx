@@ -9,8 +9,10 @@ import {
   STITCH_DETAIL_FETCHERS,
   STITCH_POST_ENDPOINTS,
 } from '../../config/stitchApiMap';
+import { getFormConfigForScreenKey } from '../../config/stitchFormConfig';
 import { ApiDetailScreen } from '../../components/ApiDetailScreen';
 import { ApiListScreen } from '../../components/ApiListScreen';
+import { ApiRecordFormScreen } from '../../components/ApiRecordFormScreen';
 import { AppButton } from '../../components/AppButton';
 import { STITCH_LIST_UPLOAD_ACTIONS } from '../../config/stitchScreenRoutes';
 import { AppCard } from '../../components/AppCard';
@@ -185,6 +187,14 @@ export function StitchScreenView({
                   return;
                 }
 
+                if (screenKey === 'officer_inventory_tasks' && recordId > 0) {
+                  (navigation as NativeStackNavigationProp<FieldOfficerStackParamList>).navigate(
+                    'FieldOfficerInventoryTaskDetail',
+                    { taskId: recordId },
+                  );
+                  return;
+                }
+
                 navigation.navigate(stitchRouteName, {
                   screenKey: config.detailScreenKey ?? screenKey.replace('_list', '_detail'),
                   itemId: recordId,
@@ -272,6 +282,11 @@ export function StitchScreenView({
   }
 
   const postEndpoint = STITCH_POST_ENDPOINTS[screenKey];
+  const formConfig = getFormConfigForScreenKey(screenKey);
+
+  if (config.mode === 'form' && formConfig) {
+    return <ApiRecordFormScreen config={formConfig} />;
+  }
 
   return (
     <SafeAreaView style={styles.safe}>

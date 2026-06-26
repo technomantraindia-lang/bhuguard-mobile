@@ -10,10 +10,10 @@ import { LOGO_SIZES } from '../../constants/branding';
 import { useTranslation } from '../../i18n/I18nContext';
 import type { RootStackParamList } from '../../navigation/types';
 import { getBiometricLoginEnabled } from '../../storage/biometricPreference';
-import { getMpinProfile, saveAuthSession } from '../../storage/authStorage';
+import { getMpinProfile } from '../../storage/authStorage';
 import { colors, spacing } from '../../theme';
 import { authenticateWithBiometrics, getOrCreateDeviceUuid } from '../../utils/biometricLogin';
-import { getDashboardRoute, isMobileSupportedRole } from '../../utils/authRouting';
+import { finishMobileLogin } from '../../utils/finishMobileLogin';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'FarmerLoginOptions'>;
 
@@ -28,21 +28,6 @@ export function FarmerLoginOptionsScreen({ navigation }: Props) {
       setBiometricReady(Boolean(profile?.mobile) && enabled);
     })();
   }, []);
-
-  const completeLogin = async (userType: string, token: string, user: Parameters<typeof saveAuthSession>[1]) => {
-    if (!isMobileSupportedRole(userType) || userType !== 'farmer') {
-      Alert.alert(t('errors.unsupportedAccount'));
-      return;
-    }
-
-    if (!user.farmer_profile?.id) {
-      Alert.alert(t('farmerLogin.profileMissingTitle'), t('farmerLogin.profileMissingMessage'));
-      return;
-    }
-
-    await saveAuthSession(token, user, userType);
-    navigation.reset({ index: 0, routes: [{ name: 'FarmerApp' }] });
-  };
 
   const handleBiometricLogin = async () => {
     if (!biometricReady) {
@@ -73,7 +58,20 @@ export function FarmerLoginOptionsScreen({ navigation }: Props) {
         device_uuid: deviceUuid,
       });
 
-      await completeLogin(result.user_type, result.token, result.user);
+      const loggedIn = await finishMobileLogin(
+        navigation,
+        { token: result.token, user: result.user, expectedRole: 'farmer' },
+        {
+          roleMismatch: t('mpinLogin.roleMismatch'),
+          unsupportedAccount: t('errors.unsupportedAccount'),
+          farmerProfileMissingTitle: t('farmerLogin.profileMissingTitle'),
+          farmerProfileMissingMessage: t('farmerLogin.profileMissingMessage'),
+        },
+      );
+
+      if (!loggedIn) {
+        return;
+      }
     } catch (error) {
       Alert.alert(t('errors.loginFailed'), getApiErrorMessage(error, t('errors.biometricDevice')));
     } finally {

@@ -1,4 +1,4 @@
-import { Alert, RefreshControl, ScrollView, StyleSheet } from 'react-native';
+import { Alert, Linking, RefreshControl, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -7,7 +7,10 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
+import { FieldOfficerLiveCheckInCard } from '../../components/officer/FieldOfficerLiveCheckInCard';
+import { OfficerBiocharSummaryCards } from '../../components/officer/OfficerBiocharSummaryCards';
 import { OfficerDashboardHeader } from '../../components/officer/OfficerDashboardHeader';
+import { OfficerQuickAccessSection } from '../../components/officer/OfficerQuickAccessSection';
 import {
   OfficerEmergencyActions,
   OfficerGreetingSection,
@@ -22,6 +25,7 @@ import {
 } from '../../components/officer/OfficerDashboardSections';
 import type { OfficerDashboardVisit } from '../../hooks/useFieldOfficerDashboardData';
 import { useFieldOfficerDashboardData } from '../../hooks/useFieldOfficerDashboardData';
+import { useScrollBottomPadding } from '../../hooks/useTabBarLayout';
 import type { FieldOfficerStackParamList, FieldOfficerTabParamList } from '../../navigation/types';
 import { officerTheme } from '../../theme/officerDashboardTheme';
 
@@ -33,6 +37,7 @@ type Nav = CompositeNavigationProp<
 export function FieldOfficerDashboard() {
   const navigation = useNavigation<Nav>();
   const { data, loading, error, reload } = useFieldOfficerDashboardData();
+  const scrollBottomPadding = useScrollBottomPadding();
 
   const handleVisitPress = (visit: OfficerDashboardVisit) => {
     if (visit.assignmentId) {
@@ -63,8 +68,33 @@ export function FieldOfficerDashboard() {
     navigation.navigate('Visits');
   };
 
+  const handleVerificationChecklist = () => {
+    const assignmentId = data?.visits.find((visit) => visit.assignmentId)?.assignmentId;
+    if (assignmentId) {
+      navigation.navigate('VisitEvidenceUpload', { assignmentId });
+      return;
+    }
+
+    navigation.navigate('Visits');
+  };
+
   const handleOnboardFarmer = () => {
     navigation.navigate('FarmerOnboardingStart');
+  };
+
+  const primaryAssignmentId = data?.visits.find((visit) => visit.assignmentId)?.assignmentId;
+
+  const openPrimaryAssignment = (onReady: (assignmentId: number) => void) => {
+    if (primaryAssignmentId) {
+      onReady(primaryAssignmentId);
+      return;
+    }
+
+    navigation.navigate('Visits');
+  };
+
+  const handleGpsCheckIn = () => {
+    openPrimaryAssignment((assignmentId) => navigation.navigate('VisitCheckIn', { assignmentId }));
   };
 
   if (loading && !data) {
@@ -85,6 +115,18 @@ export function FieldOfficerDashboard() {
 
   const dashboard = data!;
 
+  const handleCallFarmer = () => {
+    const phone =
+      dashboard.visits.find((visit) => visit.farmerPhone)?.farmerPhone ?? dashboard.primaryFarmerPhone;
+
+    if (!phone) {
+      Alert.alert('Farmer mobile number is not available.');
+      return;
+    }
+
+    void Linking.openURL(`tel:${phone}`);
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <OfficerDashboardHeader
@@ -94,21 +136,30 @@ export function FieldOfficerDashboard() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[styles.container, { paddingBottom: scrollBottomPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={reload} tintColor={officerTheme.primary} />
         }
       >
         <OfficerGreetingSection greeting={dashboard.greeting} officerName={dashboard.officerName} />
+        <FieldOfficerLiveCheckInCard />
+        <OfficerBiocharSummaryCards
+          assignedFarmersCount={dashboard.assignedFarmersCount}
+          dueBiocharCount={dashboard.dueBiocharCount}
+          overdueFarmersCount={dashboard.overdueFarmersCount}
+          draftBiocharCount={dashboard.draftBiocharCount}
+          submittedBiocharCount={dashboard.submittedBiocharCount}
+        />
         <OfficerSummaryCard dashboard={dashboard} />
         <OfficerStatsGrid dashboard={dashboard} />
         <OfficerQuickActionCards
           onStartVerification={handleStartVerification}
           onUploadEvidence={handleUploadEvidence}
           onOnboardFarmer={handleOnboardFarmer}
+          onVerificationChecklist={handleVerificationChecklist}
           onFeedstockVerification={() => navigation.navigate('FieldOfficerFeedstockVerification')}
-          onBiocharProduction={() => navigation.navigate('FieldOfficerBiocharProduction')}
+          onBiocharProduction={() => navigation.navigate('FieldOfficerBiocharProductionList')}
           onInventoryMovement={() => navigation.navigate('FieldOfficerInventoryMovement')}
         />
         <OfficerTodaysVisits
@@ -118,14 +169,36 @@ export function FieldOfficerDashboard() {
           onNewFarmer={handleOnboardFarmer}
         />
         <OfficerVerificationPipeline dashboard={dashboard} />
-        <OfficerMapCoverage dashboard={dashboard} onViewFullMap={() => navigation.navigate('Map')} />
+        <OfficerMapCoverage
+          dashboard={dashboard}
+          onViewFullMap={() => navigation.navigate('Map')}
+          onVisitPress={(assignmentId) =>
+            navigation.navigate('FieldOfficerAssignmentDetail', { assignmentId })
+          }
+        />
         <OfficerPerformanceSection dashboard={dashboard} />
         <OfficerRecentActivity activities={dashboard.recentActivities} />
         <OfficerEmergencyActions
-          onCallFarmer={() => Alert.alert('Call Farmer', 'Farmer contact will open from the visit detail screen.')}
+          onCallFarmer={handleCallFarmer}
           onNavigate={() => navigation.navigate('Map')}
-          onNextVisit={() => handleVisitPress(dashboard.visits[0] ?? { id: 'none', farmerName: '', farmName: '', location: '', timeLabel: '', status: 'pending', statusLabel: 'Pending' })}
+          onNextVisit={() => {
+            const first = dashboard.visits[0];
+            if (first) {
+              handleVisitPress(first);
+            } else {
+              navigation.navigate('Visits');
+            }
+          }}
           onReportIssue={() => navigation.navigate('FieldOfficerMonitoringReports')}
+        />
+
+        <OfficerQuickAccessSection
+          onAssignedVisits={() => navigation.navigate('Visits')}
+          onGpsCheckIn={handleGpsCheckIn}
+          onEvidenceUpload={handleUploadEvidence}
+          onReports={() => navigation.navigate('Reports')}
+          onProfile={() => navigation.navigate('FieldOfficerProfile')}
+          onSupport={() => navigation.navigate('ChatbotSupport', { supportRole: 'field_officer', sourceModule: 'officer_dashboard' })}
         />
       </ScrollView>
     </SafeAreaView>
@@ -143,6 +216,5 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: officerTheme.marginMobile,
     paddingTop: 16,
-    paddingBottom: 24,
   },
 });

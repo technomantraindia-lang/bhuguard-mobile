@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,16 +12,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Svg, { Path, Rect } from 'react-native-svg';
 
-import { getApiErrorMessage, loginPassword } from '../../api/authApi';
+import { getApiErrorMessage, login } from '../../api/authApi';
 import { AuthField } from '../../components/auth/AuthField';
 import { BhuguardLogo } from '../../components/shared/BhuguardLogo';
 import { LOGO_SIZES } from '../../constants/branding';
 import { getDemoLoginForRole, type AppLoginRole } from '../../config/authRoles';
 import { useTranslation } from '../../i18n/I18nContext';
 import type { RootStackParamList } from '../../navigation/types';
-import { saveAuthSession } from '../../storage/authStorage';
 import { colors, spacing } from '../../theme';
-import { getDashboardRoute, isMobileSupportedRole } from '../../utils/authRouting';
+import { finishMobileLogin } from '../../utils/finishMobileLogin';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PasswordLogin'>;
 
@@ -64,11 +62,27 @@ function EyeIcon({ visible }: { visible: boolean }) {
 }
 
 function getTitleKey(role: AppLoginRole): string {
-  return role === 'farmer' ? 'passwordLogin.farmerTitle' : 'passwordLogin.fieldOfficerTitle';
+  if (role === 'farmer') {
+    return 'passwordLogin.farmerTitle';
+  }
+
+  if (role === 'artisan') {
+    return 'passwordLogin.artisanTitle';
+  }
+
+  return 'passwordLogin.fieldOfficerTitle';
 }
 
-function getBackRoute(role: AppLoginRole): 'FarmerLoginOptions' | 'FieldOfficerLogin' {
-  return role === 'farmer' ? 'FarmerLoginOptions' : 'FieldOfficerLogin';
+function getBackRoute(role: AppLoginRole): 'FarmerLoginOptions' | 'FieldOfficerLogin' | 'ArtisanLogin' {
+  if (role === 'farmer') {
+    return 'FarmerLoginOptions';
+  }
+
+  if (role === 'artisan') {
+    return 'ArtisanLogin';
+  }
+
+  return 'FieldOfficerLogin';
 }
 
 export function PasswordLoginScreen({ navigation, route }: Props) {
@@ -92,27 +106,24 @@ export function PasswordLoginScreen({ navigation, route }: Props) {
     setErrorMessage(null);
 
     try {
-      const result = await loginPassword(username.trim(), password);
+      const loginId = username.trim();
+      const isEmail = loginId.includes('@');
+      const { token, user } = await login({
+        ...(isEmail ? { email: loginId } : { mobile: loginId }),
+        password,
+      });
 
-      if (!isMobileSupportedRole(result.user_type) || result.user_type !== role) {
-        setErrorMessage(t('mpinLogin.roleMismatch'));
-        return;
-      }
-
-      if (role === 'farmer' && !result.user.farmer_profile?.id) {
-        Alert.alert(t('farmerLogin.profileMissingTitle'), t('farmerLogin.profileMissingMessage'));
-        return;
-      }
-
-      const dashboardRoute = getDashboardRoute(result.user_type);
-
-      if (!dashboardRoute) {
-        setErrorMessage(t('errors.unsupportedAccount'));
-        return;
-      }
-
-      await saveAuthSession(result.token, result.user, result.user_type);
-      navigation.reset({ index: 0, routes: [{ name: dashboardRoute }] });
+      await finishMobileLogin(
+        navigation,
+        { token, user, expectedRole: role },
+        {
+          roleMismatch: t('mpinLogin.roleMismatch'),
+          unsupportedAccount: t('errors.unsupportedAccount'),
+          farmerProfileMissingTitle: t('farmerLogin.profileMissingTitle'),
+          farmerProfileMissingMessage: t('farmerLogin.profileMissingMessage'),
+        },
+        setErrorMessage,
+      );
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, t('errors.loginFailed')));
     } finally {
@@ -168,7 +179,14 @@ export function PasswordLoginScreen({ navigation, route }: Props) {
             }
           />
 
-          {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+          {errorMessage ? (
+            <Pressable onPress={() => navigation.navigate('ApiServerSettings')}>
+              <Text style={styles.error}>{errorMessage}</Text>
+              {errorMessage.includes('Cannot reach API') ? (
+                <Text style={styles.serverLink}>{t('apiServer.openSettings')} →</Text>
+              ) : null}
+            </Pressable>
+          ) : null}
 
           <Pressable
             style={[styles.signInButton, loading && styles.signInButtonDisabled]}
@@ -178,6 +196,10 @@ export function PasswordLoginScreen({ navigation, route }: Props) {
             <Text style={styles.signInText}>
               {loading ? t('passwordLogin.signingIn') : t('passwordLogin.signIn')}
             </Text>
+          </Pressable>
+
+          <Pressable onPress={() => navigation.navigate('ApiServerSettings')} style={styles.serverSettingsLink}>
+            <Text style={styles.serverSettingsText}>{t('apiServer.openSettings')}</Text>
           </Pressable>
 
           {role === 'farmer' ? (
@@ -248,6 +270,23 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontSize: 14,
     lineHeight: 20,
+  },
+  serverLink: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 6,
+  },
+  serverSettingsLink: {
+    alignSelf: 'center',
+    marginTop: spacing.sm,
+    paddingVertical: 8,
+  },
+  serverSettingsText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
   signInButton: {
     marginTop: spacing.sm,

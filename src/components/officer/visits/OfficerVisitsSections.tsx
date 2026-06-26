@@ -237,7 +237,6 @@ function DetailRow({
 
 interface OfficerVisitsQuickActionsProps {
   onGpsCheckIn: () => void;
-  onVerificationChecklist: () => void;
   onFeedstockVerification: () => void;
   onBiocharProduction: () => void;
   onInventoryMovement: () => void;
@@ -247,7 +246,6 @@ interface OfficerVisitsQuickActionsProps {
 
 export function OfficerVisitsQuickActions({
   onGpsCheckIn,
-  onVerificationChecklist,
   onFeedstockVerification,
   onBiocharProduction,
   onInventoryMovement,
@@ -256,11 +254,10 @@ export function OfficerVisitsQuickActions({
 }: OfficerVisitsQuickActionsProps) {
   const actions: Array<{ key: string; label: string; icon: BhuguardIconName; onPress: () => void }> = [
     { key: 'gps', label: 'GPS Check-In', icon: 'share_location', onPress: onGpsCheckIn },
-    { key: 'checklist', label: 'Verification Checklist', icon: 'fact_check', onPress: onVerificationChecklist },
+    { key: 'evidence', label: 'Upload Evidence', icon: 'photo_camera', onPress: onUploadEvidence },
     { key: 'feedstock', label: 'Feedstock Verify', icon: 'science', onPress: onFeedstockVerification },
     { key: 'biochar', label: 'Biochar Production', icon: 'eco', onPress: onBiocharProduction },
     { key: 'inventory', label: 'Inventory Movement', icon: 'sync', onPress: onInventoryMovement },
-    { key: 'evidence', label: 'Upload Evidence', icon: 'photo_camera', onPress: onUploadEvidence },
     { key: 'reports', label: 'Reports Queue', icon: 'pending_actions', onPress: onReportsQueue },
   ];
 

@@ -4,6 +4,7 @@
     "tagline": "जलवायु कार्रवाई के लिए डिजिटल MRV"
   },
   "preloader": {
+    "title": "Bhuguard में आपका स्वागत है",
     "loading": "आपका जलवायु कार्यक्षेत्र लोड हो रहा है…",
     "loadingData": "आपका डैशबोर्ड तैयार किया जा रहा है…"
   },
@@ -32,6 +33,9 @@
     "fieldOfficerTitle": "फील्ड ऑफिसर",
     "fieldOfficerDescription": "किसान पंजीकरण, खेत सत्यापन, भूमि मैपिंग और रिपोर्ट जमा करें",
     "fieldOfficerButton": "फील्ड ऑफिसर के रूप में जारी रखें",
+    "artisanTitle": "कारीगर",
+    "artisanDescription": "फार्म साइट पर बायोचार उत्पादन",
+    "artisanButton": "कारीगर के रूप में जारी रखें",
     "farmerRegistrationNote": "किसान पंजीकरण केवल फील्ड ऑफिसर द्वारा किया जाता है।"
   },
   "farmerLogin": {
@@ -67,9 +71,18 @@
     "signIn": "लॉगिन",
     "signingIn": "लॉगिन हो रहा है…"
   },
+  "artisanLogin": {
+    "title": "कारीगर लॉगिन",
+    "subtitle": "केवल बायोचार उत्पादन एक्सेस",
+    "passwordOption": "यूज़रनेम और पासवर्ड",
+    "mpinOption": "MPIN लॉगिन",
+    "biometricOption": "बायोमेट्रिक लॉगिन",
+    "changeRole": "भूमिका बदलें"
+  },
   "passwordLogin": {
     "farmerTitle": "किसान लॉगिन",
     "fieldOfficerTitle": "फील्ड ऑफिसर लॉगिन",
+    "artisanTitle": "कारीगर लॉगिन",
     "subtitle": "अपना यूज़रनेम और पासवर्ड दर्ज करें",
     "usernameLabel": "यूज़रनेम या मोबाइल नंबर",
     "passwordLabel": "पासवर्ड",
@@ -116,10 +129,10 @@
     "emptyUrl": "पहले सर्वर URL दर्ज करें।",
     "saveFailed": "कनेक्ट नहीं हो सका। URL जाँचें और टनल चालू रखें।",
     "saved": "सर्वर URL सहेजा गया। अब लॉगिन कर सकते हैं।",
-    "helpTitle": "क्लाइंट डेमो (किसी भी मोबाइल नेटवर्क पर)",
-    "helpSteps": "1. PC पर public tunnel script चलाएँ\n2. https://....trycloudflare.com URL कॉपी करें\n3. यहाँ पेस्ट करें → Test → Save\n4. क्लाइंट के उपयोग के दौरान टनल विंडो खुली रखें",
-    "example": "उदाहरण टेक्स्ट न उपयोग करें — Git Bash से अपना URL कॉपी करें",
-    "urlNote": "start-public-api-tunnel.sh चलाने के बाद Git Bash में दिखा https:// लिंक यहाँ पेस्ट करें"
+    "helpTitle": "लोकल डेव (एक ही Wi-Fi)",
+    "helpSteps": "1. PC पर: php artisan serve --host=0.0.0.0 --port=8000\n2. \"Use local PC\" टैप करें या http://192.168.1.18:8000 दर्ज करें\n3. कनेक्शन जाँचें → Save",
+    "example": "लोकल: http://192.168.1.18:8000",
+    "urlNote": "ऐप स्वचालित रूप से /api जोड़ता है। लोकल IP के लिए फोन और PC एक ही Wi-Fi पर होने चाहिए।"
   },
   "common": {
     "continue": "जारी रखें",

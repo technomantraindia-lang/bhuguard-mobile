@@ -5,6 +5,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { EmptyState } from '../../components/EmptyState';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { OfficerVisitsHeader } from '../../components/officer/visits/OfficerVisitsHeader';
@@ -19,6 +20,7 @@ import {
 } from '../../components/officer/visits/OfficerVisitsSections';
 import type { OfficerAssignedVisit } from '../../hooks/useFieldOfficerVisitsData';
 import { useFieldOfficerVisitsData } from '../../hooks/useFieldOfficerVisitsData';
+import { useScrollBottomPadding } from '../../hooks/useTabBarLayout';
 import type { FieldOfficerStackParamList, FieldOfficerTabParamList } from '../../navigation/types';
 import { officerTheme } from '../../theme/officerDashboardTheme';
 
@@ -41,6 +43,7 @@ export function FieldOfficerAssignedVisitsScreen() {
     filteredVisits,
     primaryAssignmentId,
   } = useFieldOfficerVisitsData();
+  const scrollBottomPadding = useScrollBottomPadding();
 
   const openVisit = (visit: OfficerAssignedVisit) => {
     navigation.navigate('FieldOfficerAssignmentDetail', { assignmentId: visit.assignmentId });
@@ -91,7 +94,7 @@ export function FieldOfficerAssignedVisitsScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[styles.container, { paddingBottom: scrollBottomPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={reload} tintColor={officerTheme.primary} />
@@ -110,11 +113,8 @@ export function FieldOfficerAssignedVisitsScreen() {
 
         <OfficerVisitsQuickActions
           onGpsCheckIn={() => requireAssignmentId((id) => navigation.navigate('VisitCheckIn', { assignmentId: id }))}
-          onVerificationChecklist={() =>
-            requireAssignmentId((id) => navigation.navigate('VerificationChecklist', { assignmentId: id }))
-          }
           onFeedstockVerification={() => navigation.navigate('FieldOfficerFeedstockVerification')}
-          onBiocharProduction={() => navigation.navigate('FieldOfficerBiocharProduction')}
+          onBiocharProduction={() => navigation.navigate('FieldOfficerBiocharProductionList')}
           onInventoryMovement={() => navigation.navigate('FieldOfficerInventoryMovement')}
           onUploadEvidence={() =>
             requireAssignmentId((id) => navigation.navigate('VisitEvidenceUpload', { assignmentId: id }))
@@ -131,7 +131,7 @@ export function FieldOfficerAssignedVisitsScreen() {
             }
 
             if (activity.title.includes('Verification')) {
-              requireAssignmentId((id) => navigation.navigate('VerificationChecklist', { assignmentId: id }));
+              requireAssignmentId((id) => navigation.navigate('VisitEvidenceUpload', { assignmentId: id }));
               return;
             }
 
@@ -163,6 +163,5 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: officerTheme.marginMobile,
     paddingTop: 16,
-    paddingBottom: 24,
   },
 });

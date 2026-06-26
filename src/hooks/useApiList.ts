@@ -55,13 +55,16 @@ export function useApiList({ fetcher, listKeys }: UseApiListOptions) {
     void load();
   }, [load]);
 
+  const reload = useCallback(() => load(false), [load]);
+  const refresh = useCallback(() => load(true), [load]);
+
   return {
     items,
     loading,
     refreshing,
     error,
     pending,
-    reload: () => load(false),
-    refresh: () => load(true),
+    reload,
+    refresh,
   };
 }

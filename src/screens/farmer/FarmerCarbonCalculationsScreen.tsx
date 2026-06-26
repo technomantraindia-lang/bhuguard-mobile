@@ -6,8 +6,7 @@ import { getFarmerCarbonCalculations } from '../../api/farmerApi';
 import { ApiListScreen } from '../../components/ApiListScreen';
 import { ListItemCard } from '../../components/ListItemCard';
 import type { FarmerStackParamList } from '../../navigation/types';
-import { pickString } from '../../utils/apiHelpers';
-import { downloadFarmerReport } from '../../utils/reportDownload';
+import { REPORT_FILE_NOT_GENERATED_MESSAGE } from '../../utils/reportFileDownload';
 type Nav = NativeStackNavigationProp<FarmerStackParamList>;
 
 export function FarmerCarbonCalculationsScreen() {
@@ -36,25 +35,10 @@ export function FarmerCarbonCalculationsScreen() {
             { label: 'Period', keys: ['calculated_at'] },
           ]}
           downloadAvailable
-          onDownload={async () => {
-            const result = await downloadFarmerReport({
-              id: `carbon-${item.id}`,
-              catalogId: 'monitoring',
-              sourceType: 'carbon',
-              sourceId: Number(item.id),
-              title: `Monitoring Report ${pickString(item, 'calculation_code', 'id')}`,
-              description: 'Quarterly monitoring report',
-              updatedLabel: `Updated: ${pickString(item, 'calculated_at')}`,
-              updatedAt: pickString(item, 'calculated_at'),
-              statusBadge: 'available',
-              icon: 'science',
-              downloadAvailable: true,
-            });
-
-            if (!result.success) {
-              Alert.alert('Download failed', result.message ?? 'Unable to download this report.');
-            }
-          }}        />
+          onDownload={() => {
+            Alert.alert('Download unavailable', REPORT_FILE_NOT_GENERATED_MESSAGE);
+          }}
+        />
       )}
     />
   );

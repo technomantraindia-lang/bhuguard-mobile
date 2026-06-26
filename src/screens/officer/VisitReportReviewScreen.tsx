@@ -11,7 +11,7 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { useVisitVerificationProgress } from '../../hooks/useVisitVerificationProgress';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { colors } from '../../theme/colors';
-import { ensureAssignmentReadyForReportSubmit } from '../../utils/visitWorkflowHelpers';
+import { ensureAssignmentReadyForReportSubmit, ensureChecklistCompletedForReport } from '../../utils/visitWorkflowHelpers';
 import {
   clearVisitReportDraft,
   loadVisitReportDraft,
@@ -113,6 +113,7 @@ export function VisitReportReviewScreen({ route, navigation }: Props) {
       }
 
       await ensureAssignmentReadyForReportSubmit(assignmentId);
+      await ensureChecklistCompletedForReport(assignmentId);
 
       await submitVisitReport(assignmentId, {
         officer_recommendation: recommendation,

@@ -6,7 +6,7 @@ export const officerTheme = {
   surfaceContainer: '#E9EDFF',
   surfaceContainerHigh: '#E1E8FD',
   surfaceVariant: '#DCE2F7',
-  primary: '#005129',
+  primary: '#0B6B3A',
   primaryContainer: '#0B6B3A',
   onPrimary: '#FFFFFF',
   onPrimaryContainer: '#93E9AB',
@@ -29,7 +29,7 @@ export const officerTheme = {
   headingGreen: '#005129',
   marginMobile: 16,
   headerHeight: 64,
-  tabBarHeight: 72,
+  tabBarHeight: 64,
 } as const;
 
 export const officerShadow = {

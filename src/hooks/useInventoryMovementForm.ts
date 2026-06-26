@@ -16,6 +16,13 @@ import type {
 import { buildFormDataFilePart } from '../utils/liveEvidenceCapture';
 import { extractList, pickString, type ApiRecord } from '../utils/apiHelpers';
 import {
+  calculateDistanceInMeters,
+  DEFAULT_ALLOWED_RADIUS_METERS,
+  MAX_ALLOWED_ACCURACY_METERS,
+} from '../utils/locationUtils';
+import { captureHighAccuracyGps } from '../utils/officerGpsCapture';
+import { buildReceiverSignatureFormPart } from '../utils/uploadChecklistSignature';
+import {
   mapBatchInventoryOption,
   mapDestinationOptions,
   mapStorageLocation,
@@ -63,6 +70,7 @@ export function useInventoryMovementForm({ farmerId }: UseInventoryMovementFormO
   const [receiverName, setReceiverName] = useState('');
   const [receiverMobile, setReceiverMobile] = useState('');
   const [receiverConfirmed, setReceiverConfirmed] = useState(false);
+  const [receiverSignature, setReceiverSignature] = useState<InventoryEvidenceAsset | null>(null);
   const [officerRemarks, setOfficerRemarks] = useState('');
   const [recordStatus, setRecordStatus] = useState<InventoryMovementStatus>('draft');
   const [evidence, setEvidence] = useState<Partial<Record<InventoryEvidenceKey, InventoryEvidenceAsset>>>({});
@@ -158,11 +166,60 @@ export function useInventoryMovementForm({ farmerId }: UseInventoryMovementFormO
       return;
     }
 
-    const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-    setLatitude(position.coords.latitude);
-    setLongitude(position.coords.longitude);
-    setAccuracyM(position.coords.accuracy ?? null);
+    try {
+      const position = await captureHighAccuracyGps();
+      setLatitude(position.latitude);
+      setLongitude(position.longitude);
+      setAccuracyM(position.accuracyM);
+      setGpsVerified(false);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Unable to capture GPS location.'));
+    }
+  };
+
+  const verifyLocation = () => {
+    if (latitude == null || longitude == null) {
+      setError('Capture GPS before verifying location.');
+      setGpsVerified(false);
+      return false;
+    }
+
+    if (accuracyM != null && accuracyM > MAX_ALLOWED_ACCURACY_METERS) {
+      setError('GPS accuracy is low. Move to an open area and capture again.');
+      setGpsVerified(false);
+      return false;
+    }
+
+    const destinationLat = destination?.latitude;
+    const destinationLng = destination?.longitude;
+
+    if (destinationLat != null && destinationLng != null) {
+      const distanceM = calculateDistanceInMeters(latitude, longitude, destinationLat, destinationLng);
+
+      if (distanceM != null && distanceM > DEFAULT_ALLOWED_RADIUS_METERS) {
+        setError(
+          `You are ${Math.round(distanceM)}m from the destination farm. Move within ${DEFAULT_ALLOWED_RADIUS_METERS}m to verify.`,
+        );
+        setGpsVerified(false);
+        return false;
+      }
+    }
+
+    setError(null);
     setGpsVerified(true);
+    return true;
+  };
+
+  const setReceiverSignatureFromUri = (uri: string) => {
+    setReceiverSignature({
+      uri,
+      name: 'receiver-signature.png',
+      type: 'image/png',
+    });
+  };
+
+  const clearReceiverSignature = () => {
+    setReceiverSignature(null);
   };
 
   const captureEvidence = async (key: InventoryEvidenceKey) => {
@@ -245,6 +302,13 @@ export function useInventoryMovementForm({ farmerId }: UseInventoryMovementFormO
       formData.append('gps_accuracy', String(accuracyM));
     }
 
+    if (receiverSignature) {
+      formData.append(
+        'receiver_signature',
+        buildReceiverSignatureFormPart(receiverSignature.uri),
+      );
+    }
+
     const evidenceFieldMap: Record<InventoryEvidenceKey, string> = {
       stock_loading: 'stock_loading_photo',
       transport_vehicle: 'transport_vehicle_photo',
@@ -286,6 +350,16 @@ export function useInventoryMovementForm({ farmerId }: UseInventoryMovementFormO
 
     if (!receiverConfirmed) {
       setError('Receiver must confirm the quantity before submitting.');
+      return null;
+    }
+
+    if (!gpsVerified) {
+      setError('GPS location must be captured and verified before submitting.');
+      return null;
+    }
+
+    if (!receiverSignature) {
+      setError('Receiver signature is required before submitting.');
       return null;
     }
 
@@ -359,7 +433,11 @@ export function useInventoryMovementForm({ farmerId }: UseInventoryMovementFormO
     quantityError,
     reload: loadInitialData,
     captureGps,
+    verifyLocation,
     captureEvidence,
+    receiverSignature,
+    setReceiverSignatureFromUri,
+    clearReceiverSignature,
     saveDraft,
     submit,
   };

@@ -30,6 +30,7 @@ interface ApiDetailScreenProps {
   statusKeys?: string[];
   fields?: DetailField[];
   renderExtra?: (item: ApiRecord) => ReactNode;
+  footer?: ReactNode;
   showReportHeader?: boolean;
 }
 
@@ -54,6 +55,7 @@ export function ApiDetailScreen({
   statusKeys = ['status', 'assignment_status', 'report_status'],
   fields = [],
   renderExtra,
+  footer,
   showReportHeader = false,
 }: ApiDetailScreenProps) {
   const { data, loading, error, pending, reload } = useApiDetail(fetcher);
@@ -117,6 +119,7 @@ export function ApiDetailScreen({
         {!fields.length && !renderExtra ? (
           <EmptyState title="No details" message={EMPTY_DATA_MESSAGE} />
         ) : null}
+        {footer}
       </ScrollView>
     </SafeAreaView>
   );

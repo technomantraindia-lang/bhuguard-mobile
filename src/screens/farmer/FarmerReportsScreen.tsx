@@ -1,8 +1,6 @@
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ErrorState } from '../../components/ErrorState';
@@ -13,18 +11,17 @@ import { FarmerCarbonProgressCard } from '../../components/farmer/FarmerCarbonPr
 import { FarmerReportHistorySection } from '../../components/farmer/FarmerReportHistorySection';
 import { FarmerReportsHeader } from '../../components/farmer/FarmerReportsHeader';
 import { useFarmerReportsData } from '../../hooks/useFarmerReportsData';
-import type { FarmerStackParamList, FarmerTabParamList } from '../../navigation/types';
+import { useScrollBottomPadding } from '../../hooks/useTabBarLayout';
+import type { FarmerStackParamList } from '../../navigation/types';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 import type { FarmerReportItem } from '../../utils/farmerReportHelpers';
 
-type Nav = CompositeNavigationProp<
-  BottomTabNavigationProp<FarmerTabParamList, 'Reports'>,
-  NativeStackNavigationProp<FarmerStackParamList>
->;
+type Nav = NativeStackNavigationProp<FarmerStackParamList>;
 
 export function FarmerReportsScreen() {
   const navigation = useNavigation<Nav>();
   const { reports, history, summary, loading, error, reload } = useFarmerReportsData();
+  const scrollBottomPadding = useScrollBottomPadding();
 
   const handleViewReport = (report: FarmerReportItem) => {
     switch (report.catalogId) {
@@ -71,13 +68,13 @@ export function FarmerReportsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <FarmerReportsHeader
-        onBack={() => navigation.navigate('Home')}
+        onBack={() => navigation.navigate('FarmerTabs', { screen: 'Home' })}
         onNotificationsPress={() => navigation.navigate('FarmerNotifications')}
-        onProfilePress={() => navigation.navigate('Profile')}
+        onProfilePress={() => navigation.navigate('FarmerTabs', { screen: 'Profile' })}
       />
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={reload} tintColor={dashboardTheme.primary} />
@@ -96,16 +93,20 @@ export function FarmerReportsScreen() {
         </View>
 
         <View style={styles.reportList}>
-          {reports.map((report) => (
-            <FarmerAvailableReportCard
-              key={report.id}
-              report={report}
-              onView={() => handleViewReport(report)}
-            />
-          ))}
+          {reports.length === 0 ? (
+            <Text style={styles.emptyReports}>No reports available yet. Data will appear after verification and carbon calculations are recorded.</Text>
+          ) : (
+            reports.map((report) => (
+              <FarmerAvailableReportCard
+                key={report.id}
+                report={report}
+                onView={() => handleViewReport(report)}
+              />
+            ))
+          )}
         </View>
 
-        <FarmerReportHistorySection items={history} />
+        {history.length > 0 ? <FarmerReportHistorySection items={history} /> : null}
 
         <FarmerBenefitsSummaryCard
           summary={reportSummary}
@@ -123,7 +124,6 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: dashboardTheme.marginMobile,
-    paddingBottom: 120,
     gap: 16,
   },
   pageTitle: {
@@ -158,5 +158,12 @@ const styles = StyleSheet.create({
   },
   reportList: {
     gap: 12,
+  },
+  emptyReports: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: dashboardTheme.onSurfaceVariant,
+    textAlign: 'center',
+    paddingVertical: 12,
   },
 });

@@ -6,11 +6,18 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { getVisitAssignments } from '../../api/fieldOfficerApi';
+import { getApiErrorMessage } from '../../api/authApi';
+import {
+  deleteFieldOfficerReportDraft,
+  getAssignmentReport,
+  getVisitAssignments,
+} from '../../api/fieldOfficerApi';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
 import { useApiList } from '../../hooks/useApiList';
 import type { FieldOfficerStackParamList, FieldOfficerTabParamList } from '../../navigation/types';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
+import { downloadFieldOfficerReport } from '../../utils/fieldOfficerReportDownload';
+import { mapFieldOfficerReport } from '../../utils/fieldOfficerReportHelpers';
 import { extractList, pickNestedString, pickString, type ApiRecord } from '../../utils/apiHelpers';
 
 type ReportsFilterKey =
@@ -154,12 +161,41 @@ export function FieldOfficerVerificationReportsScreen() {
     navigation.navigate('FieldOfficerVerificationReportDetail', { reportId: assignmentId });
   };
 
-  const downloadPdf = () => {
-    Alert.alert('PDF download', 'PDF download will be available in a future update.');
+  const handleDownloadPdf = async (assignmentId: number) => {
+    try {
+      const data = await getAssignmentReport(assignmentId);
+      const reportRecord = (data?.report ?? data) as ApiRecord;
+      const report = mapFieldOfficerReport({ ...reportRecord, assignment_id: assignmentId });
+      const result = await downloadFieldOfficerReport(report);
+
+      if (!result.success) {
+        Alert.alert('Download unavailable', result.message ?? 'Report download is not available yet.');
+        return;
+      }
+
+      Alert.alert('Success', result.message ?? 'Report downloaded successfully');
+    } catch (err) {
+      Alert.alert('Download failed', getApiErrorMessage(err, 'Report download is not available yet.'));
+    }
   };
 
-  const removeDraft = () => {
-    Alert.alert('Delete draft', 'Draft deletion is not available yet.');
+  const handleRemoveDraft = async (assignmentId: number) => {
+    try {
+      const data = await getAssignmentReport(assignmentId);
+      const reportRecord = (data?.report ?? data) as ApiRecord;
+      const reportId = Number(reportRecord?.id);
+
+      if (!reportId) {
+        Alert.alert('Draft visit', 'Open the assignment to continue or complete the verification flow.');
+        return;
+      }
+
+      await deleteFieldOfficerReportDraft(reportId);
+      reload();
+      Alert.alert('Deleted', 'Draft report removed.');
+    } catch (err) {
+      Alert.alert('Delete failed', getApiErrorMessage(err, 'Unable to delete this draft right now.'));
+    }
   };
 
   return (
@@ -264,11 +300,11 @@ export function FieldOfficerVerificationReportsScreen() {
                   </Pressable>
 
                   {isDraft ? (
-                    <Pressable style={styles.actionDanger} onPress={removeDraft}>
+                    <Pressable style={styles.actionDanger} onPress={() => void handleRemoveDraft(assignmentId)}>
                       <BhuguardMaterialIcon name="cloud_off" size={18} color={officerTheme.onErrorContainer} />
                     </Pressable>
                   ) : (
-                    <Pressable style={styles.actionSecondary} onPress={downloadPdf}>
+                    <Pressable style={styles.actionSecondary} onPress={() => void handleDownloadPdf(assignmentId)}>
                       <BhuguardMaterialIcon name="upload" size={18} color={officerTheme.primaryContainer} />
                       <Text style={styles.actionSecondaryText}>PDF</Text>
                     </Pressable>

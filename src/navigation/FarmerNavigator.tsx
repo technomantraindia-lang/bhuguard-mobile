@@ -25,18 +25,33 @@ import { FarmBoundaryUploadingScreen } from '../screens/farmer/boundary/FarmBoun
 import { FarmerFarmsScreen } from '../screens/farmer/FarmerFarmsScreen';
 import { FarmerFeedstockCollectionScreen } from '../screens/farmer/FarmerFeedstockCollectionScreen';
 import { FarmerFinalReportDetailScreen } from '../screens/farmer/FarmerFinalReportDetailScreen';
+import { FarmerReportPreviewScreen } from '../screens/reports/ReportsCenterScreen';
 import { FarmerFinalReportsScreen } from '../screens/farmer/FarmerFinalReportsScreen';
 import { FarmerNotificationsScreen } from '../screens/farmer/FarmerNotificationsScreen';
 import { FarmerActivityLogsScreen } from '../screens/farmer/FarmerActivityLogsScreen';
 import { FarmerProjectDetailsScreen } from '../screens/farmer/FarmerProjectDetailsScreen';
-import { FarmerSupportScreen } from '../screens/farmer/FarmerSupportScreen';
+import { CreateSupportThreadScreen } from '../screens/shared/CreateSupportThreadScreen';
+import { SupportChatScreenRoute } from '../screens/shared/SupportChatScreenRoute';
+import { FarmerChatbotSupportRoute } from '../screens/shared/ChatbotSupportScreenRoute';
+import { FarmerSupportThreadsRoute } from '../screens/shared/SupportThreadsScreenRoute';
 import { FarmerServiceDetailScreen } from '../screens/farmer/FarmerServiceDetailScreen';
+import { FarmerBiocharActivitiesScreen } from '../screens/farmer/FarmerBiocharActivitiesScreen';
+import { FarmerBiocharProductionScreen } from '../screens/farmer/FarmerBiocharProductionScreen';
+import { FarmerBiocharUpdatesScreen } from '../screens/farmer/FarmerBiocharUpdatesScreen';
+import { FarmerLegalScreen } from '../screens/farmer/FarmerLegalScreen';
 import { FarmerServicesScreen } from '../screens/farmer/FarmerServicesScreen';
+import { FarmerWalletScreen } from '../screens/farmer/FarmerWalletScreen';
 import { FarmerSettingsScreen } from '../screens/farmer/FarmerSettingsScreen';
 import { FarmerSoilSamplesScreen } from '../screens/farmer/FarmerSoilSamplesScreen';
+import { FarmerSoilSampleDetailScreen } from '../screens/farmer/FarmerSoilSampleDetailScreen';
 import { FarmerVerificationStatusScreen } from '../screens/farmer/FarmerVerificationStatusScreen';
 import { FarmerWeeklyUpdateDetailScreen } from '../screens/farmer/FarmerWeeklyUpdateDetailScreen';
 import { FarmerWeeklyUpdatesScreen } from '../screens/farmer/FarmerWeeklyUpdatesScreen';
+import { FarmerCreateWeeklyUpdateScreen } from '../screens/farmer/FarmerCreateWeeklyUpdateScreen';
+import { FarmerEvidenceListScreen } from '../screens/farmer/FarmerEvidenceListScreen';
+import { FarmerEvidenceDetailScreen } from '../screens/farmer/FarmerEvidenceDetailScreen';
+import { FarmerUploadEvidenceScreen } from '../screens/farmer/FarmerUploadEvidenceScreen';
+import { FullscreenImageScreen } from '../screens/shared/FullscreenImageScreen';
 import { StitchScreenRoute } from '../screens/stitch/StitchScreenRoute';
 import { FarmerTabNavigator } from './FarmerTabNavigator';
 import type { FarmerStackParamList } from './types';
@@ -121,6 +136,16 @@ export function FarmerNavigator() {
         />
         <Stack.Screen name="FarmerWeeklyUpdates" component={FarmerWeeklyUpdatesScreen} />
         <Stack.Screen name="FarmerWeeklyUpdateDetail" component={FarmerWeeklyUpdateDetailScreen} />
+        <Stack.Screen name="FarmerCreateWeeklyUpdate" component={FarmerCreateWeeklyUpdateScreen} />
+        <Stack.Screen name="FarmerBiocharUpdates" component={FarmerBiocharUpdatesScreen} />
+        <Stack.Screen name="FarmerBiocharActivities" component={FarmerBiocharActivitiesScreen} />
+        <Stack.Screen name="FarmerBiocharProduction" component={FarmerBiocharProductionScreen} />
+        <Stack.Screen name="FarmerWallet" component={FarmerWalletScreen} />
+        <Stack.Screen name="FarmerLegal" component={FarmerLegalScreen} />
+        <Stack.Screen name="FarmerEvidenceList" component={FarmerEvidenceListScreen} />
+        <Stack.Screen name="FarmerUploadEvidence" component={FarmerUploadEvidenceScreen} />
+        <Stack.Screen name="FarmerEvidenceDetail" component={FarmerEvidenceDetailScreen} />
+        <Stack.Screen name="FullscreenImage" component={FullscreenImageScreen} />
         <Stack.Screen name="FarmerServices" component={FarmerServicesScreen} />
         <Stack.Screen name="FarmerServiceDetail" component={FarmerServiceDetailScreen} />
         <Stack.Screen name="FarmerActivityLogs" component={FarmerActivityLogsScreen} />
@@ -128,17 +153,26 @@ export function FarmerNavigator() {
         <Stack.Screen name="FarmerAddBaselineAssessment" component={FarmerAddBaselineAssessmentScreen} />
         <Stack.Screen name="FarmerBaselineAssessmentDetail" component={FarmerBaselineAssessmentDetailScreen} />
         <Stack.Screen name="FarmerSoilSamples" component={FarmerSoilSamplesScreen} />
+        <Stack.Screen name="FarmerSoilSampleDetail" component={FarmerSoilSampleDetailScreen} />
         <Stack.Screen name="FarmerVerificationStatus" component={FarmerVerificationStatusScreen} />
         <Stack.Screen name="FarmerCarbonCalculations" component={FarmerCarbonCalculationsScreen} />
         <Stack.Screen name="FarmerCarbonCalculationDetail" component={FarmerCarbonCalculationDetailScreen} />
         <Stack.Screen name="FarmerFinalReports" component={FarmerFinalReportsScreen} />
         <Stack.Screen name="FarmerFeedstockCollection" component={FarmerFeedstockCollectionScreen} />
         <Stack.Screen name="FarmerFinalReportDetail" component={FarmerFinalReportDetailScreen} />
+        <Stack.Screen name="FarmerReportPreview" component={FarmerReportPreviewScreen} />
         <Stack.Screen name="FarmerNotifications" component={FarmerNotificationsScreen} />
         <Stack.Screen name="FarmerAddressDetails" component={FarmerAddressDetailsScreen} />
         <Stack.Screen name="FarmerProjectDetails" component={FarmerProjectDetailsScreen} />
         <Stack.Screen name="FarmerBenefits" component={FarmerBenefitsScreen} />
-        <Stack.Screen name="FarmerSupport" component={FarmerSupportScreen} />
+        <Stack.Screen
+          name="SupportThreads"
+          component={FarmerSupportThreadsRoute}
+          initialParams={{ supportRole: 'farmer' }}
+        />
+        <Stack.Screen name="ChatbotSupport" component={FarmerChatbotSupportRoute} />
+        <Stack.Screen name="CreateSupportThread" component={CreateSupportThreadScreen} />
+        <Stack.Screen name="SupportChat" component={SupportChatScreenRoute} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />

@@ -33,6 +33,8 @@ export interface DestinationFarmOption {
   farmCode: string;
   plotId: number | null;
   plotCode: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export function mapBatchInventoryOption(record: ApiRecord): BatchInventoryOption {
@@ -86,11 +88,23 @@ export function mapDestinationOptions(farmers: ApiRecord[]): DestinationFarmOpti
         farmCode: pickString(farmRecord, 'farm_code', 'farmCode'),
         plotId: plot ? Number(plot.id ?? 0) : null,
         plotCode: plot ? pickString(plot, 'plot_code', 'plotCode') : '—',
+        latitude: readCoordinate(farmRecord.latitude),
+        longitude: readCoordinate(farmRecord.longitude),
       });
     }
   }
 
   return options.filter((option) => option.farmId > 0);
+}
+
+function readCoordinate(value: unknown): number | null {
+  if (value == null || value === '') {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 export function formatInventoryQuantity(value: number, unit = 'Kg'): string {

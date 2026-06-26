@@ -6,7 +6,6 @@ import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 
 import { getApiErrorMessage } from '../../api/authApi';
@@ -31,11 +30,16 @@ import { ProfilePhotoCropModal } from '../../components/farmer/profile/ProfilePh
 import { ProfilePhotoPreviewModal } from '../../components/farmer/profile/ProfilePhotoPreviewModal';
 import { ProfileSecureField } from '../../components/farmer/profile/ProfileSecureField';
 import { ProfileLinkRow, ProfileToggleRow } from '../../components/farmer/profile/ProfileToggleRow';
-import { FARMER_PROFILE_DOCUMENTS } from '../../constants/farmerProfileDocuments';
+import { ProfileOptionSheet } from '../../components/farmer/profile/ProfileOptionSheet';
+import { PROFILE_LANGUAGE_OPTIONS } from '../../constants/farmerProfileDocuments';
+import { FARMER_GENDER_OPTIONS, genderLabel } from '../../constants/farmerGenderOptions';
 import { useFarmerProfileForm } from '../../hooks/useFarmerProfileForm';
+import { useFarmerProfileDocuments } from '../../hooks/useFarmerProfileDocuments';
+import { useTranslation } from '../../i18n/I18nContext';
 import { invalidateProfilePhotoCache } from '../../utils/profilePhotoCache';
 import { useLogout } from '../../hooks/useLogout';
 import type { FarmerStackParamList, FarmerTabParamList } from '../../navigation/types';
+import { useAppTheme } from '../../theme/ThemeContext';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 
 type Nav = CompositeNavigationProp<
@@ -172,11 +176,15 @@ function buildPhotoFormData(uri: string, mimeType = 'image/jpeg'): FormData {
 export function FarmerProfileScreen() {
   const navigation = useNavigation<Nav>();
   const logout = useLogout();
-  const { profile, loading, saving, error, reload, saveProfileFields, updateField } = useFarmerProfileForm();
+  const { setLanguage } = useTranslation();
+  const { isDarkMode, setDarkMode } = useAppTheme();
+  const { profile, loading, saving, error, reload, saveProfileFields, saveBankDetails, updateField } = useFarmerProfileForm();
+  const { documents: profileDocuments } = useFarmerProfileDocuments();
 
   const [expanded, setExpanded] = useState<SectionId | null>('personal');
   const [modal, setModal] = useState<ModalState>({ visible: false });
   const [languageSheetOpen, setLanguageSheetOpen] = useState(false);
+  const [genderSheetOpen, setGenderSheetOpen] = useState(false);
 
   const [photoSheetOpen, setPhotoSheetOpen] = useState(false);
   const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
@@ -198,7 +206,6 @@ export function FarmerProfileScreen() {
   const [mpinApiError, setMpinApiError] = useState<string | null>(null);
 
   const [biometricEnabled, setBiometricEnabled] = useState(true);
-  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const toggleSection = (id: SectionId) => {
@@ -224,8 +231,24 @@ export function FarmerProfileScreen() {
     }
   };
 
-  const handleUpdateBank = () => {
-    showSuccess('Bank Details Updated', 'Your bank details have been saved for verification review.');
+  const handleUpdateBank = async () => {
+    if (!profile) {
+      return;
+    }
+
+    const success = await saveBankDetails({
+      account_holder_name: profile.accountHolder,
+      bank_name: profile.bankName,
+      account_number: profile.accountNumberRaw || profile.accountNumber,
+      ifsc_code: profile.ifscCode,
+      branch_name: profile.branchName || null,
+      account_type: profile.accountType || null,
+      upi_id: profile.upiId || null,
+    });
+
+    if (success) {
+      showSuccess('Bank Details Updated', 'Your bank details have been saved successfully.');
+    }
   };
 
   const openPhotoSheet = () => {
@@ -367,28 +390,6 @@ export function FarmerProfileScreen() {
     }
   };
 
-  const handleViewDocument = (title: string) => {
-    Alert.alert('Document Preview', `${title} preview will open here.`);
-  };
-
-  const handleReplaceDocument = async (title: string) => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permission.granted) {
-      Alert.alert('Permission required', 'Gallery access is needed to upload documents.');
-      return;
-    }
-
-    const result = await DocumentPicker.getDocumentAsync({
-      copyToCacheDirectory: true,
-      multiple: false,
-      type: ['image/*', 'application/pdf'],
-    });
-
-    if (!result.canceled && result.assets?.[0]) {
-      showSuccess('Document Uploaded', `${title} has been uploaded and sent for verification.`);
-    }
-  };
 
   const handleSavePersonal = async () => {
     if (!profile) {
@@ -399,6 +400,9 @@ export function FarmerProfileScreen() {
       name: profile.fullName,
       email: profile.email,
       preferred_language: profile.preferredLanguage,
+      gender: profile.genderValue || undefined,
+      aadhaar_number: profile.aadhaarNumber || undefined,
+      pan_number: profile.panNumber ? profile.panNumber.toUpperCase() : undefined,
     });
 
     if (success) {
@@ -473,9 +477,22 @@ export function FarmerProfileScreen() {
             onChangeText={(v) => updateField('email', v)}
             keyboardType="email-address"
           />
-          <ProfileFormField label="Date of Birth" value={data.dateOfBirth} onChangeText={(v) => updateField('dateOfBirth', v)} />
-          <ProfileFormField label="Gender" value={data.gender} onChangeText={(v) => updateField('gender', v)} />
-          <ProfileFormField label="Aadhaar Number" value={data.aadhaarMasked} editable={false} />
+          <ProfileLinkRow label="Gender" onPress={() => setGenderSheetOpen(true)} />
+          <Text style={styles.selectorValue}>{data.gender}</Text>
+          <ProfileFormField
+            label="Aadhaar Number"
+            value={data.aadhaarNumber}
+            onChangeText={(v) => updateField('aadhaarNumber', v.replace(/\D/g, '').slice(0, 12))}
+            placeholder={data.aadhaarMasked !== '—' ? data.aadhaarMasked : 'Enter 12-digit Aadhaar'}
+            keyboardType="number-pad"
+          />
+          <ProfileFormField
+            label="PAN Number"
+            value={data.panNumber}
+            onChangeText={(v) => updateField('panNumber', v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))}
+            placeholder={data.panMasked !== '—' ? data.panMasked : 'ABCDE1234F'}
+            autoCapitalize="characters"
+          />
           <SectionButton label="Save Personal Info" onPress={() => void handleSavePersonal()} loading={saving} />
         </ProfileAccordionSection>
 
@@ -503,10 +520,20 @@ export function FarmerProfileScreen() {
         >
           <ProfileFormField label="Account Holder Name" value={data.accountHolder} onChangeText={(v) => updateField('accountHolder', v)} />
           <ProfileFormField label="Bank Name" value={data.bankName} onChangeText={(v) => updateField('bankName', v)} />
-          <ProfileFormField label="Account Number" value={data.accountNumber} onChangeText={(v) => updateField('accountNumber', v)} keyboardType="number-pad" />
-          <ProfileFormField label="IFSC Code" value={data.ifscCode} onChangeText={(v) => updateField('ifscCode', v)} />
-          <ProfileFormField label="UPI ID" value={data.upiId} onChangeText={(v) => updateField('upiId', v)} />
-          <SectionButton label="Update Bank Details" onPress={handleUpdateBank} />
+          <ProfileFormField
+            label="Account Number"
+            value={data.accountNumberRaw || data.accountNumber}
+            onChangeText={(v) => {
+              updateField('accountNumberRaw', v.replace(/\D/g, ''));
+              updateField('accountNumber', v.replace(/\D/g, ''));
+            }}
+            keyboardType="number-pad"
+          />
+          <ProfileFormField label="IFSC Code" value={data.ifscCode} onChangeText={(v) => updateField('ifscCode', v.toUpperCase())} autoCapitalize="characters" />
+          <ProfileFormField label="Branch Name" value={data.branchName} onChangeText={(v) => updateField('branchName', v)} />
+          <ProfileFormField label="Account Type" value={data.accountType} onChangeText={(v) => updateField('accountType', v)} />
+          <ProfileFormField label="UPI ID (optional)" value={data.upiId} onChangeText={(v) => updateField('upiId', v)} />
+          <SectionButton label="Update Bank Details" onPress={() => void handleUpdateBank()} loading={saving} />
         </ProfileAccordionSection>
 
         <ProfileAccordionSection
@@ -515,13 +542,12 @@ export function FarmerProfileScreen() {
           expanded={expanded === 'documents'}
           onToggle={() => toggleSection('documents')}
         >
-          {FARMER_PROFILE_DOCUMENTS.map((document) => (
+          {profileDocuments.map((document) => (
             <ProfileDocumentCard
               key={document.id}
               title={document.title}
               status={document.status}
-              onView={() => handleViewDocument(document.title)}
-              onReplace={() => void handleReplaceDocument(document.title)}
+              actionsEnabled={false}
             />
           ))}
         </ProfileAccordionSection>
@@ -628,12 +654,24 @@ export function FarmerProfileScreen() {
               }
             }}
           />
-          <ProfileToggleRow label="Dark Mode" value={darkModeEnabled} onValueChange={setDarkModeEnabled} />
-          <ProfileLinkRow label="Privacy Settings" onPress={() => Alert.alert('Privacy Settings', 'Privacy controls will be available soon.')} />
-          <ProfileLinkRow label="Terms & Conditions" onPress={() => Alert.alert('Terms & Conditions', 'Bhuguard DMRV terms and conditions.')} />
+          <ProfileToggleRow
+            label="Dark Mode"
+            value={isDarkMode}
+            onValueChange={(value) => {
+              void setDarkMode(value);
+            }}
+          />
+          <ProfileLinkRow
+            label="Privacy Policy"
+            onPress={() => navigation.navigate('FarmerLegal', { document: 'privacy' })}
+          />
+          <ProfileLinkRow
+            label="Terms & Conditions"
+            onPress={() => navigation.navigate('FarmerLegal', { document: 'terms' })}
+          />
           <ProfileLinkRow
             label="Help & Support"
-            onPress={() => Alert.alert('Help & Support', 'Contact Bhuguard support at support@bhuguard.com or call 1800-000-000.')}
+            onPress={() => navigation.navigate('ChatbotSupport', { supportRole: 'farmer', sourceModule: 'farmer_profile' })}
           />
         </ProfileAccordionSection>
 
@@ -657,9 +695,22 @@ export function FarmerProfileScreen() {
         selectedLanguage={data.preferredLanguage}
         onSelect={(value) => {
           updateField('preferredLanguage', value);
+          void setLanguage(value as 'en' | 'hi' | 'gu');
           void saveProfileFields({ preferred_language: value });
         }}
         onClose={() => setLanguageSheetOpen(false)}
+      />
+
+      <ProfileOptionSheet
+        visible={genderSheetOpen}
+        title="Select Gender"
+        options={FARMER_GENDER_OPTIONS}
+        selectedValue={data.genderValue}
+        onSelect={(value) => {
+          updateField('genderValue', value);
+          updateField('gender', genderLabel(value));
+        }}
+        onClose={() => setGenderSheetOpen(false)}
       />
 
       <ProfilePhotoBottomSheet
@@ -785,6 +836,14 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: dashboardTheme.error,
     fontWeight: '600',
+  },
+  selectorValue: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: dashboardTheme.onSurfaceVariant,
+    marginTop: -4,
+    marginBottom: 8,
+    paddingHorizontal: 4,
   },
   pressed: {
     opacity: 0.92,

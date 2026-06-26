@@ -38,6 +38,16 @@ export function CompanyActivitiesTabScreen() {
           onPress={() => navigation.navigate('CompanyBiocharRecords')}
         />
         <DashboardCard
+          title="Evidence Upload"
+          subtitle="Photos, documents and weight slips"
+          onPress={() => navigation.navigate('CompanyEvidenceUpload')}
+        />
+        <DashboardCard
+          title="Evidence List"
+          subtitle="Uploaded company evidence"
+          onPress={() => navigation.navigate('CompanyEvidenceList')}
+        />
+        <DashboardCard
           title="Verification Status"
           subtitle="Site verification progress"
           onPress={() => navigation.navigate('StitchScreen', { screenKey: 'company_verification_status' })}

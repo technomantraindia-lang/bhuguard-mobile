@@ -8,7 +8,7 @@ export const dashboardTheme = {
   surfaceContainer: '#E9EDFF',
   surfaceBright: '#F9F9FF',
   surfaceContainerHighest: '#DCE2F7',
-  primary: '#005129',
+  primary: '#0B6B3A',
   primaryContainer: '#0B6B3A',
   primaryFixedDim: '#84D99C',
   primaryFixed: '#9FF5B7',
@@ -36,7 +36,29 @@ export const dashboardTheme = {
   creditsSurface: '#FEFCE8',
   marginMobile: 16,
   headerHeight: 56,
-  tabBarHeight: 88,
+  tabBarHeight: 64,
+} as const;
+
+export const dashboardThemeDark = {
+  ...dashboardTheme,
+  background: '#0F1419',
+  surface: '#161D26',
+  surfaceLowest: '#1B2430',
+  surfaceLow: '#1F2A22',
+  surfaceContainerLow: '#1A2230',
+  surfaceVariant: '#2A3444',
+  surfaceContainer: '#222C3A',
+  surfaceBright: '#1B2430',
+  surfaceContainerHighest: '#2E3848',
+  onSurface: '#E8EEF5',
+  onBackground: '#E8EEF5',
+  onSurfaceVariant: '#B8C2CE',
+  textMuted: '#9AA6B2',
+  headingGreen: '#93E9AB',
+  outline: '#4B5563',
+  outlineVariant: '#2A3444',
+  surfaceContainerHigh: '#283142',
+  creditsSurface: '#2A2410',
 } as const;
 
 export const dashboardShadow = {

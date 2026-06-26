@@ -26,7 +26,8 @@ import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIc
 import { VisitVerificationProgressStepper } from '../../components/officer/VisitVerificationProgressStepper';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
-import { isVisitChecklistCompleted, countVisitEvidenceUploads } from '../../utils/visitChecklistHelpers';
+import { countVisitEvidenceUploads } from '../../utils/visitChecklistHelpers';
+import { buildVisitCheckInRouteContext, hasCompletedGpsCheckIn } from '../../utils/visitCheckInHelpers';
 import { buildVisitDetailModel } from '../../utils/visitDetailModel';
 import { resolveVisitVerificationProgress, unwrapAssignmentRecord } from '../../utils/visitWorkflowHelpers';
 
@@ -102,24 +103,40 @@ export function FieldOfficerAssignmentDetailScreen({ route, navigation }: Props)
 
   const detail = buildVisitDetailModel(assignment, assignmentId);
   const progress = resolveVisitVerificationProgress(unwrapAssignmentRecord(assignment));
-  const checklistCompleted = isVisitChecklistCompleted(assignment);
   const evidenceUploadsCount = countVisitEvidenceUploads(assignment);
 
-  const openChecklist = () => {
-    navigation.navigate('VerificationChecklist', { assignmentId });
+  const openCheckIn = () => {
+    navigation.navigate('VisitCheckIn', {
+      assignmentId,
+      visitContext: buildVisitCheckInRouteContext(assignment, assignmentId),
+    });
+  };
+
+  const openEvidenceUpload = () => {
+    navigation.navigate('VisitEvidenceUpload', { assignmentId });
   };
 
   const openVerificationFlow = () => {
-    if (detail.canStartVerification) {
-      void runAction(async () => {
-        await startVerification(assignmentId);
-        navigation.navigate('VerificationChecklist', { assignmentId });
-      });
+    if (!hasCompletedGpsCheckIn(assignment)) {
+      Alert.alert(
+        'GPS check-in required',
+        'GPS check-in is required before starting verification.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Check in',
+            onPress: openCheckIn,
+          },
+        ],
+      );
       return;
     }
 
-    if (!checklistCompleted) {
-      navigation.navigate('VerificationChecklist', { assignmentId });
+    if (detail.canStartVerification) {
+      void runAction(async () => {
+        await startVerification(assignmentId);
+        navigation.navigate('VisitEvidenceUpload', { assignmentId });
+      });
       return;
     }
 
@@ -138,7 +155,7 @@ export function FieldOfficerAssignmentDetailScreen({ route, navigation }: Props)
     }
 
     if (detail.canCheckIn) {
-      navigation.navigate('VisitCheckIn', { assignmentId });
+      openCheckIn();
       return;
     }
 
@@ -257,21 +274,14 @@ export function FieldOfficerAssignmentDetailScreen({ route, navigation }: Props)
           </View>
         </DetailCard>
 
-        <DetailCard title="Verification Checklist" icon="fact_check">
-          {detail.checklistPreview.map((item) => (
-            <View key={item.key} style={styles.checklistRow}>
-              <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
-                {item.checked ? (
-                  <BhuguardMaterialIcon name="verified" size={14} color={officerTheme.onPrimary} filled />
-                ) : null}
-              </View>
-              <Text style={styles.checklistLabel}>{item.label}</Text>
-            </View>
-          ))}
-          <Pressable style={styles.viewAllButton} onPress={openChecklist}>
-            <Text style={styles.viewAllText}>
-              View all {detail.checklistTotalCount} items
-            </Text>
+        <DetailCard title="Biochar Evidence" icon="fact_check">
+          <Text style={styles.fieldValue}>
+            {evidenceUploadsCount > 0
+              ? `${evidenceUploadsCount} evidence file(s) uploaded`
+              : 'No evidence uploaded yet for this visit.'}
+          </Text>
+          <Pressable style={styles.viewAllButton} onPress={openEvidenceUpload}>
+            <Text style={styles.viewAllText}>Upload or review evidence</Text>
             <BhuguardMaterialIcon name="chevron_right" size={18} color={officerTheme.primary} />
           </Pressable>
         </DetailCard>
@@ -301,15 +311,24 @@ export function FieldOfficerAssignmentDetailScreen({ route, navigation }: Props)
             <BhuguardMaterialIcon name="arrow_forward" size={20} color={officerTheme.primary} />
             <Text style={styles.secondaryActionText}>
               {detail.canCheckIn
-                ? 'Start Check-in'
+                ? 'GPS Check-in'
                 : detail.showVerificationActions
-                  ? checklistCompleted
-                    ? evidenceUploadsCount > 0
-                      ? 'Review Report'
-                      : 'Upload Evidence'
-                    : 'Open Checklist'
-                  : 'Start Check-in'}
+                  ? evidenceUploadsCount > 0
+                    ? 'Review Report'
+                    : 'Upload Evidence'
+                  : 'Start Visit'}
             </Text>
+          </Pressable>
+        ) : null}
+
+        {detail.showVerificationActions ? (
+          <Pressable
+            style={[styles.secondaryAction, actionLoading && styles.actionDisabled]}
+            onPress={() => navigation.navigate('VisitEvidenceUpload', { assignmentId })}
+            disabled={actionLoading}
+          >
+            <BhuguardMaterialIcon name="photo_camera" size={20} color={officerTheme.primary} />
+            <Text style={styles.secondaryActionText}>Evidence Upload</Text>
           </Pressable>
         ) : null}
       </View>

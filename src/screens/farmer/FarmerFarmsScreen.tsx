@@ -24,6 +24,7 @@ import { FarmerFarmsMapOverview } from '../../components/farmer/FarmerFarmsMapOv
 import { FarmerFarmsSummaryCard } from '../../components/farmer/FarmerFarmsSummaryCard';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
 import { useFarmerFarmsData } from '../../hooks/useFarmerFarmsData';
+import { useFabBottomOffset, useScrollBottomPadding } from '../../hooks/useTabBarLayout';
 import type { FarmerStackParamList, FarmerTabParamList } from '../../navigation/types';
 import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 import { openGoogleMaps } from '../../utils/farmMapHelpers';
@@ -55,6 +56,8 @@ export function FarmerFarmsScreen() {
     cycleFilter,
     reload,
   } = useFarmerFarmsData();
+  const scrollBottomPadding = useScrollBottomPadding(24);
+  const fabBottom = useFabBottomOffset();
 
   useFocusEffect(
     useCallback(() => {
@@ -98,7 +101,7 @@ export function FarmerFarmsScreen() {
       <FlatList
         data={farms}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: scrollBottomPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={reload} tintColor={dashboardTheme.primary} />
@@ -182,7 +185,7 @@ export function FarmerFarmsScreen() {
       />
 
       <Pressable
-        style={({ pressed }) => [styles.fab, dashboardShadow, pressed && styles.fabPressed]}
+        style={({ pressed }) => [styles.fab, dashboardShadow, { bottom: fabBottom }, pressed && styles.fabPressed]}
         onPress={() => navigation.navigate('FarmerAddFarm')}
       >
         <BhuguardMaterialIcon name="add_circle" size={22} color={dashboardTheme.onPrimary} />
@@ -199,7 +202,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: dashboardTheme.marginMobile,
-    paddingBottom: 140,
     gap: 12,
   },
   headerBlock: {
@@ -267,7 +269,6 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: dashboardTheme.marginMobile,
-    bottom: 96,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,

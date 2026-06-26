@@ -29,7 +29,7 @@ export function useFarmerActivitiesData() {
 
     try {
       const [activityData, farmsData, verificationData] = await Promise.all([
-        getFarmerActivityLogs(),
+        getFarmerActivityLogs(true),
         getFarmerFarms(),
         getFarmerVerificationStatus(),
       ]);

@@ -14,9 +14,16 @@ export function CompanyBiocharRecordsScreen() {
   return (
     <ApiListScreen
       title="Biochar Records"
-      subtitle="GET /company/biochar-records"
+      subtitle="Biochar production records"
       fetcher={getCompanyBiocharRecords}
       listKeys={['biochar_records']}
+      emptyTitle="No biochar records yet"
+      emptyMessage="Add production batches linked to your biochar service submissions."
+      headerAction={{
+        label: 'Add Record',
+        onPress: () =>
+          navigation.navigate('CompanyCreateRecord', { formKey: 'company_create_biochar' }),
+      }}
       onItemPress={(item) =>
         navigation.navigate('CompanyBiocharRecordDetail', { id: Number(item.id) })
       }

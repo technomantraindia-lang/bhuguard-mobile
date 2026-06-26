@@ -10,6 +10,7 @@ interface ProfileFormFieldProps {
   editable?: boolean;
   secureTextEntry?: boolean;
   keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'number-pad';
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 }
 
 export function ProfileFormField({
@@ -20,6 +21,7 @@ export function ProfileFormField({
   editable = true,
   secureTextEntry = false,
   keyboardType = 'default',
+  autoCapitalize = 'sentences',
 }: ProfileFormFieldProps) {
   return (
     <View style={styles.field}>
@@ -32,6 +34,7 @@ export function ProfileFormField({
         editable={editable}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
         style={[styles.input, !editable && styles.inputDisabled]}
       />
     </View>

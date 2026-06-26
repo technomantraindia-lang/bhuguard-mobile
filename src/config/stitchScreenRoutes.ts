@@ -1,12 +1,13 @@
-import type { FieldOfficerStackParamList } from '../navigation/types';
-import type { FarmerStackParamList } from '../navigation/types';
+import type { CompanyStackParamList, FieldOfficerStackParamList, FarmerStackParamList } from '../navigation/types';
 
 type FarmerScreen = keyof FarmerStackParamList;
 type OfficerScreen = keyof FieldOfficerStackParamList;
+type CompanyScreen = keyof CompanyStackParamList;
 
 export interface StitchNavigateReplacement {
   farmer?: FarmerScreen;
   officer?: OfficerScreen;
+  company?: CompanyScreen;
   buildParams?: (itemId?: number, context?: { assignmentId?: number }) => object | undefined;
 }
 
@@ -14,6 +15,10 @@ export interface StitchNavigateReplacement {
 export const STITCH_NAVIGATE_REPLACEMENTS: Record<string, StitchNavigateReplacement> = {
   add_activity_log: {
     farmer: 'FarmerSubmitActivity',
+    buildParams: (itemId) => (itemId ? { farmId: itemId } : undefined),
+  },
+  add_farmer_evidence: {
+    farmer: 'FarmerUploadEvidence',
     buildParams: (itemId) => (itemId ? { farmId: itemId } : undefined),
   },
   add_feedstock_collection: {
@@ -25,7 +30,7 @@ export const STITCH_NAVIGATE_REPLACEMENTS: Record<string, StitchNavigateReplacem
     buildParams: (itemId) => (itemId ? { verificationId: itemId } : undefined),
   },
   officer_biochar_production: {
-    officer: 'FieldOfficerBiocharProduction',
+    officer: 'FieldOfficerBiocharProductionList',
     buildParams: (itemId) => (itemId ? { farmerId: itemId } : undefined),
   },
   boundary_evidence: {
@@ -59,6 +64,20 @@ export const STITCH_NAVIGATE_REPLACEMENTS: Record<string, StitchNavigateReplacem
   land_registration: { officer: 'FarmerLandDetails' },
   onboarding_review_stitch: { officer: 'FarmerOnboardingReview' },
   onboarding_success_stitch: { officer: 'FarmerOnboardingSuccess' },
+  officer_inventory_tasks: { officer: 'FieldOfficerInventoryTasks' },
+  company_create_site: { company: 'CompanyCreateRecord', buildParams: () => ({ formKey: 'company_create_site' }) },
+  company_create_submission: { company: 'CompanyCreateRecord', buildParams: () => ({ formKey: 'company_create_submission' }) },
+  company_create_waste: { company: 'CompanyCreateRecord', buildParams: () => ({ formKey: 'company_create_waste' }) },
+  company_create_industrial: { company: 'CompanyCreateRecord', buildParams: () => ({ formKey: 'company_create_industrial' }) },
+  company_create_biochar: { company: 'CompanyCreateRecord', buildParams: () => ({ formKey: 'company_create_biochar' }) },
+  company_create_registry: { company: 'CompanyCreateRecord', buildParams: () => ({ formKey: 'company_create_registry' }) },
+  officer_create_activity_log: { officer: 'FieldOfficerCreateRecord', buildParams: () => ({ formKey: 'officer_create_activity_log' }) },
+  officer_create_baseline: { officer: 'FieldOfficerCreateRecord', buildParams: () => ({ formKey: 'officer_create_baseline' }) },
+  officer_create_soil_sample: { officer: 'FieldOfficerCreateRecord', buildParams: () => ({ formKey: 'officer_create_soil_sample' }) },
+  officer_create_monitoring_report: { officer: 'FieldOfficerCreateRecord', buildParams: () => ({ formKey: 'officer_create_monitoring_report' }) },
+  officer_create_regenerative_practice: { officer: 'FieldOfficerCreateRecord', buildParams: () => ({ formKey: 'officer_create_regenerative_practice' }) },
+  officer_create_feedstock: { officer: 'FieldOfficerCreateRecord', buildParams: () => ({ formKey: 'officer_create_feedstock' }) },
+  officer_create_plantation: { officer: 'FieldOfficerCreateRecord', buildParams: () => ({ formKey: 'officer_create_plantation' }) },
 };
 
 /** Stitch form keys rendered inline with live camera evidence upload. */

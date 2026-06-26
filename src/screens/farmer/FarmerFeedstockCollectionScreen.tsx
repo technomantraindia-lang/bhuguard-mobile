@@ -218,7 +218,7 @@ export function FarmerFeedstockCollectionScreen({ navigation, route }: Props) {
 
           {form.evidence ? (
             <View style={styles.photoPreviewWrap}>
-              <Image source={{ uri: form.evidence.uri }} style={styles.photoPreview} resizeMode="cover" />
+              <Image source={{ uri: form.evidence.previewUri }} style={styles.photoPreview} resizeMode="cover" />
               <Pressable style={styles.retakeButton} onPress={() => void form.retakeCameraPhoto()}>
                 <Text style={styles.retakeButtonText}>Retake Photo</Text>
               </Pressable>

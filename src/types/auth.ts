@@ -12,7 +12,15 @@ export interface AuthUser {
   mobile: string;
   user_type: UserType;
   status: string;
+  role?: string;
+  role_name?: string;
+  type?: string;
+  roles?: Array<string | { name?: string; role?: string }>;
   farmer_profile?: FarmerProfile;
+  company_profile?: { id: number; company_code?: string };
+  company?: { id: number; company_code?: string };
+  company_id?: number;
+  artisan_profile?: { id: number; artisan_code?: string; name?: string };
 }
 
 export interface LoginPasswordResult {

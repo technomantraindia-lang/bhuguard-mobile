@@ -1,74 +1,63 @@
-import type { UserType } from '../types/auth';
-
 export interface LivePhotoWatermarkMeta {
   capturedAtLabel: string;
-  coordinatesLabel: string;
+  latitudeLabel: string;
+  longitudeLabel: string;
+  accuracyLabel: string | null;
   villageLabel: string;
-  divisionLabel: string;
+  talukaLabel: string;
+  districtLabel: string;
   stateLabel: string;
-  userLabel: string;
 }
 
 export function formatWatermarkTimestamp(iso: string): string {
   const date = new Date(iso);
-
   const day = date.getDate();
   const month = date.toLocaleString('en-GB', { month: 'short' });
   const year = date.getFullYear();
-  const time = date.toLocaleTimeString('en-GB', {
-    hour: '2-digit',
+  const time = date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
     minute: '2-digit',
     second: '2-digit',
-    hour12: false,
+    hour12: true,
   });
 
   return `${day} ${month} ${year} ${time}`;
-}
-
-export function formatWatermarkCoordinates(latitude: number, longitude: number): string {
-  const latDirection = latitude >= 0 ? 'N' : 'S';
-  const lonDirection = longitude >= 0 ? 'E' : 'W';
-
-  return `${Math.abs(latitude).toFixed(4)}${latDirection} ${Math.abs(longitude).toFixed(4)}${lonDirection}`;
-}
-
-export function formatWatermarkUserLabel(userType: UserType | null, name: string | null | undefined): string {
-  const roleLabel =
-    userType === 'field_officer' ? 'Field Officer' : userType === 'farmer' ? 'Farmer' : 'User';
-
-  return `${roleLabel}: ${name?.trim() || 'Bhuguard User'}`;
 }
 
 export function buildLivePhotoWatermarkMeta(input: {
   capturedAt: string;
   latitude: number | null;
   longitude: number | null;
+  accuracy: number | null;
   village: string;
-  division: string;
+  taluka: string;
+  district: string;
   state: string;
-  userType: UserType | null;
-  userName: string | null | undefined;
 }): LivePhotoWatermarkMeta {
   return {
     capturedAtLabel: formatWatermarkTimestamp(input.capturedAt),
-    coordinatesLabel:
-      input.latitude != null && input.longitude != null
-        ? formatWatermarkCoordinates(input.latitude, input.longitude)
-        : 'GPS unavailable',
-    villageLabel: input.village,
-    divisionLabel: input.division,
-    stateLabel: input.state,
-    userLabel: formatWatermarkUserLabel(input.userType, input.userName),
+    latitudeLabel:
+      input.latitude != null ? `Lat: ${input.latitude.toFixed(6)}` : 'Lat: —',
+    longitudeLabel:
+      input.longitude != null ? `Lng: ${input.longitude.toFixed(6)}` : 'Lng: —',
+    accuracyLabel: input.accuracy != null ? `Accuracy: ${Math.round(input.accuracy)}m` : null,
+    villageLabel: input.village && input.village !== '—' ? `Village: ${input.village}` : 'Village: —',
+    talukaLabel: input.taluka && input.taluka !== '—' ? `Taluka: ${input.taluka}` : 'Taluka: —',
+    districtLabel:
+      input.district && input.district !== '—' ? `District: ${input.district}` : 'District: —',
+    stateLabel: input.state && input.state !== '—' ? `State: ${input.state}` : 'State: —',
   };
 }
 
 export function getLivePhotoWatermarkLines(meta: LivePhotoWatermarkMeta): string[] {
   return [
     meta.capturedAtLabel,
-    meta.coordinatesLabel,
+    meta.latitudeLabel,
+    meta.longitudeLabel,
+    ...(meta.accuracyLabel ? [meta.accuracyLabel] : []),
     meta.villageLabel,
-    meta.divisionLabel,
+    meta.talukaLabel,
+    meta.districtLabel,
     meta.stateLabel,
-    meta.userLabel,
   ];
 }

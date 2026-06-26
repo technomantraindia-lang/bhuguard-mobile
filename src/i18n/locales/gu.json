@@ -4,6 +4,7 @@
     "tagline": "જલવાયુ ક્રિયા માટે ડિજિટલ MRV"
   },
   "preloader": {
+    "title": "Bhuguard માં આપનું સ્વાગત છે",
     "loading": "તમારું જલવાયુ વર્કસ્પેસ લોડ થઈ રહ્યું છે…",
     "loadingData": "તમારું ડેશબોર્ડ તૈયાર થઈ રહ્યું છે…"
   },
@@ -32,6 +33,9 @@
     "fieldOfficerTitle": "ફીલ્ડ ઓફિસર",
     "fieldOfficerDescription": "ખેડૂત નોંધણી, ખેતર ચકાસણી, જમીન મેપિંગ અને રિપોર્ટ સબમિટ કરો",
     "fieldOfficerButton": "ફીલ્ડ ઓફિસર તરીકે ચાલુ રાખો",
+    "artisanTitle": "કારીગર",
+    "artisanDescription": "ફાર્મ સાઇટ પર બાયોચાર ઉત્પાદન",
+    "artisanButton": "કારીગર તરીકે ચાલુ રાખો",
     "farmerRegistrationNote": "ખેડૂત નોંધણી ફક્ત ફીલ્ડ ઓફિસર દ્વારા કરવામાં આવે છે."
   },
   "farmerLogin": {
@@ -67,9 +71,18 @@
     "signIn": "લોગિન",
     "signingIn": "લોગિન થઈ રહ્યું છે…"
   },
+  "artisanLogin": {
+    "title": "કારીગર લોગિન",
+    "subtitle": "ફક્ત બાયોચાર ઉત્પાદન ઍક્સેસ",
+    "passwordOption": "યુઝરનેમ અને પાસવર્ડ",
+    "mpinOption": "MPIN લોગિન",
+    "biometricOption": "બાયોમેટ્રિક લોગિન",
+    "changeRole": "ભૂમિકા બદલો"
+  },
   "passwordLogin": {
     "farmerTitle": "ખેડૂત લોગિન",
     "fieldOfficerTitle": "ફીલ્ડ ઓફિસર લોગિન",
+    "artisanTitle": "કારીગર લોગિન",
     "subtitle": "તમારું યુઝરનેમ અને પાસવર્ડ દાખલ કરો",
     "usernameLabel": "યુઝરનેમ અથવા મોબાઇલ નંબર",
     "passwordLabel": "પાસવર્ડ",
@@ -104,22 +117,24 @@
   },
   "apiServer": {
     "title": "સર્વર સેટિંગ્સ",
-    "subtitle": "એપને Bhuguard API સર્વર સાથે કનેક્ટ કરો. બીજા નેટવર્ક પર ક્લાયન્ટને બતાવવા માટે.",
-    "settingsSubtitle": "રિમોટ ડેમો માટે API URL બદલો",
+    "subtitle": "એપને Bhuguard API સર્વર સાથે કનેક્ટ કરો.",
+    "settingsSubtitle": "ક્લાયન્ટ મોબાઇલ માટે API URL બદલો",
     "openSettings": "સર્વર સેટિંગ્સ",
+    "useLocalPreset": "લોકલ PC (એ જ Wi-Fi)",
+    "networkErrorHint": "સર્વર સુધી પહોંચ શકાતી નથી. નીચે સર્વર સેટિંગ્સ ટેપ કરો.",
     "offlineTitle": "સર્વર ઉપલબ્ધ નથી",
-    "offlineHint": "પબ્લિક સર્વર URL સેટ કરવા અહીં ટેપ કરો.",
+    "offlineHint": "PC સર્વર URL સેટ કરવા અહીં ટેપ કરો.",
     "urlLabel": "સર્વર URL",
     "test": "કનેક્શન ચકાસો",
     "save": "સાચવો અને ઉપયોગ કરો",
     "reset": "ડિફૉલ્ટ પર રીસેટ",
     "emptyUrl": "પહેલા સર્વર URL દાખલ કરો.",
-    "saveFailed": "કનેક્ટ થઈ શક્યું નહીં. URL ચકાસો અને ટનલ ચાલુ રાખો.",
+    "saveFailed": "કનેક્ટ થઈ શક્યું નહીં. URL અને Laravel ચાલુ છે કે નહીં ચકાસો.",
     "saved": "સર્વર URL સાચવ્યું. હવે લોગિન કરી શકો.",
-    "helpTitle": "ક્લાયન્ટ ડેમો (કોઈ પણ મોબાઇલ નેટવર્ક)",
-    "helpSteps": "1. PC પર public tunnel script ચલાવો\n2. https://....trycloudflare.com URL કૉપી કરો\n3. અહીં પેસ્ટ કરો → Test → Save\n4. ક્લાયન્ટ ઉપયોગ કરે ત્યારે ટનલ વિન્ડો ખુલ્લી રાખો",
-    "example": "ઉદાહરણ ટેક્સ્ટ ન વાપરો — Git Bash માંથી તમારું URL કૉપી કરો",
-    "urlNote": "start-public-api-tunnel.sh ચલાવ્યા પછી Git Bash માં દેખાતી https:// લિંક અહીં પેસ્ટ કરો"
+    "helpTitle": "એ જ Wi-Fi પર ક્લાયન્ટ મોબાઇલ",
+    "helpSteps": "1. PC પર: php artisan serve --host=0.0.0.0 --port=8000\n2. \"લોકલ PC\" ટેપ કરો અથવા http://192.168.1.18:8000 દાખલ કરો\n3. કનેક્શન ચકાસો → સાચવો\n\nબીજા નેટવર્ક માટે https ટનલ URL પેસ્ટ કરો.",
+    "example": "લોકલ: http://192.168.1.18:8000",
+    "urlNote": "એપ આપમેળે /api ઉમેરે છે. લોકલ IP માટે ફોન અને PC એ જ Wi-Fi પર હોવા જોઈએ."
   },
   "common": {
     "continue": "ચાલુ રાખો",

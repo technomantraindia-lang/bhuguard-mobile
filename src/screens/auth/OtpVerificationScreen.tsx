@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -16,9 +16,8 @@ import { AuthBackHeader } from '../../components/auth/AuthBackHeader';
 import { PinBoxInput } from '../../components/auth/PinBoxInput';
 import { useTranslation } from '../../i18n/I18nContext';
 import type { RootStackParamList } from '../../navigation/types';
-import { saveAuthSession } from '../../storage/authStorage';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
-import { getDashboardRoute, isMobileSupportedRole } from '../../utils/authRouting';
+import { finishMobileLogin } from '../../utils/finishMobileLogin';
 import { formatMobileDisplay } from '../../utils/securityFlow';
 
 const RESEND_SECONDS = 45;
@@ -49,33 +48,6 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
     return () => clearInterval(timer);
   }, [secondsLeft]);
 
-  const completeLogin = async (userType: string, token: string, user: Parameters<typeof saveAuthSession>[1]) => {
-    if (!isMobileSupportedRole(userType)) {
-      setError(t('errors.unsupportedAccount'));
-      return;
-    }
-
-    if (role && userType !== role) {
-      setError(t('mpinLogin.roleMismatch'));
-      return;
-    }
-
-    if (userType === 'farmer' && !user.farmer_profile?.id) {
-      Alert.alert(t('farmerLogin.profileMissingTitle'), t('farmerLogin.profileMissingMessage'));
-      return;
-    }
-
-    const dashboardRoute = getDashboardRoute(userType);
-
-    if (!dashboardRoute) {
-      setError(t('errors.unsupportedAccount'));
-      return;
-    }
-
-    await saveAuthSession(token, user, userType);
-    navigation.reset({ index: 0, routes: [{ name: dashboardRoute }] });
-  };
-
   const verify = async () => {
     if (otp.trim().length !== 6) {
       setError(t('errors.otpRequired'));
@@ -88,7 +60,17 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
     try {
       if (purpose === 'login') {
         const result = await verifyLoginOtp(mobile, otp.trim());
-        await completeLogin(result.user_type, result.token, result.user);
+        await finishMobileLogin(
+          navigation,
+          { token: result.token, user: result.user, expectedRole: role },
+          {
+            roleMismatch: t('mpinLogin.roleMismatch'),
+            unsupportedAccount: t('errors.unsupportedAccount'),
+            farmerProfileMissingTitle: t('farmerLogin.profileMissingTitle'),
+            farmerProfileMissingMessage: t('farmerLogin.profileMissingMessage'),
+          },
+          setError,
+        );
         return;
       }
 

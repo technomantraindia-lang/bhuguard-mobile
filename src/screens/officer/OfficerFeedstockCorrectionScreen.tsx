@@ -7,38 +7,30 @@ import { saveFeedstockVerificationDraft } from '../../api/fieldOfficerApi';
 import { getApiErrorMessage } from '../../api/authApi';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerTheme } from '../../theme/officerDashboardTheme';
-import { buildVerificationPayload } from '../../utils/feedstockVerificationHelpers';
-import { defaultChecklistItems } from '../../constants/feedstockVerificationChecklist';
+import { buildFeedstockFormPayload, createDefaultFeedstockFormState } from '../../utils/feedstockVerificationHelpers';
 
 type Props = NativeStackScreenProps<FieldOfficerStackParamList, 'OfficerFeedstockCorrection'>;
 
 export function OfficerFeedstockCorrectionScreen({ route, navigation }: Props) {
-  const { verificationId, initialNotes = '', initialRequiredChanges = '' } = route.params;
+  const { verificationId, initialNotes = '', initialRequiredChanges = '', initialDueDate = '' } = route.params;
   const [correctionNotes, setCorrectionNotes] = useState(initialNotes);
   const [requiredChanges, setRequiredChanges] = useState(initialRequiredChanges);
+  const [correctionDueDate, setCorrectionDueDate] = useState(initialDueDate);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
 
     try {
-      await saveFeedstockVerificationDraft(
-        verificationId,
-        buildVerificationPayload({
-          checklist: defaultChecklistItems(),
-          photoReviews: [],
-          weightSlipApproved: null,
-          gpsVerified: null,
-          gpsFlagged: false,
-          officerRemarks: '',
-          correctionNotes,
-          requiredChanges,
-          rejectionReason: '',
-          verificationResult: 'correction_required',
-        }),
-      );
+      const state = createDefaultFeedstockFormState();
+      state.correctionNotes = correctionNotes;
+      state.requiredChanges = requiredChanges;
+      state.correctionDueDate = correctionDueDate;
+      state.verificationResult = 'correction_required';
 
-      Alert.alert('Correction requested', 'Correction notes saved to the verification draft.', [
+      await saveFeedstockVerificationDraft(verificationId, buildFeedstockFormPayload(state));
+
+      Alert.alert('Correction requested', 'Correction request saved to the verification draft.', [
         {
           text: 'OK',
           onPress: () =>
@@ -65,7 +57,7 @@ export function OfficerFeedstockCorrectionScreen({ route, navigation }: Props) {
         <Text style={styles.title}>Correction Request</Text>
       </View>
       <View style={styles.content}>
-        <Text style={styles.label}>Correction Notes</Text>
+        <Text style={styles.label}>Correction Reason</Text>
         <TextInput
           value={correctionNotes}
           onChangeText={setCorrectionNotes}
@@ -74,13 +66,21 @@ export function OfficerFeedstockCorrectionScreen({ route, navigation }: Props) {
           placeholder="Describe required corrections"
           placeholderTextColor={officerTheme.outline}
         />
-        <Text style={styles.label}>Required Changes</Text>
+        <Text style={styles.label}>Required Action from Farmer</Text>
         <TextInput
           value={requiredChanges}
           onChangeText={setRequiredChanges}
           multiline
           style={styles.input}
           placeholder="List required changes for farmer"
+          placeholderTextColor={officerTheme.outline}
+        />
+        <Text style={styles.label}>Due Date</Text>
+        <TextInput
+          value={correctionDueDate}
+          onChangeText={setCorrectionDueDate}
+          style={styles.singleLineInput}
+          placeholder="DD MMM YYYY"
           placeholderTextColor={officerTheme.outline}
         />
         <Pressable style={styles.button} onPress={() => void handleSave()} disabled={saving}>
@@ -114,6 +114,15 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: officerTheme.surfaceLowest,
     textAlignVertical: 'top',
+    color: officerTheme.onSurface,
+  },
+  singleLineInput: {
+    borderWidth: 1,
+    borderColor: officerTheme.outlineVariant,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: officerTheme.surfaceLowest,
     color: officerTheme.onSurface,
   },
   button: {

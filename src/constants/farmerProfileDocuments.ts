@@ -18,5 +18,4 @@ export const PROFILE_LANGUAGE_OPTIONS = [
   { value: 'en', label: 'English' },
   { value: 'hi', label: 'Hindi' },
   { value: 'gu', label: 'Gujarati' },
-  { value: 'mr', label: 'Marathi' },
 ] as const;

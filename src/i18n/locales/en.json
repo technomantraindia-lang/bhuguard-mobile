@@ -4,6 +4,7 @@
     "tagline": "Digital MRV for Climate Action"
   },
   "preloader": {
+    "title": "Welcome to Bhuguard",
     "loading": "Loading your climate workspace…",
     "loadingData": "Preparing your dashboard…"
   },
@@ -25,14 +26,26 @@
   "role": {
     "screenTitle": "Select Role",
     "title": "Select Your Role",
-    "subtitle": "Continue as farmer or field officer",
+    "subtitle": "Continue as farmer, field officer, or company user",
     "farmerTitle": "Farmer",
     "farmerDescription": "Access your farm, activities, reports and profile",
     "farmerButton": "Continue as Farmer",
     "fieldOfficerTitle": "Field Officer",
     "fieldOfficerDescription": "Register farmers, verify farms, capture land mapping and submit reports",
     "fieldOfficerButton": "Continue as Field Officer",
+    "artisanTitle": "Artisan",
+    "artisanDescription": "Biochar production at farm sites",
+    "artisanButton": "Continue as Artisan",
+    "companyTitle": "Company User",
+    "companyDescription": "Manage sites, service submissions, records, evidence and reports",
+    "companyButton": "Continue as Company",
     "farmerRegistrationNote": "Farmer registration is completed only by a Field Officer."
+  },
+  "companyLogin": {
+    "title": "Company Login",
+    "subtitle": "Login with your company email or mobile and password",
+    "passwordOption": "Username & Password",
+    "changeRole": "Change role"
   },
   "farmerLogin": {
     "screenTitle": "Farmer Login",
@@ -67,9 +80,19 @@
     "signIn": "Login",
     "signingIn": "Signing in…"
   },
+  "artisanLogin": {
+    "title": "Artisan Login",
+    "subtitle": "Biochar production access only",
+    "passwordOption": "Username & Password",
+    "mpinOption": "MPIN Login",
+    "biometricOption": "Biometric Login",
+    "changeRole": "Change role"
+  },
   "passwordLogin": {
     "farmerTitle": "Farmer Login",
     "fieldOfficerTitle": "Field Officer Login",
+    "artisanTitle": "Artisan Login",
+    "companyTitle": "Company Login",
     "subtitle": "Enter your username and password",
     "usernameLabel": "Username or mobile number",
     "passwordLabel": "Password",
@@ -104,22 +127,24 @@
   },
   "apiServer": {
     "title": "Server settings",
-    "subtitle": "Connect the app to your Bhuguard API server. Use this when testing with a client on another network.",
-    "settingsSubtitle": "Change API server URL for remote demo / client testing",
+    "subtitle": "Connect the app to your Bhuguard API server.",
+    "settingsSubtitle": "Change API server URL for client mobile testing",
     "openSettings": "Server settings",
+    "useLocalPreset": "Use local PC (same Wi-Fi)",
+    "networkErrorHint": "Cannot reach server. Tap Server settings below.",
     "offlineTitle": "Server not reachable",
-    "offlineHint": "Tap here to set the public server URL (required for other networks).",
+    "offlineHint": "Tap here to set your PC server URL (same Wi-Fi or tunnel).",
     "urlLabel": "Server URL",
     "test": "Test connection",
     "save": "Save & use",
     "reset": "Reset to default",
     "emptyUrl": "Enter the server URL first.",
-    "saveFailed": "Could not connect. Check the URL and make sure the server tunnel is running.",
+    "saveFailed": "Could not connect. Check the URL and that Laravel is running.",
     "saved": "Server URL saved. You can log in now.",
-    "helpTitle": "For client demo (any mobile network)",
-    "helpSteps": "1. On your PC run the public tunnel script\n2. Copy the https://....trycloudflare.com URL\n3. Paste it here and tap Test, then Save\n4. Keep the tunnel window open while the client uses the app",
-    "example": "Do NOT use the example text — copy YOUR URL from Git Bash",
-    "urlNote": "Copy the full https:// link shown in Git Bash after running start-public-api-tunnel.sh"
+    "helpTitle": "Client mobile on same Wi-Fi",
+    "helpSteps": "1. On PC run: php artisan serve --host=0.0.0.0 --port=8000\n2. Tap \"Use local PC\" or enter: http://192.168.1.18:8000\n3. Test connection → Save\n\nOther network: paste your https tunnel URL (ngrok / cloudflare).",
+    "example": "Local: http://192.168.1.18:8000",
+    "urlNote": "The app adds /api automatically. Phone and PC must use the same Wi-Fi for local IP."
   },
   "common": {
     "continue": "Continue",
@@ -149,6 +174,7 @@
     },
     "officer": {
       "dashboard": "Dashboard",
+      "farmers": "Farmers",
       "visits": "Visits",
       "evidence": "Evidence",
       "reports": "Reports",

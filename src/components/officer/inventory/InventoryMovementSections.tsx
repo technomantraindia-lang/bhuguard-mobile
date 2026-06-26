@@ -485,19 +485,25 @@ export function ReceiverConfirmationSection({
   receiverName,
   receiverMobile,
   receiverConfirmed,
+  receiverSignatureCaptured,
   quantityMoved,
   onChangeReceiverName,
   onChangeReceiverMobile,
   onToggleConfirmed,
+  onCaptureSignature,
+  onClearSignature,
 }: {
   farmerName: string;
   receiverName: string;
   receiverMobile: string;
   receiverConfirmed: boolean;
+  receiverSignatureCaptured: boolean;
   quantityMoved: string;
   onChangeReceiverName: (value: string) => void;
   onChangeReceiverMobile: (value: string) => void;
   onToggleConfirmed: () => void;
+  onCaptureSignature: () => void;
+  onClearSignature: () => void;
 }) {
   return (
     <View style={[styles.card, officerCardShadow, styles.section]}>
@@ -536,6 +542,26 @@ export function ReceiverConfirmationSection({
           received in good condition.
         </Text>
       </Pressable>
+
+      <View style={styles.fieldBlock}>
+        <FieldLabel label="Receiver Signature" />
+        <Pressable
+          style={[styles.signaturePad, receiverSignatureCaptured && styles.signaturePadCaptured]}
+          onPress={onCaptureSignature}
+        >
+          {receiverSignatureCaptured ? (
+            <View style={styles.signatureCapturedRow}>
+              <BhuguardMaterialIcon name="verified" size={18} color={officerTheme.primaryContainer} />
+              <Text style={styles.signatureCapturedText}>Signature Captured</Text>
+              <Pressable onPress={onClearSignature}>
+                <Text style={styles.clearSignatureText}>Clear</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Text style={styles.signatureHint}>Tap to capture receiver signature</Text>
+          )}
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -811,6 +837,26 @@ const styles = StyleSheet.create({
   checkboxChecked: { backgroundColor: officerTheme.primaryContainer, borderColor: officerTheme.primaryContainer },
   confirmText: { flex: 1, fontSize: 13, lineHeight: 18, color: officerTheme.onSurface },
   confirmStrong: { fontWeight: '700', color: officerTheme.primaryContainer },
+  signaturePad: {
+    minHeight: 88,
+    borderWidth: 1,
+    borderColor: officerTheme.outlineVariant,
+    borderRadius: 12,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    backgroundColor: officerTheme.surface,
+  },
+  signaturePadCaptured: {
+    borderStyle: 'solid',
+    borderColor: officerTheme.primaryContainer,
+    backgroundColor: 'rgba(173, 238, 195, 0.2)',
+  },
+  signatureHint: { fontSize: 13, color: officerTheme.outline },
+  signatureCapturedRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  signatureCapturedText: { fontSize: 13, fontWeight: '700', color: officerTheme.primary },
+  clearSignatureText: { fontSize: 12, fontWeight: '600', color: officerTheme.error },
   statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 8 },
   statusOption: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   radio: { width: 16, height: 16, borderRadius: 8, borderWidth: 2, borderColor: officerTheme.outlineVariant },

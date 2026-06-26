@@ -5,13 +5,14 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { getApiErrorMessage } from '../../api/authApi';
 import { getFieldOfficerReportDetail } from '../../api/fieldOfficerApi';
+import { ReportDownloadActions } from '../../components/reports/ReportDownloadActions';
 import { AppButton } from '../../components/AppButton';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { useApiDetail } from '../../hooks/useApiDetail';
+import { useReportDownload } from '../../hooks/useReportDownload';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
-import { downloadFieldOfficerReport } from '../../utils/fieldOfficerReportDownload';
 import {
   formatReportStatusLabel,
   formatVerificationDateLabel,
@@ -19,12 +20,13 @@ import {
   type FieldOfficerReportItem,
 } from '../../utils/fieldOfficerReportHelpers';
 import { pickString, type ApiRecord } from '../../utils/apiHelpers';
+import { getReportStatusBadgeStyle } from '../../utils/reportStatusHelpers';
 
 type Props = NativeStackScreenProps<FieldOfficerStackParamList, 'FieldOfficerReportDetail'>;
 
 export function FieldOfficerReportDetailScreen({ route, navigation }: Props) {
   const { reportId } = route.params;
-  const [downloading, setDownloading] = useState(false);
+  const [previewNote] = useState('Report preview is not available yet.');
 
   const fetcher = useCallback(() => getFieldOfficerReportDetail(reportId), [reportId]);
 
@@ -32,29 +34,15 @@ export function FieldOfficerReportDetailScreen({ route, navigation }: Props) {
 
   const reportRecord = (data?.report ?? data) as ApiRecord | undefined;
   const report: FieldOfficerReportItem | null = reportRecord ? mapFieldOfficerReport(reportRecord) : null;
+  const status = pickString(reportRecord ?? {}, 'status', 'admin_review_status');
+  const badge = getReportStatusBadgeStyle(status);
 
-  const handleDownload = async () => {
-    if (!report) {
-      return;
-    }
-
-    setDownloading(true);
-
-    try {
-      const result = await downloadFieldOfficerReport(report);
-
-      if (!result.success) {
-        Alert.alert('Download failed', result.message ?? 'Unable to download this report right now.');
-        return;
-      }
-
-      Alert.alert('Success', result.message ?? 'Report downloaded successfully');
-    } catch (err) {
-      Alert.alert('Download failed', getApiErrorMessage(err, 'Unable to download this report right now.'));
-    } finally {
-      setDownloading(false);
-    }
-  };
+  const { downloadingFormat, download } = useReportDownload({
+    role: 'field_officer',
+    reportId,
+    fileNameBase: report?.reportId,
+    downloadKey: `field_officer-${reportId}`,
+  });
 
   if (loading) {
     return (
@@ -85,7 +73,9 @@ export function FieldOfficerReportDetailScreen({ route, navigation }: Props) {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.card, officerCardShadow]}>
           <Text style={styles.reportId}>{report.reportId}</Text>
-          <Text style={styles.status}>{formatReportStatusLabel(report.status)}</Text>
+          <View style={[styles.status, { backgroundColor: badge.backgroundColor }]}>
+            <Text style={[styles.statusText, { color: badge.color }]}>{formatReportStatusLabel(report.status)}</Text>
+          </View>
 
           <DetailRow label="Farmer / Company" value={report.companyName || report.farmerName} />
           <DetailRow label="Farm / Site" value={report.farmName} />
@@ -102,11 +92,16 @@ export function FieldOfficerReportDetailScreen({ route, navigation }: Props) {
           <Text style={styles.summaryText}>{pickString(reportRecord, 'officer_summary')}</Text>
         </View>
 
+        <View style={[styles.card, officerCardShadow]}>
+          <Text style={styles.sectionTitle}>Preview</Text>
+          <Text style={styles.summaryText}>{previewNote}</Text>
+        </View>
+
         {!report.isDraft ? (
-          <AppButton
-            label={downloading ? 'Downloading...' : 'Download PDF'}
-            onPress={() => void handleDownload()}
-            loading={downloading}
+          <ReportDownloadActions
+            downloadingFormat={downloadingFormat}
+            onPreview={() => navigation.navigate('FieldOfficerReportPreview', { reportId, title: report.reportId })}
+            onDownload={(format) => void download(format)}
           />
         ) : (
           <AppButton
@@ -187,11 +182,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: officerTheme.secondaryContainer,
-    color: officerTheme.onSecondaryContainer,
+    overflow: 'hidden',
+  },
+  statusText: {
     fontSize: 12,
     fontWeight: '700',
-    overflow: 'hidden',
   },
   sectionTitle: {
     fontSize: 16,

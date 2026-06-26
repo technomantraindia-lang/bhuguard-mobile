@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useApiList } from '../hooks/useApiList';
@@ -27,6 +28,7 @@ interface ApiListScreenProps {
   onItemPress?: (item: ApiRecord) => void;
   renderItem: (item: ApiRecord, index: number) => ReactNode;
   keyExtractor?: (item: ApiRecord, index: number) => string;
+  refetchOnFocus?: boolean;
 }
 
 function matchesSearch(item: ApiRecord, query: string, keys: string[]): boolean {
@@ -50,12 +52,24 @@ export function ApiListScreen({
   onItemPress,
   renderItem,
   keyExtractor,
+  refetchOnFocus = false,
 }: ApiListScreenProps) {
   const [search, setSearch] = useState('');
   const { items, loading, refreshing, error, pending, reload, refresh } = useApiList({
     fetcher,
     listKeys,
   });
+
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (refetchOnFocus) {
+        void refreshRef.current();
+      }
+    }, [refetchOnFocus]),
+  );
 
   const filteredItems = useMemo(() => {
     if (!search.trim()) {

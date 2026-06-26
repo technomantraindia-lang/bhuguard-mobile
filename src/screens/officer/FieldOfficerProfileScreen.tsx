@@ -22,6 +22,7 @@ import { OfficerProfilePerformanceSection } from '../../components/officer/profi
 import { OfficerProfileSummaryCard } from '../../components/officer/profile/OfficerProfileSummaryCard';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
 import { useFieldOfficerProfileData } from '../../hooks/useFieldOfficerProfileData';
+import { useScrollBottomPadding } from '../../hooks/useTabBarLayout';
 import { useLogout } from '../../hooks/useLogout';
 import { useTranslation } from '../../i18n/I18nContext';
 import type { FieldOfficerStackParamList, FieldOfficerTabParamList } from '../../navigation/types';
@@ -105,6 +106,7 @@ export function FieldOfficerProfileScreen() {
   const logout = useLogout();
   const { t } = useTranslation();
   const { data, loading, error, reload, updatePhotoUrl } = useFieldOfficerProfileData();
+  const scrollBottomPadding = useScrollBottomPadding();
 
   const [photoSheetOpen, setPhotoSheetOpen] = useState(false);
   const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
@@ -191,7 +193,7 @@ export function FieldOfficerProfileScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={reload} tintColor={officerTheme.primary} />
@@ -251,6 +253,12 @@ export function FieldOfficerProfileScreen() {
             onPress={() => openSection('security')}
           />
           <OfficerProfileMenuRow
+            icon="support_agent"
+            title="Help & Support"
+            subtitle="Message the Bhuguard team"
+            onPress={() => navigation.navigate('SupportThreads', { supportRole: 'field_officer' })}
+          />
+          <OfficerProfileMenuRow
             icon="description"
             title={t('common.settings')}
             subtitle={t('language.settingsSubtitle')}
@@ -293,7 +301,6 @@ const styles = StyleSheet.create({
   content: {
     padding: officerTheme.marginMobile,
     gap: 24,
-    paddingBottom: 96,
   },
   pageHeader: {
     gap: 4,

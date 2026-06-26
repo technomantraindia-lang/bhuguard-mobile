@@ -2,18 +2,9 @@ import * as Location from 'expo-location';
 
 export interface ResolvedCaptureLocation {
   village: string;
-  division: string;
+  taluka: string;
+  district: string;
   state: string;
-}
-
-function formatDivisionLabel(district: string | null | undefined, subregion: string | null | undefined): string {
-  const source = district?.trim() || subregion?.trim();
-
-  if (!source) {
-    return '—';
-  }
-
-  return /division$/i.test(source) ? source : `${source} Division`;
 }
 
 export async function resolveCaptureLocation(
@@ -25,7 +16,7 @@ export async function resolveCaptureLocation(
     const place = results[0];
 
     if (!place) {
-      return { village: '—', division: '—', state: 'Gujarat' };
+      return { village: '—', taluka: '—', district: '—', state: 'Gujarat' };
     }
 
     const village =
@@ -35,12 +26,16 @@ export async function resolveCaptureLocation(
       place.subregion?.trim() ||
       '—';
 
+    const taluka = place.subregion?.trim() || place.city?.trim() || '—';
+    const district = place.district?.trim() || place.region?.trim() || '—';
+
     return {
       village,
-      division: formatDivisionLabel(place.district, place.subregion),
+      taluka,
+      district,
       state: place.region?.trim() || 'Gujarat',
     };
   } catch {
-    return { village: '—', division: '—', state: 'Gujarat' };
+    return { village: '—', taluka: '—', district: '—', state: 'Gujarat' };
   }
 }

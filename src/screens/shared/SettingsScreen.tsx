@@ -7,7 +7,7 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { useTranslation } from '../../i18n/I18nContext';
 import type { AppLanguage } from '../../i18n/types';
 import { useLogout } from '../../hooks/useLogout';
-import { navigateToApiServerSettings } from '../../navigation/navigationRef';
+import { navigateToApiHealthCheck, navigateToApiServerSettings } from '../../navigation/navigationRef';
 import { colors } from '../../theme/colors';
 
 interface SettingsScreenProps {
@@ -65,6 +65,19 @@ export function SettingsScreen({ title, subtitle }: SettingsScreenProps) {
           <AppButton label={t('apiServer.openSettings')} onPress={navigateToApiServerSettings} variant="secondary" />
         </View>
 
+        {__DEV__ ? (
+          <>
+            <AppCard title="Developer" subtitle="API connectivity diagnostics (dev only)" />
+            <View style={styles.actions}>
+              <AppButton
+                label="API Health Check"
+                onPress={navigateToApiHealthCheck}
+                variant="secondary"
+              />
+            </View>
+          </>
+        ) : null}
+
         <AppCard title={t('common.account')} subtitle={t('common.logout')} />
 
         <View style={styles.actions}>
@@ -78,5 +91,5 @@ export function SettingsScreen({ title, subtitle }: SettingsScreenProps) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   container: { padding: 20, gap: 12, paddingBottom: 24 },
-  actions: { marginTop: 4 },
+  actions: { marginTop: 4, gap: 8 },
 });

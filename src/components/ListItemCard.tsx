@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme/colors';
@@ -22,6 +23,7 @@ interface ListItemCardProps {
   lines?: ListFieldLine[];
   onDownload?: () => void;
   downloadAvailable?: boolean;
+  renderFooter?: () => ReactNode;
 }
 
 export function ListItemCard({
@@ -33,6 +35,7 @@ export function ListItemCard({
   lines = [],
   onDownload,
   downloadAvailable,
+  renderFooter,
 }: ListItemCardProps) {
   const status = statusNested
     ? pickNestedString(item, statusNested)
@@ -52,8 +55,9 @@ export function ListItemCard({
         </View>
       ))}
       {downloadAvailable && onDownload ? (
-        <AppButton label="Download (placeholder)" onPress={onDownload} variant="secondary" style={styles.download} />
+        <AppButton label="Download PDF" onPress={onDownload} variant="secondary" style={styles.download} />
       ) : null}
+      {renderFooter?.()}
     </AppCard>
   );
 }

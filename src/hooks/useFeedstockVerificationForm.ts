@@ -7,52 +7,36 @@ import {
   saveFeedstockVerificationDraft,
   submitFeedstockVerification,
 } from '../api/fieldOfficerApi';
-import type { FeedstockChecklistItem, FeedstockPhotoReview, VerificationResult } from '../constants/feedstockVerificationChecklist';
+import type { FeedstockPhotoReview, SectionResult, VerificationResult } from '../constants/feedstockVerificationChecklist';
 import { extractList, type ApiRecord } from '../utils/apiHelpers';
 import {
-  buildVerificationPayload,
+  applyRecordToFormState,
+  buildFeedstockFormPayload,
+  calculateFeedstockCompletionPercent,
+  canSubmitFeedstockVerification,
+  createDefaultFeedstockFormState,
+  feedstockVerificationBlockers,
   mapFeedstockVerificationRecord,
+  type FeedstockVerificationFormState,
   type FeedstockVerificationViewModel,
 } from '../utils/feedstockVerificationHelpers';
 
-export function useFeedstockVerificationForm(verificationId?: number) {
+export function useFeedstockVerificationForm(verificationId?: number, officerName = 'Field Officer') {
   const [verification, setVerification] = useState<FeedstockVerificationViewModel | null>(null);
+  const [formState, setFormState] = useState<FeedstockVerificationFormState>(() => createDefaultFeedstockFormState());
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEmpty, setIsEmpty] = useState(false);
 
-  const [checklist, setChecklist] = useState<FeedstockChecklistItem[]>([]);
-  const [photoReviews, setPhotoReviews] = useState<FeedstockPhotoReview[]>([]);
-  const [weightSlipApproved, setWeightSlipApproved] = useState<boolean | null>(null);
-  const [gpsVerified, setGpsVerified] = useState<boolean | null>(null);
-  const [gpsFlagged, setGpsFlagged] = useState(false);
-  const [officerRemarks, setOfficerRemarks] = useState('');
-  const [correctionNotes, setCorrectionNotes] = useState('');
-  const [requiredChanges, setRequiredChanges] = useState('');
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [verificationResult, setVerificationResult] = useState<VerificationResult>(null);
-
-  const applyRecord = useCallback((record: FeedstockVerificationViewModel) => {
-    setVerification(record);
-    setChecklist(record.checklist);
-    setPhotoReviews(
-      record.photos.map((photo) => ({
-        photoId: photo.id,
-        approved: photo.approved,
-        rejected: photo.rejected,
-      })),
-    );
-    setWeightSlipApproved(record.weightSlip.approved);
-    setGpsVerified(null);
-    setGpsFlagged(false);
-    setOfficerRemarks(record.officerRemarks);
-    setCorrectionNotes(record.correctionNotes);
-    setRequiredChanges(record.requiredChanges);
-    setRejectionReason(record.rejectionReason);
-    setVerificationResult(record.verificationResult);
-  }, []);
+  const applyRecord = useCallback(
+    (record: FeedstockVerificationViewModel) => {
+      setVerification(record);
+      setFormState((current) => applyRecordToFormState(record, current));
+    },
+    [],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -63,7 +47,7 @@ export function useFeedstockVerificationForm(verificationId?: number) {
       if (verificationId) {
         const data = await getFeedstockVerificationDetail(verificationId);
         const record = (data.feedstock_verification ?? data) as ApiRecord;
-        applyRecord(mapFeedstockVerificationRecord(record));
+        applyRecord(mapFeedstockVerificationRecord(record, officerName));
         return;
       }
 
@@ -76,7 +60,7 @@ export function useFeedstockVerificationForm(verificationId?: number) {
         return;
       }
 
-      applyRecord(mapFeedstockVerificationRecord(first));
+      applyRecord(mapFeedstockVerificationRecord(first, officerName));
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load feedstock verification.'));
       setVerification(null);
@@ -84,70 +68,163 @@ export function useFeedstockVerificationForm(verificationId?: number) {
     } finally {
       setLoading(false);
     }
-  }, [applyRecord, verificationId]);
+  }, [applyRecord, officerName, verificationId]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const payload = useMemo(
-    () =>
-      buildVerificationPayload({
-        checklist,
-        photoReviews,
-        weightSlipApproved,
-        gpsVerified,
-        gpsFlagged,
-        officerRemarks,
-        correctionNotes,
-        requiredChanges,
-        rejectionReason,
-        verificationResult,
-      }),
-    [
-      checklist,
-      photoReviews,
-      weightSlipApproved,
-      gpsVerified,
-      gpsFlagged,
-      officerRemarks,
-      correctionNotes,
-      requiredChanges,
-      rejectionReason,
-      verificationResult,
-    ],
+  useEffect(() => {
+    if (officerName && verification) {
+      setVerification((current) => (current ? { ...current, officerName } : current));
+    }
+  }, [officerName, verification?.id]);
+
+  const completionPercent = useMemo(
+    () => (verification ? calculateFeedstockCompletionPercent(formState, verification) : 0),
+    [formState, verification],
   );
 
-  const updateChecklistItem = (key: string, patch: Partial<FeedstockChecklistItem>) => {
-    setChecklist((current) => current.map((item) => (item.key === key ? { ...item, ...patch } : item)));
+  const submitBlockers = useMemo(
+    () => (verification ? feedstockVerificationBlockers(formState, verification) : ['Load verification data first.']),
+    [formState, verification],
+  );
+
+  const submitReady = useMemo(
+    () => (verification ? canSubmitFeedstockVerification(formState, verification) : false),
+    [formState, verification],
+  );
+
+  const updateSectionItem = (
+    sectionKey: keyof FeedstockVerificationFormState['sections'],
+    itemKey: string,
+    checked: boolean,
+  ) => {
+    setFormState((current) => ({
+      ...current,
+      sections: {
+        ...current.sections,
+        [sectionKey]: {
+          ...current.sections[sectionKey],
+          items: {
+            ...current.sections[sectionKey].items,
+            [itemKey]: checked,
+          },
+        },
+      },
+    }));
+  };
+
+  const updateSectionResult = (
+    sectionKey: keyof FeedstockVerificationFormState['sections'],
+    result: SectionResult,
+  ) => {
+    setFormState((current) => ({
+      ...current,
+      sections: {
+        ...current.sections,
+        [sectionKey]: {
+          ...current.sections[sectionKey],
+          result,
+        },
+      },
+    }));
+  };
+
+  const updateSectionRemarks = (
+    sectionKey: keyof FeedstockVerificationFormState['sections'],
+    remarks: string,
+  ) => {
+    setFormState((current) => ({
+      ...current,
+      sections: {
+        ...current.sections,
+        [sectionKey]: {
+          ...current.sections[sectionKey],
+          remarks,
+        },
+      },
+    }));
   };
 
   const updatePhotoReview = (photoId: number, patch: Partial<FeedstockPhotoReview>) => {
-    setPhotoReviews((current) =>
-      current.map((item) => (item.photoId === photoId ? { ...item, ...patch } : item)),
-    );
+    setFormState((current) => ({
+      ...current,
+      photoReviews: current.photoReviews.map((item) =>
+        item.photoId === photoId ? { ...item, ...patch } : item,
+      ),
+    }));
   };
 
-  const validateSubmit = (): string | null => {
-    if (!verificationResult) {
-      return 'Select a final verification status before submitting.';
-    }
+  const setOfficerObservedQuantity = (value: string) => {
+    setFormState((current) => ({ ...current, officerObservedQuantity: value }));
+  };
 
-    const incompleteChecklist = checklist.some((item) => !item.result);
+  const setWeightSlipApproved = (approved: boolean | null) => {
+    setFormState((current) => ({ ...current, weightSlipApproved: approved }));
+  };
 
-    if (incompleteChecklist) {
-      return 'Complete all feedstock verification checklist items.';
-    }
+  const setWeightSlipRejectionReason = (value: string) => {
+    setFormState((current) => ({ ...current, weightSlipRejectionReason: value }));
+  };
 
-    if (verificationResult === 'correction_required' && !correctionNotes.trim()) {
-      return 'Add correction notes when requesting changes.';
-    }
+  const setGpsVerified = (verified: boolean | null) => {
+    setFormState((current) => ({
+      ...current,
+      gpsVerified: verified,
+      gpsFlagged: verified ? false : current.gpsFlagged,
+    }));
+  };
 
-    if (verificationResult === 'rejected' && !rejectionReason.trim()) {
-      return 'Add a rejection reason before rejecting this record.';
-    }
+  const setGpsFlagged = (flagged: boolean) => {
+    setFormState((current) => ({
+      ...current,
+      gpsFlagged: flagged,
+      gpsVerified: flagged ? false : current.gpsVerified,
+    }));
+  };
 
-    return null;
+  const setGpsOverrideReason = (value: string) => {
+    setFormState((current) => ({ ...current, gpsOverrideReason: value }));
+  };
+
+  const setGpsOverridePhotoUri = (uri: string | null) => {
+    setFormState((current) => ({ ...current, gpsOverridePhotoUri: uri }));
+  };
+
+  const addOfficerEvidencePhoto = (uri: string) => {
+    setFormState((current) => ({
+      ...current,
+      officerEvidencePhotos: [...current.officerEvidencePhotos, uri],
+    }));
+  };
+
+  const setOfficerRemarks = (value: string) => {
+    setFormState((current) => ({ ...current, officerRemarks: value }));
+  };
+
+  const setCorrectionNotes = (value: string) => {
+    setFormState((current) => ({ ...current, correctionNotes: value }));
+  };
+
+  const setRequiredChanges = (value: string) => {
+    setFormState((current) => ({ ...current, requiredChanges: value }));
+  };
+
+  const setCorrectionDueDate = (value: string) => {
+    setFormState((current) => ({ ...current, correctionDueDate: value }));
+  };
+
+  const setEvidenceNotes = (value: string) => {
+    setFormState((current) => ({ ...current, evidenceNotes: value }));
+  };
+
+  const setRejectionReason = (value: string) => {
+    setFormState((current) => ({ ...current, rejectionReason: value }));
+  };
+
+  const setVerificationResult = (value: VerificationResult) => {
+    setFormState((current) => ({ ...current, verificationResult: value }));
   };
 
   const saveDraft = async (): Promise<boolean> => {
@@ -159,9 +236,9 @@ export function useFeedstockVerificationForm(verificationId?: number) {
     setError(null);
 
     try {
-      const data = await saveFeedstockVerificationDraft(verification.id, payload);
+      const data = await saveFeedstockVerificationDraft(verification.id, buildFeedstockFormPayload(formState));
       const record = (data.feedstock_verification ?? data) as ApiRecord;
-      applyRecord(mapFeedstockVerificationRecord(record));
+      applyRecord(mapFeedstockVerificationRecord(record, officerName));
       return true;
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to save verification draft.'));
@@ -176,10 +253,8 @@ export function useFeedstockVerificationForm(verificationId?: number) {
       return false;
     }
 
-    const validationError = validateSubmit();
-
-    if (validationError) {
-      setError(validationError);
+    if (!submitReady) {
+      setError(submitBlockers[0] ?? 'Complete all required verification steps.');
       return false;
     }
 
@@ -187,9 +262,9 @@ export function useFeedstockVerificationForm(verificationId?: number) {
     setError(null);
 
     try {
-      const data = await submitFeedstockVerification(verification.id, payload);
+      const data = await submitFeedstockVerification(verification.id, buildFeedstockFormPayload(formState));
       const record = (data.feedstock_verification ?? data) as ApiRecord;
-      applyRecord(mapFeedstockVerificationRecord(record));
+      applyRecord(mapFeedstockVerificationRecord(record, officerName));
       return true;
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to submit feedstock verification.'));
@@ -201,32 +276,35 @@ export function useFeedstockVerificationForm(verificationId?: number) {
 
   return {
     verification,
+    formState,
     loading,
     submitting,
     savingDraft,
     error,
     isEmpty,
+    completionPercent,
+    submitReady,
+    submitBlockers,
     setError,
     reload: load,
-    checklist,
-    updateChecklistItem,
-    photoReviews,
+    updateSectionItem,
+    updateSectionResult,
+    updateSectionRemarks,
     updatePhotoReview,
-    weightSlipApproved,
+    setOfficerObservedQuantity,
     setWeightSlipApproved,
-    gpsVerified,
+    setWeightSlipRejectionReason,
     setGpsVerified,
-    gpsFlagged,
     setGpsFlagged,
-    officerRemarks,
+    setGpsOverrideReason,
+    setGpsOverridePhotoUri,
+    addOfficerEvidencePhoto,
     setOfficerRemarks,
-    correctionNotes,
     setCorrectionNotes,
-    requiredChanges,
     setRequiredChanges,
-    rejectionReason,
+    setCorrectionDueDate,
+    setEvidenceNotes,
     setRejectionReason,
-    verificationResult,
     setVerificationResult,
     saveDraft,
     submit,

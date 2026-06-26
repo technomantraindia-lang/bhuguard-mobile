@@ -26,11 +26,16 @@ export function OfficerGpsValidationScreen({ route, navigation }: Props) {
         <Pressable
           style={styles.button}
           onPress={() => {
-            navigation.navigate({
-              name: 'FieldOfficerFeedstockVerification',
-              params: { verificationId, gpsVerified: true },
-              merge: true,
-            });
+            if (verificationId != null) {
+              navigation.navigate({
+                name: 'FieldOfficerFeedstockVerification',
+                params: { verificationId, gpsVerified: true },
+                merge: true,
+              });
+              return;
+            }
+
+            navigation.goBack();
           }}
         >
           <Text style={styles.buttonText}>Confirm GPS Valid</Text>

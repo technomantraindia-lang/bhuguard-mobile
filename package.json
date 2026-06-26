@@ -1,6 +1,6 @@
 {
   "name": "bhuguard-mobile",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "main": "index.ts",
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -17,9 +17,12 @@
     "expo-image-picker": "~56.0.18",
     "expo-local-authentication": "~56.0.4",
     "expo-location": "~56.0.18",
+    "expo-print": "~56.0.4",
+    "expo-sharing": "~56.0.18",
     "expo-status-bar": "~56.0.4",
     "react": "19.2.3",
     "react-native": "0.85.3",
+    "react-native-photo-manipulator": "^1.9.2",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
     "react-native-svg": "15.15.4",
@@ -38,9 +41,15 @@
     "start:lan": "expo start --go --lan",
     "start:dev-client": "expo start --dev-client --lan",
     "start:dev-client:clear": "expo start --dev-client --lan --clear",
+    "prebuild:development": "powershell -ExecutionPolicy Bypass -File ./scripts/prebuild-development.ps1",
+    "build:dev-client": "powershell -ExecutionPolicy Bypass -File ./scripts/build-dev-client-apk.ps1",
     "android": "expo start --go --android",
     "ios": "expo start --go --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build:demo-apk": "powershell -ExecutionPolicy Bypass -File ./scripts/build-demo-apk.ps1",
+    "build:apk": "npm run build:demo-apk",
+    "prebuild:demo": "powershell -ExecutionPolicy Bypass -File ./scripts/prebuild-demo.ps1",
+    "generate:icons": "python ./scripts/generate-app-icons.py"
   },
   "private": true
 }

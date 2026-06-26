@@ -6,6 +6,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import type { ReportDownloadFormat } from '../../api/reportsApi';
 import { deleteFieldOfficerReportDraft } from '../../api/fieldOfficerApi';
 import { getApiErrorMessage } from '../../api/authApi';
 import { AppButton } from '../../components/AppButton';
@@ -19,7 +20,7 @@ import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIc
 import { useFieldOfficerReportsData } from '../../hooks/useFieldOfficerReportsData';
 import type { FieldOfficerStackParamList, FieldOfficerTabParamList } from '../../navigation/types';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
-import { downloadFieldOfficerReport } from '../../utils/fieldOfficerReportDownload';
+import { downloadFieldOfficerReport } from '../../utils/roleReportDownload';
 import type { FieldOfficerReportFilter, FieldOfficerReportItem } from '../../utils/fieldOfficerReportHelpers';
 import { clearVisitReportDraft } from '../../utils/visitVerificationStorage';
 
@@ -42,6 +43,7 @@ export function FieldOfficerReportsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FieldOfficerReportFilter>('all');
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [downloadingFormat, setDownloadingFormat] = useState<ReportDownloadFormat | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FieldOfficerReportItem | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -68,11 +70,12 @@ export function FieldOfficerReportsScreen() {
     navigation.navigate('FieldOfficerDraftReportEditor', { assignmentId: report.assignmentId });
   };
 
-  const handleDownload = async (report: FieldOfficerReportItem) => {
+  const handleDownload = async (report: FieldOfficerReportItem, format: ReportDownloadFormat) => {
     setDownloadingId(report.id);
+    setDownloadingFormat(format);
 
     try {
-      const result = await downloadFieldOfficerReport(report);
+      const result = await downloadFieldOfficerReport(report, format);
 
       if (!result.success) {
         Alert.alert('Download failed', result.message ?? 'Unable to download this report right now.');
@@ -84,6 +87,7 @@ export function FieldOfficerReportsScreen() {
       Alert.alert('Download failed', getApiErrorMessage(err, 'Unable to download this report right now.'));
     } finally {
       setDownloadingId(null);
+      setDownloadingFormat(null);
     }
   };
 
@@ -222,10 +226,10 @@ export function FieldOfficerReportsScreen() {
               <OfficerReportCard
                 key={`${report.id}-${report.assignmentId}`}
                 report={report}
-                downloading={downloadingId === report.id}
+                downloadingFormat={downloadingId === report.id ? downloadingFormat : null}
                 onView={() => handleView(report)}
                 onContinue={() => handleContinue(report)}
-                onDownload={() => void handleDownload(report)}
+                onDownload={(format) => void handleDownload(report, format)}
                 onDeleteDraft={report.isDraft ? () => setDeleteTarget(report) : undefined}
               />
             ))}

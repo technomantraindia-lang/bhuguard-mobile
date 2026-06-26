@@ -3,7 +3,7 @@
     "name": "Bhuguard",
     "slug": "bhuguard-mobile",
     "scheme": "bhuguard",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
@@ -12,9 +12,10 @@
       "bundleIdentifier": "com.technomantra.bhuguard"
     },
     "android": {
+      "versionCode": 3,
       "package": "com.technomantra.bhuguard",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#005129",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

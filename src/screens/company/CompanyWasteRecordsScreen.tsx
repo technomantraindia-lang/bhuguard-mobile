@@ -14,9 +14,15 @@ export function CompanyWasteRecordsScreen() {
   return (
     <ApiListScreen
       title="Waste Records"
-      subtitle="GET /company/waste-records"
+      subtitle="Company waste management records"
       fetcher={getCompanyWasteRecords}
       listKeys={['waste_records']}
+      emptyTitle="No waste records yet"
+      emptyMessage="Add waste records linked to your service submissions."
+      headerAction={{
+        label: 'Add Waste Record',
+        onPress: () => navigation.navigate('CompanyCreateRecord', { formKey: 'company_create_waste' }),
+      }}
       onItemPress={(item) =>
         navigation.navigate('CompanyWasteRecordDetail', { id: Number(item.id) })
       }

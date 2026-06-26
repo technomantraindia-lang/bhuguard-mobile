@@ -18,6 +18,9 @@ import {
 } from '../../../../utils/boundaryGeometry';
 import { getBoundaryFlowRoutes } from '../../../../utils/boundaryFlowRoutes';
 import { boundaryRouteParams } from '../../../../utils/boundaryNavigation';
+import { applyLivePhotoWatermark } from '../../../../services/livePhotoWatermarkService';
+import { resolveCaptureLocation } from '../../../../utils/livePhotoLocation';
+import { buildLivePhotoWatermarkMeta } from '../../../../utils/livePhotoWatermarkFormat';
 
 type Props = NativeStackScreenProps<FarmerStackParamList, 'CameraBoundaryLive'>;
 
@@ -140,12 +143,49 @@ export function CameraBoundaryLiveScreen({ navigation }: Props) {
         return;
       }
 
+      const capturedAt = new Date().toISOString();
+      const location = await resolveCaptureLocation(latitude, longitude);
+      const watermark = buildLivePhotoWatermarkMeta({
+        capturedAt,
+        latitude,
+        longitude,
+        accuracy: acc,
+        village: location.village,
+        taluka: location.taluka,
+        district: location.district,
+        state: location.state,
+      });
+
+      let stampedUri: string;
+
+      try {
+        stampedUri = await applyLivePhotoWatermark(photo.uri, watermark, {
+          uri: photo.uri,
+          name: `boundary-point-${boundary.points.length + 1}.jpg`,
+          type: 'image/jpeg',
+          capturedAt,
+          latitude,
+          longitude,
+          accuracy: acc,
+          village: location.village,
+          taluka: location.taluka,
+          district: location.district,
+          state: location.state,
+        });
+      } catch (error) {
+        Alert.alert(
+          'Stamp failed',
+          error instanceof Error ? error.message : 'Could not burn timestamp onto the boundary photo.',
+        );
+        return;
+      }
+
       boundary.addPoint({
         latitude,
         longitude,
         accuracy: acc,
-        timestamp: new Date().toISOString(),
-        photoUri: photo.uri,
+        timestamp: capturedAt,
+        photoUri: stampedUri,
         label: `Corner ${boundary.points.length + 1}`,
       });
       boundary.setCurrentLocation(latitude, longitude, acc);

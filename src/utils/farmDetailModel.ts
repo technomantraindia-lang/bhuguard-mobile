@@ -70,7 +70,7 @@ function parseAcres(farm: ApiRecord): number {
     return area;
   }
 
-  return 12.45;
+  return 0;
 }
 
 function buildVerificationSteps(farm: ApiRecord): FarmVerificationStep[] {
@@ -92,13 +92,14 @@ function buildCarbonProgress(farm: ApiRecord, carbonRecords: ApiRecord[]): FarmC
   const farmCarbon = carbonRecords.find((record) => Number(record.farm_id) === Number(farm.id));
 
   const estimated = Number(
-    farmCarbon?.estimated_co2e ?? farmCarbon?.estimated_carbon_credits ?? farm.estimated_co2e ?? 14.8,
+    farmCarbon?.estimated_co2e ?? farmCarbon?.estimated_carbon_credits ?? farm.estimated_co2e ?? 0,
   );
-  const target = Number(farmCarbon?.target_co2e ?? farmCarbon?.target_carbon_credits ?? 25);
+  const target = Number(farmCarbon?.target_co2e ?? farmCarbon?.target_carbon_credits ?? 0);
 
-  const safeEstimated = Number.isFinite(estimated) && estimated > 0 ? estimated : 14.8;
-  const safeTarget = Number.isFinite(target) && target > 0 ? target : 25;
-  const progressPercent = Math.min(100, Math.round((safeEstimated / safeTarget) * 100));
+  const safeEstimated = Number.isFinite(estimated) && estimated > 0 ? estimated : 0;
+  const safeTarget = Number.isFinite(target) && target > 0 ? target : 0;
+  const progressPercent =
+    safeTarget > 0 ? Math.min(100, Math.round((safeEstimated / safeTarget) * 100)) : 0;
 
   return {
     estimatedLabel: `${safeEstimated.toFixed(1)} tCO₂e`,
@@ -120,113 +121,9 @@ export function buildFarmDetailViewModel(
     .filter((item): item is FarmerActivityViewModel => item !== null)
     .filter((activity) => activity.farmId === farmId || activity.farmId === 0);
 
-  const allActivities =
-    activities.length > 0
-      ? activities
-      : [
-          {
-            id: 1,
-            activityId: 'ACT-2026-00001',
-            farmId,
-            title: 'Crop Sowing',
-            emoji: '🌱',
-            iconName: 'potted_plant' as const,
-            farmName: farm.name,
-            farmerName: '',
-            projectName: 'Regenerative Agriculture',
-            dateLabel: '10 Jan 2026',
-            recordedAtLabel: '10 Jan 2026, 09:30',
-            sortKey: 3,
-            status: 'approved' as const,
-            statusLabel: 'Approved',
-            submittedBy: 'Farmer',
-            evidencePhotoCount: 2,
-            documentsCount: 0,
-            evidenceLabel: '2 photos',
-            gpsCaptured: true,
-            gpsLabel: 'Captured',
-            fieldOfficerName: 'Rakesh Patel',
-            reviewDateLabel: null,
-            remark: null,
-            quantity: null,
-            unit: null,
-            description: null,
-          },
-          {
-            id: 2,
-            activityId: 'ACT-2026-00002',
-            farmId,
-            title: 'Biochar Application',
-            emoji: '♻️',
-            iconName: 'co2' as const,
-            farmName: farm.name,
-            farmerName: '',
-            projectName: 'Regenerative Agriculture',
-            dateLabel: '18 Jan 2026',
-            recordedAtLabel: '18 Jan 2026, 14:15',
-            sortKey: 2,
-            status: 'under_review' as const,
-            statusLabel: 'Under Review',
-            submittedBy: 'Farmer',
-            evidencePhotoCount: 3,
-            documentsCount: 0,
-            evidenceLabel: '3 photos',
-            gpsCaptured: true,
-            gpsLabel: 'Captured',
-            fieldOfficerName: 'Rakesh Patel',
-            reviewDateLabel: null,
-            remark: null,
-            quantity: null,
-            unit: null,
-            description: null,
-          },
-          {
-            id: 3,
-            activityId: 'ACT-2026-00003',
-            farmId,
-            title: 'Irrigation',
-            emoji: '💧',
-            iconName: 'water_drop' as const,
-            farmName: farm.name,
-            farmerName: '',
-            projectName: 'Regenerative Agriculture',
-            dateLabel: '25 Jan 2026',
-            recordedAtLabel: '25 Jan 2026, 07:45',
-            sortKey: 1,
-            status: 'approved' as const,
-            statusLabel: 'Approved',
-            submittedBy: 'Farmer',
-            evidencePhotoCount: 1,
-            documentsCount: 0,
-            evidenceLabel: '1 photo',
-            gpsCaptured: false,
-            gpsLabel: 'Not captured',
-            fieldOfficerName: 'Rakesh Patel',
-            reviewDateLabel: null,
-            remark: null,
-            quantity: null,
-            unit: null,
-            description: null,
-          },
-        ];
+  const allActivities = activities;
 
-  const activitySummary =
-    activities.length > 0
-      ? buildActivitiesSummary(allActivities, [])
-      : {
-          submitted: 28,
-          approved: 20,
-          underReview: 5,
-          correctionRequired: 3,
-          verified: 20,
-          pending: 8,
-          photosUploaded: 42,
-          documentsUploaded: 6,
-          gpsCapturedPercent: 86,
-          lastVerificationLabel: '12 Jan 2026',
-          fieldOfficerName: 'Rakesh Patel',
-          verificationStatusLabel: 'Verified',
-        };
+  const activitySummary = buildActivitiesSummary(allActivities, []);
 
   const coordinates = getFarmCoordinates(farmRecord) ?? getDemoCenter();
   const acres = parseAcres(farmRecord);
@@ -234,13 +131,12 @@ export function buildFarmDetailViewModel(
   const verificationBadge = getFarmVerificationBadge(farmRecord);
 
   const areaLabel = getFarmAreaLabel(farmRecord);
-  const resolvedArea = areaLabel === '—' ? '12.45 Acres' : areaLabel;
 
   return {
     farm,
-    farmName: farm.name === `Farm ${farm.id}` ? 'Demo Farmer Farm' : farm.name,
-    farmCode: farm.code === 'BG-FARM-000' ? 'BG-BHG-FARM-000001' : farm.code,
-    statusLabel: titleCase(pickString(farmRecord, 'status') !== '-' ? pickString(farmRecord, 'status') : 'Active'),
+    farmName: farm.name,
+    farmCode: farm.code,
+    statusLabel: titleCase(pickString(farmRecord, 'status') !== '-' ? pickString(farmRecord, 'status') : '—'),
     verificationLabel:
       verificationBadge === 'verified'
         ? 'Verified'
@@ -250,28 +146,35 @@ export function buildFarmDetailViewModel(
     projectName:
       pickString(farmRecord, 'project_name', 'service_name') !== '-'
         ? pickString(farmRecord, 'project_name', 'service_name')
-        : 'Regenerative Agriculture',
-    areaLabel: resolvedArea,
+        : '—',
+    areaLabel: areaLabel === '—' ? 'Not set' : areaLabel,
     locationLabel:
       getFarmLocationLabel(farmRecord) !== 'Location not set'
         ? getFarmLocationLabel(farmRecord)
-        : 'Demo Village, Ahmedabad, Gujarat',
+        : 'Location not set',
     surveyNumber:
       pickString(farmRecord, 'land_survey_number', 'survey_number') !== '-'
         ? pickString(farmRecord, 'land_survey_number', 'survey_number')
-        : 'GJ-2026-1458',
-    cropLabel: farm.cropLabel !== '—' ? farm.cropLabel : 'Wheat',
-    soilLabel: farm.soilLabel !== '—' ? farm.soilLabel : 'Black Soil',
+        : '—',
+    cropLabel: farm.cropLabel !== '—' ? farm.cropLabel : '—',
+    soilLabel: farm.soilLabel !== '—' ? farm.soilLabel : '—',
     irrigationLabel:
-      pickString(farmRecord, 'irrigation_type') !== '-' ? titleCase(pickString(farmRecord, 'irrigation_type')) : 'Drip',
+      pickString(farmRecord, 'irrigation_type') !== '-'
+        ? titleCase(pickString(farmRecord, 'irrigation_type'))
+        : '—',
     mappedLabel: isFarmMapped(farmRecord) ? 'Yes' : 'No',
     coordinatesLabel: formatCoordinatePair(coordinates),
-    enrollmentDate: pickString(farmRecord, 'enrollment_date', 'created_at') !== '-' ? pickString(farmRecord, 'enrollment_date', 'created_at') : '12 Jan 2026',
-    carbonProgramLabel: 'Active',
+    enrollmentDate:
+      pickString(farmRecord, 'enrollment_date', 'created_at') !== '-'
+        ? pickString(farmRecord, 'enrollment_date', 'created_at')
+        : '—',
+    carbonProgramLabel: pickString(farmRecord, 'carbon_program_status') !== '-'
+      ? pickString(farmRecord, 'carbon_program_status')
+      : '—',
     fieldOfficerName:
       pickNestedString(farmRecord, 'field_officer.name') !== '-'
         ? pickNestedString(farmRecord, 'field_officer.name')
-        : 'Rakesh Patel',
+        : '—',
     activitySummary,
     recentActivities: allActivities.slice(0, 3),
     carbonProgress: buildCarbonProgress(farmRecord, carbonRecords),

@@ -17,7 +17,12 @@ export function FarmerWeeklyUpdatesScreen() {
       subtitle="GET /farmer/weekly-updates"
       fetcher={getFarmerWeeklyUpdates}
       listKeys={['weekly_updates']}
-      emptyTitle="No weekly updates"
+      refetchOnFocus
+      emptyTitle="No weekly updates yet"
+      headerAction={{
+        label: 'Create Update',
+        onPress: () => navigation.navigate('FarmerCreateWeeklyUpdate'),
+      }}
       onItemPress={(item) =>
         navigation.navigate('FarmerWeeklyUpdateDetail', { updateId: Number(item.id) })
       }

@@ -1,18 +1,11 @@
 import { useCallback } from 'react';
 
-import { apiClient } from '../api/client';
+import { logout } from '../api/authApi';
 import { navigationRef } from '../navigation/navigationRef';
-import { clearAuthSession } from '../storage/authStorage';
 
 export function useLogout() {
-  const logout = useCallback(async () => {
-    try {
-      await apiClient.post('/auth/logout');
-    } catch {
-      // Local session is always cleared even if server logout fails.
-    }
-
-    await clearAuthSession();
+  const logoutUser = useCallback(async () => {
+    await logout();
 
     if (navigationRef.isReady()) {
       navigationRef.reset({
@@ -22,5 +15,5 @@ export function useLogout() {
     }
   }, []);
 
-  return logout;
+  return logoutUser;
 }

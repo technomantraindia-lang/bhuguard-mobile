@@ -1,104 +1,86 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, SafeAreaView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, SafeAreaView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { getApiErrorMessage } from '../../api/authApi';
-import { getAssignmentEvidence, uploadVisitEvidence } from '../../api/fieldOfficerApi';
+import { getAssignmentEvidence } from '../../api/evidenceApi';
 import { AppButton } from '../../components/AppButton';
 import { AppCard } from '../../components/AppCard';
-import { LiveEvidenceCaptureCard } from '../../components/evidence/LiveEvidenceCaptureCard';
+import { ErrorState } from '../../components/ErrorState';
+import { LoadingState } from '../../components/LoadingState';
+import { EvidenceUploadForm } from '../../components/evidence/EvidenceUploadForm';
 import { VisitVerificationProgressStepper } from '../../components/officer/VisitVerificationProgressStepper';
 import { ScreenHeader } from '../../components/ScreenHeader';
-import { useLiveEvidenceCapture } from '../../hooks/useLiveEvidenceCapture';
+import { OFFICER_EVIDENCE_CATEGORY_OPTIONS } from '../../constants/evidenceCategories';
+import { useEvidenceUpload } from '../../hooks/useEvidenceUpload';
 import { useVisitVerificationProgress } from '../../hooks/useVisitVerificationProgress';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { colors } from '../../theme/colors';
 import { extractList, type ApiRecord } from '../../utils/apiHelpers';
-import { appendVisitEvidenceFields } from '../../utils/liveEvidenceCapture';
+import type { LiveCapturedEvidence } from '../../utils/liveEvidenceCapture';
 
 type Props = NativeStackScreenProps<FieldOfficerStackParamList, 'VisitEvidenceUpload'>;
-
-type EvidenceCategoryKey =
-  | 'document_photo'
-  | 'verification_photo'
-  | 'site_photo'
-  | 'supporting_document'
-  | 'weekly_progress_photo';
-
-const CATEGORY_OPTIONS: Array<{ key: EvidenceCategoryKey; label: string }> = [
-  { key: 'document_photo', label: 'Document' },
-  { key: 'verification_photo', label: 'Verification' },
-  { key: 'site_photo', label: 'Site' },
-  { key: 'supporting_document', label: 'Supporting Doc' },
-  { key: 'weekly_progress_photo', label: 'Weekly Progress' },
-];
 
 export function VisitEvidenceUploadScreen({ route, navigation }: Props) {
   const { assignmentId } = route.params;
   const { progress, reload: reloadProgress } = useVisitVerificationProgress(assignmentId, 'evidence');
-  const [uploading, setUploading] = useState(false);
-  const [loadingEvidence, setLoadingEvidence] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [category, setCategory] = useState<EvidenceCategoryKey>('verification_photo');
-  const [notes, setNotes] = useState('');
-  const [uploadedCount, setUploadedCount] = useState(0);
-  const liveEvidence = useLiveEvidenceCapture({ defaultName: 'visit-evidence.jpg', allowsEditing: true });
+  const [category, setCategory] = useState('verification_photo');
+  const [remarks, setRemarks] = useState('');
+  const [slipNumber, setSlipNumber] = useState('');
+  const [grossWeight, setGrossWeight] = useState('');
+  const [tareWeight, setTareWeight] = useState('');
+  const [netWeight, setNetWeight] = useState('');
+  const [unit, setUnit] = useState('');
+  const [weighingDate, setWeighingDate] = useState('');
+
+  const evidenceUpload = useEvidenceUpload({
+    role: 'field_officer',
+    visitId: assignmentId,
+    onSuccess: () => void reloadProgress(),
+  });
 
   const loadEvidence = useCallback(async () => {
-    setLoadingEvidence(true);
-
-    try {
-      const data = await getAssignmentEvidence(assignmentId);
-      const items = extractList(data as ApiRecord, ['evidence', 'evidence_uploads', 'data']);
-      setUploadedCount(items.length);
-    } catch {
-      setUploadedCount(0);
-    } finally {
-      setLoadingEvidence(false);
-    }
-  }, [assignmentId]);
+    await evidenceUpload.refreshList();
+  }, [evidenceUpload]);
 
   useEffect(() => {
     void loadEvidence();
-  }, [loadEvidence]);
+  }, [assignmentId]);
 
-  const uploadEvidence = async () => {
-    if (!liveEvidence.evidence) {
-      setError('Capture a live photo before uploading.');
+  if (!assignmentId) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <ErrorState message="Visit ID is missing. Please reopen this visit and try again." />
+      </SafeAreaView>
+    );
+  }
+
+  const handleSubmit = async (file: LiveCapturedEvidence | { uri: string; name: string; type: string }) => {
+    const saved = await evidenceUpload.submitEvidence(file, {
+      evidence_category: category,
+      visit_id: assignmentId,
+      remarks,
+      notes: remarks,
+      slip_number: slipNumber,
+      gross_weight: grossWeight,
+      tare_weight: tareWeight,
+      net_weight: netWeight,
+      unit,
+      weighing_date: weighingDate,
+    });
+
+    if (!saved) {
       return;
     }
 
-    setUploading(true);
-    setError(null);
-
-    try {
-      const formData = new FormData();
-      appendVisitEvidenceFields(formData, liveEvidence.evidence);
-      formData.append('category', category);
-
-      if (notes.trim()) {
-        formData.append('notes', notes.trim());
-      }
-
-      await uploadVisitEvidence(assignmentId, formData);
-      await loadEvidence();
-      await reloadProgress();
-      liveEvidence.clearEvidence();
-      setNotes('');
-
-      Alert.alert('Evidence uploaded', 'Your live photo evidence was saved successfully.');
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Evidence upload failed.'));
-    } finally {
-      setUploading(false);
-    }
+    setRemarks('');
+    setSlipNumber('');
+    setGrossWeight('');
+    setTareWeight('');
+    setNetWeight('');
+    setUnit('');
+    setWeighingDate('');
+    Alert.alert('Evidence uploaded', 'Your evidence was saved successfully.');
   };
-
-  const continueToReview = () => {
-    navigation.navigate('VisitReportReview', { assignmentId });
-  };
-
-  const displayError = error ?? liveEvidence.error;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -112,74 +94,44 @@ export function VisitEvidenceUploadScreen({ route, navigation }: Props) {
         <AppCard
           title="Uploaded evidence"
           subtitle={
-            loadingEvidence
+            evidenceUpload.loadingList
               ? 'Loading saved evidence...'
-              : `${uploadedCount} file${uploadedCount === 1 ? '' : 's'} saved on server`
+              : `${evidenceUpload.uploadedCount} file${evidenceUpload.uploadedCount === 1 ? '' : 's'} saved on server`
           }
         />
 
-        <AppCard title="Evidence category" subtitle="Choose what you are capturing">
-          <View style={styles.categoryRow}>
-            {CATEGORY_OPTIONS.map((opt) => {
-              const active = opt.key === category;
-
-              return (
-                <PressableChip
-                  key={opt.key}
-                  label={opt.label}
-                  active={active}
-                  onPress={() => setCategory(opt.key)}
-                />
-              );
-            })}
-          </View>
-        </AppCard>
-
-        <LiveEvidenceCaptureCard
-          evidence={liveEvidence.evidence}
-          capturing={liveEvidence.capturing}
-          uploading={uploading}
-          error={displayError}
-          onOpenCamera={() => void liveEvidence.captureEvidence()}
-          onRetake={() => void liveEvidence.retakeEvidence()}
-          onUpload={() => void uploadEvidence()}
-          uploadLabel="Upload Evidence"
-          showUploadButton
-        />
-
-        <TextInput
-          style={styles.notesInput}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Optional notes (for this evidence)"
-          placeholderTextColor={colors.textMuted}
-          multiline
+        <EvidenceUploadForm
+          categories={OFFICER_EVIDENCE_CATEGORY_OPTIONS}
+          selectedCategory={category}
+          onCategoryChange={setCategory}
+          remarks={remarks}
+          onRemarksChange={setRemarks}
+          uploading={evidenceUpload.uploading}
+          error={evidenceUpload.error}
+          onSubmit={handleSubmit}
+          showWeightSlipFields={category === 'weight_slip'}
+          slipNumber={slipNumber}
+          grossWeight={grossWeight}
+          tareWeight={tareWeight}
+          netWeight={netWeight}
+          unit={unit}
+          weighingDate={weighingDate}
+          onSlipNumberChange={setSlipNumber}
+          onGrossWeightChange={setGrossWeight}
+          onTareWeightChange={setTareWeight}
+          onNetWeightChange={setNetWeight}
+          onUnitChange={setUnit}
+          onWeighingDateChange={setWeighingDate}
         />
 
         <AppButton
           label="Continue to Review"
-          onPress={continueToReview}
+          onPress={() => navigation.navigate('VisitReportReview', { assignmentId })}
           variant="secondary"
-          disabled={uploadedCount === 0}
+          disabled={evidenceUpload.uploadedCount === 0}
         />
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function PressableChip({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable style={[styles.categoryChip, active && styles.categoryChipActive]} onPress={onPress}>
-      <Text style={[styles.categoryChipText, active && styles.categoryChipTextActive]}>{label}</Text>
-    </Pressable>
   );
 }
 
@@ -187,29 +139,4 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   container: { padding: 20, gap: 12 },
-  categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  categoryChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-    overflow: 'hidden',
-  },
-  categoryChipActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.softGreen,
-  },
-  categoryChipText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
-  categoryChipTextActive: { color: colors.primary },
-  notesInput: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    padding: 12,
-    minHeight: 46,
-    color: colors.text,
-  },
 });

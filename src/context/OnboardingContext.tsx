@@ -206,6 +206,19 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         appendFile(formData, 'consent_form', draft.consent_form);
         appendFile(formData, 'proof_of_land_ownership', draft.proof_of_land_ownership);
 
+        const hasStampedImage =
+          [draft.farmer_photo, draft.proof_of_land_ownership].some(
+            (file) => file?.mimeType?.startsWith('image/'),
+          );
+
+        if (hasStampedImage) {
+          formData.append('client_pre_stamped', '1');
+        }
+
+        if (draft.gps_captured_at.trim()) {
+          formData.append('captured_at', draft.gps_captured_at.trim());
+        }
+
         if (draft.boundary_points.length >= 3) {
           const mappingPayload = buildOnboardingBoundaryPayload(draft);
           formData.append('boundary_mapping', JSON.stringify(mappingPayload));

@@ -28,6 +28,10 @@ export async function createCompanySite(payload: ApiRecord) {
   return postApiData('/company/sites', payload);
 }
 
+export async function updateCompanySite(id: number | string, payload: ApiRecord) {
+  return putApiData(`/company/sites/${id}`, payload);
+}
+
 export async function getCompanyServices() {
   return fetchApiData('/company/services');
 }
@@ -80,13 +84,7 @@ export async function createCompanyBiocharRecord(payload: ApiRecord) {
   return postApiData('/company/biochar-records', payload);
 }
 
-export async function getCompanyEvidence() {
-  return fetchApiData('/company/evidence');
-}
-
-export async function uploadCompanyEvidence(formData: FormData) {
-  return postApiData('/company/evidence', formData);
-}
+export { getCompanyEvidence, uploadCompanyEvidence } from './evidenceApi';
 
 export async function getCompanyVerificationStatus() {
   return fetchApiData('/company/verification-status');
@@ -115,3 +113,30 @@ export async function getCompanyRegistryExports() {
 export async function createCompanyRegistryExport(payload: ApiRecord) {
   return postApiData('/company/registry-exports', payload);
 }
+
+export async function updateCompanyWasteRecord(id: number | string, payload: ApiRecord) {
+  return putApiData(`/company/waste-records/${id}`, payload);
+}
+
+export async function updateCompanyIndustrialCarbonRecord(id: number | string, payload: ApiRecord) {
+  return putApiData(`/company/industrial-carbon-records/${id}`, payload);
+}
+
+export async function updateCompanyBiocharRecord(id: number | string, payload: ApiRecord) {
+  return putApiData(`/company/biochar-records/${id}`, payload);
+}
+
+/** Task-spec aliases */
+export const getSites = getCompanySites;
+export const getSiteDetail = getCompanySiteDetail;
+export const createSite = createCompanySite;
+export const updateSite = updateCompanySite;
+export const getServiceSubmissions = getCompanyServiceSubmissions;
+export const createServiceSubmission = createCompanyServiceSubmission;
+export const getWasteRecords = getCompanyWasteRecords;
+export const createWasteRecord = createCompanyWasteRecord;
+export const getBiocharProductionRecords = getCompanyBiocharRecords;
+export const createBiocharProductionRecord = createCompanyBiocharRecord;
+export const getIndustrialCarbonRecords = getCompanyIndustrialCarbonRecords;
+export const createIndustrialCarbonRecord = createCompanyIndustrialCarbonRecord;
+export const getCompanyReports = getCompanyFinalReports;
