@@ -9,7 +9,9 @@ import { ArtisanGpsStatusCard } from '../../components/artisan/ArtisanGpsStatusC
 import { BiocharProductionSuccessModal } from '../../components/officer/biochar/BiocharProductionSuccessModal';
 import {
   BiocharEvidenceCaptureSection,
-  MoistureSection,
+  FinalStageSection,
+  InitialDataSection,
+  MoistureReadingsSection,
   OfficerNotesSection,
   ProcessDataSection,
   ProductionBatchSection,
@@ -22,7 +24,6 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import {
   BIOCHAR_BATCH_EVIDENCE_SLOT,
   BIOCHAR_MOISTURE_EVIDENCE_SLOT,
-  BIOCHAR_OUTPUT_EVIDENCE_SLOT,
   BIOCHAR_PROCESS_EVIDENCE_SLOTS,
   type BiocharEvidenceKey,
 } from '../../constants/biocharProduction';
@@ -40,6 +41,7 @@ export function ArtisanBiocharProductionScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<ScreenRoute>();
   const form = useBiocharProductionForm({
+    farmerId: route.params.farmerId,
     farmId: route.params.farmId,
     batchId: route.params?.batchId,
     apiMode: 'artisan',
@@ -69,8 +71,9 @@ export function ArtisanBiocharProductionScreen() {
   useEffect(() => {
     if (gps.latitude != null && gps.longitude != null) {
       void form.syncGpsFromCapture(gps.latitude, gps.longitude, gps.accuracyM);
+      void form.syncAltitudeFromCapture(gps.altitude ?? null);
     }
-  }, [form, gps.accuracyM, gps.latitude, gps.longitude]);
+  }, [form, gps.accuracyM, gps.altitude, gps.latitude, gps.longitude]);
 
   if (form.loading) {
     return (
@@ -150,6 +153,7 @@ export function ArtisanBiocharProductionScreen() {
       evidence={form.evidence[slot.key]}
       readOnly={readOnly}
       onAddEvidence={(key) => void handleAddEvidence(key)}
+      onUploadEvidence={(key) => void form.uploadEvidence(key)}
       onRemoveEvidence={form.removeEvidence}
       onPreviewEvidence={() => Alert.alert('Evidence', 'Captured and ready for upload.')}
     />
@@ -167,13 +171,14 @@ export function ArtisanBiocharProductionScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Biochar Activity" subtitle={route.params.farmLabel} />
+      <ScreenHeader title="Biochar Process" subtitle={route.params.farmLabel} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <ProductionRecordCard
           productionRecordCode={form.productionRecordCode}
           batchCode={form.batchCode}
           officerName={form.officerName}
+          farmerId={form.selectedFarmerId}
           farmerName={form.farmerName}
           productionDate={form.productionDate}
           statusLabel={form.statusLabel}
@@ -196,9 +201,33 @@ export function ArtisanBiocharProductionScreen() {
           feedstockUnit={form.feedstockUnit}
           feedstockType={form.feedstockType}
           onGenerateBatchCode={() => void form.regenerateCodes()}
+          onBatchCodeChange={form.setBatchCode}
           onFeedstockQuantityChange={form.setFeedstockQuantity}
           onFeedstockUnitChange={(value) => form.setFeedstockUnit(value as FeedstockQuantityUnit)}
           onFeedstockTypeChange={(value) => form.setFeedstockType(value as FeedstockTypeValue)}
+        />
+
+        <InitialDataSection
+          timestampDate={form.timestampDate}
+          timestampTime={form.timestampTime}
+          altitude={form.altitude}
+          villageName={form.villageName}
+          talukaName={form.talukaName}
+          districtName={form.districtName}
+          stateName={form.stateName}
+          latitude={form.latitude}
+          longitude={form.longitude}
+          accuracyM={form.accuracyM}
+          onTimestampDateChange={form.setTimestampDate}
+          onTimestampTimeChange={form.setTimestampTime}
+          onAltitudeChange={(value) => form.setAltitude(value === '' ? null : Number(value))}
+          onVillageNameChange={form.setVillageName}
+          onTalukaNameChange={form.setTalukaName}
+          onDistrictNameChange={form.setDistrictName}
+          onStateNameChange={form.setStateName}
+          onCaptureGps={() => void form.recaptureGps()}
+          onRecaptureGps={() => void form.recaptureGps()}
+          mapPreviewUrl={form.mapPreviewUrl}
         />
 
         <ArtisanGpsStatusCard
@@ -213,16 +242,29 @@ export function ArtisanBiocharProductionScreen() {
         />
 
         {renderEvidenceCapture(BIOCHAR_BATCH_EVIDENCE_SLOT)}
+        {renderEvidenceCapture(BIOCHAR_MOISTURE_EVIDENCE_SLOT)}
 
-        <MoistureSection
-          moistureValue={form.moistureValue}
-          moistureNotes={form.moistureNotes}
-          onMoistureValueChange={form.setMoistureValue}
-          onMoistureNotesChange={form.setMoistureNotes}
+        <MoistureReadingsSection
+          readings={form.moistureReadings}
           readOnly={readOnly}
+          onAddReading={form.addMoistureReading}
+          onRemoveReading={form.removeMoistureReading}
+          onChangeReading={(key, value) => form.updateMoistureReading(key, 'moistureReading', value)}
+          onChangeNotes={(key, value) => form.updateMoistureReading(key, 'notes', value)}
+          onCapturePhoto={(key) => void form.captureMoistureReadingPhoto(key)}
+          onUploadPhoto={(key) => void form.uploadMoistureReadingPhoto(key)}
         />
 
-        {renderEvidenceCapture(BIOCHAR_MOISTURE_EVIDENCE_SLOT)}
+        {BIOCHAR_PROCESS_EVIDENCE_SLOTS.slice(0, 3).map(renderEvidenceCapture)}
+
+        <FinalStageSection
+          finalStageTime={form.finalStageTime}
+          quenchingTime={form.quenchingTime}
+          onFinalStageTimeChange={form.setFinalStageTime}
+          onQuenchingTimeChange={form.setQuenchingTime}
+        />
+
+        {BIOCHAR_PROCESS_EVIDENCE_SLOTS.slice(3).map(renderEvidenceCapture)}
 
         <ProductionTimeSection
           startTime={form.startTime}
@@ -242,9 +284,6 @@ export function ArtisanBiocharProductionScreen() {
           onBiocharOutputChange={form.setBiocharOutput}
           onBiocharOutputUnitChange={form.setBiocharOutputUnit}
         />
-
-        {BIOCHAR_PROCESS_EVIDENCE_SLOTS.map(renderEvidenceCapture)}
-        {renderEvidenceCapture(BIOCHAR_OUTPUT_EVIDENCE_SLOT)}
 
         <ArtisanGpsStatusCard
           title="Production Finish GPS"

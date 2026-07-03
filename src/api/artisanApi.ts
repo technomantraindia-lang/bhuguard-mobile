@@ -121,6 +121,26 @@ export async function submitArtisanBiocharProduction(id: number | string) {
   return postApiData(`/artisan/biochar-production/${id}/submit`, {});
 }
 
+export async function getArtisanBiocharMixingRecords() {
+  return fetchApiData('/artisan/biochar-mixing');
+}
+
+export async function getArtisanBiocharMixing(id: number | string) {
+  return fetchApiData(`/artisan/biochar-mixing/${id}`);
+}
+
+export async function createArtisanBiocharMixing(payload: FormData) {
+  return postApiData('/artisan/biochar-mixing', payload);
+}
+
+export async function saveArtisanBiocharMixingDraft(id: number | string, payload: FormData) {
+  return postApiData(`/artisan/biochar-mixing/${id}/save-draft`, payload);
+}
+
+export async function submitArtisanBiocharMixing(id: number | string) {
+  return postApiData(`/artisan/biochar-mixing/${id}/submit`, {});
+}
+
 export type ArtisanGpsLogPayload = {
   farm_id?: number | null;
   biochar_production_id?: number | null;

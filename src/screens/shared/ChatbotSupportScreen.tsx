@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { getApiErrorMessage } from '../../api/authApi';
 import { askChatbot, requestSupportAgent, requestSupportCall } from '../../api/chatbotApi';
 import { getSupportThreadDetail } from '../../api/supportApi';
+import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import {
   AgentHandoffCard,
   AssistantWelcomeCard,
@@ -78,6 +78,7 @@ function bubbleVariant(senderType: ChatMessage['senderType']): 'user' | 'bot' | 
 
 export function ChatbotSupportScreen({ supportRole, sourceModule }: ChatbotSupportScreenProps) {
   const navigation = useNavigation<NativeStackNavigationProp<Record<string, object | undefined>>>();
+  const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [threadId, setThreadId] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -267,21 +268,17 @@ export function ChatbotSupportScreen({ supportRole, sourceModule }: ChatbotSuppo
   const aiAnswered = messages.some((message) => message.senderType === 'ai_bot');
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <ScreenContainer keyboardAvoiding backgroundColor={dashboardTheme.background}>
       <ChatbotSupportHeader />
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 16 + insets.bottom }]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          ref={scrollRef}
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
           <AssistantWelcomeCard />
 
           <QuickQuestionChips
@@ -319,22 +316,19 @@ export function ChatbotSupportScreen({ supportRole, sourceModule }: ChatbotSuppo
           <ChatbotStatusBadges aiAnswered={aiAnswered} callRequested={callRequested} />
         </ScrollView>
 
-        <ChatbotComposer
-          value={input}
-          sending={sending}
-          onChange={setInput}
-          onSend={() => void handleAsk(input)}
-          bottomInset={56}
-          footer={<ChatbotBottomNav onHistory={openTicketInbox} />}
-        />
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <ChatbotComposer
+        value={input}
+        sending={sending}
+        onChange={setInput}
+        onSend={() => void handleAsk(input)}
+        bottomInset={0}
+        footer={<ChatbotBottomNav onHistory={openTicketInbox} />}
+      />
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: dashboardTheme.background },
-  flex: { flex: 1 },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 8 },
 });

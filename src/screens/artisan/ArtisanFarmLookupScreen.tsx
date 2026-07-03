@@ -59,6 +59,19 @@ export function ArtisanFarmLookupScreen() {
     const farmLabel = pickString(farm, 'farm_code', 'farm_name');
     navigation.navigate('ArtisanBiocharProduction', {
       farmId: Number(farm.id),
+      farmerId: farm.farmer_id != null ? Number(farm.farmer_id) : undefined,
+      farmLabel: farmLabel !== '-' ? farmLabel : `Farm ${farm.id}`,
+    });
+  };
+
+  const startMixing = () => {
+    if (!farm?.id) {
+      return;
+    }
+
+    const farmLabel = pickString(farm, 'farm_code', 'farm_name');
+    navigation.navigate('ArtisanBiocharMixing', {
+      farmId: Number(farm.id),
       farmLabel: farmLabel !== '-' ? farmLabel : `Farm ${farm.id}`,
     });
   };
@@ -117,6 +130,9 @@ export function ArtisanFarmLookupScreen() {
 
             <Pressable style={styles.primaryButton} onPress={startProduction}>
               <Text style={styles.primaryButtonText}>Start Biochar Production</Text>
+            </Pressable>
+            <Pressable style={styles.secondaryButton} onPress={startMixing}>
+              <Text style={styles.secondaryButtonText}>Biochar Mixing</Text>
             </Pressable>
           </View>
         ) : null}
@@ -177,4 +193,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryButtonText: { color: '#fff', fontWeight: '700' },
+  secondaryButton: {
+    marginTop: spacing.sm,
+    backgroundColor: '#FFFFFF',
+    borderColor: colors.primary,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  secondaryButtonText: { color: colors.primaryDark, fontWeight: '700' },
 });

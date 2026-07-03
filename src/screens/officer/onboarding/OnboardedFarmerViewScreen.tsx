@@ -113,6 +113,11 @@ export function OnboardedFarmerViewScreen() {
               <AppButton label="Biochar Awareness" onPress={() => navigation.navigate('BiocharAwareness', { farmerId: resolvedFarmerId })} />
               <AppButton label="Start Biochar Activity" onPress={startBiocharActivity} />
               <AppButton
+                label="Add Biochar Mixing"
+                variant="secondary"
+                onPress={() => navigation.navigate('FieldOfficerBiocharMixing', { farmerId: resolvedFarmerId })}
+              />
+              <AppButton
                 label="Biochar History"
                 variant="secondary"
                 onPress={() => navigation.navigate('FieldOfficerBiocharProductionList')}

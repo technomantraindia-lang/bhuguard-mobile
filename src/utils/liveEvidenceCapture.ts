@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import { applyLivePhotoWatermark } from '../services/livePhotoWatermarkService';
 import { resolveCaptureLocation } from './livePhotoLocation';
 import { buildLivePhotoWatermarkMeta, type LivePhotoWatermarkMeta } from './livePhotoWatermarkFormat';
+import { getCurrentLocationDetailed, MAX_ALLOWED_ACCURACY_METERS } from './locationUtils';
 
 export interface LiveCapturedEvidence {
   uri: string;
@@ -39,20 +40,34 @@ export async function captureLivePhotoEvidence(options?: {
 
   const locationPermission = await Location.requestForegroundPermissionsAsync();
 
-  if (locationPermission.granted) {
-    try {
-      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      latitude = position.coords.latitude;
-      longitude = position.coords.longitude;
-      accuracy = position.coords.accuracy ?? null;
-    } catch {
-      // Photo can still be captured without GPS.
-    }
+  if (!locationPermission.granted) {
+    return { ok: false, cancelled: false, error: 'GPS permission is required to stamp evidence photos.' };
+  }
+
+  try {
+    const position = await getCurrentLocationDetailed();
+    latitude = position.latitude;
+    longitude = position.longitude;
+    accuracy = position.accuracyM;
+  } catch (error) {
+    return {
+      ok: false,
+      cancelled: false,
+      error: error instanceof Error ? error.message : 'Unable to capture GPS location for evidence stamp.',
+    };
+  }
+
+  if (accuracy == null || accuracy > MAX_ALLOWED_ACCURACY_METERS) {
+    return {
+      ok: false,
+      cancelled: false,
+      error: `GPS accuracy must be ${MAX_ALLOWED_ACCURACY_METERS}m or better before capturing evidence.`,
+    };
   }
 
   const result = await ImagePicker.launchCameraAsync({
-    quality: 0.85,
-    allowsEditing: options?.allowsEditing ?? true,
+    quality: 0.75,
+    allowsEditing: options?.allowsEditing ?? false,
     mediaTypes: ImagePicker.MediaTypeOptions.Images,
   });
 
@@ -127,6 +142,122 @@ export async function captureLivePhotoEvidence(options?: {
       watermark,
     },
   };
+}
+
+export async function pickStampedPhotoEvidence(options?: {
+  defaultName?: string;
+  allowsEditing?: boolean;
+}): Promise<LiveCaptureResult> {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+  if (!permission.granted) {
+    return { ok: false, cancelled: false, error: 'Photo library permission is required to upload evidence.' };
+  }
+
+  let latitude: number | null = null;
+  let longitude: number | null = null;
+  let accuracy: number | null = null;
+
+  const locationPermission = await Location.requestForegroundPermissionsAsync();
+
+  if (!locationPermission.granted) {
+    return { ok: false, cancelled: false, error: 'GPS permission is required to stamp uploaded evidence photos.' };
+  }
+
+  try {
+    const position = await getCurrentLocationDetailed();
+    latitude = position.latitude;
+    longitude = position.longitude;
+    accuracy = position.accuracyM;
+  } catch (error) {
+    return {
+      ok: false,
+      cancelled: false,
+      error: error instanceof Error ? error.message : 'Unable to capture GPS location for evidence stamp.',
+    };
+  }
+
+  if (accuracy == null || accuracy > MAX_ALLOWED_ACCURACY_METERS) {
+    return {
+      ok: false,
+      cancelled: false,
+      error: `GPS accuracy must be ${MAX_ALLOWED_ACCURACY_METERS}m or better before uploading evidence.`,
+    };
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    quality: 0.75,
+    allowsEditing: options?.allowsEditing ?? false,
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+  });
+
+  if (result.canceled || !result.assets[0]) {
+    return { ok: false, cancelled: true };
+  }
+
+  const asset = result.assets[0];
+  const capturedAt = new Date().toISOString();
+  const location =
+    latitude != null && longitude != null
+      ? await resolveCaptureLocation(latitude, longitude)
+      : { village: 'Not Available', taluka: 'Not Available', district: 'Not Available', state: 'Gujarat' };
+
+  const watermark = buildLivePhotoWatermarkMeta({
+    capturedAt,
+    latitude,
+    longitude,
+    accuracy,
+    village: location.village,
+    taluka: location.taluka,
+    district: location.district,
+    state: location.state,
+  });
+
+  try {
+    const stampedUri = await applyLivePhotoWatermark(asset.uri, watermark, {
+      uri: asset.uri,
+      name: asset.fileName ?? options?.defaultName ?? 'uploaded-evidence.jpg',
+      type: asset.mimeType ?? 'image/jpeg',
+      capturedAt,
+      latitude,
+      longitude,
+      accuracy,
+      village: location.village,
+      taluka: location.taluka,
+      district: location.district,
+      state: location.state,
+    });
+
+    if (stampedUri === asset.uri) {
+      return {
+        ok: false,
+        cancelled: false,
+        error: 'Evidence stamp could not be applied. Please restart the app and try again.',
+      };
+    }
+
+    return {
+      ok: true,
+      evidence: {
+        uri: stampedUri,
+        previewUri: stampedUri,
+        name: asset.fileName ?? options?.defaultName ?? 'uploaded-evidence.jpg',
+        type: asset.mimeType ?? 'image/jpeg',
+        label: asset.fileName ?? 'Uploaded photo',
+        latitude,
+        longitude,
+        accuracy,
+        capturedAt,
+        watermark,
+      },
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      cancelled: false,
+      error: error instanceof Error ? error.message : 'Failed to burn timestamp onto the selected photo.',
+    };
+  }
 }
 
 export async function captureStampedPhotoUri(options?: {

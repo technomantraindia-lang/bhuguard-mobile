@@ -286,6 +286,26 @@ export async function submitFarmerBiocharActivity(id: number | string) {
   return postApiData(`/farmer/biochar-activities/${id}/submit`, {});
 }
 
+export async function getFarmerBiocharMixingRecords() {
+  return fetchApiData('/farmer/biochar-mixing');
+}
+
+export async function getFarmerBiocharMixing(id: number | string) {
+  return fetchApiData(`/farmer/biochar-mixing/${id}`);
+}
+
+export async function createFarmerBiocharMixing(payload: FormData) {
+  return postApiData('/farmer/biochar-mixing', payload);
+}
+
+export async function saveFarmerBiocharMixingDraft(id: number | string, payload: FormData) {
+  return postApiData(`/farmer/biochar-mixing/${id}/save-draft`, payload);
+}
+
+export async function submitFarmerBiocharMixing(id: number | string) {
+  return postApiData(`/farmer/biochar-mixing/${id}/submit`, {});
+}
+
 export async function getFarmerWallet() {
   return fetchApiData('/farmer/wallet');
 }

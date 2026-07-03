@@ -30,15 +30,20 @@ export function ArtisanDashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
+
     setError(null);
 
     try {
       const data = await getArtisanDashboard();
       setDashboard((data.dashboard ?? data) as ApiRecord);
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to load artisan dashboard.'));
+      if (!silent) {
+        setError(getApiErrorMessage(err, 'Failed to load artisan dashboard.'));
+      }
     } finally {
       setLoading(false);
     }
@@ -46,13 +51,13 @@ export function ArtisanDashboardScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void load();
-    }, [load]),
+      void load(Boolean(dashboard));
+    }, [dashboard, load]),
   );
 
   if (loading && !dashboard) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={['top']}>
         <LoadingState message="Loading artisan dashboard..." />
       </SafeAreaView>
     );
@@ -60,8 +65,8 @@ export function ArtisanDashboardScreen() {
 
   if (error && !dashboard) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <ErrorState message={error} onRetry={load} />
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ErrorState message={error} onRetry={() => void load(false)} />
       </SafeAreaView>
     );
   }

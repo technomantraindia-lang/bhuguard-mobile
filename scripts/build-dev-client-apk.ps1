@@ -7,8 +7,10 @@ $envFile = Join-Path $repoRoot ".env"
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 $env:PATH = "$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:PATH"
+$devApiUrl = if ($env:EXPO_PUBLIC_DEV_LOCAL_API_URL) { $env:EXPO_PUBLIC_DEV_LOCAL_API_URL } else { "http://192.168.0.100:8000/api" }
 $env:EXPO_PUBLIC_APP_VARIANT = "development"
-$env:EXPO_PUBLIC_API_URL = "http://192.168.1.18:8000/api"
+$env:EXPO_PUBLIC_API_URL = $devApiUrl
+$env:EXPO_PUBLIC_DEV_LOCAL_API_URL = $devApiUrl
 $env:NODE_ENV = "development"
 
 Write-Host "Building Bhuguard Android development client (API: $env:EXPO_PUBLIC_API_URL)" -ForegroundColor Cyan

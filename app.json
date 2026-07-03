@@ -8,12 +8,19 @@
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.technomantra.bhuguard"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.bhuguard.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Bhuguard uses camera to capture Biochar activity, farm, feedstock, moisture, production, and evidence images.",
+        "NSLocationWhenInUseUsageDescription": "Bhuguard uses location to verify farm location, Biochar activity location, GPS evidence, Field Officer check-in, and Artisan production location.",
+        "NSPhotoLibraryUsageDescription": "Bhuguard uses photo library to select and upload evidence images when required.",
+        "NSMicrophoneUsageDescription": "Bhuguard uses microphone when recording Biochar process videos.",
+        "NSFaceIDUsageDescription": "Bhuguard uses Face ID for secure login.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
-      "versionCode": 3,
-      "package": "com.technomantra.bhuguard",
+      "package": "com.bhuguard.app",
       "adaptiveIcon": {
         "backgroundColor": "#005129",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -24,7 +31,10 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO"
       ]
     },
     "web": {
@@ -35,19 +45,29 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Bhuguard to access your camera for field evidence capture."
+          "cameraPermission": "Bhuguard uses camera to capture Biochar activity, farm, feedstock, moisture, production, and evidence images.",
+          "microphonePermission": "Bhuguard uses microphone when recording Biochar process videos.",
+          "recordAudioAndroid": true
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow Bhuguard to capture farm GPS coordinates during farmer onboarding."
+          "locationWhenInUsePermission": "Bhuguard uses location to verify farm location, Biochar activity location, GPS evidence, Field Officer check-in, and Artisan production location."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Bhuguard to attach farmer photos during onboarding."
+          "photosPermission": "Bhuguard uses photo library to select and upload evidence images when required.",
+          "cameraPermission": "Bhuguard uses camera to capture Biochar activity, farm, feedstock, moisture, production, and evidence images.",
+          "microphonePermission": "Bhuguard uses microphone when recording Biochar process videos."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Bhuguard uses Face ID for secure login."
         }
       ]
     ],

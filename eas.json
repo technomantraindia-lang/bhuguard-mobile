@@ -1,6 +1,6 @@
 {
   "cli": {
-    "version": ">= 20.1.0",
+    "version": ">= 12.0.0",
     "appVersionSource": "remote"
   },
   "build": {
@@ -9,17 +9,28 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_APP_VARIANT": "development",
-        "EXPO_PUBLIC_API_URL": "http://192.168.1.18:8000/api"
+        "EXPO_PUBLIC_API_URL": "http://192.168.0.100:8000/api",
+        "EXPO_PUBLIC_DEV_LOCAL_API_URL": "http://192.168.0.100:8000/api"
       }
     },
     "preview": {
       "distribution": "internal",
+      "ios": {
+        "simulator": false
+      },
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_APP_VARIANT": "demo",
+        "EXPO_PUBLIC_API_URL": "https://demo.bhuguard.com/api"
       }
     },
     "demo": {
       "distribution": "internal",
+      "ios": {
+        "simulator": false
+      },
       "android": {
         "buildType": "apk"
       },
@@ -31,11 +42,23 @@
     "client-apk": {
       "extends": "demo"
     },
+    "production-apk": {
+      "extends": "production",
+      "android": {
+        "buildType": "apk"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_APP_VARIANT": "production",
         "EXPO_PUBLIC_API_URL": "https://demo.bhuguard.com/api"
+      },
+      "ios": {
+        "simulator": false
+      },
+      "android": {
+        "buildType": "app-bundle"
       }
     }
   },

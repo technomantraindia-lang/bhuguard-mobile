@@ -115,6 +115,7 @@ export function OfficerQuickActionCards({
   >
 >) {
   const actions: Array<{
+    id: string;
     icon: BhuguardIconName;
     title: string;
     description: string;
@@ -122,6 +123,7 @@ export function OfficerQuickActionCards({
     onPress: () => void;
   }> = [
     {
+      id: 'biochar-evidence-upload',
       icon: 'photo_camera',
       title: 'Upload Evidence',
       description: 'Capture Biochar visit photos and supporting evidence',
@@ -129,6 +131,7 @@ export function OfficerQuickActionCards({
       onPress: onUploadEvidence,
     },
     {
+      id: 'start-verification',
       icon: 'assignment',
       title: 'Start Verification',
       description: 'Begin Biochar field verification at farmer location',
@@ -136,6 +139,7 @@ export function OfficerQuickActionCards({
       onPress: onStartVerification,
     },
     {
+      id: 'onboard-new-farmer',
       icon: 'person_add',
       title: 'Onboard New Farmer',
       description: 'Register farmer details, map land and upload documents',
@@ -143,6 +147,7 @@ export function OfficerQuickActionCards({
       onPress: onOnboardFarmer,
     },
     {
+      id: 'feedstock-verification',
       icon: 'science',
       title: 'Feedstock Verify',
       description: 'Review farmer feedstock collection records',
@@ -150,6 +155,7 @@ export function OfficerQuickActionCards({
       onPress: onFeedstockVerification,
     },
     {
+      id: 'biochar-production',
       icon: 'eco',
       title: 'Biochar Production',
       description: 'Record kiln batch, process data and evidence',
@@ -157,6 +163,7 @@ export function OfficerQuickActionCards({
       onPress: onBiocharProduction,
     },
     {
+      id: 'inventory-movement',
       icon: 'sync',
       title: 'Inventory Movement',
       description: 'Move biochar stock between storage and farm',
@@ -164,6 +171,7 @@ export function OfficerQuickActionCards({
       onPress: onInventoryMovement,
     },
     {
+      id: 'field-evidence-upload',
       icon: 'photo_camera',
       title: 'Upload Evidence',
       description: 'Capture field photos and geo-tags',
@@ -178,7 +186,7 @@ export function OfficerQuickActionCards({
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickActionsRow}>
         {actions.map((action) => (
           <OfficerPremiumQuickActionCard
-            key={action.title}
+            key={action.id}
             icon={action.icon}
             title={action.title}
             description={action.description}

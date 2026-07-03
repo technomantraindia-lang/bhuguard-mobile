@@ -36,7 +36,7 @@ type Nav = CompositeNavigationProp<
 
 export function FieldOfficerDashboard() {
   const navigation = useNavigation<Nav>();
-  const { data, loading, error, reload } = useFieldOfficerDashboardData();
+  const { data, loading, refreshing, error, reload, refresh } = useFieldOfficerDashboardData();
   const scrollBottomPadding = useScrollBottomPadding();
 
   const handleVisitPress = (visit: OfficerDashboardVisit) => {
@@ -139,7 +139,7 @@ export function FieldOfficerDashboard() {
         contentContainerStyle={[styles.container, { paddingBottom: scrollBottomPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={reload} tintColor={officerTheme.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={officerTheme.primary} />
         }
       >
         <OfficerGreetingSection greeting={dashboard.greeting} officerName={dashboard.officerName} />

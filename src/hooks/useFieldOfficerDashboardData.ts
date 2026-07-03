@@ -384,10 +384,16 @@ async function loadOptional<T>(loader: () => Promise<T>, fallback: T): Promise<T
 export function useFieldOfficerDashboardData() {
   const [data, setData] = useState<FieldOfficerDashboardViewModel | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
     setError(null);
 
     try {
@@ -505,14 +511,18 @@ export function useFieldOfficerDashboardData() {
       setError(getApiErrorMessage(err, 'Failed to load field officer dashboard.'));
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    void load();
+    void load(false);
   }, [load]);
 
-  return { data, loading, error, reload: load };
+  const reload = useCallback(() => load(false), [load]);
+  const refresh = useCallback(() => load(true), [load]);
+
+  return { data, loading, refreshing, error, reload, refresh };
 }
 
 // Backward compatibility for any imports of OfficerDashboardTask

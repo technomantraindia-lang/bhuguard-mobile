@@ -114,6 +114,9 @@ export function FarmerBiocharActivitiesScreen() {
         <Pressable style={styles.newButton} onPress={() => navigation.navigate('FarmerBiocharProduction', {})}>
           <Text style={styles.newButtonText}>New Biochar Activity</Text>
         </Pressable>
+        <Pressable style={styles.mixingButton} onPress={() => navigation.navigate('FarmerBiocharMixing', {})}>
+          <Text style={styles.mixingButtonText}>Add Biochar Mixing</Text>
+        </Pressable>
 
         <Text style={styles.sectionTitle}>Draft Activities ({drafts.length})</Text>
         {drafts.length === 0 ? <Text style={styles.empty}>No draft activities yet.</Text> : drafts.map(renderRecord)}
@@ -135,6 +138,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   newButtonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  mixingButton: {
+    backgroundColor: '#FFFFFF',
+    borderColor: colors.primary,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  mixingButtonText: { color: colors.primaryDark, fontWeight: '700', fontSize: 16 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginTop: 8 },
   empty: { color: colors.textMuted, fontSize: 14 },
   card: {

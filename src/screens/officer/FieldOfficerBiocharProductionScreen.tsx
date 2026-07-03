@@ -8,7 +8,9 @@ import type { RouteProp } from '@react-navigation/native';
 import { BiocharProductionSuccessModal } from '../../components/officer/biochar/BiocharProductionSuccessModal';
 import {
   BiocharEvidenceCaptureSection,
-  MoistureSection,
+  FinalStageSection,
+  InitialDataSection,
+  MoistureReadingsSection,
   OfficerNotesSection,
   ProcessDataSection,
   ProductionBatchSection,
@@ -22,8 +24,6 @@ import { LoadingState } from '../../components/LoadingState';
 import {
   BIOCHAR_BATCH_EVIDENCE_SLOT,
   BIOCHAR_MOISTURE_EVIDENCE_SLOT,
-  BIOCHAR_OPERATOR_EVIDENCE_SLOT,
-  BIOCHAR_OUTPUT_EVIDENCE_SLOT,
   BIOCHAR_PROCESS_EVIDENCE_SLOTS,
   type BiocharEvidenceKey,
 } from '../../constants/biocharProduction';
@@ -105,6 +105,7 @@ export function FieldOfficerBiocharProductionScreen() {
       evidence={form.evidence[slot.key]}
       readOnly={readOnly}
       onAddEvidence={(key) => void form.addEvidence(key)}
+      onUploadEvidence={(key) => void form.uploadEvidence(key)}
       onRemoveEvidence={form.removeEvidence}
       onPreviewEvidence={previewEvidence}
     />
@@ -124,11 +125,72 @@ export function FieldOfficerBiocharProductionScreen() {
           productionRecordCode={form.productionRecordCode}
           batchCode={form.batchCode}
           officerName={form.officerName}
+          farmerId={form.selectedFarmerId}
           farmerName={form.farmerName}
           productionDate={form.productionDate}
           onProductionDateChange={readOnly ? undefined : form.setProductionDate}
           statusLabel={form.statusLabel}
         />
+
+        <ProductionBatchSection
+          batchCode={form.batchCode}
+          feedstockQuantity={form.feedstockQuantity}
+          feedstockUnit={form.feedstockUnit}
+          feedstockType={form.feedstockType}
+          onGenerateBatchCode={() => void form.regenerateCodes()}
+          onBatchCodeChange={form.setBatchCode}
+          onFeedstockQuantityChange={form.setFeedstockQuantity}
+          onFeedstockUnitChange={(value) => form.setFeedstockUnit(value as FeedstockQuantityUnit)}
+          onFeedstockTypeChange={(value) => form.setFeedstockType(value as FeedstockTypeValue)}
+        />
+
+        <InitialDataSection
+          timestampDate={form.timestampDate}
+          timestampTime={form.timestampTime}
+          altitude={form.altitude}
+          villageName={form.villageName}
+          talukaName={form.talukaName}
+          districtName={form.districtName}
+          stateName={form.stateName}
+          latitude={form.latitude}
+          longitude={form.longitude}
+          accuracyM={form.accuracyM}
+          onTimestampDateChange={form.setTimestampDate}
+          onTimestampTimeChange={form.setTimestampTime}
+          onAltitudeChange={(value) => form.setAltitude(value === '' ? null : Number(value))}
+          onVillageNameChange={form.setVillageName}
+          onTalukaNameChange={form.setTalukaName}
+          onDistrictNameChange={form.setDistrictName}
+          onStateNameChange={form.setStateName}
+          onCaptureGps={() => void form.recaptureGps()}
+          onRecaptureGps={() => void form.recaptureGps()}
+          mapPreviewUrl={form.mapPreviewUrl}
+        />
+
+        {renderEvidenceCapture(BIOCHAR_BATCH_EVIDENCE_SLOT)}
+        {renderEvidenceCapture(BIOCHAR_MOISTURE_EVIDENCE_SLOT)}
+
+        <MoistureReadingsSection
+          readings={form.moistureReadings}
+          readOnly={readOnly}
+          onAddReading={form.addMoistureReading}
+          onRemoveReading={form.removeMoistureReading}
+          onChangeReading={(key, value) => form.updateMoistureReading(key, 'moistureReading', value)}
+          onChangeNotes={(key, value) => form.updateMoistureReading(key, 'notes', value)}
+          onCapturePhoto={(key) => void form.captureMoistureReadingPhoto(key)}
+          onUploadPhoto={(key) => void form.uploadMoistureReadingPhoto(key)}
+        />
+
+        {BIOCHAR_PROCESS_EVIDENCE_SLOTS.slice(0, 3).map(renderEvidenceCapture)}
+
+        <FinalStageSection
+          finalStageTime={form.finalStageTime}
+          quenchingTime={form.quenchingTime}
+          onFinalStageTimeChange={form.setFinalStageTime}
+          onQuenchingTimeChange={form.setQuenchingTime}
+        />
+
+        {BIOCHAR_PROCESS_EVIDENCE_SLOTS.slice(3).map(renderEvidenceCapture)}
 
         <ProductionUnitSection
           units={form.units}
@@ -143,29 +205,6 @@ export function FieldOfficerBiocharProductionScreen() {
           onOperatorNameChange={form.setOperatorName}
           onRecaptureGps={() => void form.recaptureGps()}
         />
-
-        <ProductionBatchSection
-          batchCode={form.batchCode}
-          feedstockQuantity={form.feedstockQuantity}
-          feedstockUnit={form.feedstockUnit}
-          feedstockType={form.feedstockType}
-          onGenerateBatchCode={() => void form.regenerateCodes()}
-          onFeedstockQuantityChange={form.setFeedstockQuantity}
-          onFeedstockUnitChange={(value) => form.setFeedstockUnit(value as FeedstockQuantityUnit)}
-          onFeedstockTypeChange={(value) => form.setFeedstockType(value as FeedstockTypeValue)}
-        />
-
-        {renderEvidenceCapture(BIOCHAR_BATCH_EVIDENCE_SLOT)}
-
-        <MoistureSection
-          moistureValue={form.moistureValue}
-          moistureNotes={form.moistureNotes}
-          onMoistureValueChange={form.setMoistureValue}
-          onMoistureNotesChange={form.setMoistureNotes}
-          readOnly={readOnly}
-        />
-
-        {renderEvidenceCapture(BIOCHAR_MOISTURE_EVIDENCE_SLOT)}
 
         <ProductionTimeSection
           startTime={form.startTime}
@@ -185,12 +224,6 @@ export function FieldOfficerBiocharProductionScreen() {
           onBiocharOutputChange={form.setBiocharOutput}
           onBiocharOutputUnitChange={form.setBiocharOutputUnit}
         />
-
-        {BIOCHAR_PROCESS_EVIDENCE_SLOTS.map(renderEvidenceCapture)}
-
-        {renderEvidenceCapture(BIOCHAR_OUTPUT_EVIDENCE_SLOT)}
-
-        {renderEvidenceCapture(BIOCHAR_OPERATOR_EVIDENCE_SLOT)}
 
         <OfficerNotesSection value={form.officerNotes} onChange={form.setOfficerNotes} />
 

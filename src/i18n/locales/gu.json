@@ -132,8 +132,8 @@
     "saveFailed": "કનેક્ટ થઈ શક્યું નહીં. URL અને Laravel ચાલુ છે કે નહીં ચકાસો.",
     "saved": "સર્વર URL સાચવ્યું. હવે લોગિન કરી શકો.",
     "helpTitle": "એ જ Wi-Fi પર ક્લાયન્ટ મોબાઇલ",
-    "helpSteps": "1. PC પર: php artisan serve --host=0.0.0.0 --port=8000\n2. \"લોકલ PC\" ટેપ કરો અથવા http://192.168.1.18:8000 દાખલ કરો\n3. કનેક્શન ચકાસો → સાચવો\n\nબીજા નેટવર્ક માટે https ટનલ URL પેસ્ટ કરો.",
-    "example": "લોકલ: http://192.168.1.18:8000",
+    "helpSteps": "1. PC પર: php artisan serve --host=0.0.0.0 --port=8000\n2. \"લોકલ PC\" ટેપ કરો અથવા http://YOUR-PC-IP:8000 દાખલ કરો\n3. કનેક્શન ચકાસો → સાચવો\n\nProduction: https://yourdomain.com",
+    "example": "Production: https://yourdomain.com",
     "urlNote": "એપ આપમેળે /api ઉમેરે છે. લોકલ IP માટે ફોન અને PC એ જ Wi-Fi પર હોવા જોઈએ."
   },
   "common": {

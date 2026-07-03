@@ -130,8 +130,8 @@
     "saveFailed": "कनेक्ट नहीं हो सका। URL जाँचें और टनल चालू रखें।",
     "saved": "सर्वर URL सहेजा गया। अब लॉगिन कर सकते हैं।",
     "helpTitle": "लोकल डेव (एक ही Wi-Fi)",
-    "helpSteps": "1. PC पर: php artisan serve --host=0.0.0.0 --port=8000\n2. \"Use local PC\" टैप करें या http://192.168.1.18:8000 दर्ज करें\n3. कनेक्शन जाँचें → Save",
-    "example": "लोकल: http://192.168.1.18:8000",
+    "helpSteps": "1. PC पर: php artisan serve --host=0.0.0.0 --port=8000\n2. \"Use local PC\" टैप करें या http://YOUR-PC-IP:8000 दर्ज करें\n3. कनेक्शन जाँचें → Save\n\nProduction: https://yourdomain.com",
+    "example": "Production: https://yourdomain.com",
     "urlNote": "ऐप स्वचालित रूप से /api जोड़ता है। लोकल IP के लिए फोन और PC एक ही Wi-Fi पर होने चाहिए।"
   },
   "common": {

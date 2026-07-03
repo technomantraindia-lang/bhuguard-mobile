@@ -17,6 +17,7 @@ import { FieldOfficerProfileScreen } from '../screens/officer/FieldOfficerProfil
 import { FieldOfficerProfileSectionScreen } from '../screens/officer/FieldOfficerProfileSectionScreen';
 import { FieldOfficerSettingsScreen } from '../screens/officer/FieldOfficerSettingsScreen';
 import { FieldOfficerSoilSamplesScreen } from '../screens/officer/FieldOfficerSoilSamplesScreen';
+import { FieldOfficerBiocharMixingScreen } from '../screens/officer/FieldOfficerBiocharMixingScreen';
 import { FieldOfficerBiocharProductionListScreen } from '../screens/officer/FieldOfficerBiocharProductionListScreen';
 import { FieldOfficerBiocharProductionScreen } from '../screens/officer/FieldOfficerBiocharProductionScreen';
 import { FieldOfficerCreateVisitScreen } from '../screens/officer/FieldOfficerCreateVisitScreen';
@@ -85,6 +86,7 @@ export function OfficerNavigator() {
         <Stack.Screen name="FieldOfficerFeedstockVerification" component={FieldOfficerFeedstockVerificationScreen} />
         <Stack.Screen name="FieldOfficerBiocharProductionList" component={FieldOfficerBiocharProductionListScreen} />
         <Stack.Screen name="FieldOfficerBiocharProduction" component={FieldOfficerBiocharProductionScreen} />
+        <Stack.Screen name="FieldOfficerBiocharMixing" component={FieldOfficerBiocharMixingScreen} />
         <Stack.Screen name="FieldOfficerCreateVisit" component={FieldOfficerCreateVisitScreen} />
         <Stack.Screen name="FieldOfficerInventoryMovement" component={FieldOfficerInventoryMovementScreen} />
         <Stack.Screen name="FieldOfficerInventoryTasks" component={FieldOfficerInventoryTasksScreen} />

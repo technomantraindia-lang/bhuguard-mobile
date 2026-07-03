@@ -90,6 +90,7 @@ export function useArtisanGpsTracker({ farmId, batchId }: UseArtisanGpsTrackerOp
     retryGps,
     latitude: capture?.latitude ?? null,
     longitude: capture?.longitude ?? null,
+    altitude: capture?.altitude ?? null,
     accuracyM: capture?.accuracyM ?? null,
     gpsCaptured: capture != null,
   };

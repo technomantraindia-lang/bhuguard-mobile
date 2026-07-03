@@ -23,6 +23,7 @@ export function isPlaceholderApiUrl(url: string): boolean {
     'example.com',
     'your-domain.com',
     'api.yourdomain.com',
+    'yourdomain.com',
   ];
 
   return placeholders.some((placeholder) => host === placeholder || host.includes('your-tunnel'));

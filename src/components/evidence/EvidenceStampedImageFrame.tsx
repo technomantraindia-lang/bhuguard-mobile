@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   Image,
   Pressable,
@@ -12,6 +13,7 @@ import {
 import { colors } from '../../theme/colors';
 
 export const EVIDENCE_PREVIEW_MIN_HEIGHT = 320;
+export const EVIDENCE_THUMBNAIL_MAX_HEIGHT = 140;
 export const EVIDENCE_PREVIEW_HINT = 'Tap image to view full evidence';
 
 interface EvidenceStampedImageFrameProps {
@@ -19,6 +21,7 @@ interface EvidenceStampedImageFrameProps {
   onPress?: () => void;
   hint?: string;
   minHeight?: number;
+  compact?: boolean;
   frameStyle?: StyleProp<ViewStyle>;
   imageStyle?: StyleProp<ImageStyle>;
 }
@@ -28,23 +31,48 @@ export function EvidenceStampedImageFrame({
   onPress,
   hint = EVIDENCE_PREVIEW_HINT,
   minHeight = EVIDENCE_PREVIEW_MIN_HEIGHT,
+  compact = false,
   frameStyle,
   imageStyle,
 }: EvidenceStampedImageFrameProps) {
-  const showHint = Boolean(onPress && hint);
+  const [aspectRatio, setAspectRatio] = useState(3 / 4);
+  const showHint = Boolean(onPress && hint && !compact);
   const usesCustomFrame = frameStyle != null;
+  const frameMinHeight = compact ? EVIDENCE_THUMBNAIL_MAX_HEIGHT : minHeight;
+
+  useEffect(() => {
+    let active = true;
+
+    Image.getSize(
+      uri,
+      (width, height) => {
+        if (active && width > 0 && height > 0) {
+          setAspectRatio(width / height);
+        }
+      },
+      () => {
+        if (active) {
+          setAspectRatio(3 / 4);
+        }
+      },
+    );
+
+    return () => {
+      active = false;
+    };
+  }, [uri]);
 
   const content = (
-    <View style={[styles.frame, usesCustomFrame ? frameStyle : { minHeight }]}>
-      <View
-        style={[
-          styles.imageContainer,
-          usesCustomFrame ? styles.imageContainerFlexible : styles.imageContainerFixed,
-        ]}
-      >
+    <View style={[styles.frame, usesCustomFrame ? frameStyle : { minHeight: frameMinHeight }]}>
+      <View style={[styles.imageContainer, compact && styles.imageContainerCompact]}>
         <Image
           source={{ uri }}
-          style={[styles.image, imageStyle]}
+          style={[
+            styles.image,
+            { aspectRatio },
+            compact ? styles.imageCompact : null,
+            imageStyle,
+          ]}
           resizeMode="contain"
           accessibilityLabel="Evidence preview"
         />
@@ -88,20 +116,19 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
     backgroundColor: colors.background,
+    paddingVertical: 4,
   },
-  imageContainerFixed: {
-    minHeight: EVIDENCE_PREVIEW_MIN_HEIGHT - 48,
-  },
-  imageContainerFlexible: {
-    flex: 1,
-    minHeight: 0,
+  imageContainerCompact: {
+    maxHeight: EVIDENCE_THUMBNAIL_MAX_HEIGHT,
+    overflow: 'hidden',
   },
   image: {
     width: '100%',
-    height: '100%',
     alignSelf: 'center',
+  },
+  imageCompact: {
+    maxHeight: EVIDENCE_THUMBNAIL_MAX_HEIGHT - 8,
   },
   hint: {
     textAlign: 'center',

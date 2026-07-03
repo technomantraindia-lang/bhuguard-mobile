@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   BIOCHAR_OUTPUT_UNITS,
@@ -32,6 +32,13 @@ export interface BiocharEvidenceAsset {
   accuracy?: number | null;
 }
 
+export interface BiocharMoistureReadingDraft {
+  key: string;
+  moistureReading: string;
+  notes: string;
+  photo?: BiocharEvidenceAsset;
+}
+
 interface CardProps {
   children: React.ReactNode;
   style?: object;
@@ -57,16 +64,18 @@ interface ProductionRecordCardProps {
   productionRecordCode: string;
   batchCode: string;
   officerName: string;
+  farmerId?: number | null;
   farmerName?: string;
   productionDate: string;
   onProductionDateChange?: (value: string) => void;
-  statusLabel: string;
+  statusLabel: string | null;
 }
 
 export function ProductionRecordCard({
   productionRecordCode,
   batchCode,
   officerName,
+  farmerId,
   farmerName,
   productionDate,
   onProductionDateChange,
@@ -79,10 +88,12 @@ export function ProductionRecordCard({
           <Text style={styles.metaLabel}>Production Record ID</Text>
           <Text style={styles.recordCode}>{productionRecordCode || '—'}</Text>
         </View>
-        <View style={styles.draftBadge}>
-          <View style={styles.draftDot} />
-          <Text style={styles.draftBadgeText}>{statusLabel}</Text>
-        </View>
+        {statusLabel ? (
+          <View style={styles.draftBadge}>
+            <View style={styles.draftDot} />
+            <Text style={styles.draftBadgeText}>{statusLabel}</Text>
+          </View>
+        ) : null}
       </View>
       <View style={styles.divider} />
       <View style={styles.recordGrid}>
@@ -118,10 +129,143 @@ export function ProductionRecordCard({
           <Text style={styles.metaValue}>{batchCode || '—'}</Text>
         </View>
         <View style={[styles.recordCell, styles.recordCellFull]}>
+          <Text style={styles.metaLabel}>Farmer ID</Text>
+          <Text style={styles.metaValue}>{farmerId != null ? `FRM${String(farmerId).padStart(3, '0')}` : 'â€”'}</Text>
+        </View>
+        <View style={[styles.recordCell, styles.recordCellFull]}>
           <Text style={styles.metaLabel}>Farmer Name</Text>
           <Text style={styles.metaValue}>{farmerName?.trim() ? farmerName : '—'}</Text>
         </View>
       </View>
+    </Card>
+  );
+}
+
+interface InitialDataSectionProps {
+  timestampDate: string;
+  timestampTime: string;
+  altitude: number | null;
+  villageName: string;
+  talukaName: string;
+  districtName: string;
+  stateName: string;
+  latitude: number | null;
+  longitude: number | null;
+  accuracyM: number | null;
+  onTimestampDateChange: (value: string) => void;
+  onTimestampTimeChange: (value: string) => void;
+  onAltitudeChange: (value: string) => void;
+  onVillageNameChange: (value: string) => void;
+  onTalukaNameChange: (value: string) => void;
+  onDistrictNameChange: (value: string) => void;
+  onStateNameChange: (value: string) => void;
+  onCaptureGps: () => void;
+  onRecaptureGps: () => void;
+  mapPreviewUrl?: string;
+}
+
+export function InitialDataSection({
+  timestampDate,
+  timestampTime,
+  altitude,
+  villageName,
+  talukaName,
+  districtName,
+  stateName,
+  latitude,
+  longitude,
+  accuracyM,
+  onTimestampDateChange,
+  onTimestampTimeChange,
+  onAltitudeChange,
+  onVillageNameChange,
+  onTalukaNameChange,
+  onDistrictNameChange,
+  onStateNameChange,
+  onCaptureGps,
+  onRecaptureGps,
+  mapPreviewUrl,
+}: InitialDataSectionProps) {
+  return (
+    <Card>
+      <SectionTitle icon="location_on" title="Initial Data" />
+      <Text style={styles.fieldLabel}>Time Stamp</Text>
+      <View style={styles.timeGrid}>
+        <View style={styles.timeCell}>
+          <Text style={styles.fieldLabel}>Date</Text>
+          <TextInput style={styles.input} value={timestampDate} onChangeText={onTimestampDateChange} placeholder="YYYY-MM-DD" />
+        </View>
+        <View style={styles.timeCell}>
+          <Text style={styles.fieldLabel}>Time</Text>
+          <TextInput style={styles.input} value={timestampTime} onChangeText={onTimestampTimeChange} placeholder="HH:MM" />
+        </View>
+      </View>
+
+      <View style={styles.timeGrid}>
+        <View style={styles.timeCell}>
+          <Text style={styles.fieldLabel}>Altitude</Text>
+          <TextInput
+            style={styles.input}
+            value={altitude != null ? String(altitude) : ''}
+            onChangeText={onAltitudeChange}
+            keyboardType="decimal-pad"
+            placeholder="Meters"
+          />
+        </View>
+        <View style={styles.timeCell}>
+          <Text style={styles.fieldLabel}>Accuracy</Text>
+          <Text style={styles.metaValue}>{accuracyM != null ? `± ${accuracyM.toFixed(1)} meters` : '—'}</Text>
+        </View>
+      </View>
+
+      <View style={styles.gpsCard}>
+        <View style={styles.gpsHeader}>
+          <Text style={styles.gpsTitle}>Captured Location</Text>
+          <View style={styles.gpsActionRow}>
+            <Pressable style={styles.captureGpsButton} onPress={onCaptureGps}>
+              <BhuguardMaterialIcon name="location_on" size={18} color={officerTheme.onPrimary} />
+              <Text style={styles.captureGpsButtonText}>Capture GPS</Text>
+            </Pressable>
+            <Pressable style={styles.recaptureButton} onPress={onRecaptureGps}>
+              <BhuguardMaterialIcon name="location_on" size={18} color={officerTheme.primaryContainer} />
+              <Text style={styles.recaptureButtonText}>Recapture GPS</Text>
+            </Pressable>
+          </View>
+        </View>
+        <View style={styles.gpsGrid}>
+          <View style={styles.gpsCell}>
+            <Text style={styles.metaLabel}>Lat/Long</Text>
+            <Text style={styles.gpsValue}>
+              {formatCoordinate(latitude, 'N')}
+              {'\n'}
+              {formatCoordinate(longitude, 'E')}
+            </Text>
+          </View>
+          <View style={styles.gpsCell}>
+            <Text style={styles.metaLabel}>Accuracy</Text>
+            <Text style={styles.gpsValue}>{accuracyM != null ? `± ${accuracyM.toFixed(1)} meters` : '—'}</Text>
+          </View>
+        </View>
+        <View style={styles.mapPreview}>
+          <Text style={styles.metaLabel}>Map Preview</Text>
+          {mapPreviewUrl ? (
+            <Pressable style={styles.mapPreviewButton} onPress={() => void Linking.openURL(mapPreviewUrl)}>
+              <Text style={styles.mapPreviewButtonText}>Open Map Preview</Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.mapPreviewText}>Map preview unavailable until GPS is captured.</Text>
+          )}
+        </View>
+      </View>
+
+      <Text style={styles.fieldLabel}>Village Name</Text>
+      <TextInput style={styles.input} value={villageName} onChangeText={onVillageNameChange} placeholder="Village name" />
+      <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Taluka Name</Text>
+      <TextInput style={styles.input} value={talukaName} onChangeText={onTalukaNameChange} placeholder="Taluka name" />
+      <Text style={[styles.fieldLabel, styles.fieldSpacing]}>District Name</Text>
+      <TextInput style={styles.input} value={districtName} onChangeText={onDistrictNameChange} placeholder="District name" />
+      <Text style={[styles.fieldLabel, styles.fieldSpacing]}>State Name</Text>
+      <TextInput style={styles.input} value={stateName} onChangeText={onStateNameChange} placeholder="State name" />
     </Card>
   );
 }
@@ -251,6 +395,7 @@ interface ProductionBatchSectionProps {
   feedstockUnit: string;
   feedstockType: string;
   onGenerateBatchCode: () => void;
+  onBatchCodeChange: (value: string) => void;
   onFeedstockQuantityChange: (value: string) => void;
   onFeedstockUnitChange: (value: string) => void;
   onFeedstockTypeChange: (value: string) => void;
@@ -262,6 +407,7 @@ export function ProductionBatchSection({
   feedstockUnit,
   feedstockType,
   onGenerateBatchCode,
+  onBatchCodeChange,
   onFeedstockQuantityChange,
   onFeedstockUnitChange,
   onFeedstockTypeChange,
@@ -276,7 +422,15 @@ export function ProductionBatchSection({
       <SectionTitle icon="assignment" title="Production Batch" />
       <Text style={styles.fieldLabel}>Batch ID</Text>
       <View style={styles.inlineRow}>
-        <TextInput style={[styles.input, styles.readonlyInput, styles.flex1]} value={batchCode} editable={false} />
+        <TextInput
+          style={[styles.input, styles.flex1]}
+          value={batchCode}
+          onChangeText={onBatchCodeChange}
+          placeholder="BIO-FRM001-20260701-001"
+          placeholderTextColor={officerTheme.outline}
+          autoCapitalize="characters"
+          autoCorrect={false}
+        />
         <Pressable style={styles.generateButton} onPress={onGenerateBatchCode}>
           <Text style={styles.generateButtonText}>Generate</Text>
         </Pressable>
@@ -362,6 +516,94 @@ export function MoistureSection({
   );
 }
 
+interface MoistureReadingsSectionProps {
+  readings: BiocharMoistureReadingDraft[];
+  readOnly?: boolean;
+  onAddReading: () => void;
+  onRemoveReading: (key: string) => void;
+  onChangeReading: (key: string, value: string) => void;
+  onChangeNotes: (key: string, value: string) => void;
+  onCapturePhoto: (key: string) => void;
+  onUploadPhoto: (key: string) => void;
+}
+
+export function MoistureReadingsSection({
+  readings,
+  readOnly = false,
+  onAddReading,
+  onRemoveReading,
+  onChangeReading,
+  onChangeNotes,
+  onCapturePhoto,
+  onUploadPhoto,
+}: MoistureReadingsSectionProps) {
+  return (
+    <Card>
+      <SectionTitle
+        icon="water_drop"
+        title="Moisture Readings"
+        trailing={!readOnly ? (
+          <Pressable style={styles.addReadingButton} onPress={onAddReading}>
+            <Text style={styles.addReadingButtonText}>Add Reading</Text>
+          </Pressable>
+        ) : null}
+      />
+      <View style={styles.readingList}>
+        {readings.map((reading, index) => (
+          <View key={reading.key} style={styles.readingCard}>
+            <View style={styles.readingHeader}>
+              <Text style={styles.readingTitle}>Reading {index + 1}</Text>
+              {!readOnly && readings.length > 1 ? (
+                <Pressable onPress={() => onRemoveReading(reading.key)}>
+                  <Text style={styles.removeReadingText}>Remove</Text>
+                </Pressable>
+              ) : null}
+            </View>
+            <Text style={styles.fieldLabel}>Moisture %</Text>
+            <TextInput
+              style={styles.input}
+              value={reading.moistureReading}
+              onChangeText={(value) => onChangeReading(reading.key, value)}
+              keyboardType="decimal-pad"
+              placeholder="e.g. 12.5"
+              editable={!readOnly}
+            />
+            <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Notes</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={reading.notes}
+              onChangeText={(value) => onChangeNotes(reading.key, value)}
+              multiline
+              placeholder="Optional reading notes"
+              editable={!readOnly}
+            />
+            <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Photo</Text>
+            {reading.photo ? (
+              <EvidenceStampedImageFrame
+                uri={reading.photo.uri}
+                frameStyle={styles.singleEvidencePreview}
+                imageStyle={styles.singleEvidenceImage}
+              />
+            ) : null}
+            {!readOnly ? (
+              <View style={styles.singleEvidenceActions}>
+                <Pressable style={styles.retakeButton} onPress={() => onCapturePhoto(reading.key)}>
+                  <BhuguardMaterialIcon name="photo_camera" size={18} color={officerTheme.primaryContainer} />
+                  <Text style={styles.retakeButtonText}>{reading.photo ? 'Retake Photo' : 'Capture Photo'}</Text>
+                </Pressable>
+                <Pressable style={styles.retakeButton} onPress={() => onUploadPhoto(reading.key)}>
+                  <BhuguardMaterialIcon name="upload" size={18} color={officerTheme.primaryContainer} />
+                  <Text style={styles.retakeButtonText}>Upload</Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
+        ))}
+      </View>
+    </Card>
+  );
+}
+
 interface ProductionTimeSectionProps {
   startTime: string;
   endTime: string;
@@ -394,6 +636,42 @@ export function ProductionTimeSection({
           <TextInput style={styles.input} value={endTime} onChangeText={onEndTimeChange} placeholder="12:30" />
         </View>
       </View>
+    </Card>
+  );
+}
+
+interface FinalStageSectionProps {
+  finalStageTime: string;
+  quenchingTime: string;
+  onFinalStageTimeChange: (value: string) => void;
+  onQuenchingTimeChange: (value: string) => void;
+}
+
+export function FinalStageSection({
+  finalStageTime,
+  quenchingTime,
+  onFinalStageTimeChange,
+  onQuenchingTimeChange,
+}: FinalStageSectionProps) {
+  return (
+    <Card>
+      <SectionTitle icon="schedule" title="Final Stage" />
+      <Text style={styles.fieldLabel}>Final Stage Time</Text>
+      <TextInput
+        style={styles.input}
+        value={finalStageTime}
+        onChangeText={onFinalStageTimeChange}
+        placeholder="HH:MM"
+        placeholderTextColor={officerTheme.outline}
+      />
+      <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Quenching Time</Text>
+      <TextInput
+        style={styles.input}
+        value={quenchingTime}
+        onChangeText={onQuenchingTimeChange}
+        placeholder="HH:MM"
+        placeholderTextColor={officerTheme.outline}
+      />
     </Card>
   );
 }
@@ -488,6 +766,7 @@ interface BiocharEvidenceCaptureSectionProps {
   evidence?: BiocharEvidenceAsset;
   readOnly?: boolean;
   onAddEvidence: (key: BiocharEvidenceKey) => void;
+  onUploadEvidence: (key: BiocharEvidenceKey) => void;
   onRemoveEvidence: (key: BiocharEvidenceKey) => void;
   onPreviewEvidence: (key: BiocharEvidenceKey) => void;
 }
@@ -497,6 +776,7 @@ export function BiocharEvidenceCaptureSection({
   evidence,
   readOnly = false,
   onAddEvidence,
+  onUploadEvidence,
   onRemoveEvidence,
   onPreviewEvidence,
 }: BiocharEvidenceCaptureSectionProps) {
@@ -528,6 +808,12 @@ export function BiocharEvidenceCaptureSection({
                 <BhuguardMaterialIcon name="photo_camera" size={18} color={officerTheme.primaryContainer} />
                 <Text style={styles.retakeButtonText}>Retake</Text>
               </Pressable>
+              {slot.kind === 'photo' ? (
+                <Pressable style={styles.retakeButton} onPress={() => onUploadEvidence(slot.key)}>
+                  <BhuguardMaterialIcon name="upload" size={18} color={officerTheme.primaryContainer} />
+                  <Text style={styles.retakeButtonText}>Upload</Text>
+                </Pressable>
+              ) : null}
               <Pressable style={styles.removeEvidenceButton} onPress={() => onRemoveEvidence(slot.key)}>
                 <BhuguardMaterialIcon name="cloud_off" size={18} color={officerTheme.onPrimary} />
                 <Text style={styles.removeEvidenceText}>Remove</Text>
@@ -536,20 +822,32 @@ export function BiocharEvidenceCaptureSection({
           ) : null}
         </View>
       ) : (
-        <Pressable
-          style={[styles.captureButton, readOnly && styles.captureButtonDisabled]}
-          onPress={() => onAddEvidence(slot.key)}
-          disabled={readOnly}
-        >
-          <BhuguardMaterialIcon
-            name="photo_camera"
-            size={28}
-            color={officerTheme.onPrimary}
-          />
-          <Text style={styles.captureButtonText}>
-            {slot.kind === 'video' ? 'Record Live Video' : 'Capture Live Image'}
-          </Text>
-        </Pressable>
+        <View style={styles.captureChoiceRow}>
+          <Pressable
+            style={[styles.captureButton, readOnly && styles.captureButtonDisabled]}
+            onPress={() => onAddEvidence(slot.key)}
+            disabled={readOnly}
+          >
+            <BhuguardMaterialIcon
+              name="photo_camera"
+              size={24}
+              color={officerTheme.onPrimary}
+            />
+            <Text style={styles.captureButtonText}>
+              {slot.kind === 'video' ? 'Record Live Video' : 'Capture Live Image'}
+            </Text>
+          </Pressable>
+          {slot.kind === 'photo' ? (
+            <Pressable
+              style={[styles.uploadButton, readOnly && styles.captureButtonDisabled]}
+              onPress={() => onUploadEvidence(slot.key)}
+              disabled={readOnly}
+            >
+              <BhuguardMaterialIcon name="upload" size={24} color={officerTheme.primaryContainer} />
+              <Text style={styles.uploadButtonText}>Upload Image</Text>
+            </Pressable>
+          ) : null}
+        </View>
       )}
     </Card>
   );
@@ -735,8 +1033,9 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 10,
   },
-  gpsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  gpsHeader: { gap: 10 },
   gpsTitle: { fontSize: 12, fontWeight: '700', color: officerTheme.primary },
+  gpsActionRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   capturedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -748,9 +1047,23 @@ const styles = StyleSheet.create({
   },
   capturedBadgeText: { fontSize: 11, fontWeight: '700', color: officerTheme.primaryContainer },
   gpsGrid: { flexDirection: 'row', gap: 8 },
-  gpsCell: { flex: 1 },
+  gpsCell: { flex: 1, minWidth: 120 },
   gpsValue: { fontSize: 13, color: officerTheme.onSurface, marginTop: 2, lineHeight: 18 },
+  captureGpsButton: {
+    flex: 1,
+    minWidth: 136,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: 8,
+    backgroundColor: officerTheme.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
   recaptureButton: {
+    flex: 1,
+    minWidth: 148,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -759,9 +1072,45 @@ const styles = StyleSheet.create({
     borderColor: officerTheme.primaryContainer,
     borderRadius: 8,
     backgroundColor: officerTheme.surfaceLowest,
+    paddingHorizontal: 10,
     paddingVertical: 10,
   },
+  captureGpsButtonText: { fontSize: 14, fontWeight: '700', color: officerTheme.onPrimary },
   recaptureButtonText: { fontSize: 14, fontWeight: '700', color: officerTheme.primaryContainer },
+  mapPreview: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(11, 107, 58, 0.14)',
+    paddingTop: 10,
+    gap: 8,
+  },
+  mapPreviewButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 8,
+    backgroundColor: '#EAF7EF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  mapPreviewButtonText: { fontSize: 13, fontWeight: '700', color: officerTheme.primaryContainer },
+  mapPreviewText: { fontSize: 13, color: officerTheme.onSurfaceVariant, lineHeight: 18 },
+  addReadingButton: {
+    backgroundColor: officerTheme.primaryContainer,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  addReadingButtonText: { fontSize: 12, fontWeight: '700', color: officerTheme.onPrimary },
+  readingList: { gap: 12 },
+  readingCard: {
+    borderWidth: 1,
+    borderColor: officerTheme.outlineVariant,
+    borderRadius: 10,
+    padding: 12,
+    gap: 8,
+    backgroundColor: officerTheme.surfaceLowest,
+  },
+  readingHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  readingTitle: { fontSize: 14, fontWeight: '700', color: officerTheme.onSurface },
+  removeReadingText: { fontSize: 12, fontWeight: '700', color: officerTheme.error },
   inlineRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   flex1: { flex: 1 },
   generateButton: {
@@ -824,9 +1173,10 @@ const styles = StyleSheet.create({
     backgroundColor: officerTheme.surfaceLow,
     gap: 8,
   },
-  singleEvidenceActions: { flexDirection: 'row', gap: 10 },
+  singleEvidenceActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   retakeButton: {
     flex: 1,
+    minWidth: 120,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -838,6 +1188,7 @@ const styles = StyleSheet.create({
   retakeButtonText: { color: officerTheme.primaryContainer, fontWeight: '700', fontSize: 14 },
   removeEvidenceButton: {
     flex: 1,
+    minWidth: 120,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -848,6 +1199,8 @@ const styles = StyleSheet.create({
   },
   removeEvidenceText: { color: officerTheme.onPrimary, fontWeight: '700', fontSize: 14 },
   captureButton: {
+    flex: 1,
+    minWidth: 140,
     backgroundColor: officerTheme.primaryContainer,
     borderRadius: 12,
     paddingVertical: 18,
@@ -857,6 +1210,20 @@ const styles = StyleSheet.create({
   },
   captureButtonDisabled: { opacity: 0.5 },
   captureButtonText: { color: officerTheme.onPrimary, fontWeight: '700', fontSize: 16 },
+  captureChoiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  uploadButton: {
+    flex: 1,
+    minWidth: 140,
+    borderWidth: 1,
+    borderColor: officerTheme.primaryContainer,
+    borderRadius: 12,
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: officerTheme.surfaceLowest,
+  },
+  uploadButtonText: { color: officerTheme.primaryContainer, fontWeight: '700', fontSize: 16 },
   evidenceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   evidenceTile: {
     width: '47%',

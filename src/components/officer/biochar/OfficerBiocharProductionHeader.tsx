@@ -28,7 +28,7 @@ export function OfficerBiocharProductionHeader({
 }: OfficerBiocharProductionHeaderProps) {
   return (
     <ScreenHeader
-      title="Biochar Activity"
+      title="Biochar Process"
       showBack
       showBrandLogo
       onBackPress={onBackPress}

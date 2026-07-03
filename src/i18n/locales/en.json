@@ -142,8 +142,8 @@
     "saveFailed": "Could not connect. Check the URL and that Laravel is running.",
     "saved": "Server URL saved. You can log in now.",
     "helpTitle": "Client mobile on same Wi-Fi",
-    "helpSteps": "1. On PC run: php artisan serve --host=0.0.0.0 --port=8000\n2. Tap \"Use local PC\" or enter: http://192.168.1.18:8000\n3. Test connection → Save\n\nOther network: paste your https tunnel URL (ngrok / cloudflare).",
-    "example": "Local: http://192.168.1.18:8000",
+    "helpSteps": "1. On PC run: php artisan serve --host=0.0.0.0 --port=8000\n2. Tap \"Use local PC\" or enter: http://YOUR-PC-IP:8000\n3. Test connection → Save\n\nProduction: https://yourdomain.com\nDemo staging: https://demo.bhuguard.com",
+    "example": "Production: https://yourdomain.com",
     "urlNote": "The app adds /api automatically. Phone and PC must use the same Wi-Fi for local IP."
   },
   "common": {

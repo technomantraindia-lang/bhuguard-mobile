@@ -6,7 +6,6 @@ import { Alert } from 'react-native';
 import { getApiErrorMessage } from '../api/authApi';
 import {
   createOfficerBiocharBatch,
-  getBiocharBatchPreviewCodes,
   getBiocharProductionUnits,
   getFieldOfficerBiocharBatch,
   getFieldOfficerFarmers,
@@ -35,8 +34,9 @@ import type { BiocharEvidenceAsset } from '../components/officer/biochar/Biochar
 import { extractList, pickString, type ApiRecord } from '../utils/apiHelpers';
 import { mapProductionUnit, type ProductionUnitOption } from '../utils/biocharProductionHelpers';
 import { todayIsoDate } from '../utils/activityDateHelpers';
-import { captureLivePhotoEvidence } from '../utils/liveEvidenceCapture';
-import { captureHighAccuracyGps } from '../utils/officerGpsCapture';
+import { captureLivePhotoEvidence, pickStampedPhotoEvidence } from '../utils/liveEvidenceCapture';
+import { buildGoogleMapsUrl, captureHighAccuracyGps } from '../utils/officerGpsCapture';
+import { resolveCaptureLocation } from '../utils/livePhotoLocation';
 
 interface UseBiocharProductionFormOptions {
   farmerId?: number;
@@ -46,9 +46,45 @@ interface UseBiocharProductionFormOptions {
   behalfReason?: string;
 }
 
+export interface BiocharMoistureReadingDraft {
+  key: string;
+  moistureReading: string;
+  notes: string;
+  photo?: BiocharEvidenceAsset;
+}
+
+function createMoistureReadingDraft(seed = 0): BiocharMoistureReadingDraft {
+  return {
+    key: `reading-${Date.now()}-${seed}-${Math.random().toString(16).slice(2)}`,
+    moistureReading: '',
+    notes: '',
+  };
+}
+
+function createDefaultMoistureReadings(): BiocharMoistureReadingDraft[] {
+  return Array.from({ length: 5 }, (_, index) => createMoistureReadingDraft(index));
+}
+
+function currentTimeValue(): string {
+  const now = new Date();
+
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
+
 function hydrateBatch(batch: ApiRecord) {
   const kilnId = pickString(batch, 'kiln_id', 'kilnId');
   const farmerName = pickString(batch, 'farmer_name', 'farmerName');
+  const moistureReadings = extractList(batch, ['moisture_readings']).map((reading, index) => ({
+    key: `reading-${batch.id}-${index}`,
+    moistureReading: pickString(reading, 'moisture_reading', 'moistureReading'),
+    notes: pickString(reading, 'notes'),
+    photo: reading.stamped_photo_path || reading.original_photo_path || reading.moisture_photo_path
+      ? {
+          uri: pickString(reading, 'stamped_photo_path', 'original_photo_path', 'moisture_photo_path'),
+          name: pickString(reading, 'stamped_photo_path', 'original_photo_path', 'moisture_photo_path'),
+        }
+      : undefined,
+  }));
 
   return {
     batchId: Number(batch.id),
@@ -77,7 +113,20 @@ function hydrateBatch(batch: ApiRecord) {
     latitude: batch.gps_latitude != null ? Number(batch.gps_latitude) : null,
     longitude: batch.gps_longitude != null ? Number(batch.gps_longitude) : null,
     accuracyM: batch.gps_accuracy != null ? Number(batch.gps_accuracy) : null,
+    altitude: batch.altitude != null ? Number(batch.altitude) : null,
+    timestampDate:
+      pickString(batch, 'timestamp_date', 'timestampDate') !== '-'
+        ? pickString(batch, 'timestamp_date', 'timestampDate').slice(0, 10)
+        : todayIsoDate(),
+    timestampTime: pickString(batch, 'timestamp_time', 'timestampTime') || currentTimeValue(),
+    finalStageTime: pickString(batch, 'final_stage_time', 'finalStageTime') || '',
+    quenchingTime: pickString(batch, 'quenching_time', 'quenchingTime') || '',
+    villageName: pickString(batch, 'village_name', 'villageName'),
+    talukaName: pickString(batch, 'taluka_name', 'talukaName'),
+    districtName: pickString(batch, 'district_name', 'districtName'),
+    stateName: pickString(batch, 'state_name', 'stateName'),
     officerNotes: pickString(batch, 'officer_notes', 'officerNotes'),
+    moistureReadings,
     canEdit: batch.can_edit !== false,
     canSubmit: batch.can_submit !== false,
     status: pickString(batch, 'status'),
@@ -113,12 +162,22 @@ export function useBiocharProductionForm({
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [accuracyM, setAccuracyM] = useState<number | null>(null);
+  const [altitude, setAltitude] = useState<number | null>(null);
+  const [timestampDate, setTimestampDate] = useState(todayIsoDate());
+  const [timestampTime, setTimestampTime] = useState(currentTimeValue());
+  const [finalStageTime, setFinalStageTime] = useState('');
+  const [quenchingTime, setQuenchingTime] = useState(currentTimeValue());
+  const [villageName, setVillageName] = useState('');
+  const [talukaName, setTalukaName] = useState('');
+  const [districtName, setDistrictName] = useState('');
+  const [stateName, setStateName] = useState('');
 
   const [feedstockQuantity, setFeedstockQuantity] = useState('');
   const [feedstockUnit, setFeedstockUnit] = useState(DEFAULT_FEEDSTOCK_QUANTITY_UNIT);
   const [feedstockType, setFeedstockType] = useState(DEFAULT_FEEDSTOCK_TYPE);
   const [moistureValue, setMoistureValue] = useState('');
   const [moistureNotes, setMoistureNotes] = useState('');
+  const [moistureReadings, setMoistureReadings] = useState<BiocharMoistureReadingDraft[]>(createDefaultMoistureReadings);
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('12:30');
   const [temperature, setTemperature] = useState('');
@@ -126,7 +185,7 @@ export function useBiocharProductionForm({
   const [biocharOutput, setBiocharOutput] = useState('');
   const [biocharOutputUnit, setBiocharOutputUnit] = useState<'kg' | 'ton'>('kg');
   const [officerNotes, setOfficerNotes] = useState('');
-  const [recordStatus, setRecordStatus] = useState('draft');
+  const [recordStatus, setRecordStatus] = useState<string | null>(null);
   const [evidence, setEvidence] = useState<Partial<Record<BiocharEvidenceKey, BiocharEvidenceAsset>>>({});
 
   const statusLabel = useMemo(() => {
@@ -146,7 +205,7 @@ export function useBiocharProductionForm({
       return 'Correction Required';
     }
 
-    return recordStatus.replace(/_/g, ' ');
+    return recordStatus ? recordStatus.replace(/_/g, ' ') : null;
   }, [recordStatus]);
 
   const applyBatch = useCallback((batch: ApiRecord) => {
@@ -186,10 +245,22 @@ export function useBiocharProductionForm({
     setLatitude(hydrated.latitude);
     setLongitude(hydrated.longitude);
     setAccuracyM(hydrated.accuracyM);
+    setAltitude(hydrated.altitude);
+    setTimestampDate(hydrated.timestampDate);
+    setTimestampTime(hydrated.timestampTime);
+    setFinalStageTime(hydrated.finalStageTime);
+    setQuenchingTime(hydrated.quenchingTime);
+    setVillageName(hydrated.villageName !== '-' ? hydrated.villageName : '');
+    setTalukaName(hydrated.talukaName !== '-' ? hydrated.talukaName : '');
+    setDistrictName(hydrated.districtName !== '-' ? hydrated.districtName : '');
+    setStateName(hydrated.stateName !== '-' ? hydrated.stateName : '');
+    setMoistureReadings(
+      hydrated.moistureReadings.length > 0 ? hydrated.moistureReadings : createDefaultMoistureReadings(),
+    );
     setOfficerNotes(hydrated.officerNotes !== '-' ? hydrated.officerNotes : '');
     setCanEdit(hydrated.canEdit);
     setCanSubmit(hydrated.canSubmit);
-    setRecordStatus(hydrated.status !== '-' ? hydrated.status : 'draft');
+    setRecordStatus(hydrated.status !== '-' ? hydrated.status : null);
   }, [feedstockType, feedstockUnit]);
 
   const loadInitialData = useCallback(async () => {
@@ -232,6 +303,10 @@ export function useBiocharProductionForm({
         try {
           const profileData = (await getFarmerProfile()) as ApiRecord;
           const profile = (profileData.profile ?? profileData) as ApiRecord;
+          const profileFarmerId = Number(profile.id ?? profile.farmer_id ?? profile.farmerId);
+          if (Number.isFinite(profileFarmerId) && profileFarmerId > 0) {
+            setSelectedFarmerId(profileFarmerId);
+          }
           const name = pickString(profile, 'name', 'farmer_name');
           if (name !== '-') {
             setOfficerName(name);
@@ -271,7 +346,6 @@ export function useBiocharProductionForm({
       if (initialBatchId) {
         requests.push(getFieldOfficerBiocharBatch(initialBatchId));
       } else {
-        requests.push(getBiocharBatchPreviewCodes());
         if (!farmerId) {
           requests.push(getFieldOfficerFarmers());
         }
@@ -295,19 +369,8 @@ export function useBiocharProductionForm({
         const batch = (batchData.batch ?? batchData) as ApiRecord;
         applyBatch(batch);
       } else {
-        const codesData = results[2] as ApiRecord;
-        const codes = (codesData.codes ?? codesData) as ApiRecord;
-        const nextRecordCode = pickString(codes, 'production_record_code', 'productionRecordCode');
-        const nextBatchCode = pickString(codes, 'batch_code', 'batchCode');
-        if (nextRecordCode !== '-') {
-          setProductionRecordCode(nextRecordCode);
-        }
-        if (nextBatchCode !== '-') {
-          setBatchCode(nextBatchCode);
-        }
-
-        if (!farmerId && results[3]) {
-          const farmersData = results[3] as ApiRecord;
+        if (!farmerId && results[2]) {
+          const farmersData = results[2] as ApiRecord;
           const farmers = extractList(farmersData as ApiRecord, ['farmers']);
           const firstFarmer = farmers[0];
           if (firstFarmer?.id) {
@@ -353,25 +416,12 @@ export function useBiocharProductionForm({
   }, [loadInitialData]);
 
   const regenerateCodes = useCallback(async () => {
-    if (batchId || isArtisanMode || isFarmerMode) {
-      return;
-    }
+    const datePart = (productionDate || todayIsoDate()).replace(/-/g, '');
+    const farmerPart = selectedFarmerId ? `FRM${String(selectedFarmerId).padStart(3, '0')}` : null;
+    const sequencePart = String(Math.floor(Math.random() * 900) + 100).padStart(3, '0');
 
-    try {
-      const codesData = await getBiocharBatchPreviewCodes();
-      const codes = (codesData.codes ?? codesData) as ApiRecord;
-      const nextRecordCode = pickString(codes, 'production_record_code', 'productionRecordCode');
-      const nextBatchCode = pickString(codes, 'batch_code', 'batchCode');
-      if (nextRecordCode !== '-') {
-        setProductionRecordCode(nextRecordCode);
-      }
-      if (nextBatchCode !== '-') {
-        setBatchCode(nextBatchCode);
-      }
-    } catch (codeError) {
-      Alert.alert('Unable to generate codes', getApiErrorMessage(codeError, 'Try again in a moment.'));
-    }
-  }, [batchId, isArtisanMode, isFarmerMode]);
+    setBatchCode(['BIO', farmerPart, datePart, sequencePart].filter(Boolean).join('-'));
+  }, [productionDate, selectedFarmerId]);
 
   const recaptureGps = useCallback(async () => {
     const permission = await Location.requestForegroundPermissionsAsync();
@@ -385,6 +435,13 @@ export function useBiocharProductionForm({
       setLatitude(position.latitude);
       setLongitude(position.longitude);
       setAccuracyM(position.accuracyM);
+      setAltitude(position.altitude);
+      const location = await resolveCaptureLocation(position.latitude, position.longitude);
+
+      setVillageName((current) => current.trim() || (location.village !== '-' ? location.village : 'Not Available'));
+      setTalukaName((current) => current.trim() || (location.taluka !== '-' ? location.taluka : 'Not Available'));
+      setDistrictName((current) => current.trim() || (location.district !== '-' ? location.district : 'Not Available'));
+      setStateName((current) => current.trim() || (location.state !== '-' ? location.state : 'Gujarat'));
     } catch (gpsError) {
       Alert.alert('GPS capture failed', getApiErrorMessage(gpsError, 'Unable to capture GPS location.'));
     }
@@ -394,6 +451,10 @@ export function useBiocharProductionForm({
     setLatitude(nextLatitude);
     setLongitude(nextLongitude);
     setAccuracyM(nextAccuracy);
+  }, []);
+
+  const syncAltitudeFromCapture = useCallback(async (nextAltitude: number | null) => {
+    setAltitude(nextAltitude);
   }, []);
 
   const selectUnit = useCallback(
@@ -423,6 +484,79 @@ export function useBiocharProductionForm({
     },
     [units],
   );
+
+  const addMoistureReading = useCallback(() => {
+    setMoistureReadings((current) => [...current, createMoistureReadingDraft(current.length)]);
+  }, []);
+
+  const updateMoistureReading = useCallback((key: string, field: 'moistureReading' | 'notes', value: string) => {
+    setMoistureReadings((current) =>
+      current.map((reading) => (reading.key === key ? { ...reading, [field]: value } : reading)),
+    );
+  }, []);
+
+  const updateMoistureReadingPhoto = useCallback((key: string, asset?: BiocharEvidenceAsset) => {
+    setMoistureReadings((current) =>
+      current.map((reading) => (reading.key === key ? { ...reading, photo: asset } : reading)),
+    );
+  }, []);
+
+  const removeMoistureReading = useCallback((key: string) => {
+    setMoistureReadings((current) => {
+      const next = current.filter((reading) => reading.key !== key);
+      return next.length > 0 ? next : [createMoistureReadingDraft()];
+    });
+  }, []);
+
+  const captureMoistureReadingPhoto = useCallback(async (key: string) => {
+    const result = await captureLivePhotoEvidence({
+      defaultName: `moisture-reading-${key}.jpg`,
+      allowsEditing: true,
+    });
+
+    if (!result.ok) {
+      if (!result.cancelled && result.error) {
+        Alert.alert('Capture failed', result.error);
+      }
+
+      return;
+    }
+
+    updateMoistureReadingPhoto(key, {
+      uri: result.evidence.uri,
+      name: result.evidence.name,
+      mimeType: result.evidence.type,
+      capturedAt: result.evidence.capturedAt,
+      latitude: result.evidence.latitude,
+      longitude: result.evidence.longitude,
+      accuracy: result.evidence.accuracy,
+    });
+  }, [updateMoistureReadingPhoto]);
+
+  const uploadMoistureReadingPhoto = useCallback(async (key: string) => {
+    const result = await pickStampedPhotoEvidence({
+      defaultName: `moisture-reading-${key}.jpg`,
+      allowsEditing: true,
+    });
+
+    if (!result.ok) {
+      if (!result.cancelled && result.error) {
+        Alert.alert('Upload failed', result.error);
+      }
+
+      return;
+    }
+
+    updateMoistureReadingPhoto(key, {
+      uri: result.evidence.uri,
+      name: result.evidence.name,
+      mimeType: result.evidence.type,
+      capturedAt: result.evidence.capturedAt,
+      latitude: result.evidence.latitude,
+      longitude: result.evidence.longitude,
+      accuracy: result.evidence.accuracy,
+    });
+  }, [updateMoistureReadingPhoto]);
 
   const addEvidence = useCallback(async (key: BiocharEvidenceKey) => {
     const isVideo = key === 'process_video';
@@ -483,6 +617,39 @@ export function useBiocharProductionForm({
     }));
   }, []);
 
+  const uploadEvidence = useCallback(async (key: BiocharEvidenceKey) => {
+    if (key === 'process_video') {
+      Alert.alert('Upload unavailable', 'Video upload is not used for the Biochar process evidence sequence.');
+      return;
+    }
+
+    const result = await pickStampedPhotoEvidence({
+      defaultName: `${key}.jpg`,
+      allowsEditing: true,
+    });
+
+    if (!result.ok) {
+      if (!result.cancelled && result.error) {
+        Alert.alert('Upload failed', result.error);
+      }
+
+      return;
+    }
+
+    setEvidence((current) => ({
+      ...current,
+      [key]: {
+        uri: result.evidence.uri,
+        name: result.evidence.name,
+        mimeType: result.evidence.type,
+        capturedAt: result.evidence.capturedAt,
+        latitude: result.evidence.latitude,
+        longitude: result.evidence.longitude,
+        accuracy: result.evidence.accuracy,
+      },
+    }));
+  }, []);
+
   const removeEvidence = useCallback((key: BiocharEvidenceKey) => {
     setEvidence((current) => {
       const next = { ...current };
@@ -513,6 +680,18 @@ export function useBiocharProductionForm({
 
     if (productionDate.trim()) {
       formData.append('production_date', productionDate.trim());
+    }
+
+    if (batchCode.trim()) {
+      formData.append('batch_code', batchCode.trim());
+    }
+
+    if (timestampDate.trim()) {
+      formData.append('timestamp_date', timestampDate.trim());
+    }
+
+    if (timestampTime.trim()) {
+      formData.append('timestamp_time', timestampTime.trim());
     }
 
     if (selectedUnitId) {
@@ -562,8 +741,60 @@ export function useBiocharProductionForm({
     if (accuracyM != null) {
       formData.append('gps_accuracy', String(accuracyM));
     }
+    if (altitude != null) {
+      formData.append('altitude', String(altitude));
+    }
+    if (villageName.trim()) {
+      formData.append('village_name', villageName.trim());
+    }
+    if (talukaName.trim()) {
+      formData.append('taluka_name', talukaName.trim());
+    }
+    if (districtName.trim()) {
+      formData.append('district_name', districtName.trim());
+    }
+    if (stateName.trim()) {
+      formData.append('state_name', stateName.trim());
+    }
+    if (finalStageTime.trim()) {
+      formData.append('final_stage_time', finalStageTime.trim());
+    }
+    if (quenchingTime.trim()) {
+      formData.append('quenching_time', quenchingTime.trim());
+    }
     if (officerNotes.trim()) {
       formData.append('officer_notes', officerNotes.trim());
+    }
+
+    const normalizedMoistureReadings = moistureReadings.filter(
+      (reading) => reading.moistureReading.trim() || reading.notes.trim() || reading.photo,
+    );
+    if (normalizedMoistureReadings.length > 0) {
+      normalizedMoistureReadings.forEach((reading, index) => {
+        formData.append(`moisture_readings[${index}][moisture_reading]`, reading.moistureReading.trim());
+        if (reading.notes.trim()) {
+          formData.append(`moisture_readings[${index}][notes]`, reading.notes.trim());
+        }
+        if (reading.photo) {
+          formData.append(`moisture_readings[${index}][moisture_photo]`, {
+            uri: reading.photo.uri,
+            name: reading.photo.name,
+            type: reading.photo.mimeType ?? 'application/octet-stream',
+          } as unknown as Blob);
+        }
+        if (reading.photo?.capturedAt) {
+          formData.append(`moisture_readings[${index}][captured_at]`, reading.photo.capturedAt);
+        }
+        if (reading.photo?.latitude != null) {
+          formData.append(`moisture_readings[${index}][latitude]`, String(reading.photo.latitude));
+        }
+        if (reading.photo?.longitude != null) {
+          formData.append(`moisture_readings[${index}][longitude]`, String(reading.photo.longitude));
+        }
+        if (reading.photo?.accuracy != null) {
+          formData.append(`moisture_readings[${index}][gps_accuracy]`, String(reading.photo.accuracy));
+        }
+      });
     }
 
     const imageEvidence = (Object.keys(BIOCHAR_EVIDENCE_API_FIELD) as BiocharEvidenceKey[])
@@ -613,9 +844,14 @@ export function useBiocharProductionForm({
   }, [
     accuracyM,
     behalfReason,
+    batchCode,
     biocharOutput,
     biocharOutputUnit,
+    altitude,
+    districtName,
     endTime,
+    finalStageTime,
+    quenchingTime,
     evidence,
     feedstockQuantity,
     feedstockType,
@@ -628,6 +864,7 @@ export function useBiocharProductionForm({
     longitude,
     moistureNotes,
     moistureValue,
+    moistureReadings,
     officerNotes,
     operatorName,
     productionDate,
@@ -635,7 +872,12 @@ export function useBiocharProductionForm({
     selectedFarmerId,
     selectedUnitId,
     startTime,
+    stateName,
+    talukaName,
+    timestampDate,
+    timestampTime,
     temperature,
+    villageName,
   ]);
 
   const persistDraft = useCallback(async (): Promise<number> => {
@@ -717,16 +959,49 @@ export function useBiocharProductionForm({
         throw new Error('No assigned farmer found for this production record.');
       }
 
+      if (!batchCode.trim()) {
+        throw new Error('Generate or enter a Batch ID before submitting.');
+      }
+
       if (!feedstockQuantity.trim()) {
         throw new Error('Enter feedstock quantity before submitting.');
       }
 
-      if (isArtisanMode && (latitude == null || longitude == null)) {
-        throw new Error('GPS location is required before submit. Capture GPS on the submit screen.');
+      if (!feedstockType.trim()) {
+        throw new Error('Select feedstock type before submitting.');
       }
 
-      if (!isArtisanMode && !biocharOutput.trim()) {
-        throw new Error('Enter biochar output before submitting.');
+      if (latitude == null || longitude == null) {
+        throw new Error('GPS location is required before submit. Capture GPS and try again.');
+      }
+
+      const completedReadings = moistureReadings.filter((reading) => reading.moistureReading.trim());
+      if (completedReadings.length < 5) {
+        throw new Error('Enter all five moisture readings before submitting.');
+      }
+
+      const requiredEvidence: BiocharEvidenceKey[] = [
+        'feedstock_photo',
+        'moisture_image',
+        'starting_pyrolysis_photo',
+        'mid_stage_photo',
+        'end_stage_before_quenching_photo',
+        'quenching_photo',
+        'biochar_unloaded_photo',
+        'biochar_mixing_photo',
+      ];
+
+      const missingEvidence = requiredEvidence.find((key) => !evidence[key]);
+      if (missingEvidence) {
+        throw new Error('Capture or upload all required Biochar process images before submitting.');
+      }
+
+      if (!finalStageTime.trim()) {
+        throw new Error('Enter final stage time before submitting.');
+      }
+
+      if (!quenchingTime.trim()) {
+        throw new Error('Enter quenching time before submitting.');
       }
 
       const id = await persistDraft();
@@ -747,7 +1022,7 @@ export function useBiocharProductionForm({
     } finally {
       setSubmitting(false);
     }
-  }, [applyBatch, batchCode, biocharOutput, feedstockQuantity, isArtisanMode, isFarmerMode, latitude, longitude, persistDraft, selectedFarmerId]);
+  }, [applyBatch, batchCode, evidence, feedstockQuantity, feedstockType, finalStageTime, isArtisanMode, isFarmerMode, latitude, longitude, moistureReadings, persistDraft, quenchingTime, selectedFarmerId]);
 
   return {
     loading,
@@ -755,6 +1030,7 @@ export function useBiocharProductionForm({
     error,
     officerName,
     batchId,
+    selectedFarmerId,
     productionRecordCode,
     batchCode,
     farmerName,
@@ -769,11 +1045,21 @@ export function useBiocharProductionForm({
     latitude,
     longitude,
     accuracyM,
+    altitude,
+    timestampDate,
+    timestampTime,
+    finalStageTime,
+    quenchingTime,
+    villageName,
+    talukaName,
+    districtName,
+    stateName,
     feedstockQuantity,
     feedstockUnit,
     feedstockType,
     moistureValue,
     moistureNotes,
+    moistureReadings,
     startTime,
     endTime,
     temperature,
@@ -782,6 +1068,7 @@ export function useBiocharProductionForm({
     biocharOutputUnit,
     officerNotes,
     evidence,
+    mapPreviewUrl: latitude != null && longitude != null ? buildGoogleMapsUrl(latitude, longitude) : undefined,
     gpsCaptured: latitude != null && longitude != null,
     setFeedstockQuantity,
     setFeedstockUnit,
@@ -796,13 +1083,30 @@ export function useBiocharProductionForm({
     setBiocharOutputUnit,
     setOfficerNotes,
     setOperatorName,
+    setBatchCode,
     setProductionDate,
+    setTimestampDate,
+    setTimestampTime,
+    setFinalStageTime,
+    setQuenchingTime,
+    setVillageName,
+    setTalukaName,
+    setDistrictName,
+    setStateName,
+    setAltitude,
     selectUnit,
     setKilnId: updateKilnId,
     regenerateCodes,
     recaptureGps,
     syncGpsFromCapture,
+    syncAltitudeFromCapture,
+    addMoistureReading,
+    updateMoistureReading,
+    removeMoistureReading,
+    captureMoistureReadingPhoto,
+    uploadMoistureReadingPhoto,
     addEvidence,
+    uploadEvidence,
     removeEvidence,
     submit,
     saveDraft,

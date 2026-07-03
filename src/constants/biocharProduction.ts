@@ -16,8 +16,14 @@ export const BIOCHAR_VERIFICATION_OPTIONS: Array<{ value: BiocharVerificationRes
   { value: 'correction', label: 'Correction Required' },
 ];
 
-/** Evidence keys in production flow order (after batch details). */
 export type BiocharEvidenceKey =
+  | 'feedstock_photo'
+  | 'starting_pyrolysis_photo'
+  | 'mid_stage_photo'
+  | 'end_stage_before_quenching_photo'
+  | 'quenching_photo'
+  | 'biochar_unloaded_photo'
+  | 'biochar_mixing_photo'
   | 'feedstock_image'
   | 'moisture_image'
   | 'process_image'
@@ -32,61 +38,87 @@ export type BiocharEvidenceSlot = {
   kind: 'photo' | 'video';
 };
 
-/** Shown after feedstock evidence — moisture reading proof. */
+export const BIOCHAR_BATCH_EVIDENCE_SLOT: BiocharEvidenceSlot = {
+  key: 'feedstock_photo',
+  title: 'Feedstock Photo',
+  description: 'Capture live photo of feedstock used for this biochar process.',
+  kind: 'photo',
+};
+
+export const BIOCHAR_PROCESS_EVIDENCE_SLOTS: BiocharEvidenceSlot[] = [
+  {
+    key: 'starting_pyrolysis_photo',
+    title: 'Starting of Pyrolysis Photo',
+    description: 'Capture live photo at the start of pyrolysis.',
+    kind: 'photo',
+  },
+  {
+    key: 'mid_stage_photo',
+    title: 'Mid Stage Photo',
+    description: 'Capture live photo during the middle of pyrolysis.',
+    kind: 'photo',
+  },
+  {
+    key: 'end_stage_before_quenching_photo',
+    title: 'End Stage Photo Before Quenching',
+    description: 'Capture live photo just before quenching.',
+    kind: 'photo',
+  },
+  {
+    key: 'quenching_photo',
+    title: 'Quenching Photo',
+    description: 'Capture live photo of the quenching stage.',
+    kind: 'photo',
+  },
+  {
+    key: 'biochar_unloaded_photo',
+    title: 'Biochar Unloaded Photo',
+    description: 'Capture live photo of biochar unloading.',
+    kind: 'photo',
+  },
+  {
+    key: 'biochar_mixing_photo',
+    title: 'Biochar Mixing Photo',
+    description: 'Capture live photo of biochar mixing.',
+    kind: 'photo',
+  },
+];
+
+export const BIOCHAR_EVIDENCE_API_FIELD: Record<BiocharEvidenceKey, string> = {
+  feedstock_photo: 'feedstock_photo',
+  starting_pyrolysis_photo: 'starting_pyrolysis_photo',
+  mid_stage_photo: 'mid_stage_photo',
+  end_stage_before_quenching_photo: 'end_stage_before_quenching_photo',
+  quenching_photo: 'quenching_photo',
+  biochar_unloaded_photo: 'biochar_unloaded_photo',
+  biochar_mixing_photo: 'biochar_mixing_photo',
+  feedstock_image: 'feedstock_photo',
+  moisture_image: 'moisture_photo',
+  process_image: 'starting_pyrolysis_photo',
+  process_video: 'mid_stage_photo',
+  batch_finish: 'biochar_unloaded_photo',
+  operator_with_biochar: 'biochar_mixing_photo',
+};
+
 export const BIOCHAR_MOISTURE_EVIDENCE_SLOT: BiocharEvidenceSlot = {
   key: 'moisture_image',
-  title: 'Moisture Image',
+  title: 'Moisture Photo of Feedstock',
   description: 'Capture live photo of moisture reading or sample.',
   kind: 'photo',
 };
 
-/** Shown immediately after Production Batch section. */
-export const BIOCHAR_BATCH_EVIDENCE_SLOT: BiocharEvidenceSlot = {
-  key: 'feedstock_image',
-  title: 'Feedstock Live Image',
-  description: 'Capture live photo of feedstock used for this production batch.',
-  kind: 'photo',
-};
-
-/** Shown after production process data — during / mid-production evidence. */
-export const BIOCHAR_PROCESS_EVIDENCE_SLOTS: BiocharEvidenceSlot[] = [
-  {
-    key: 'process_image',
-    title: 'Process Live Image',
-    description: 'Capture live photo during the middle of the production process.',
-    kind: 'photo',
-  },
-  {
-    key: 'process_video',
-    title: 'Process Video',
-    description: 'Record a short live video during production.',
-    kind: 'video',
-  },
-];
-
-/** Shown after batch is finished. */
 export const BIOCHAR_OUTPUT_EVIDENCE_SLOT: BiocharEvidenceSlot = {
   key: 'batch_finish',
-  title: 'Batch Finish Image',
-  description: 'Capture live photo of finished biochar output after the batch completes.',
+  title: 'Biochar Unloaded Photo',
+  description: 'Capture live photo of finished biochar output after unloading.',
   kind: 'photo',
 };
 
-/** Final operator evidence. */
 export const BIOCHAR_OPERATOR_EVIDENCE_SLOT: BiocharEvidenceSlot = {
   key: 'operator_with_biochar',
-  title: 'Operator with Biochar',
-  description: 'Capture live photo of the operator with the finished biochar.',
+  title: 'Biochar Mixing Photo',
+  description: 'Capture live photo of biochar mixing.',
   kind: 'photo',
-};
-
-export const BIOCHAR_EVIDENCE_API_FIELD: Record<BiocharEvidenceKey, string> = {
-  feedstock_image: 'feedstock_photo',
-  moisture_image: 'moisture_photo',
-  process_image: 'production_photo',
-  process_video: 'production_video',
-  batch_finish: 'batch_output_photo',
-  operator_with_biochar: 'operator_photo',
 };
 
 export { FEEDSTOCK_QUANTITY_UNITS, FEEDSTOCK_TYPES };

@@ -35,6 +35,7 @@ import { SupportChatScreenRoute } from '../screens/shared/SupportChatScreenRoute
 import { FarmerChatbotSupportRoute } from '../screens/shared/ChatbotSupportScreenRoute';
 import { FarmerSupportThreadsRoute } from '../screens/shared/SupportThreadsScreenRoute';
 import { FarmerServiceDetailScreen } from '../screens/farmer/FarmerServiceDetailScreen';
+import { FarmerBiocharMixingScreen } from '../screens/farmer/FarmerBiocharMixingScreen';
 import { FarmerBiocharActivitiesScreen } from '../screens/farmer/FarmerBiocharActivitiesScreen';
 import { FarmerBiocharProductionScreen } from '../screens/farmer/FarmerBiocharProductionScreen';
 import { FarmerBiocharUpdatesScreen } from '../screens/farmer/FarmerBiocharUpdatesScreen';
@@ -140,6 +141,7 @@ export function FarmerNavigator() {
         <Stack.Screen name="FarmerBiocharUpdates" component={FarmerBiocharUpdatesScreen} />
         <Stack.Screen name="FarmerBiocharActivities" component={FarmerBiocharActivitiesScreen} />
         <Stack.Screen name="FarmerBiocharProduction" component={FarmerBiocharProductionScreen} />
+        <Stack.Screen name="FarmerBiocharMixing" component={FarmerBiocharMixingScreen} />
         <Stack.Screen name="FarmerWallet" component={FarmerWalletScreen} />
         <Stack.Screen name="FarmerLegal" component={FarmerLegalScreen} />
         <Stack.Screen name="FarmerEvidenceList" component={FarmerEvidenceListScreen} />

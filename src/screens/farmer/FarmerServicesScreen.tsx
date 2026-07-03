@@ -1,5 +1,5 @@
 import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,6 +8,7 @@ import { FARMER_UPCOMING_SERVICE_MESSAGE } from '../../constants/farmerActivityS
 import { AppButton } from '../../components/AppButton';
 import { FarmerActivityServiceCard } from '../../components/farmer/activities/FarmerActivityServiceCard';
 import { LoadingState } from '../../components/LoadingState';
+import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { useFarmerServicesScreenData } from '../../hooks/useFarmerServicesScreenData';
 import type { FarmerStackParamList } from '../../navigation/types';
@@ -16,6 +17,7 @@ import type { FarmerActivityServiceItem } from '../../constants/farmerActivitySe
 
 export function FarmerServicesScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<FarmerStackParamList>>();
+  const insets = useSafeAreaInsets();
   const { services, loading, refreshing, error, reload, refresh } = useFarmerServicesScreenData();
 
   const openBiocharActivities = () => {
@@ -37,20 +39,21 @@ export function FarmerServicesScreen() {
 
   if (loading && services.length === 0) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <ScreenContainer>
         <View style={styles.headerPad}>
           <ScreenHeader title="Services" subtitle="Your enrolled Bhuguard services" />
         </View>
         <LoadingState message="Loading services..." />
-      </SafeAreaView>
+      </ScreenContainer>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <ScreenContainer>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: 24 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={dashboardTheme.primary} />
         }
@@ -87,17 +90,15 @@ export function FarmerServicesScreen() {
           ))}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: dashboardTheme.background },
   headerPad: { paddingHorizontal: 20, paddingTop: 12 },
   content: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 32,
     gap: 16,
   },
   helperText: {

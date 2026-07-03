@@ -140,7 +140,7 @@ export function ApiServerSettingsScreen({ navigation }: Props) {
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
-            placeholder="http://192.168.1.18:8000"
+            placeholder="https://yourdomain.com"
             editable={!testing && !saving}
           />
 

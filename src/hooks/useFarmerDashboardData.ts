@@ -176,10 +176,16 @@ function formatVerificationDate(value: unknown): string | null {
 export function useFarmerDashboardData() {
   const [data, setData] = useState<FarmerDashboardViewModel | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
     setError(null);
 
     try {
@@ -298,12 +304,16 @@ export function useFarmerDashboardData() {
       setError(getApiErrorMessage(err, 'Failed to load dashboard.'));
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    void load();
+    void load(false);
   }, [load]);
 
-  return { data, loading, error, reload: load };
+  const reload = useCallback(() => load(false), [load]);
+  const refresh = useCallback(() => load(true), [load]);
+
+  return { data, loading, refreshing, error, reload, refresh };
 }

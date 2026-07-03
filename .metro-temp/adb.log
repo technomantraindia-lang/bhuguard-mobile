@@ -1,0 +1,6 @@
+--- adb starting (pid 16632) ---
+06-20 14:02:06.510 16632  5884 I adb     : main.cpp:66 Android Debug Bridge version 1.0.41
+06-20 14:02:06.510 16632  5884 I adb     : main.cpp:66 Version 37.0.0-14910828
+06-20 14:02:06.510 16632  5884 I adb     : main.cpp:66 Installed as C:\Users\Admin\AppData\Local\Android\Sdk\platform-tools\adb.exe
+06-20 14:02:06.510 16632  5884 I adb     : main.cpp:66 Running on Windows 10.0.19045
+06-20 14:02:06.510 16632  5884 I adb     : main.cpp:66 

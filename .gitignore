@@ -47,3 +47,17 @@ sitemap-001.xml.gz
 # generated native folders
 /ios
 /android
+
+# Build/generated folders
+android_old/
+android/
+ios/
+.expo/
+node_modules/
+
+# Build outputs
+releases/
+*.apk
+*.aab
+*.ipa
+*.zip

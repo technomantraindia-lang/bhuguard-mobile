@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
@@ -13,20 +12,17 @@ import { FarmerQuickAccessSection } from '../../components/farmer/FarmerQuickAcc
 import { FarmerRecentActivitiesSection } from '../../components/farmer/FarmerRecentActivitiesSection';
 import { useFarmerStackNavigation, useFarmerTabNavigation } from '../../hooks/useBrandedNavigation';
 import { useFarmerDashboardData } from '../../hooks/useFarmerDashboardData';
+import { useFocusSilentRefresh } from '../../hooks/useFocusSilentRefresh';
 import { useScrollBottomPadding } from '../../hooks/useTabBarLayout';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 
 export function FarmerDashboard() {
   const navigateStack = useFarmerStackNavigation();
   const navigateTab = useFarmerTabNavigation();
-  const { data, loading, error, reload } = useFarmerDashboardData();
+  const { data, loading, refreshing, error, reload, refresh } = useFarmerDashboardData();
   const scrollBottomPadding = useScrollBottomPadding(24);
 
-  useFocusEffect(
-    useCallback(() => {
-      void reload();
-    }, [reload]),
-  );
+  useFocusSilentRefresh(refresh, Boolean(data));
 
   const openProfile = () => navigateTab('Profile');
   const openNotifications = () => navigateStack('FarmerNotifications');
@@ -76,7 +72,9 @@ export function FarmerDashboard() {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={reload} tintColor={dashboardTheme.primary} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={dashboardTheme.primary} />
+        }
       >
         <FarmerHeroSummaryCard
           farmerCode={dashboard.farmerCode}

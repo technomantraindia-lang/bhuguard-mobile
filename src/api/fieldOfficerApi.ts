@@ -296,6 +296,26 @@ export async function createOfficerBiocharBatch(payload: FormData) {
   return postApiData('/field-officer/biochar/batches', payload);
 }
 
+export async function getOfficerFarmerBiocharMixingRecords(farmerId: number | string) {
+  return fetchApiData(`/field-officer/farmers/${farmerId}/biochar-mixing`);
+}
+
+export async function createOfficerFarmerBiocharMixing(farmerId: number | string, payload: FormData) {
+  return postApiData(`/field-officer/farmers/${farmerId}/biochar-mixing`, payload);
+}
+
+export async function getOfficerBiocharMixing(id: number | string) {
+  return fetchApiData(`/field-officer/biochar-mixing/${id}`);
+}
+
+export async function saveOfficerBiocharMixingDraft(id: number | string, payload: FormData) {
+  return postApiData(`/field-officer/biochar-mixing/${id}/save-draft`, payload);
+}
+
+export async function submitOfficerBiocharMixing(id: number | string) {
+  return postApiData(`/field-officer/biochar-mixing/${id}/submit`, {});
+}
+
 export async function getBiocharInventoryOptions() {
   return fetchApiData('/field-officer/biochar/inventory-movements/options');
 }

@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
 import { BUILD_API_BASE_URL } from '../config/apiDefaults';
-import { LOCAL_API_BASE_URL } from '../config/env';
+import { DEMO_API_BASE_URL, LOCAL_API_BASE_URL, PRODUCTION_API_BASE_URL } from '../config/env';
 import { isPlaceholderApiUrl, isTryCloudflareTunnelUrl } from '../config/apiUrlValidation';
 import { formatApiUnreachableMessage } from '../utils/apiError';
 
@@ -11,7 +11,13 @@ const API_BASE_URL_KEY = 'bhuguard_api_base_url';
 let cachedApiBaseUrl: string | null = null;
 
 export function getDefaultApiBaseUrl(): string {
-  return BUILD_API_BASE_URL || LOCAL_API_BASE_URL;
+  const built = BUILD_API_BASE_URL || PRODUCTION_API_BASE_URL;
+
+  if (isPlaceholderApiUrl(built)) {
+    return DEMO_API_BASE_URL;
+  }
+
+  return built;
 }
 
 export function normalizeApiBaseUrl(input: string): string {
@@ -67,8 +73,10 @@ function shouldMigrateStoredApiUrl(stored: string): boolean {
     return false;
   }
 
-  // Drop help-text placeholders and expired Cloudflare quick-tunnel URLs saved earlier.
-  return isPlaceholderApiUrl(stored) || isTryCloudflareTunnelUrl(stored);
+  // Drop help-text placeholders, expired tunnels, and unreplaced yourdomain.com URLs.
+  return (
+    isPlaceholderApiUrl(stored) || isTryCloudflareTunnelUrl(stored)
+  );
 }
 
 async function applyStoredApiUrl(stored: string): Promise<string> {

@@ -101,14 +101,21 @@ export type ArtisanStackParamList = {
   ArtisanFarmLookup: undefined;
   ArtisanBiocharProduction: {
     farmId: number;
+    farmerId?: number;
     farmLabel?: string;
     batchId?: number;
     gpsRecaptured?: boolean;
     latitude?: number;
     longitude?: number;
   };
+  ArtisanBiocharMixing: {
+    farmId: number;
+    farmLabel?: string;
+    recordId?: number;
+  };
   ArtisanProductionRecords: { status: 'draft' | 'submitted' };
   ArtisanProfile: undefined;
+  FullscreenImage: { uri: string; title?: string };
 };
 
 export type FarmerStackParamList = {
@@ -139,6 +146,7 @@ export type FarmerStackParamList = {
   FarmerBiocharUpdates: undefined;
   FarmerBiocharActivities: undefined;
   FarmerBiocharProduction: { batchId?: number; gpsRecaptured?: boolean; latitude?: number; longitude?: number } | undefined;
+  FarmerBiocharMixing: { recordId?: number } | undefined;
   FarmerWallet: undefined;
   FarmerWeeklyUpdateDetail: { updateId: number };
   FarmerCreateWeeklyUpdate: { farmId?: number } | undefined;
@@ -274,6 +282,7 @@ export type FieldOfficerStackParamList = {
     | undefined;
   FieldOfficerBiocharProductionList: undefined;
   FieldOfficerBiocharProduction: { farmerId?: number; batchId?: number; behalfReason?: string; gpsRecaptured?: boolean; latitude?: number; longitude?: number } | undefined;
+  FieldOfficerBiocharMixing: { farmerId: number; recordId?: number } | undefined;
   FieldOfficerInventoryMovement: { farmerId?: number; movementId?: number } | undefined;
   FieldOfficerInventoryTasks: undefined;
   FieldOfficerInventoryTaskDetail: { taskId: number };
