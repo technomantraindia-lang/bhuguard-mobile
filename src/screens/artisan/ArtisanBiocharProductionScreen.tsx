@@ -6,33 +6,23 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
 import { ArtisanGpsStatusCard } from '../../components/artisan/ArtisanGpsStatusCard';
+import { BiocharProcessFormContent } from '../../components/officer/biochar/BiocharProcessFormContent';
 import { BiocharProductionSuccessModal } from '../../components/officer/biochar/BiocharProductionSuccessModal';
 import {
-  BiocharEvidenceCaptureSection,
-  FinalStageSection,
   InitialDataSection,
-  MoistureReadingsSection,
-  OfficerNotesSection,
   ProcessDataSection,
-  ProductionBatchSection,
   ProductionRecordCard,
   ProductionTimeSection,
 } from '../../components/officer/biochar/BiocharProductionSections';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { ScreenHeader } from '../../components/ScreenHeader';
-import {
-  BIOCHAR_BATCH_EVIDENCE_SLOT,
-  BIOCHAR_MOISTURE_EVIDENCE_SLOT,
-  BIOCHAR_PROCESS_EVIDENCE_SLOTS,
-  type BiocharEvidenceKey,
-} from '../../constants/biocharProduction';
+import { type BiocharEvidenceKey } from '../../constants/biocharProduction';
 import { useArtisanGpsTracker } from '../../hooks/useArtisanGpsTracker';
 import { useBiocharProductionForm } from '../../hooks/useBiocharProductionForm';
 import type { ArtisanStackParamList } from '../../navigation/types';
 import { colors } from '../../theme';
 import { biocharEvidenceKeyToGpsStage } from '../../utils/artisanGpsAccuracy';
-import type { FeedstockQuantityUnit, FeedstockTypeValue } from '../../constants/feedstockTypes';
 
 type Nav = NativeStackNavigationProp<ArtisanStackParamList, 'ArtisanBiocharProduction'>;
 type ScreenRoute = RouteProp<ArtisanStackParamList, 'ArtisanBiocharProduction'>;
@@ -45,6 +35,17 @@ export function ArtisanBiocharProductionScreen() {
     farmId: route.params.farmId,
     batchId: route.params?.batchId,
     apiMode: 'artisan',
+    selectionPrefill: {
+      farmerName: route.params.farmerName,
+      farmerCode: route.params.farmerCode,
+      farmCode: route.params.farmCode,
+      village: route.params.village,
+      taluka: route.params.taluka,
+      district: route.params.district,
+      state: route.params.state,
+      latitude: route.params.latitude,
+      longitude: route.params.longitude,
+    },
   });
   const gps = useArtisanGpsTracker({
     farmId: route.params.farmId,
@@ -54,6 +55,11 @@ export function ArtisanBiocharProductionScreen() {
   const [submittedBatchCode, setSubmittedBatchCode] = useState('');
   const [productionStartCaptured, setProductionStartCaptured] = useState(false);
   const readOnly = !form.canEdit;
+
+  const farmerCode =
+    route.params.farmerCode ??
+    form.farmerCode ??
+    (form.selectedFarmerId ? `BHG-FRM-${String(form.selectedFarmerId).padStart(6, '0')}` : null);
 
   useEffect(() => {
     if (route.params?.gpsRecaptured) {
@@ -123,8 +129,7 @@ export function ArtisanBiocharProductionScreen() {
     }
   };
 
-  const handleAddEvidence = async (key: BiocharEvidenceKey) => {
-    await form.addEvidence(key);
+  const handleEvidenceCaptured = async (key: BiocharEvidenceKey) => {
     const stage = biocharEvidenceKeyToGpsStage(key);
     if (stage) {
       await gps.captureGps(stage, {
@@ -146,19 +151,6 @@ export function ArtisanBiocharProductionScreen() {
     }
   };
 
-  const renderEvidenceCapture = (slot: typeof BIOCHAR_BATCH_EVIDENCE_SLOT) => (
-    <BiocharEvidenceCaptureSection
-      key={slot.key}
-      slot={slot}
-      evidence={form.evidence[slot.key]}
-      readOnly={readOnly}
-      onAddEvidence={(key) => void handleAddEvidence(key)}
-      onUploadEvidence={(key) => void form.uploadEvidence(key)}
-      onRemoveEvidence={form.removeEvidence}
-      onPreviewEvidence={() => Alert.alert('Evidence', 'Captured and ready for upload.')}
-    />
-  );
-
   const gpsCardProps = {
     latitude: gps.latitude,
     longitude: gps.longitude,
@@ -174,138 +166,109 @@ export function ArtisanBiocharProductionScreen() {
       <ScreenHeader title="Biochar Process" subtitle={route.params.farmLabel} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <ProductionRecordCard
-          productionRecordCode={form.productionRecordCode}
-          batchCode={form.batchCode}
-          officerName={form.officerName}
-          farmerId={form.selectedFarmerId}
-          farmerName={form.farmerName}
-          productionDate={form.productionDate}
-          statusLabel={form.statusLabel}
-        />
-
-        <ArtisanGpsStatusCard
-          title="Production Start GPS"
-          {...gpsCardProps}
-          onCaptureGps={() =>
-            void gps.captureGps('production_start', { farmId: route.params.farmId, biocharProductionId: form.batchId })
-          }
-          onRetryGps={() =>
-            void gps.retryGps('production_start', { farmId: route.params.farmId, biocharProductionId: form.batchId })
-          }
-        />
-
-        <ProductionBatchSection
-          batchCode={form.batchCode}
-          feedstockQuantity={form.feedstockQuantity}
-          feedstockUnit={form.feedstockUnit}
-          feedstockType={form.feedstockType}
-          onGenerateBatchCode={() => void form.regenerateCodes()}
-          onBatchCodeChange={form.setBatchCode}
-          onFeedstockQuantityChange={form.setFeedstockQuantity}
-          onFeedstockUnitChange={(value) => form.setFeedstockUnit(value as FeedstockQuantityUnit)}
-          onFeedstockTypeChange={(value) => form.setFeedstockType(value as FeedstockTypeValue)}
-        />
-
-        <InitialDataSection
-          timestampDate={form.timestampDate}
-          timestampTime={form.timestampTime}
-          altitude={form.altitude}
-          villageName={form.villageName}
-          talukaName={form.talukaName}
-          districtName={form.districtName}
-          stateName={form.stateName}
-          latitude={form.latitude}
-          longitude={form.longitude}
-          accuracyM={form.accuracyM}
-          onTimestampDateChange={form.setTimestampDate}
-          onTimestampTimeChange={form.setTimestampTime}
-          onAltitudeChange={(value) => form.setAltitude(value === '' ? null : Number(value))}
-          onVillageNameChange={form.setVillageName}
-          onTalukaNameChange={form.setTalukaName}
-          onDistrictNameChange={form.setDistrictName}
-          onStateNameChange={form.setStateName}
-          onCaptureGps={() => void form.recaptureGps()}
-          onRecaptureGps={() => void form.recaptureGps()}
-          mapPreviewUrl={form.mapPreviewUrl}
-        />
-
-        <ArtisanGpsStatusCard
-          title="Feedstock Check GPS"
-          {...gpsCardProps}
-          onCaptureGps={() =>
-            void gps.captureGps('feedstock_check', { farmId: route.params.farmId, biocharProductionId: form.batchId })
-          }
-          onRetryGps={() =>
-            void gps.retryGps('feedstock_check', { farmId: route.params.farmId, biocharProductionId: form.batchId })
-          }
-        />
-
-        {renderEvidenceCapture(BIOCHAR_BATCH_EVIDENCE_SLOT)}
-        {renderEvidenceCapture(BIOCHAR_MOISTURE_EVIDENCE_SLOT)}
-
-        <MoistureReadingsSection
-          readings={form.moistureReadings}
+        <BiocharProcessFormContent
+          form={form}
           readOnly={readOnly}
-          onAddReading={form.addMoistureReading}
-          onRemoveReading={form.removeMoistureReading}
-          onChangeReading={(key, value) => form.updateMoistureReading(key, 'moistureReading', value)}
-          onChangeNotes={(key, value) => form.updateMoistureReading(key, 'notes', value)}
-          onCapturePhoto={(key) => void form.captureMoistureReadingPhoto(key)}
-          onUploadPhoto={(key) => void form.uploadMoistureReadingPhoto(key)}
-        />
-
-        {BIOCHAR_PROCESS_EVIDENCE_SLOTS.slice(0, 3).map(renderEvidenceCapture)}
-
-        <FinalStageSection
-          finalStageTime={form.finalStageTime}
-          quenchingTime={form.quenchingTime}
-          onFinalStageTimeChange={form.setFinalStageTime}
-          onQuenchingTimeChange={form.setQuenchingTime}
-        />
-
-        {BIOCHAR_PROCESS_EVIDENCE_SLOTS.slice(3).map(renderEvidenceCapture)}
-
-        <ProductionTimeSection
-          startTime={form.startTime}
-          endTime={form.endTime}
-          onStartTimeChange={form.setStartTime}
-          onEndTimeChange={handleEndTimeChange}
-        />
-
-        <ProcessDataSection
-          temperature={form.temperature}
-          residenceTime={form.residenceTime}
-          biocharOutput={form.biocharOutput}
-          biocharOutputUnit={form.biocharOutputUnit}
-          feedstockQuantity={form.feedstockQuantity}
-          onTemperatureChange={form.setTemperature}
-          onResidenceTimeChange={form.setResidenceTime}
-          onBiocharOutputChange={form.setBiocharOutput}
-          onBiocharOutputUnitChange={form.setBiocharOutputUnit}
-        />
-
-        <ArtisanGpsStatusCard
-          title="Production Finish GPS"
-          {...gpsCardProps}
-          onCaptureGps={() =>
-            void gps.captureGps('production_finish', { farmId: route.params.farmId, biocharProductionId: form.batchId })
+          farmerCode={farmerCode}
+          onEvidenceCaptured={(key) => void handleEvidenceCaptured(key)}
+          headerSlot={
+            <>
+              <ProductionRecordCard
+                productionRecordCode={form.productionRecordCode}
+                batchCode={form.batchCode}
+                officerName={form.officerName}
+                farmerId={form.selectedFarmerId}
+                farmerName={form.farmerName}
+                productionDate={form.productionDate}
+                statusLabel={form.statusLabel}
+              />
+              <ArtisanGpsStatusCard
+                title="Production Start GPS"
+                {...gpsCardProps}
+                onCaptureGps={() =>
+                  void gps.captureGps('production_start', { farmId: route.params.farmId, biocharProductionId: form.batchId })
+                }
+                onRetryGps={() =>
+                  void gps.retryGps('production_start', { farmId: route.params.farmId, biocharProductionId: form.batchId })
+                }
+              />
+            </>
           }
-          onRetryGps={() =>
-            void gps.retryGps('production_finish', { farmId: route.params.farmId, biocharProductionId: form.batchId })
-          }
-        />
-
-        <OfficerNotesSection value={form.officerNotes} onChange={form.setOfficerNotes} />
-
-        <ArtisanGpsStatusCard
-          title="Submit GPS"
-          {...gpsCardProps}
-          onCaptureGps={() =>
-            void gps.captureGps('submit', { farmId: route.params.farmId, biocharProductionId: form.batchId })
-          }
-          onRetryGps={() =>
-            void gps.retryGps('submit', { farmId: route.params.farmId, biocharProductionId: form.batchId })
+          extraSectionsSlot={
+            <>
+              <InitialDataSection
+                timestampDate={form.timestampDate}
+                timestampTime={form.timestampTime}
+                altitude={form.altitude}
+                villageName={form.villageName}
+                talukaName={form.talukaName}
+                districtName={form.districtName}
+                stateName={form.stateName}
+                latitude={form.latitude}
+                longitude={form.longitude}
+                accuracyM={form.accuracyM}
+                accuracyTier={form.gpsAccuracyTier}
+                farmerCode={farmerCode}
+                farmCode={route.params.farmCode}
+                onTimestampDateChange={form.setTimestampDate}
+                onTimestampTimeChange={form.setTimestampTime}
+                onAltitudeChange={(value) => form.setAltitude(value === '' ? null : Number(value))}
+                onVillageNameChange={form.setVillageName}
+                onTalukaNameChange={form.setTalukaName}
+                onDistrictNameChange={form.setDistrictName}
+                onStateNameChange={form.setStateName}
+                onCaptureGps={() => void form.recaptureGps()}
+                onRecaptureGps={() => void form.recaptureGps()}
+                mapPreviewUrl={form.mapPreviewUrl}
+              />
+              <ArtisanGpsStatusCard
+                title="Feedstock Check GPS"
+                {...gpsCardProps}
+                onCaptureGps={() =>
+                  void gps.captureGps('feedstock_check', { farmId: route.params.farmId, biocharProductionId: form.batchId })
+                }
+                onRetryGps={() =>
+                  void gps.retryGps('feedstock_check', { farmId: route.params.farmId, biocharProductionId: form.batchId })
+                }
+              />
+              <ProductionTimeSection
+                startTime={form.startTime}
+                endTime={form.endTime}
+                onStartTimeChange={form.setStartTime}
+                onEndTimeChange={handleEndTimeChange}
+              />
+              <ProcessDataSection
+                temperature={form.temperature}
+                residenceTime={form.residenceTime}
+                biocharOutput={form.biocharOutput}
+                biocharOutputUnit={form.biocharOutputUnit}
+                feedstockQuantity={form.feedstockQuantity}
+                onTemperatureChange={form.setTemperature}
+                onResidenceTimeChange={form.setResidenceTime}
+                onBiocharOutputChange={form.setBiocharOutput}
+                onBiocharOutputUnitChange={form.setBiocharOutputUnit}
+              />
+              <ArtisanGpsStatusCard
+                title="Production Finish GPS"
+                {...gpsCardProps}
+                onCaptureGps={() =>
+                  void gps.captureGps('production_finish', { farmId: route.params.farmId, biocharProductionId: form.batchId })
+                }
+                onRetryGps={() =>
+                  void gps.retryGps('production_finish', { farmId: route.params.farmId, biocharProductionId: form.batchId })
+                }
+              />
+              <ArtisanGpsStatusCard
+                title="Submit GPS"
+                {...gpsCardProps}
+                onCaptureGps={() =>
+                  void gps.captureGps('submit', { farmId: route.params.farmId, biocharProductionId: form.batchId })
+                }
+                onRetryGps={() =>
+                  void gps.retryGps('submit', { farmId: route.params.farmId, biocharProductionId: form.batchId })
+                }
+              />
+            </>
           }
         />
 
@@ -313,11 +276,11 @@ export function ArtisanBiocharProductionScreen() {
 
         {form.canSubmit ? (
           <View style={styles.actions}>
+            <Pressable style={styles.secondaryButton} onPress={() => void handleSaveDraft()} disabled={form.submitting}>
+              <Text style={styles.secondaryButtonText}>{form.submitting ? 'Saving…' : 'Save Draft'}</Text>
+            </Pressable>
             <Pressable style={styles.primaryButton} onPress={() => void handleSubmit()} disabled={form.submitting}>
               <Text style={styles.primaryButtonText}>{form.submitting ? 'Submitting…' : 'Submit'}</Text>
-            </Pressable>
-            <Pressable style={styles.secondaryButton} onPress={() => void handleSaveDraft()} disabled={form.submitting}>
-              <Text style={styles.secondaryButtonText}>{form.submitting ? 'Saving…' : 'Save as Draft'}</Text>
             </Pressable>
           </View>
         ) : (

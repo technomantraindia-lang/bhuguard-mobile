@@ -46,8 +46,8 @@ export function FarmerActivitiesHeader({ onNotificationsPress, onProfilePress }:
         <View style={styles.titleRow}>
           <BrandedHeaderLogo />
           <View style={styles.titleCopy}>
-            <Text style={styles.title}>My Activities</Text>
-            <Text style={styles.subtitle}>Track your submitted farming work</Text>
+            <Text style={styles.title}>Farm Activity</Text>
+            <Text style={styles.subtitle}>Manage your farm updates every 20 days</Text>
           </View>
         </View>
       </View>

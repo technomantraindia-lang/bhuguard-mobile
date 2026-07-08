@@ -31,7 +31,12 @@ import {
 import { pickString, type ApiRecord } from '../utils/apiHelpers';
 import { todayIsoDate } from '../utils/activityDateHelpers';
 import { captureLivePhotoEvidence } from '../utils/liveEvidenceCapture';
-import { captureHighAccuracyGps } from '../utils/officerGpsCapture';
+import {
+  captureBiocharGps,
+  showBiocharPoorAccuracyWarning,
+} from '../utils/biocharGpsCapture';
+import type { ArtisanGpsAccuracyTier } from '../utils/artisanGpsAccuracy';
+import { classifyArtisanGpsAccuracy } from '../utils/artisanGpsAccuracy';
 
 export type BiocharMixingEvidenceAsset = {
   uri: string;
@@ -48,6 +53,14 @@ interface UseBiocharMixingFormOptions {
   farmId?: number;
   recordId?: number;
   apiMode?: 'officer' | 'farmer' | 'artisan';
+  selectionPrefill?: {
+    farmerName?: string;
+    phoneNumber?: string;
+    village?: string;
+    taluka?: string;
+    district?: string;
+    state?: string;
+  };
 }
 
 function hydrateRecord(record: ApiRecord) {
@@ -104,6 +117,7 @@ export function useBiocharMixingForm({
   farmId,
   recordId: initialRecordId,
   apiMode = 'farmer',
+  selectionPrefill,
 }: UseBiocharMixingFormOptions = {}) {
   const isOfficerMode = apiMode === 'officer';
   const isArtisanMode = apiMode === 'artisan';
@@ -125,6 +139,12 @@ export function useBiocharMixingForm({
   const [longitude, setLongitude] = useState<number | null>(null);
   const [altitude, setAltitude] = useState<number | null>(null);
   const [accuracyM, setAccuracyM] = useState<number | null>(null);
+  const [gpsAccuracyTier, setGpsAccuracyTier] = useState<ArtisanGpsAccuracyTier>('unknown');
+  const [gpsCapturedAt, setGpsCapturedAt] = useState<string | null>(null);
+  const [villageName, setVillageName] = useState('');
+  const [talukaName, setTalukaName] = useState('');
+  const [districtName, setDistrictName] = useState('');
+  const [stateName, setStateName] = useState('');
   const [farmerName, setFarmerName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [acresOfCotton, setAcresOfCotton] = useState('');
@@ -162,9 +182,20 @@ export function useBiocharMixingForm({
 
     try {
       if (isArtisanMode) {
-        const profile = (await getArtisanProfile()) as ApiRecord;
-        if (!recordId && profile.name && profile.name !== '-') {
-          setFarmerName('');
+        await getArtisanProfile();
+        if (selectionPrefill && !recordId) {
+          if (selectionPrefill.farmerName) {
+            setFarmerName(selectionPrefill.farmerName);
+          }
+          if (selectionPrefill.phoneNumber) {
+            setPhoneNumber(selectionPrefill.phoneNumber);
+          }
+          if (selectionPrefill.village) {
+            setSite(selectionPrefill.village);
+          }
+          if (selectionPrefill.state) {
+            setState(selectionPrefill.state);
+          }
         }
       } else if (isOfficerMode) {
         await getFieldOfficerProfile();
@@ -195,7 +226,7 @@ export function useBiocharMixingForm({
     } finally {
       setLoading(false);
     }
-  }, [applyRecord, isArtisanMode, isOfficerMode, recordId]);
+  }, [applyRecord, isArtisanMode, isOfficerMode, recordId, selectionPrefill]);
 
   useEffect(() => {
     void loadInitialData();
@@ -205,12 +236,25 @@ export function useBiocharMixingForm({
     setCapturingGps(true);
 
     try {
-      const gps = await captureHighAccuracyGps();
-      setLatitude(gps.latitude);
-      setLongitude(gps.longitude);
-      setAccuracyM(gps.accuracyM);
-      if (gps.altitude != null) {
-        setAltitude(gps.altitude);
+      const capture = await captureBiocharGps();
+      setLatitude(capture.latitude);
+      setLongitude(capture.longitude);
+      setAccuracyM(capture.accuracyM);
+      setGpsAccuracyTier(capture.accuracyTier);
+      setGpsCapturedAt(capture.capturedAt);
+      if (capture.altitude != null) {
+        setAltitude(capture.altitude);
+      }
+
+      if (capture.locationResolved) {
+        setVillageName(capture.village);
+        setTalukaName(capture.taluka);
+        setDistrictName(capture.district);
+        setStateName(capture.state);
+      }
+
+      if (capture.isPoorAccuracy) {
+        showBiocharPoorAccuracyWarning();
       }
     } catch (gpsError) {
       Alert.alert('GPS capture failed', getApiErrorMessage(gpsError, 'Unable to capture GPS location.'));
@@ -300,6 +344,21 @@ export function useBiocharMixingForm({
     if (accuracyM != null) {
       formData.append('gps_accuracy', String(accuracyM));
     }
+    if (gpsCapturedAt) {
+      formData.append('captured_at', gpsCapturedAt);
+    }
+    if (villageName.trim()) {
+      formData.append('village_name', villageName.trim());
+    }
+    if (talukaName.trim()) {
+      formData.append('taluka_name', talukaName.trim());
+    }
+    if (districtName.trim()) {
+      formData.append('district_name', districtName.trim());
+    }
+    if (stateName.trim()) {
+      formData.append('state_name', stateName.trim());
+    }
     if (farmerName.trim()) {
       formData.append('farmer_name', farmerName.trim());
     }
@@ -353,9 +412,11 @@ export function useBiocharMixingForm({
     altitude,
     batchNumbers,
     dateOfMixing,
+    districtName,
     evidence,
     farmId,
     farmerName,
+    gpsCapturedAt,
     isArtisanMode,
     latitude,
     longitude,
@@ -363,6 +424,9 @@ export function useBiocharMixingForm({
     phoneNumber,
     site,
     state,
+    stateName,
+    talukaName,
+    villageName,
   ]);
 
   const persistDraft = useCallback(async (): Promise<number> => {
@@ -487,6 +551,8 @@ export function useBiocharMixingForm({
     longitude,
     altitude,
     accuracyM,
+    gpsAccuracyTier,
+    gpsCapturedAt,
     farmerName,
     setFarmerName,
     phoneNumber,

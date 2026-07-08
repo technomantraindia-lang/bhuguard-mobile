@@ -115,8 +115,8 @@ export function FarmBoundaryStartScreen({ navigation, route }: Props) {
 
         <View style={styles.instructionCard}>
           <Text style={styles.instructionText}>
-            To map uneven land, walk around the farm boundary. Tap Capture Point at every corner or turn. Minimum 3
-            points required.
+            To map uneven land, walk around the farm boundary. Points are captured automatically as you walk.
+            Use Capture Point only as a backup. Minimum 3 points required.
           </Text>
         </View>
 

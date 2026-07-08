@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import {
-  getFarmerActivityLogs,
+  getFarmerFarmActivities,
   getFarmerDashboard,
   getFarmerEvidence,
   getFarmerFarms,
@@ -195,14 +195,14 @@ export function useFarmerDashboardData() {
         dashboardData,
         profileData,
         farmsData,
-        activityData,
+        farmActivityData,
         servicesData,
         evidenceData,
       ] = await Promise.all([
         loadDashboardSection(() => getFarmerDashboard(), { dashboard: {} }),
         loadDashboardSection(() => getFarmerProfile(), { profile: {} }),
         loadDashboardSection(() => getFarmerFarms(), { farms: [] }),
-        loadDashboardSection(() => getFarmerActivityLogs(true), { activity_logs: [] }),
+        loadDashboardSection(() => getFarmerFarmActivities(), { farm_activities: [] }),
         loadDashboardSection(() => getFarmerServices(), { services: [] }),
         loadDashboardSection(() => getFarmerEvidence(), { evidence: [] }),
       ]);
@@ -213,18 +213,33 @@ export function useFarmerDashboardData() {
       const farms = extractList(farmsData as ApiRecord, ['farms']);
       const farmNameById = buildFarmNameMap(farms);
       const evidenceItems = extractList(evidenceData as ApiRecord, ['evidence', 'evidence_uploads']);
+      const updateCycle = (dashboard.farm_update_cycle ?? {}) as ApiRecord;
       const biocharBlock = (dashboard.biochar ?? {}) as ApiRecord;
-      const updateCycle = (dashboard.biochar_update_cycle ?? biocharBlock.update_cycle ?? {}) as ApiRecord;
       const walletBlock = (dashboard.wallet ?? biocharBlock.wallet ?? {}) as ApiRecord;
-      const cycleStatus = String(updateCycle.cycle_status ?? 'not_started');
+      const cycleStatus = String(updateCycle.farm_update_status ?? 'not_started');
       const daysRemaining = updateCycle.days_remaining;
       const cycleTone: 'default' | 'warning' | 'danger' =
-        cycleStatus === 'overdue' ? 'danger' : cycleStatus === 'due_today' || cycleStatus === 'due_soon' ? 'warning' : 'default';
+        cycleStatus === 'overdue'
+          ? 'danger'
+          : cycleStatus === 'due_soon' || updateCycle.status_color === 'yellow'
+            ? 'warning'
+            : 'default';
 
-      const mappedActivities = extractActivityLogs(activityData as ApiRecord)
-        .map((record) => mapActivityRecord(record, farmNameById))
-        .filter((item): item is FarmerActivityViewModel => item !== null)
-        .sort((left, right) => right.sortKey - left.sortKey);
+      const farmActivityRecords = extractList(farmActivityData as ApiRecord, ['farm_activities', 'farmActivities']);
+      const mappedActivities = farmActivityRecords
+        .map((record) => ({
+          id: Number(record.id),
+          title: 'Farm Activity',
+          activityId: String(record.activity_code ?? record.id ?? ''),
+          farmName: String(record.farm_code ?? record.farm_id ?? ''),
+          dateLabel: String(record.activity_date ?? record.submitted_at ?? ''),
+          statusLabel: String(record.status ?? 'submitted'),
+          emoji: '🌾',
+          sortKey: new Date(String(record.submitted_at ?? record.activity_date ?? 0)).getTime() || 0,
+          status: String(record.status ?? 'submitted'),
+        }))
+        .filter((item) => item.id > 0)
+        .sort((left, right) => right.sortKey - left.sortKey) as FarmerActivityViewModel[];
 
       const activitySummary = buildActivitiesSummary(mappedActivities, []);
       const landTotals = sumFarmLandTotals(farms);
@@ -293,10 +308,10 @@ export function useFarmerDashboardData() {
         weeklyUpdatesPendingCount: 0,
         evidenceUploadedCount: evidenceCount,
         reportsAvailableCount: 0,
-        biocharServiceStatusLabel: String(biocharBlock.service_status_label ?? 'Open'),
+        biocharServiceStatusLabel: String(biocharBlock.service_status_label ?? 'Active'),
         biocharDaysRemainingLabel:
           daysRemaining === null || daysRemaining === undefined ? '—' : `${daysRemaining} days`,
-        biocharCycleStatusLabel: String(updateCycle.cycle_status_label ?? 'Not Started'),
+        biocharCycleStatusLabel: String(updateCycle.farm_update_status_label ?? 'Not Started'),
         biocharCycleTone: cycleTone,
         walletAmountLabel: `₹${walletPending.toLocaleString('en-IN')}`,
       });

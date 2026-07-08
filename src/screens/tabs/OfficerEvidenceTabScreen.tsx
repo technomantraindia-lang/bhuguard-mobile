@@ -31,7 +31,7 @@ import { officerCardShadow, officerTheme } from '../../theme/officerDashboardThe
 
 type Nav = CompositeNavigationProp<
 
-  BottomTabNavigationProp<FieldOfficerTabParamList, 'Evidence'>,
+  BottomTabNavigationProp<FieldOfficerTabParamList, 'Visits'>,
 
   NativeStackNavigationProp<FieldOfficerStackParamList>
 

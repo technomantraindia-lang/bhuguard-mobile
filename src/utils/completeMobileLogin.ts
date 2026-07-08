@@ -51,7 +51,11 @@ export async function completeMobileLogin({
   }
 
   if (expectedRole && resolvedRole !== expectedRole) {
-    return { ok: false, code: 'role_mismatch', message: 'Account role does not match selected login role.' };
+    return {
+      ok: false,
+      code: 'role_mismatch',
+      message: 'Account role does not match selected login role.',
+    };
   }
 
   if (resolvedRole === 'farmer' && !user.farmer_profile?.id) {

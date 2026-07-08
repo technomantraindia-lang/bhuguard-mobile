@@ -41,6 +41,26 @@ export async function getFarmerDashboard() {
   return fetchApiData('/farmer/dashboard');
 }
 
+export async function getFarmerMyFarms() {
+  return fetchApiData<{ farms: ApiRecord[] }>('/farmer/my-farms');
+}
+
+export async function getFarmerFarmActivities(status?: 'draft' | 'submitted') {
+  return fetchApiData<{ farm_activities: ApiRecord[] }>('/farmer/farm-activities', status ? { status } : undefined);
+}
+
+export async function getFarmerFarmActivity(id: number | string) {
+  return fetchApiData<{ farm_activity: ApiRecord }>(`/farmer/farm-activities/${id}`);
+}
+
+export async function saveFarmerFarmActivityDraft(formData: FormData) {
+  return postApiData<{ farm_activity: ApiRecord }>('/farmer/farm-activities/save-draft', formData);
+}
+
+export async function submitFarmerFarmActivity(formData: FormData) {
+  return postApiData<{ farm_activity: ApiRecord }>('/farmer/farm-activities/submit', formData);
+}
+
 export async function getFarmerFarms() {
   return fetchApiData('/farmer/farms');
 }
@@ -270,6 +290,10 @@ export async function getFarmerBiocharActivities(params?: Record<string, string 
   return fetchApiData('/farmer/biochar-activities', params);
 }
 
+export async function getFarmerBiocharBatchPreviewCodes() {
+  return fetchApiData('/farmer/biochar/batches/next-codes');
+}
+
 export async function getFarmerBiocharActivity(id: number | string) {
   return fetchApiData(`/farmer/biochar-activities/${id}`);
 }
@@ -286,8 +310,8 @@ export async function submitFarmerBiocharActivity(id: number | string) {
   return postApiData(`/farmer/biochar-activities/${id}/submit`, {});
 }
 
-export async function getFarmerBiocharMixingRecords() {
-  return fetchApiData('/farmer/biochar-mixing');
+export async function getFarmerBiocharMixingRecords(params?: Record<string, string | number | undefined>) {
+  return fetchApiData('/farmer/biochar-mixing', params);
 }
 
 export async function getFarmerBiocharMixing(id: number | string) {

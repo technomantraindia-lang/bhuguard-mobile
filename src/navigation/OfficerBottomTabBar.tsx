@@ -7,7 +7,6 @@ const OFFICER_TABS: RoleTabConfig[] = [
   { routeName: 'Home', labelKey: 'tabs.officer.dashboard', icon: 'assignment_turned_in', filledWhenActive: true },
   { routeName: 'Farmers', labelKey: 'tabs.officer.farmers', icon: 'group' },
   { routeName: 'Visits', labelKey: 'tabs.officer.visits', icon: 'event_note' },
-  { routeName: 'Evidence', labelKey: 'tabs.officer.evidence', icon: 'photo_camera' },
   { routeName: 'Reports', labelKey: 'tabs.officer.reports', icon: 'pending_actions' },
   { routeName: 'Profile', labelKey: 'tabs.officer.profile', icon: 'account_circle', filledWhenActive: true },
 ];

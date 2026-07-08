@@ -22,7 +22,7 @@ export function FarmerRecentActivitiesSection({
   return (
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>Recent Biochar Activity</Text>
+        <Text style={styles.sectionTitle}>Recent Farm Activity</Text>
         <DashboardPressable variant="button" onPress={onViewAllPress}>
           <Text style={styles.viewAll}>View all</Text>
         </DashboardPressable>

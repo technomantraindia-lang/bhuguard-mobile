@@ -11,6 +11,8 @@ interface OnboardingTextFieldProps {
   keyboardType?: 'default' | 'numeric' | 'phone-pad' | 'email-address';
   editable?: boolean;
   maxLength?: number;
+  secureTextEntry?: boolean;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   leftIcon?: ReactNode;
 }
 
@@ -22,6 +24,8 @@ export function OnboardingTextField({
   keyboardType = 'default',
   editable = true,
   maxLength,
+  secureTextEntry = false,
+  autoCapitalize = 'sentences',
   leftIcon,
 }: OnboardingTextFieldProps) {
   return (
@@ -37,6 +41,8 @@ export function OnboardingTextField({
           keyboardType={keyboardType}
           editable={editable}
           maxLength={maxLength}
+          secureTextEntry={secureTextEntry}
+          autoCapitalize={autoCapitalize}
           style={[styles.input, !editable && styles.inputReadonly]}
         />
       </View>

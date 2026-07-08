@@ -31,6 +31,9 @@ export interface OnboardingResult {
 export interface OnboardingDraft {
   farmer_name: string;
   mobile: string;
+  username: string;
+  password: string;
+  confirm_password: string;
   alternate_mobile: string;
   email: string;
   gender: string;
@@ -56,6 +59,8 @@ export interface OnboardingDraft {
   soil_type: string;
   existing_farming_practice: string;
   service_interest: string;
+  project_interest: string[];
+  service_interests: string[];
   remarks: string;
   gps_latitude: string;
   gps_longitude: string;
@@ -80,6 +85,9 @@ export interface OnboardingDraft {
 const defaultDraft: OnboardingDraft = {
   farmer_name: '',
   mobile: '',
+  username: '',
+  password: '',
+  confirm_password: '',
   alternate_mobile: '',
   email: '',
   gender: '',
@@ -105,6 +113,8 @@ const defaultDraft: OnboardingDraft = {
   soil_type: '',
   existing_farming_practice: '',
   service_interest: '',
+  project_interest: [],
+  service_interests: [],
   remarks: '',
   gps_latitude: '',
   gps_longitude: '',
@@ -174,6 +184,9 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
         appendScalar(formData, 'farmer_name', draft.farmer_name);
         appendScalar(formData, 'mobile', draft.mobile);
+        appendScalar(formData, 'username', draft.username);
+        appendScalar(formData, 'password', draft.password);
+        appendScalar(formData, 'confirm_password', draft.confirm_password);
         appendScalar(formData, 'email', draft.email);
         appendScalar(formData, 'preferred_language', draft.preferred_language);
         appendScalar(formData, 'address_line', draft.address_line);
@@ -189,8 +202,12 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         appendScalar(formData, 'gps_longitude', draft.gps_longitude);
         appendScalar(formData, 'gps_accuracy', draft.gps_accuracy);
         appendScalar(formData, 'crop_type', draft.crop_type);
+        appendScalar(formData, 'ownership_type', draft.ownership_type);
         appendScalar(formData, 'irrigation_type', draft.irrigation_type);
         appendScalar(formData, 'soil_type', draft.soil_type);
+
+        draft.project_interest.forEach((interest) => formData.append('project_interest[]', interest));
+        draft.service_interests.forEach((interest) => formData.append('service_interests[]', interest));
 
         const notes = buildOnboardingNotes(draft);
 

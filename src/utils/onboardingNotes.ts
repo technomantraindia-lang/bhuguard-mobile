@@ -1,11 +1,5 @@
 import type { OnboardingDraft } from '../context/OnboardingContext';
 
-const SERVICE_LABELS: Record<string, string> = {
-  regenerative_agriculture: 'Regenerative Agriculture',
-  agro_forestry: 'Agro Forestry',
-  biochar: 'Biochar',
-};
-
 /** Merges UI-only fields into the backend `notes` field. */
 export function buildOnboardingNotes(draft: OnboardingDraft): string {
   const lines: string[] = [];
@@ -52,9 +46,12 @@ export function buildOnboardingNotes(draft: OnboardingDraft): string {
     extras.push(`Existing farming practice: ${draft.existing_farming_practice.trim()}`);
   }
 
-  if (draft.service_interest.trim()) {
-    const label = SERVICE_LABELS[draft.service_interest] ?? draft.service_interest;
-    extras.push(`Service interest: ${label}`);
+  if (draft.project_interest.length > 0) {
+    extras.push(`Project interests: ${draft.project_interest.join(', ')}`);
+  }
+
+  if (draft.service_interests.length > 0) {
+    extras.push(`Service interests: ${draft.service_interests.join(', ')}`);
   }
 
   if (draft.remarks.trim()) {

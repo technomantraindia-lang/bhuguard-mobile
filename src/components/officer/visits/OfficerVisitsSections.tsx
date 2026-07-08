@@ -39,7 +39,7 @@ export function OfficerVisitsSummaryCards({
   onFilterPress?: (filter: VisitFilterKey) => void;
 }) {
   const cards: Array<{ label: string; value: number; color: string; filter: VisitFilterKey }> = [
-    { label: 'Assigned Today', value: summary.assignedToday, color: officerTheme.primary, filter: 'today' },
+    { label: 'Visited Field Today', value: summary.assignedToday, color: officerTheme.primary, filter: 'today' },
     { label: 'Pending Verification', value: summary.pendingVerification, color: officerTheme.tertiary, filter: 'pending' },
     { label: 'Completed', value: summary.completed, color: officerTheme.secondary, filter: 'completed' },
     { label: 'High Priority', value: summary.highPriority, color: officerTheme.error, filter: 'high_priority' },
@@ -249,12 +249,10 @@ export function OfficerVisitsQuickActions({
   onFeedstockVerification,
   onBiocharProduction,
   onInventoryMovement,
-  onUploadEvidence,
   onReportsQueue,
 }: OfficerVisitsQuickActionsProps) {
   const actions: Array<{ key: string; label: string; icon: BhuguardIconName; onPress: () => void }> = [
     { key: 'gps', label: 'GPS Check-In', icon: 'share_location', onPress: onGpsCheckIn },
-    { key: 'evidence', label: 'Upload Evidence', icon: 'photo_camera', onPress: onUploadEvidence },
     { key: 'feedstock', label: 'Feedstock Verify', icon: 'science', onPress: onFeedstockVerification },
     { key: 'biochar', label: 'Biochar Production', icon: 'eco', onPress: onBiocharProduction },
     { key: 'inventory', label: 'Inventory Movement', icon: 'sync', onPress: onInventoryMovement },
@@ -265,7 +263,7 @@ export function OfficerVisitsQuickActions({
     <View style={styles.section}>
       <OfficerQuickActionsSectionHeader
         title="Quick Officer Actions"
-        subtitle="Run visit verification, biochar workflows, and evidence capture."
+        subtitle="Run visit verification and biochar workflows."
       />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickActionsRow}>
         {actions.map((action) => (

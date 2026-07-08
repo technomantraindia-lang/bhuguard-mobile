@@ -63,8 +63,8 @@ export function FarmerConsentScreen() {
 
   return (
     <OnboardingConsentLayout
-      stepCurrent={2}
-      progressLabel="Step 2: Legal Agreements"
+      stepCurrent={3}
+      progressLabel="Step 3: Consent & Legal"
       onNext={next}
       nextLabel={ONBOARDING_NEXT_LABELS[2]}
       footerError={displayError}

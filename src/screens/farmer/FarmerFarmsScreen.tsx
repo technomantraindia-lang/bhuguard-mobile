@@ -148,7 +148,7 @@ export function FarmerFarmsScreen() {
           <FarmerFarmListCard
             farm={item}
             onViewDetails={() => navigation.navigate('FarmerFarmDetail', { farmId: item.id })}
-            onAddActivity={() => navigation.navigate('FarmerSubmitActivity', { farmId: item.id })}
+            onAddActivity={() => navigation.navigate('FarmerFarmActivity', { farmId: item.id })}
             onMapBoundary={() => navigation.navigate('FarmBoundaryStart', { farmId: item.id })}
             onViewBoundary={() => navigation.navigate('FarmerFarmDetail', { farmId: item.id })}
             onOpenMap={async () => {
@@ -164,33 +164,17 @@ export function FarmerFarmsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <EmptyState
-              title={searchQuery.trim() || filterMode !== 'all' ? 'No farms found' : 'No farms added yet'}
+              title={searchQuery.trim() || filterMode !== 'all' ? 'No farms found' : 'No farm linked'}
               message={
                 searchQuery.trim() || filterMode !== 'all'
                   ? 'Try changing your search or filter.'
-                  : 'Add your first farm to start tracking activities and verification.'
+                  : 'No farm is linked with your account. Please contact your Field Officer.'
               }
             />
-            {!searchQuery.trim() && filterMode === 'all' ? (
-              <Pressable
-                style={({ pressed }) => [styles.emptyButton, pressed && styles.fabPressed]}
-                onPress={() => navigation.navigate('FarmerAddFarm')}
-              >
-                <BhuguardMaterialIcon name="add_circle" size={20} color={dashboardTheme.onPrimary} />
-                <Text style={styles.emptyButtonText}>Add New Farm</Text>
-              </Pressable>
-            ) : null}
           </View>
         }
       />
 
-      <Pressable
-        style={({ pressed }) => [styles.fab, dashboardShadow, { bottom: fabBottom }, pressed && styles.fabPressed]}
-        onPress={() => navigation.navigate('FarmerAddFarm')}
-      >
-        <BhuguardMaterialIcon name="add_circle" size={22} color={dashboardTheme.onPrimary} />
-        <Text style={styles.fabText}>Add New Farm</Text>
-      </Pressable>
     </SafeAreaView>
   );
 }

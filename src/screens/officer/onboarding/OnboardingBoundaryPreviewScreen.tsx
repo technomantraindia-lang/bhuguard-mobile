@@ -73,7 +73,21 @@ export function OnboardingBoundaryPreviewScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <BoundaryLiveMap points={boundary.points} areaLabel={boundary.areaLabel} showPolygon height={320} />
+        <BoundaryLiveMap
+          points={boundary.points}
+          walkingPoints={boundary.walkingPoints}
+          areaLabel={boundary.areaLabel}
+          showPolygon
+          height={320}
+          isOutsideTolerance={boundary.isOutsideTolerance}
+          satelliteMode={boundary.satelliteMode}
+          onToggleSatellite={boundary.toggleSatelliteMode}
+        />
+        {boundary.isOutsideTolerance ? (
+          <Text style={styles.warning}>
+            Boundary moved outside expected farm area. Please adjust within field boundary.
+          </Text>
+        ) : null}
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Area Calculation</Text>
@@ -133,6 +147,14 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '700', color: dashboardTheme.headingGreen },
   main: { fontSize: 18, fontWeight: '700', color: dashboardTheme.primaryContainer },
   meta: { fontSize: 14, color: dashboardTheme.onSurface },
+  warning: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#B91C1C',
+    backgroundColor: '#FEF2F2',
+    borderRadius: 10,
+    padding: 10,
+  },
   status: { fontSize: 14, fontWeight: '700', color: dashboardTheme.primaryContainer, marginTop: 4 },
   primaryButton: {
     backgroundColor: dashboardTheme.primaryContainer,

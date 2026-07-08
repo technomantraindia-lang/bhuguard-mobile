@@ -50,7 +50,7 @@ export function FieldOfficerReportDraftScreen({ navigation }: Props) {
         {draftReports.length === 0 ? (
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyText}>No draft visits available right now.</Text>
-            <AppButton label="View Assigned Visits" onPress={() => navigation.navigate('FieldOfficerAssignments')} />
+            <AppButton label="View Visited Field" onPress={() => navigation.navigate('FieldOfficerAssignments')} />
           </View>
         ) : (
           <View style={styles.list}>

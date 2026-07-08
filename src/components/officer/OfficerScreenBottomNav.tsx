@@ -7,16 +7,16 @@ import { BhuguardMaterialIcon, type BhuguardIconName } from '../shared/BhuguardM
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerShadow, officerTheme } from '../../theme/officerDashboardTheme';
 
-const TABS: Array<{ label: string; icon: BhuguardIconName; tab: 'Home' | 'Visits' | 'Evidence' | 'Reports' | 'Profile' }> = [
+const TABS: Array<{ label: string; icon: BhuguardIconName; tab: 'Home' | 'Visits' | 'Farmers' | 'Reports' | 'Profile' }> = [
   { label: 'Dashboard', icon: 'assignment_turned_in', tab: 'Home' },
   { label: 'Visits', icon: 'event_note', tab: 'Visits' },
-  { label: 'Evidence', icon: 'photo_camera', tab: 'Evidence' },
+  { label: 'Farmers', icon: 'group', tab: 'Farmers' },
   { label: 'Reports', icon: 'pending_actions', tab: 'Reports' },
   { label: 'Profile', icon: 'account_circle', tab: 'Profile' },
 ];
 
 interface OfficerScreenBottomNavProps {
-  activeTab?: 'Home' | 'Visits' | 'Evidence' | 'Reports' | 'Profile';
+  activeTab?: 'Home' | 'Visits' | 'Farmers' | 'Reports' | 'Profile';
 }
 
 export function OfficerScreenBottomNav({ activeTab = 'Visits' }: OfficerScreenBottomNavProps) {

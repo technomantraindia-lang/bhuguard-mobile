@@ -2,7 +2,7 @@ export interface LivePhotoWatermarkMeta {
   capturedAtLabel: string;
   latitudeLabel: string;
   longitudeLabel: string;
-  accuracyLabel: string | null;
+  accuracyLabel: string;
   villageLabel: string;
   talukaLabel: string;
   districtLabel: string;
@@ -40,7 +40,7 @@ export function buildLivePhotoWatermarkMeta(input: {
       input.latitude != null ? `Lat: ${input.latitude.toFixed(6)}` : 'Lat: —',
     longitudeLabel:
       input.longitude != null ? `Lng: ${input.longitude.toFixed(6)}` : 'Lng: —',
-    accuracyLabel: input.accuracy != null ? `Accuracy: ${Math.round(input.accuracy)}m` : null,
+    accuracyLabel: input.accuracy != null ? `Accuracy: ${Math.round(input.accuracy)}m` : 'Accuracy: —',
     villageLabel: input.village && input.village !== '—' ? `Village: ${input.village}` : 'Village: —',
     talukaLabel: input.taluka && input.taluka !== '—' ? `Taluka: ${input.taluka}` : 'Taluka: —',
     districtLabel:
@@ -54,7 +54,7 @@ export function getLivePhotoWatermarkLines(meta: LivePhotoWatermarkMeta): string
     meta.capturedAtLabel,
     meta.latitudeLabel,
     meta.longitudeLabel,
-    ...(meta.accuracyLabel ? [meta.accuracyLabel] : []),
+    meta.accuracyLabel,
     meta.villageLabel,
     meta.talukaLabel,
     meta.districtLabel,

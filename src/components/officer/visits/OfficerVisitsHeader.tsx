@@ -48,7 +48,7 @@ export function OfficerVisitsHeader({
 
         <View style={styles.copy}>
           <Text style={styles.title} numberOfLines={1}>
-            Assigned Visits
+            Visited Field
           </Text>
           <Text style={styles.subtitle} numberOfLines={1}>
             Field verification queue

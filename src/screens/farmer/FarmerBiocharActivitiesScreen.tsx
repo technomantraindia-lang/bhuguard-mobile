@@ -29,7 +29,8 @@ function statusTone(status: string): string {
 
 export function FarmerBiocharActivitiesScreen() {
   const navigation = useNavigation<Nav>();
-  const [records, setRecords] = useState<ApiRecord[]>([]);
+  const [drafts, setDrafts] = useState<ApiRecord[]>([]);
+  const [submitted, setSubmitted] = useState<ApiRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,8 +39,12 @@ export function FarmerBiocharActivitiesScreen() {
     setError(null);
 
     try {
-      const data = await getFarmerBiocharActivities();
-      setRecords(extractList(data as ApiRecord, ['batches', 'activities']));
+      const [draftData, submittedData] = await Promise.all([
+        getFarmerBiocharActivities({ status: 'draft' }),
+        getFarmerBiocharActivities({ status: 'submitted' }),
+      ]);
+      setDrafts(extractList(draftData as ApiRecord, ['batches', 'activities']));
+      setSubmitted(extractList(submittedData as ApiRecord, ['batches', 'activities']));
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load Biochar activities.'));
     } finally {
@@ -53,10 +58,7 @@ export function FarmerBiocharActivitiesScreen() {
     }, [load]),
   );
 
-  const drafts = records.filter((record) => record.is_draft === true || record.status === 'draft');
-  const submitted = records.filter((record) => record.is_draft !== true && record.status !== 'draft');
-
-  if (loading && records.length === 0) {
+  if (loading && drafts.length === 0 && submitted.length === 0) {
     return (
       <SafeAreaView style={styles.safe}>
         <LoadingState message="Loading Biochar activities..." />
@@ -64,7 +66,7 @@ export function FarmerBiocharActivitiesScreen() {
     );
   }
 
-  if (error && records.length === 0) {
+  if (error && drafts.length === 0 && submitted.length === 0) {
     return (
       <SafeAreaView style={styles.safe}>
         <ErrorState message={error} onRetry={load} />

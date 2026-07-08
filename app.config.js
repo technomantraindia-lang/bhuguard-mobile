@@ -8,6 +8,7 @@ const appScheme = appJson.expo.scheme ?? 'bhuguard';
 const rawApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim() || PRODUCTION_API_URL;
 const apiUrl = rawApiUrl.includes('yourdomain.com') ? DEMO_API_URL : rawApiUrl;
 const usesHttpApi = apiUrl.startsWith('http://');
+const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() || '';
 
 const IOS_CAMERA_PERMISSION =
   'Bhuguard uses camera to capture Biochar activity, farm, feedstock, moisture, production, and evidence images.';
@@ -36,10 +37,14 @@ module.exports = {
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
-      backgroundColor: '#005129',
+      backgroundColor: '#F7FAF6',
     },
     ios: {
       ...appJson.expo.ios,
+      config: {
+        ...appJson.expo.ios?.config,
+        googleMapsApiKey: googleMapsApiKey || undefined,
+      },
       infoPlist: {
         ...appJson.expo.ios?.infoPlist,
         NSCameraUsageDescription: IOS_CAMERA_PERMISSION,
@@ -52,6 +57,12 @@ module.exports = {
     android: {
       ...appJson.expo.android,
       package: appJson.expo.android?.package ?? 'com.bhuguard.app',
+      config: {
+        ...appJson.expo.android?.config,
+        googleMaps: {
+          apiKey: googleMapsApiKey || undefined,
+        },
+      },
       usesCleartextTraffic: usesHttpApi,
       intentFilters: [
         {

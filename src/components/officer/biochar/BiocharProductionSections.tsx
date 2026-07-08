@@ -3,6 +3,7 @@ import { Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInp
 
 import {
   BIOCHAR_OUTPUT_UNITS,
+  BIOCHAR_PROCESS_FEEDSTOCK_UNITS,
   BIOCHAR_VERIFICATION_OPTIONS,
   FEEDSTOCK_QUANTITY_UNITS,
   FEEDSTOCK_TYPES,
@@ -19,6 +20,8 @@ import {
   type ProductionUnitOption,
 } from '../../../utils/biocharProductionHelpers';
 import { formatActivityDisplayDate } from '../../../utils/activityDateHelpers';
+import { artisanGpsAccuracyLabel, artisanGpsAccuracyTone, type ArtisanGpsAccuracyTier } from '../../../utils/artisanGpsAccuracy';
+import { BIOCHAR_POOR_ACCURACY_MESSAGE } from '../../../utils/biocharGpsCapture';
 import { BhuguardMaterialIcon, type BhuguardIconName } from '../../shared/BhuguardMaterialIcon';
 import { EvidenceStampedImageFrame } from '../../evidence/EvidenceStampedImageFrame';
 
@@ -57,6 +60,63 @@ function SectionTitle({ icon, title, trailing }: { icon: BhuguardIconName; title
       </View>
       {trailing}
     </View>
+  );
+}
+
+export interface BiocharFarmerOption {
+  id: number;
+  name: string;
+  mobile?: string;
+}
+
+interface FarmerAssignmentSectionProps {
+  farmers: BiocharFarmerOption[];
+  selectedFarmerId: number | null;
+  readOnly?: boolean;
+  onSelectFarmer: (farmerId: number) => void;
+}
+
+export function FarmerAssignmentSection({
+  farmers,
+  selectedFarmerId,
+  readOnly = false,
+  onSelectFarmer,
+}: FarmerAssignmentSectionProps) {
+  if (readOnly || selectedFarmerId != null) {
+    return null;
+  }
+
+  return (
+    <Card>
+      <Text style={styles.sectionTitle}>Select Farmer</Text>
+      <Text style={styles.sectionHint}>
+        Choose the farmer for this Biochar production record before saving or submitting.
+      </Text>
+      {farmers.length === 0 ? (
+        <Text style={styles.warningText}>
+          No assigned farmers found. Register or onboard a farmer first, then return to this form.
+        </Text>
+      ) : (
+        <View style={styles.farmerList}>
+          {farmers.map((farmer) => (
+            <Pressable
+              key={farmer.id}
+              style={styles.farmerOption}
+              onPress={() => onSelectFarmer(farmer.id)}
+            >
+              <View style={styles.farmerOptionText}>
+                <Text style={styles.farmerOptionName}>{farmer.name}</Text>
+                <Text style={styles.farmerOptionMeta}>
+                  {`FRM${String(farmer.id).padStart(3, '0')}`}
+                  {farmer.mobile ? ` · ${farmer.mobile}` : ''}
+                </Text>
+              </View>
+              <BhuguardMaterialIcon name="chevron_right" size={20} color={officerTheme.primary} />
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </Card>
   );
 }
 
@@ -130,7 +190,7 @@ export function ProductionRecordCard({
         </View>
         <View style={[styles.recordCell, styles.recordCellFull]}>
           <Text style={styles.metaLabel}>Farmer ID</Text>
-          <Text style={styles.metaValue}>{farmerId != null ? `FRM${String(farmerId).padStart(3, '0')}` : 'â€”'}</Text>
+          <Text style={styles.metaValue}>{farmerId != null ? `FRM${String(farmerId).padStart(3, '0')}` : '—'}</Text>
         </View>
         <View style={[styles.recordCell, styles.recordCellFull]}>
           <Text style={styles.metaLabel}>Farmer Name</Text>
@@ -152,6 +212,9 @@ interface InitialDataSectionProps {
   latitude: number | null;
   longitude: number | null;
   accuracyM: number | null;
+  accuracyTier?: ArtisanGpsAccuracyTier;
+  farmerCode?: string | null;
+  farmCode?: string | null;
   onTimestampDateChange: (value: string) => void;
   onTimestampTimeChange: (value: string) => void;
   onAltitudeChange: (value: string) => void;
@@ -175,6 +238,9 @@ export function InitialDataSection({
   latitude,
   longitude,
   accuracyM,
+  accuracyTier = 'unknown',
+  farmerCode,
+  farmCode,
   onTimestampDateChange,
   onTimestampTimeChange,
   onAltitudeChange,
@@ -186,6 +252,12 @@ export function InitialDataSection({
   onRecaptureGps,
   mapPreviewUrl,
 }: InitialDataSectionProps) {
+  const accuracyLabel =
+    accuracyM != null
+      ? `± ${accuracyM.toFixed(1)} meters (${artisanGpsAccuracyLabel(accuracyTier)})`
+      : '—';
+  const accuracyTone = artisanGpsAccuracyTone(accuracyTier);
+
   return (
     <Card>
       <SectionTitle icon="location_on" title="Initial Data" />
@@ -214,9 +286,39 @@ export function InitialDataSection({
         </View>
         <View style={styles.timeCell}>
           <Text style={styles.fieldLabel}>Accuracy</Text>
-          <Text style={styles.metaValue}>{accuracyM != null ? `± ${accuracyM.toFixed(1)} meters` : '—'}</Text>
+          <Text
+            style={[
+              styles.metaValue,
+              accuracyTone === 'success' && styles.accuracyExcellent,
+              accuracyTone === 'warning' && styles.accuracyAcceptable,
+              accuracyTone === 'danger' && styles.accuracyPoor,
+            ]}
+          >
+            {accuracyLabel}
+          </Text>
         </View>
       </View>
+
+      {accuracyTier === 'poor' ? (
+        <Text style={styles.gpsWarningText}>{BIOCHAR_POOR_ACCURACY_MESSAGE}</Text>
+      ) : null}
+
+      {(farmerCode || farmCode) ? (
+        <View style={styles.recordGrid}>
+          {farmerCode ? (
+            <View style={styles.recordCell}>
+              <Text style={styles.metaLabel}>Farmer ID</Text>
+              <Text style={styles.metaValue}>{farmerCode}</Text>
+            </View>
+          ) : null}
+          {farmCode ? (
+            <View style={styles.recordCell}>
+              <Text style={styles.metaLabel}>Farm ID</Text>
+              <Text style={styles.metaValue}>{farmCode}</Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
 
       <View style={styles.gpsCard}>
         <View style={styles.gpsHeader}>
@@ -243,7 +345,16 @@ export function InitialDataSection({
           </View>
           <View style={styles.gpsCell}>
             <Text style={styles.metaLabel}>Accuracy</Text>
-            <Text style={styles.gpsValue}>{accuracyM != null ? `± ${accuracyM.toFixed(1)} meters` : '—'}</Text>
+            <Text
+              style={[
+                styles.gpsValue,
+                accuracyTone === 'success' && styles.accuracyExcellent,
+                accuracyTone === 'warning' && styles.accuracyAcceptable,
+                accuracyTone === 'danger' && styles.accuracyPoor,
+              ]}
+            >
+              {accuracyLabel}
+            </Text>
           </View>
         </View>
         <View style={styles.mapPreview}>
@@ -389,11 +500,149 @@ export function ProductionUnitSection({
   );
 }
 
-interface ProductionBatchSectionProps {
+interface BatchDetailsSectionProps {
   batchCode: string;
+  farmerId?: number | null;
+  farmerCode?: string | null;
+  batchCodeError?: string | null;
+  onGenerateBatchCode: () => void;
+  onBatchCodeChange: (value: string) => void;
+  readOnly?: boolean;
+}
+
+export function BatchDetailsSection({
+  batchCode,
+  farmerId,
+  farmerCode,
+  batchCodeError,
+  onGenerateBatchCode,
+  onBatchCodeChange,
+  readOnly = false,
+}: BatchDetailsSectionProps) {
+  const farmerLabel =
+    farmerCode?.trim() ||
+    (farmerId != null ? `BHG-FRM-${String(farmerId).padStart(6, '0')}` : '—');
+
+  return (
+    <Card>
+      <SectionTitle icon="assignment" title="Batch Details" />
+      <Text style={styles.fieldLabel}>Batch ID</Text>
+      <View style={styles.inlineRow}>
+        <TextInput
+          style={[styles.input, styles.flex1]}
+          value={batchCode}
+          onChangeText={onBatchCodeChange}
+          placeholder="BHG-FRM-000003-BCH-20260708-001"
+          placeholderTextColor={officerTheme.outline}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          editable={!readOnly}
+        />
+        {!readOnly ? (
+          <Pressable style={styles.generateButton} onPress={onGenerateBatchCode}>
+            <Text style={styles.generateButtonText}>Generate Batch ID</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      <Text style={styles.helperText}>
+        Generate automatically or enter a custom Batch ID. Generated IDs use format {`{FARMER_ID}-BCH-{YYYYMMDD}-{SEQUENCE}`}.
+      </Text>
+      {batchCodeError ? <Text style={styles.errorText}>{batchCodeError}</Text> : null}
+      <Text style={styles.fieldLabel}>Farmer ID</Text>
+      <Text style={styles.metaValue}>{farmerLabel}</Text>
+    </Card>
+  );
+}
+
+interface FeedstockQuantitySectionProps {
+  feedstockQuantity: string;
+  feedstockUnit: string;
+  feedstockType?: string;
+  onFeedstockQuantityChange: (value: string) => void;
+  onFeedstockUnitChange: (value: string) => void;
+  onFeedstockTypeChange?: (value: string) => void;
+  readOnly?: boolean;
+  showFeedstockType?: boolean;
+}
+
+export function FeedstockQuantitySection({
+  feedstockQuantity,
+  feedstockUnit,
+  feedstockType = '',
+  onFeedstockQuantityChange,
+  onFeedstockUnitChange,
+  onFeedstockTypeChange,
+  readOnly = false,
+  showFeedstockType = true,
+}: FeedstockQuantitySectionProps) {
+  const [unitPickerOpen, setUnitPickerOpen] = React.useState(false);
+  const [typePickerOpen, setTypePickerOpen] = React.useState(false);
+  const unitLabel =
+    BIOCHAR_PROCESS_FEEDSTOCK_UNITS.find((item) => item.value === feedstockUnit)?.label ??
+    FEEDSTOCK_QUANTITY_UNITS.find((item) => item.value === feedstockUnit)?.label ??
+    feedstockUnit;
+  const typeLabel = FEEDSTOCK_TYPES.find((item) => item.value === feedstockType)?.label ?? feedstockType;
+
+  return (
+    <Card>
+      <SectionTitle icon="agriculture" title="Feedstock Quantity" />
+      <View style={styles.inlineRow}>
+        <TextInput
+          style={[styles.input, styles.flex1]}
+          value={feedstockQuantity}
+          onChangeText={onFeedstockQuantityChange}
+          keyboardType="decimal-pad"
+          placeholder="Enter quantity"
+          placeholderTextColor={officerTheme.outline}
+          editable={!readOnly}
+        />
+        <Pressable
+          style={styles.unitSelector}
+          onPress={() => !readOnly && setUnitPickerOpen(true)}
+          disabled={readOnly}
+        >
+          <Text style={styles.selectorText}>{unitLabel}</Text>
+          <BhuguardMaterialIcon name="chevron_right" size={18} color={officerTheme.onSurfaceVariant} />
+        </Pressable>
+      </View>
+      {showFeedstockType && onFeedstockTypeChange ? (
+        <>
+          <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Feedstock Type</Text>
+          <Pressable style={styles.selector} onPress={() => !readOnly && setTypePickerOpen(true)} disabled={readOnly}>
+            <Text style={styles.selectorText}>{typeLabel || 'Select feedstock type'}</Text>
+            <BhuguardMaterialIcon name="chevron_right" size={20} color={officerTheme.onSurfaceVariant} />
+          </Pressable>
+        </>
+      ) : null}
+      <PickerModal
+        visible={unitPickerOpen}
+        title="Quantity Unit"
+        options={BIOCHAR_PROCESS_FEEDSTOCK_UNITS.map((item) => ({ value: item.value, label: item.label }))}
+        onClose={() => setUnitPickerOpen(false)}
+        onSelect={onFeedstockUnitChange}
+      />
+      {showFeedstockType && onFeedstockTypeChange ? (
+        <PickerModal
+          visible={typePickerOpen}
+          title="Feedstock Type"
+          options={FEEDSTOCK_TYPES.map((item) => ({ value: item.value, label: item.label }))}
+          onClose={() => setTypePickerOpen(false)}
+          onSelect={onFeedstockTypeChange}
+        />
+      ) : null}
+    </Card>
+  );
+}
+
+interface ProductionBatchSectionProps {
+  kilnId?: string;
+  batchCode: string;
+  farmerId?: number | null;
+  farmerName?: string;
   feedstockQuantity: string;
   feedstockUnit: string;
   feedstockType: string;
+  onKilnIdChange?: (value: string) => void;
   onGenerateBatchCode: () => void;
   onBatchCodeChange: (value: string) => void;
   onFeedstockQuantityChange: (value: string) => void;
@@ -402,10 +651,14 @@ interface ProductionBatchSectionProps {
 }
 
 export function ProductionBatchSection({
+  kilnId = '',
   batchCode,
+  farmerId,
+  farmerName,
   feedstockQuantity,
   feedstockUnit,
   feedstockType,
+  onKilnIdChange,
   onGenerateBatchCode,
   onBatchCodeChange,
   onFeedstockQuantityChange,
@@ -420,6 +673,16 @@ export function ProductionBatchSection({
   return (
     <Card>
       <SectionTitle icon="assignment" title="Production Batch" />
+      <Text style={styles.fieldLabel}>Kiln ID / Supply ID</Text>
+      <TextInput
+        style={styles.input}
+        value={kilnId}
+        onChangeText={onKilnIdChange}
+        placeholder="Enter kiln or supply ID"
+        placeholderTextColor={officerTheme.outline}
+        autoCapitalize="characters"
+        editable={Boolean(onKilnIdChange)}
+      />
       <Text style={styles.fieldLabel}>Batch ID</Text>
       <View style={styles.inlineRow}>
         <TextInput
@@ -435,6 +698,11 @@ export function ProductionBatchSection({
           <Text style={styles.generateButtonText}>Generate</Text>
         </Pressable>
       </View>
+
+      <Text style={styles.fieldLabel}>Farmer ID</Text>
+      <Text style={styles.metaValue}>{farmerId != null ? `FRM${String(farmerId).padStart(3, '0')}` : '—'}</Text>
+      <Text style={styles.fieldLabel}>Farmer Name</Text>
+      <Text style={styles.metaValue}>{farmerName?.trim() ? farmerName : '—'}</Text>
 
       <Text style={styles.fieldLabel}>Feedstock Quantity</Text>
       <View style={styles.inlineRow}>
@@ -452,7 +720,7 @@ export function ProductionBatchSection({
         </Pressable>
       </View>
 
-      <Text style={styles.fieldLabel}>Feedstock Type</Text>
+      <Text style={styles.fieldLabel}>Feedstock Size</Text>
       <Pressable style={styles.selector} onPress={() => setTypePickerOpen(true)}>
         <Text style={styles.selectorText}>{typeLabel}</Text>
         <BhuguardMaterialIcon name="chevron_right" size={20} color={officerTheme.onSurfaceVariant} />
@@ -519,6 +787,8 @@ export function MoistureSection({
 interface MoistureReadingsSectionProps {
   readings: BiocharMoistureReadingDraft[];
   readOnly?: boolean;
+  showNotes?: boolean;
+  fixedCount?: number;
   onAddReading: () => void;
   onRemoveReading: (key: string) => void;
   onChangeReading: (key: string, value: string) => void;
@@ -530,6 +800,8 @@ interface MoistureReadingsSectionProps {
 export function MoistureReadingsSection({
   readings,
   readOnly = false,
+  showNotes = true,
+  fixedCount,
   onAddReading,
   onRemoveReading,
   onChangeReading,
@@ -537,23 +809,28 @@ export function MoistureReadingsSection({
   onCapturePhoto,
   onUploadPhoto,
 }: MoistureReadingsSectionProps) {
+  const allowAdd = !fixedCount;
+  const allowRemove = !fixedCount;
+
   return (
     <Card>
       <SectionTitle
         icon="water_drop"
-        title="Moisture Readings"
-        trailing={!readOnly ? (
-          <Pressable style={styles.addReadingButton} onPress={onAddReading}>
-            <Text style={styles.addReadingButtonText}>Add Reading</Text>
-          </Pressable>
-        ) : null}
+        title="Moisture Reading Repeater"
+        trailing={
+          !readOnly && allowAdd ? (
+            <Pressable style={styles.addReadingButton} onPress={onAddReading}>
+              <Text style={styles.addReadingButtonText}>Add Reading</Text>
+            </Pressable>
+          ) : null
+        }
       />
       <View style={styles.readingList}>
         {readings.map((reading, index) => (
           <View key={reading.key} style={styles.readingCard}>
             <View style={styles.readingHeader}>
-              <Text style={styles.readingTitle}>Reading {index + 1}</Text>
-              {!readOnly && readings.length > 1 ? (
+              <Text style={styles.readingTitle}>Moisture Reading {index + 1} + Photo</Text>
+              {!readOnly && allowRemove && readings.length > 1 ? (
                 <Pressable onPress={() => onRemoveReading(reading.key)}>
                   <Text style={styles.removeReadingText}>Remove</Text>
                 </Pressable>
@@ -568,15 +845,19 @@ export function MoistureReadingsSection({
               placeholder="e.g. 12.5"
               editable={!readOnly}
             />
-            <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Notes</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={reading.notes}
-              onChangeText={(value) => onChangeNotes(reading.key, value)}
-              multiline
-              placeholder="Optional reading notes"
-              editable={!readOnly}
-            />
+            {showNotes ? (
+              <>
+                <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Notes</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={reading.notes}
+                  onChangeText={(value) => onChangeNotes(reading.key, value)}
+                  multiline
+                  placeholder="Optional reading notes"
+                  editable={!readOnly}
+                />
+              </>
+            ) : null}
             <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Photo</Text>
             {reading.photo ? (
               <EvidenceStampedImageFrame
@@ -654,6 +935,79 @@ export function FinalStageSection({
   onQuenchingTimeChange,
 }: FinalStageSectionProps) {
   return (
+    <>
+      <FinalStageTimeSection finalStageTime={finalStageTime} onFinalStageTimeChange={onFinalStageTimeChange} />
+      <QuenchingTimeSection quenchingTime={quenchingTime} onQuenchingTimeChange={onQuenchingTimeChange} />
+    </>
+  );
+}
+
+interface FinalStageTimeSectionProps {
+  finalStageTime: string;
+  onFinalStageTimeChange: (value: string) => void;
+  readOnly?: boolean;
+}
+
+export function FinalStageTimeSection({
+  finalStageTime,
+  onFinalStageTimeChange,
+  readOnly = false,
+}: FinalStageTimeSectionProps) {
+  return (
+    <Card>
+      <SectionTitle icon="schedule" title="Final Stage Time" />
+      <TextInput
+        style={styles.input}
+        value={finalStageTime}
+        onChangeText={onFinalStageTimeChange}
+        placeholder="HH:MM"
+        placeholderTextColor={officerTheme.outline}
+        editable={!readOnly}
+      />
+    </Card>
+  );
+}
+
+interface QuenchingTimeSectionProps {
+  quenchingTime: string;
+  onQuenchingTimeChange: (value: string) => void;
+  readOnly?: boolean;
+}
+
+export function QuenchingTimeSection({
+  quenchingTime,
+  onQuenchingTimeChange,
+  readOnly = false,
+}: QuenchingTimeSectionProps) {
+  return (
+    <Card>
+      <SectionTitle icon="schedule" title="Quenching Time" />
+      <TextInput
+        style={styles.input}
+        value={quenchingTime}
+        onChangeText={onQuenchingTimeChange}
+        placeholder="HH:MM"
+        placeholderTextColor={officerTheme.outline}
+        editable={!readOnly}
+      />
+    </Card>
+  );
+}
+
+interface LegacyFinalStageSectionProps {
+  finalStageTime: string;
+  quenchingTime: string;
+  onFinalStageTimeChange: (value: string) => void;
+  onQuenchingTimeChange: (value: string) => void;
+}
+
+function LegacyFinalStageCombinedSection({
+  finalStageTime,
+  quenchingTime,
+  onFinalStageTimeChange,
+  onQuenchingTimeChange,
+}: LegacyFinalStageSectionProps) {
+  return (
     <Card>
       <SectionTitle icon="schedule" title="Final Stage" />
       <Text style={styles.fieldLabel}>Final Stage Time</Text>
@@ -675,6 +1029,9 @@ export function FinalStageSection({
     </Card>
   );
 }
+
+// Keep export name stable for any legacy imports — now renders split sections.
+export { LegacyFinalStageCombinedSection as FinalStageSectionLegacy };
 
 interface ProcessDataSectionProps {
   temperature: string;
@@ -844,7 +1201,7 @@ export function BiocharEvidenceCaptureSection({
               disabled={readOnly}
             >
               <BhuguardMaterialIcon name="upload" size={24} color={officerTheme.primaryContainer} />
-              <Text style={styles.uploadButtonText}>Upload Image</Text>
+              <Text style={styles.uploadButtonText}>Upload from Gallery</Text>
             </Pressable>
           ) : null}
         </View>
@@ -861,7 +1218,7 @@ interface OfficerNotesSectionProps {
 export function OfficerNotesSection({ value, onChange }: OfficerNotesSectionProps) {
   return (
     <Card>
-      <SectionTitle icon="description" title="Officer Notes" />
+      <SectionTitle icon="description" title="Notes" />
       <TextInput
         style={styles.notesInput}
         value={value}
@@ -954,6 +1311,23 @@ const styles = StyleSheet.create({
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitleLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: officerTheme.onSurface },
+  sectionHint: { fontSize: 13, color: officerTheme.onSurfaceVariant, lineHeight: 18 },
+  warningText: { fontSize: 14, color: officerTheme.error, lineHeight: 20 },
+  farmerList: { gap: 8 },
+  farmerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: officerTheme.outlineVariant,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: officerTheme.surface,
+  },
+  farmerOptionText: { flex: 1, gap: 2, paddingRight: 8 },
+  farmerOptionName: { fontSize: 15, fontWeight: '700', color: officerTheme.onSurface },
+  farmerOptionMeta: { fontSize: 12, color: officerTheme.onSurfaceVariant },
   recordHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   metaLabel: {
     fontSize: 11,
@@ -981,6 +1355,12 @@ const styles = StyleSheet.create({
   metaValue: { fontSize: 15, color: officerTheme.onSurface, marginTop: 2 },
   officerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   fieldLabel: { fontSize: 12, fontWeight: '600', color: officerTheme.onSurfaceVariant, marginBottom: 4 },
+  helperText: { fontSize: 12, color: officerTheme.onSurfaceVariant, marginTop: 6, marginBottom: 8 },
+  errorText: { fontSize: 13, color: '#B91C1C', marginTop: 6 },
+  gpsWarningText: { fontSize: 13, color: '#B45309', marginTop: 8, marginBottom: 8 },
+  accuracyExcellent: { color: '#15803D' },
+  accuracyAcceptable: { color: '#B45309' },
+  accuracyPoor: { color: '#B91C1C' },
   fieldSpacing: { marginTop: 10 },
   textArea: { minHeight: 72, textAlignVertical: 'top' },
   selector: {

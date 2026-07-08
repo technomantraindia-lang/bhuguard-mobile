@@ -40,8 +40,8 @@ export type BiocharEvidenceSlot = {
 
 export const BIOCHAR_BATCH_EVIDENCE_SLOT: BiocharEvidenceSlot = {
   key: 'feedstock_photo',
-  title: 'Feedstock Photo',
-  description: 'Capture live photo of feedstock used for this biochar process.',
+  title: 'Feedstock Image',
+  description: 'Capture or upload a photo of feedstock used for this biochar process.',
   kind: 'photo',
 };
 
@@ -120,5 +120,17 @@ export const BIOCHAR_OPERATOR_EVIDENCE_SLOT: BiocharEvidenceSlot = {
   description: 'Capture live photo of biochar mixing.',
   kind: 'photo',
 };
+
+/** Biochar process form allows kg and ton only. */
+export const BIOCHAR_PROCESS_FEEDSTOCK_UNITS = [
+  { value: 'kg', label: 'Kg' },
+  { value: 'ton', label: 'Ton' },
+] as const;
+
+export type BiocharProcessFeedstockUnit = (typeof BIOCHAR_PROCESS_FEEDSTOCK_UNITS)[number]['value'];
+
+export const DEFAULT_BIOCHAR_PROCESS_FEEDSTOCK_UNIT: BiocharProcessFeedstockUnit = 'kg';
+
+export const BIOCHAR_PROCESS_MOISTURE_READING_COUNT = 5;
 
 export { FEEDSTOCK_QUANTITY_UNITS, FEEDSTOCK_TYPES };

@@ -51,31 +51,21 @@ export function FieldOfficerDashboard() {
   const handleStartVerification = () => {
     const firstVisit = data?.visits.find((visit) => visit.assignmentId);
     if (firstVisit?.assignmentId) {
-      navigation.navigate('FieldOfficerAssignmentDetail', { assignmentId: firstVisit.assignmentId });
+      navigation.navigate('FieldOfficerVisitVerification', { assignmentId: firstVisit.assignmentId });
       return;
     }
 
-    navigation.navigate('Visits');
-  };
-
-  const handleUploadEvidence = () => {
-    const assignmentId = data?.visits.find((visit) => visit.assignmentId)?.assignmentId;
-    if (assignmentId) {
-      navigation.navigate('VisitEvidenceUpload', { assignmentId });
-      return;
-    }
-
-    navigation.navigate('Visits');
+    navigation.navigate('FieldOfficerVisitVerification', {});
   };
 
   const handleVerificationChecklist = () => {
     const assignmentId = data?.visits.find((visit) => visit.assignmentId)?.assignmentId;
     if (assignmentId) {
-      navigation.navigate('VisitEvidenceUpload', { assignmentId });
+      navigation.navigate('FieldOfficerVisitVerification', { assignmentId });
       return;
     }
 
-    navigation.navigate('Visits');
+    navigation.navigate('FieldOfficerVisitVerification', {});
   };
 
   const handleOnboardFarmer = () => {
@@ -155,7 +145,6 @@ export function FieldOfficerDashboard() {
         <OfficerStatsGrid dashboard={dashboard} />
         <OfficerQuickActionCards
           onStartVerification={handleStartVerification}
-          onUploadEvidence={handleUploadEvidence}
           onOnboardFarmer={handleOnboardFarmer}
           onVerificationChecklist={handleVerificationChecklist}
           onFeedstockVerification={() => navigation.navigate('FieldOfficerFeedstockVerification')}
@@ -195,7 +184,6 @@ export function FieldOfficerDashboard() {
         <OfficerQuickAccessSection
           onAssignedVisits={() => navigation.navigate('Visits')}
           onGpsCheckIn={handleGpsCheckIn}
-          onEvidenceUpload={handleUploadEvidence}
           onReports={() => navigation.navigate('Reports')}
           onProfile={() => navigation.navigate('FieldOfficerProfile')}
           onSupport={() => navigation.navigate('ChatbotSupport', { supportRole: 'field_officer', sourceModule: 'officer_dashboard' })}

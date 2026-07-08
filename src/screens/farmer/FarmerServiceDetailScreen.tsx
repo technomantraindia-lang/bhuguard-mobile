@@ -273,12 +273,9 @@ export function FarmerServiceDetailScreen({ route, navigation }: Props) {
         ) : null}
 
         {!canEnroll && isEnrolled && (pickString(record, 'code') === 'BIOCHAR' || serviceName.toLowerCase().includes('biochar')) ? (
-          <Pressable
-            style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-            onPress={() => navigation.navigate('FarmerBiocharActivities')}
-          >
-            <Text style={styles.primaryButtonText}>Open Biochar Activity</Text>
-          </Pressable>
+          <View style={styles.unavailableCard}>
+            <Text style={styles.unavailableText}>Biochar service is active on your account. Use Farm Activity to submit your 20-day farm updates.</Text>
+          </View>
         ) : null}
 
         {!canEnroll && !isEnrolled ? (

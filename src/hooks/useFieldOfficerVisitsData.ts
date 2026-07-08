@@ -490,7 +490,7 @@ function buildActivitiesFromAssignments(assignments: ApiRecord[] = []): OfficerD
 
     accepted: 'Visit Accepted',
 
-    assigned: 'Visit Assigned',
+    assigned: 'Pending Visited',
 
   };
 

@@ -54,6 +54,7 @@ export type PasswordLoginParams = {
 export type RootStackParamList = {
   Preloader: undefined;
   LanguageSelection: undefined;
+  MobileLogin: undefined;
   RoleSelection: undefined;
   ApiServerSettings: undefined;
   FarmerLoginOptions: undefined;
@@ -90,7 +91,6 @@ export type FieldOfficerTabParamList = {
   Home: undefined;
   Farmers: undefined;
   Visits: undefined;
-  Evidence: undefined;
   Reports: undefined;
   Map: undefined;
   Profile: undefined;
@@ -102,15 +102,30 @@ export type ArtisanStackParamList = {
   ArtisanBiocharProduction: {
     farmId: number;
     farmerId?: number;
+    farmerCode?: string;
+    farmerName?: string;
+    farmCode?: string;
     farmLabel?: string;
-    batchId?: number;
-    gpsRecaptured?: boolean;
+    village?: string;
+    taluka?: string;
+    district?: string;
+    state?: string;
     latitude?: number;
     longitude?: number;
+    batchId?: number;
+    gpsRecaptured?: boolean;
   };
   ArtisanBiocharMixing: {
     farmId: number;
+    farmerId?: number;
+    farmerCode?: string;
+    farmerName?: string;
+    farmCode?: string;
     farmLabel?: string;
+    village?: string;
+    taluka?: string;
+    district?: string;
+    state?: string;
     recordId?: number;
   };
   ArtisanProductionRecords: { status: 'draft' | 'submitted' };
@@ -142,6 +157,8 @@ export type FarmerStackParamList = {
   CameraBoundaryUploading: { farmId: number };
   BoundaryPhotoGallery: { farmId: number };
   FarmerAddFarm: undefined;
+  FarmerFarmSelection: undefined;
+  FarmerFarmActivity: { farmId?: number; activityId?: number };
   FarmerWeeklyUpdates: undefined;
   FarmerBiocharUpdates: undefined;
   FarmerBiocharActivities: undefined;
@@ -230,6 +247,7 @@ export type FieldOfficerStackParamList = {
   FieldOfficerMonitoringReports: undefined;
   FieldOfficerNotifications: undefined;
   VisitCheckIn: { assignmentId: number; visitContext?: import('../utils/visitCheckInHelpers').VisitCheckInRouteContext };
+  FieldOfficerVisitVerification: { assignmentId?: number; farmerId?: number; farmId?: number };
   VisitLocationVerify: {
     assignmentId: number;
     capture: OfficerGpsCaptureResult;
@@ -281,7 +299,22 @@ export type FieldOfficerStackParamList = {
     | { verificationId?: number; gpsVerified?: boolean; assignmentId?: number }
     | undefined;
   FieldOfficerBiocharProductionList: undefined;
-  FieldOfficerBiocharProduction: { farmerId?: number; batchId?: number; behalfReason?: string; gpsRecaptured?: boolean; latitude?: number; longitude?: number } | undefined;
+    FieldOfficerBiocharProduction: {
+      farmerId?: number;
+      farmerName?: string;
+      farmId?: number;
+      fieldOfficerId?: number;
+      visitId?: number;
+      village?: string;
+      taluka?: string;
+      district?: string;
+      state?: string;
+      gpsAccuracy?: number;
+      batchId?: number;
+      gpsRecaptured?: boolean;
+      latitude?: number;
+      longitude?: number;
+    } | undefined;
   FieldOfficerBiocharMixing: { farmerId: number; recordId?: number } | undefined;
   FieldOfficerInventoryMovement: { farmerId?: number; movementId?: number } | undefined;
   FieldOfficerInventoryTasks: undefined;

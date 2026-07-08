@@ -7,15 +7,22 @@ interface BiocharProductionSuccessModalProps {
   visible: boolean;
   batchCode: string;
   onClose: () => void;
-  onBackToVisits: () => void;
+  onAddNewBatch?: () => void;
+  onBackToDashboard?: () => void;
+  /** @deprecated Use onBackToDashboard */
+  onBackToVisits?: () => void;
 }
 
 export function BiocharProductionSuccessModal({
   visible,
   batchCode,
   onClose,
+  onAddNewBatch,
+  onBackToDashboard,
   onBackToVisits,
 }: BiocharProductionSuccessModalProps) {
+  const handleDashboard = onBackToDashboard ?? onBackToVisits ?? onClose;
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
@@ -25,11 +32,13 @@ export function BiocharProductionSuccessModal({
           </View>
           <Text style={styles.title}>Record Submitted</Text>
           <Text style={styles.message}>
-            Biochar Production Batch <Text style={styles.batchCode}>{batchCode}</Text> has been successfully submitted
-            for review.
+            Biochar Production Batch <Text style={styles.batchCode}>{batchCode}</Text> has been successfully submitted.
           </Text>
-          <Pressable style={styles.button} onPress={onBackToVisits}>
-            <Text style={styles.buttonText}>Back to Assigned Visits</Text>
+          <Pressable style={styles.button} onPress={onAddNewBatch ?? onClose}>
+            <Text style={styles.buttonText}>Add New Batch</Text>
+          </Pressable>
+          <Pressable style={styles.secondaryButton} onPress={handleDashboard}>
+            <Text style={styles.secondaryButtonText}>Go To Dashboard</Text>
           </Pressable>
         </View>
       </View>
@@ -71,6 +80,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
+    marginBottom: 10,
   },
   buttonText: { color: officerTheme.onPrimary, fontSize: 15, fontWeight: '700' },
+  secondaryButton: {
+    width: '100%',
+    backgroundColor: '#EAF7EF',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  secondaryButtonText: { color: officerTheme.primaryContainer, fontSize: 15, fontWeight: '700' },
 });

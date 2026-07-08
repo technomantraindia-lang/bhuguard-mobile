@@ -121,7 +121,6 @@ const styles = StyleSheet.create({
   },
   imageContainerCompact: {
     maxHeight: EVIDENCE_THUMBNAIL_MAX_HEIGHT,
-    overflow: 'hidden',
   },
   image: {
     width: '100%',

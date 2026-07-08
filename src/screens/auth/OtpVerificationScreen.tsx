@@ -62,7 +62,12 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
         const result = await verifyLoginOtp(mobile, otp.trim());
         await finishMobileLogin(
           navigation,
-          { token: result.token, user: result.user, expectedRole: role },
+          {
+            token: result.token,
+            user: result.user,
+            // Entrance mobile login omits role; role-specific logins may still pass expectedRole.
+            expectedRole: role,
+          },
           {
             roleMismatch: t('mpinLogin.roleMismatch'),
             unsupportedAccount: t('errors.unsupportedAccount'),

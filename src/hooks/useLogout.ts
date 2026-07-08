@@ -10,7 +10,7 @@ export function useLogout() {
     if (navigationRef.isReady()) {
       navigationRef.reset({
         index: 0,
-        routes: [{ name: 'RoleSelection' }],
+        routes: [{ name: 'MobileLogin' }],
       });
     }
   }, []);

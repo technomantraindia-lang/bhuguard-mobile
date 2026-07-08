@@ -344,7 +344,7 @@ export function BiocharApplicationVerificationScreen({ route, navigation }: Prop
             navigation.replace('EvidenceVerification', { assignmentId });
             return;
           }
-          navigation.navigate('FieldOfficerTabs', { screen: 'Evidence' });
+          navigation.navigate('FieldOfficerTabs', { screen: 'Home' });
         }}
         onBackToVisits={() => {
           setSuccessVisible(false);

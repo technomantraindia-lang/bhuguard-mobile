@@ -1,10 +1,19 @@
 import * as Location from 'expo-location';
 
+import { getDistricts, getTalukas, getVillages, type AddressOption } from '../api/addressApi';
+
 export interface ResolvedCaptureLocation {
   village: string;
   taluka: string;
   district: string;
   state: string;
+}
+
+export interface ValidatedCaptureLocation extends ResolvedCaptureLocation {
+  resolved: boolean;
+  villageId?: number | null;
+  talukaId?: number | null;
+  districtId?: number | null;
 }
 
 const UNKNOWN_LOCATION = '-';
@@ -101,6 +110,93 @@ function resolveDistrict(place: Location.LocationGeocodedAddress): string {
   );
 
   return knownDistrict ?? candidates[0] ?? UNKNOWN_LOCATION;
+}
+
+function normalizeAddressName(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function findBestAddressMatch(candidate: string, options: AddressOption[]): AddressOption | null {
+  if (!candidate || candidate === UNKNOWN_LOCATION) {
+    return null;
+  }
+
+  const normalizedCandidate = normalizeAddressName(candidate);
+  const exact = options.find((option) => normalizeAddressName(option.name) === normalizedCandidate);
+
+  if (exact) {
+    return exact;
+  }
+
+  const partial = options.find((option) => {
+    const normalizedOption = normalizeAddressName(option.name);
+
+    return (
+      normalizedOption.includes(normalizedCandidate) ||
+      normalizedCandidate.includes(normalizedOption)
+    );
+  });
+
+  return partial ?? null;
+}
+
+async function validateAgainstAddressMaster(raw: ResolvedCaptureLocation): Promise<ValidatedCaptureLocation> {
+  const empty: ValidatedCaptureLocation = {
+    village: '',
+    taluka: '',
+    district: '',
+    state: 'Gujarat',
+    resolved: false,
+  };
+
+  try {
+    const districts = await getDistricts('Gujarat');
+    const matchedDistrict = findBestAddressMatch(raw.district, districts);
+
+    if (!matchedDistrict) {
+      return empty;
+    }
+
+    const talukas = await getTalukas(matchedDistrict.id);
+    const matchedTaluka = findBestAddressMatch(raw.taluka, talukas);
+
+    if (!matchedTaluka) {
+      return {
+        ...empty,
+        district: matchedDistrict.name,
+        state: 'Gujarat',
+        districtId: matchedDistrict.id,
+      };
+    }
+
+    const villages = await getVillages(
+      matchedTaluka.id,
+      raw.village !== UNKNOWN_LOCATION ? raw.village : undefined,
+    );
+    const matchedVillage = findBestAddressMatch(raw.village, villages);
+
+    return {
+      village: matchedVillage?.name ?? '',
+      taluka: matchedTaluka.name,
+      district: matchedDistrict.name,
+      state: 'Gujarat',
+      resolved: Boolean(matchedVillage),
+      villageId: matchedVillage?.id ?? null,
+      talukaId: matchedTaluka.id,
+      districtId: matchedDistrict.id,
+    };
+  } catch {
+    return empty;
+  }
+}
+
+export async function resolveValidatedCaptureLocation(
+  latitude: number,
+  longitude: number,
+): Promise<ValidatedCaptureLocation> {
+  const raw = await resolveCaptureLocation(latitude, longitude);
+
+  return validateAgainstAddressMaster(raw);
 }
 
 export async function resolveCaptureLocation(

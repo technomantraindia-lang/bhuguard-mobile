@@ -65,17 +65,17 @@ export function FarmerBiocharDashboardStats({
   return (
     <View style={styles.wrap}>
       <View style={styles.grid}>
-        <StatCard icon="eco" value={serviceStatusLabel} label="Biochar Service Status" onPress={onServicePress} />
+        <StatCard icon="eco" value={serviceStatusLabel} label="Biochar" />
         <StatCard
           icon="event_note"
           value={daysRemainingLabel}
-          label="Biochar Update Countdown"
+          label="Next Farm Update"
           tone={cycleTone}
           onPress={onUpdatesPress}
         />
       </View>
       <View style={styles.grid}>
-        <StatCard icon="schedule" value={cycleStatusLabel} label="Next Biochar Update Due" tone={cycleTone} onPress={onUpdatesPress} />
+        <StatCard icon="schedule" value={cycleStatusLabel} label="Farm Update Status" tone={cycleTone} onPress={onUpdatesPress} />
         <StatCard icon="payments" value={walletAmountLabel} label="Wallet Amount" onPress={onWalletPress} />
       </View>
       <StatCard icon="photo_camera" value={String(evidenceCount)} label="Evidence Uploaded" onPress={onEvidencePress} />

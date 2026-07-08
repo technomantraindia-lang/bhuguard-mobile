@@ -17,12 +17,18 @@ import { countVisitEvidenceUploads } from './visitChecklistHelpers';
 import { buildMrvChecklistPayload, enrichMrvStateFromAssignmentEvidence, parseMrvVerificationState } from './mrvVerificationHelpers';
 
 export type VisitVerificationStepKey =
-  | 'accept'
+  | 'start_visit'
   | 'check_in'
-  | 'verify'
-  | 'checklist'
+  | 'farmer_details'
+  | 'mobile_network'
+  | 'start_biochar_activity'
+  | 'biochar_process'
   | 'evidence'
-  | 'review';
+  | 'review'
+  | 'submit'
+  | 'accept'
+  | 'verify'
+  | 'checklist';
 
 export interface VisitVerificationStep {
   key: VisitVerificationStepKey;
@@ -30,12 +36,13 @@ export interface VisitVerificationStep {
 }
 
 export const VISIT_VERIFICATION_STEPS: VisitVerificationStep[] = [
-  { key: 'accept', label: 'Accept' },
+  { key: 'start_visit', label: 'Start Visit' },
   { key: 'check_in', label: 'Check-in' },
-  { key: 'verify', label: 'Verify' },
-  { key: 'checklist', label: 'Checklist' },
-  { key: 'evidence', label: 'Evidence' },
-  { key: 'review', label: 'Review' },
+  { key: 'farmer_details', label: 'Farmer Details' },
+  { key: 'mobile_network', label: 'Mobile / Network' },
+  { key: 'start_biochar_activity', label: 'Start Biochar Activity' },
+  { key: 'biochar_process', label: 'Biochar Process' },
+  { key: 'evidence', label: 'Evidence/Submit' },
 ];
 
 const STATUS_ORDER = [
@@ -54,6 +61,10 @@ export function unwrapAssignmentRecord(data: ApiRecord): ApiRecord {
     return data.assignment as ApiRecord;
   }
 
+  if (data.visit && typeof data.visit === 'object') {
+    return data.visit as ApiRecord;
+  }
+
   return data;
 }
 
@@ -67,10 +78,8 @@ function statusIndex(status: string): number {
   return index === -1 ? 0 : index;
 }
 
-function isChecklistCompleted(assignment: ApiRecord): boolean {
-  const checklist = assignment.verification_checklist ?? assignment.checklist;
-
-  return Boolean(checklist && typeof checklist === 'object' && (checklist as ApiRecord).completed_at);
+function hasMobileNetworkVerification(assignment: ApiRecord): boolean {
+  return assignment.farmer_has_mobile !== undefined && assignment.farmer_has_mobile !== null;
 }
 
 export interface VisitVerificationProgress {
@@ -81,52 +90,54 @@ export interface VisitVerificationProgress {
 export function resolveVisitVerificationProgress(assignment: ApiRecord): VisitVerificationProgress {
   const status = getAssignmentStatus(assignment);
   const index = statusIndex(status);
-  const checklistDone = isChecklistCompleted(assignment);
   const evidenceDone = countVisitEvidenceUploads(assignment) > 0;
-  const submitted = status === 'submitted_to_admin' || status === 'approved';
+  const mobileNetworkDone = hasMobileNetworkVerification(assignment);
+  const submitted = ['submitted_to_admin', 'approved'].includes(status);
 
   const completedSteps: VisitVerificationStepKey[] = [];
 
-  if (index > statusIndex('assigned')) {
-    completedSteps.push('accept');
+  if (index >= statusIndex('accepted')) {
+    completedSteps.push('start_visit');
   }
 
   if (index > statusIndex('started')) {
     completedSteps.push('check_in');
   }
 
-  if (index > statusIndex('checked_in')) {
-    completedSteps.push('verify');
+  if (assignment.farmer_id) {
+    completedSteps.push('farmer_details');
   }
 
-  if (checklistDone) {
-    completedSteps.push('checklist');
+  if (mobileNetworkDone) {
+    completedSteps.push('mobile_network');
+    completedSteps.push('start_biochar_activity');
   }
 
   if (evidenceDone) {
+    completedSteps.push('biochar_process');
     completedSteps.push('evidence');
   }
 
   if (submitted) {
-    completedSteps.push('review');
+    completedSteps.push('review', 'submit');
   }
 
-  let currentStep: VisitVerificationStepKey = 'accept';
+  let currentStep: VisitVerificationStepKey = 'start_visit';
 
-  if (index <= statusIndex('assigned')) {
-    currentStep = 'accept';
-  } else if (index <= statusIndex('accepted')) {
-    currentStep = 'accept';
+  if (index < statusIndex('accepted')) {
+    currentStep = 'start_visit';
   } else if (index <= statusIndex('started')) {
     currentStep = 'check_in';
-  } else if (index <= statusIndex('checked_in')) {
-    currentStep = 'verify';
-  } else if (!checklistDone) {
-    currentStep = 'checklist';
+  } else if (!assignment.farmer_id) {
+    currentStep = 'farmer_details';
+  } else if (!mobileNetworkDone) {
+    currentStep = 'mobile_network';
   } else if (!evidenceDone) {
+    currentStep = 'start_biochar_activity';
+  } else if (!submitted) {
     currentStep = 'evidence';
   } else {
-    currentStep = 'review';
+    currentStep = 'submit';
   }
 
   return { currentStep, completedSteps };
@@ -143,6 +154,18 @@ export async function ensureVisitReadyForGpsCheckIn(
 ): Promise<ApiRecord> {
   let assignment = await refreshAssignment(assignmentId);
   let status = getAssignmentStatus(assignment);
+
+  if (['cancelled', 'canceled', 'completed', 'submitted_to_admin', 'approved', 'rejected'].includes(status)) {
+    throw new Error(
+      status === 'cancelled' || status === 'canceled'
+        ? 'This visit is cancelled and cannot be checked in.'
+        : 'This visit is already completed and cannot be checked in again.',
+    );
+  }
+
+  if (['checked_in', 'verification_in_progress', 'started'].includes(status)) {
+    return assignment;
+  }
 
   if (status === 'assigned') {
     await acceptVisit(assignmentId);

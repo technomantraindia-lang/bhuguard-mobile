@@ -20,17 +20,12 @@ export function FarmerServicesScreen() {
   const insets = useSafeAreaInsets();
   const { services, loading, refreshing, error, reload, refresh } = useFarmerServicesScreenData();
 
-  const openBiocharActivities = () => {
-    navigation.navigate('FarmerBiocharActivities');
-  };
-
   const openChatSupport = () => {
     navigation.navigate('ChatbotSupport', { supportRole: 'farmer', sourceModule: 'farmer_services' });
   };
 
   const handleServicePress = (service: FarmerActivityServiceItem) => {
-    if (service.code === 'BIOCHAR' && service.canOpen) {
-      openBiocharActivities();
+    if (service.code === 'BIOCHAR') {
       return;
     }
 
@@ -65,7 +60,7 @@ export function FarmerServicesScreen() {
         />
 
         <Text style={styles.helperText}>
-          Biochar is active. Regenerative Agriculture and Agroforestry are coming soon.
+          Biochar is active on your account. Farm Activity updates are submitted separately every 20 days.
         </Text>
 
         {error ? (
@@ -79,13 +74,9 @@ export function FarmerServicesScreen() {
           {services.map((service) => (
             <FarmerActivityServiceCard
               key={service.code}
-              service={service}
+              service={service.code === 'BIOCHAR' ? { ...service, canOpen: false, statusLabel: 'Active' } : service}
+              displayOnly={service.code === 'BIOCHAR'}
               onPress={() => handleServicePress(service)}
-              onActionPress={() => {
-                if (service.code === 'BIOCHAR') {
-                  openBiocharActivities();
-                }
-              }}
             />
           ))}
         </View>

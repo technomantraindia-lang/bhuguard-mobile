@@ -15,7 +15,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   acceptVisit,
   getVisitAssignmentDetail,
-  startVerification,
   startVisit,
 } from '../../api/fieldOfficerApi';
 import { getApiErrorMessage } from '../../api/authApi';
@@ -26,12 +25,50 @@ import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIc
 import { VisitVerificationProgressStepper } from '../../components/officer/VisitVerificationProgressStepper';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
-import { countVisitEvidenceUploads } from '../../utils/visitChecklistHelpers';
-import { buildVisitCheckInRouteContext, hasCompletedGpsCheckIn } from '../../utils/visitCheckInHelpers';
+import { buildVisitCheckInRouteContext } from '../../utils/visitCheckInHelpers';
 import { buildVisitDetailModel } from '../../utils/visitDetailModel';
 import { resolveVisitVerificationProgress, unwrapAssignmentRecord } from '../../utils/visitWorkflowHelpers';
 
 type Props = NativeStackScreenProps<FieldOfficerStackParamList, 'FieldOfficerAssignmentDetail'>;
+type BiocharActivityParams = NonNullable<FieldOfficerStackParamList['FieldOfficerBiocharProduction']>;
+
+function nestedRecord(record: Record<string, unknown> | null, key: string): Record<string, unknown> | null {
+  const value = record?.[key];
+
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+}
+
+function pickNumber(record: Record<string, unknown> | null, ...keys: string[]): number | undefined {
+  if (!record) {
+    return undefined;
+  }
+
+  for (const key of keys) {
+    const numberValue = Number(record[key]);
+
+    if (Number.isFinite(numberValue) && numberValue !== 0) {
+      return numberValue;
+    }
+  }
+
+  return undefined;
+}
+
+function pickText(record: Record<string, unknown> | null, ...keys: string[]): string | undefined {
+  if (!record) {
+    return undefined;
+  }
+
+  for (const key of keys) {
+    const value = record[key];
+
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return String(value);
+    }
+  }
+
+  return undefined;
+}
 
 export function FieldOfficerAssignmentDetailScreen({ route, navigation }: Props) {
   const { assignmentId } = route.params;
@@ -103,7 +140,6 @@ export function FieldOfficerAssignmentDetailScreen({ route, navigation }: Props)
 
   const detail = buildVisitDetailModel(assignment, assignmentId);
   const progress = resolveVisitVerificationProgress(unwrapAssignmentRecord(assignment));
-  const evidenceUploadsCount = countVisitEvidenceUploads(assignment);
 
   const openCheckIn = () => {
     navigation.navigate('VisitCheckIn', {
@@ -112,40 +148,31 @@ export function FieldOfficerAssignmentDetailScreen({ route, navigation }: Props)
     });
   };
 
-  const openEvidenceUpload = () => {
-    navigation.navigate('VisitEvidenceUpload', { assignmentId });
+  const openVerificationFlow = () => {
+    navigation.navigate('FieldOfficerVisitVerification', { assignmentId });
   };
 
-  const openVerificationFlow = () => {
-    if (!hasCompletedGpsCheckIn(assignment)) {
-      Alert.alert(
-        'GPS check-in required',
-        'GPS check-in is required before starting verification.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Check in',
-            onPress: openCheckIn,
-          },
-        ],
-      );
-      return;
-    }
+  const openBiocharActivity = () => {
+    const farmer = nestedRecord(assignment, 'farmer');
+    const farmerUser = nestedRecord(farmer, 'user');
+    const farm = nestedRecord(assignment, 'farm');
+    const fieldOfficer = nestedRecord(assignment, 'field_officer');
+    const params: BiocharActivityParams = {
+      farmerId: pickNumber(farmer, 'id') ?? pickNumber(assignment, 'farmer_id'),
+      farmerName: pickText(farmerUser, 'name', 'farmer_name') ?? pickText(farmer, 'name', 'farmer_name'),
+      farmId: pickNumber(farm, 'id') ?? pickNumber(assignment, 'farm_id'),
+      fieldOfficerId: pickNumber(fieldOfficer, 'id') ?? pickNumber(assignment, 'field_officer_id'),
+      visitId: assignmentId,
+      village: pickText(farm, 'village', 'village_name') ?? pickText(farmer, 'village'),
+      taluka: pickText(farm, 'taluka', 'taluka_name') ?? pickText(farmer, 'taluka'),
+      district: pickText(farm, 'district', 'district_name') ?? pickText(farmer, 'district'),
+      state: pickText(farm, 'state', 'state_name') ?? pickText(farmer, 'state'),
+      latitude: pickNumber(assignment, 'check_in_latitude', 'latitude', 'gps_latitude') ?? pickNumber(farm, 'latitude', 'gps_latitude'),
+      longitude: pickNumber(assignment, 'check_in_longitude', 'longitude', 'gps_longitude') ?? pickNumber(farm, 'longitude', 'gps_longitude'),
+      gpsAccuracy: pickNumber(assignment, 'check_in_gps_accuracy', 'gps_accuracy') ?? pickNumber(farm, 'gps_accuracy'),
+    };
 
-    if (detail.canStartVerification) {
-      void runAction(async () => {
-        await startVerification(assignmentId);
-        navigation.navigate('VisitEvidenceUpload', { assignmentId });
-      });
-      return;
-    }
-
-    if (evidenceUploadsCount > 0) {
-      navigation.navigate('VisitReportReview', { assignmentId });
-      return;
-    }
-
-    navigation.navigate('VisitEvidenceUpload', { assignmentId });
+    navigation.navigate('FieldOfficerBiocharProduction', params);
   };
 
   const handleStartCheckIn = () => {
@@ -175,6 +202,13 @@ export function FieldOfficerAssignmentDetailScreen({ route, navigation }: Props)
 
   const showStartCheckIn =
     detail.canStartVisit || detail.canCheckIn || detail.showVerificationActions;
+  const showStartBiocharActivity =
+    progress.completedSteps.includes('mobile_network') ||
+    progress.currentStep === 'start_biochar_activity' ||
+    progress.currentStep === 'biochar_process' ||
+    progress.currentStep === 'evidence' ||
+    progress.currentStep === 'review' ||
+    progress.currentStep === 'submit';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -274,17 +308,27 @@ export function FieldOfficerAssignmentDetailScreen({ route, navigation }: Props)
           </View>
         </DetailCard>
 
-        <DetailCard title="Biochar Evidence" icon="fact_check">
-          <Text style={styles.fieldValue}>
-            {evidenceUploadsCount > 0
-              ? `${evidenceUploadsCount} evidence file(s) uploaded`
-              : 'No evidence uploaded yet for this visit.'}
-          </Text>
-          <Pressable style={styles.viewAllButton} onPress={openEvidenceUpload}>
-            <Text style={styles.viewAllText}>Upload or review evidence</Text>
-            <BhuguardMaterialIcon name="chevron_right" size={18} color={officerTheme.primary} />
+        {detail.showVerificationActions ? (
+          <Pressable
+            style={[styles.secondaryAction, actionLoading && styles.actionDisabled]}
+            onPress={openVerificationFlow}
+            disabled={actionLoading}
+          >
+            <BhuguardMaterialIcon name="verified" size={20} color={officerTheme.primary} />
+            <Text style={styles.secondaryActionText}>Start Verification</Text>
           </Pressable>
-        </DetailCard>
+        ) : null}
+
+        {showStartBiocharActivity ? (
+          <Pressable
+            style={[styles.secondaryAction, actionLoading && styles.actionDisabled]}
+            onPress={openBiocharActivity}
+            disabled={actionLoading}
+          >
+            <BhuguardMaterialIcon name="eco" size={20} color={officerTheme.primary} />
+            <Text style={styles.secondaryActionText}>Start Biochar Activity</Text>
+          </Pressable>
+        ) : null}
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <View style={styles.scrollSpacer} />
@@ -313,24 +357,12 @@ export function FieldOfficerAssignmentDetailScreen({ route, navigation }: Props)
               {detail.canCheckIn
                 ? 'GPS Check-in'
                 : detail.showVerificationActions
-                  ? evidenceUploadsCount > 0
-                    ? 'Review Report'
-                    : 'Upload Evidence'
+                  ? 'Start Verification'
                   : 'Start Visit'}
             </Text>
           </Pressable>
         ) : null}
 
-        {detail.showVerificationActions ? (
-          <Pressable
-            style={[styles.secondaryAction, actionLoading && styles.actionDisabled]}
-            onPress={() => navigation.navigate('VisitEvidenceUpload', { assignmentId })}
-            disabled={actionLoading}
-          >
-            <BhuguardMaterialIcon name="photo_camera" size={20} color={officerTheme.primary} />
-            <Text style={styles.secondaryActionText}>Evidence Upload</Text>
-          </Pressable>
-        ) : null}
       </View>
     </SafeAreaView>
   );

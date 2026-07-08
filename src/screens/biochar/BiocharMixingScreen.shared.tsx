@@ -25,6 +25,13 @@ type MixingRouteParams = {
   farmerId?: number;
   farmId?: number;
   farmLabel?: string;
+  farmerCode?: string;
+  farmerName?: string;
+  farmCode?: string;
+  village?: string;
+  taluka?: string;
+  district?: string;
+  state?: string;
 };
 
 interface BiocharMixingScreenProps<T extends MixingRouteParams> {
@@ -47,6 +54,16 @@ export function createBiocharMixingScreen<T extends MixingRouteParams>({
       recordId: params.recordId,
       farmerId: params.farmerId,
       farmId: params.farmId,
+      selectionPrefill:
+        apiMode === 'artisan'
+          ? {
+              farmerName: params.farmerName,
+              village: params.village,
+              taluka: params.taluka,
+              district: params.district,
+              state: params.state,
+            }
+          : undefined,
     });
 
     const readOnly = !form.canEdit;
@@ -118,6 +135,8 @@ export function createBiocharMixingScreen<T extends MixingRouteParams>({
             longitude={form.longitude}
             altitude={form.altitude}
             accuracyM={form.accuracyM}
+            accuracyTier={form.gpsAccuracyTier}
+            gpsCapturedAt={form.gpsCapturedAt}
             capturing={form.capturingGps}
             readOnly={readOnly}
             onCaptureGps={() => void form.recaptureGps()}

@@ -22,6 +22,10 @@ export function RootNavigator() {
           getComponent={() => require('../screens/auth/LanguageSelectionScreen').LanguageSelectionScreen}
         />
         <Stack.Screen
+          name="MobileLogin"
+          getComponent={() => require('../screens/auth/MobileLoginScreen').MobileLoginScreen}
+        />
+        <Stack.Screen
           name="RoleSelection"
           getComponent={() => require('../screens/auth/RoleSelectionScreen').RoleSelectionScreen}
         />

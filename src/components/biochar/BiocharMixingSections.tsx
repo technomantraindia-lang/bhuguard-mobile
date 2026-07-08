@@ -6,6 +6,7 @@ import { AppCard } from '../AppCard';
 import { LiveEvidenceCaptureCard } from '../evidence/LiveEvidenceCaptureCard';
 import { EvidenceStampedImageFrame } from '../evidence/EvidenceStampedImageFrame';
 import type { LiveCapturedEvidence } from '../../utils/liveEvidenceCapture';
+import type { ArtisanGpsAccuracyTier } from '../../utils/artisanGpsAccuracy';
 import { BIOCHAR_MIXING_STATES, type BiocharMixingEvidenceSlot } from '../../constants/biocharMixing';
 import type { BiocharMixingEvidenceAsset } from '../../hooks/useBiocharMixingForm';
 import { colors } from '../../theme/colors';
@@ -74,6 +75,8 @@ interface BiocharMixingLocationSectionProps {
   longitude: number | null;
   altitude: number | null;
   accuracyM: number | null;
+  accuracyTier?: ArtisanGpsAccuracyTier;
+  gpsCapturedAt?: string | null;
   capturing?: boolean;
   readOnly?: boolean;
   onCaptureGps: () => void;
@@ -84,6 +87,8 @@ export function BiocharMixingLocationSection({
   longitude,
   altitude,
   accuracyM,
+  accuracyTier = 'unknown',
+  gpsCapturedAt = null,
   capturing = false,
   readOnly = false,
   onCaptureGps,
@@ -94,6 +99,8 @@ export function BiocharMixingLocationSection({
         latitude={latitude != null ? String(latitude) : undefined}
         longitude={longitude != null ? String(longitude) : undefined}
         accuracy={accuracyM != null ? String(accuracyM) : undefined}
+        accuracyTier={accuracyTier}
+        capturedAt={gpsCapturedAt ?? undefined}
         captured={latitude != null && longitude != null}
         capturing={capturing}
         onCapture={readOnly ? () => undefined : onCaptureGps}
@@ -206,11 +213,15 @@ function toLiveEvidence(asset: BiocharMixingEvidenceAsset): LiveCapturedEvidence
     latitude: asset.latitude ?? null,
     longitude: asset.longitude ?? null,
     accuracy: asset.accuracy ?? null,
+    village: '',
+    taluka: '',
+    district: '',
+    state: 'Gujarat',
     watermark: {
       capturedAtLabel: asset.capturedAt ?? '',
       latitudeLabel: asset.latitude != null ? `Lat ${asset.latitude}` : 'Lat -',
       longitudeLabel: asset.longitude != null ? `Lng ${asset.longitude}` : 'Lng -',
-      accuracyLabel: asset.accuracy != null ? `±${asset.accuracy}m` : null,
+      accuracyLabel: asset.accuracy != null ? `Accuracy: ${Math.round(asset.accuracy)}m` : 'Accuracy: —',
       villageLabel: '',
       talukaLabel: '',
       districtLabel: '',

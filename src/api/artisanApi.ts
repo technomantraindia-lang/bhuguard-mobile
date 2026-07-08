@@ -1,4 +1,5 @@
 import type { ApiSuccessResponse, AuthUser } from '../types/auth';
+import type { ArtisanAllocatedTaluka, ArtisanAllocatedVillage, ArtisanFarmSearchRecord } from '../types/artisanFarmSearch';
 import { resolveUserRole } from '../utils/authRole';
 import { fetchApiData, type ApiRecord } from '../utils/apiHelpers';
 
@@ -97,8 +98,39 @@ export async function lookupArtisanFarm(farmId: string | number) {
   return postApiData('/artisan/farm/lookup', { farm_id: farmId });
 }
 
+export interface ArtisanFarmSearchParams {
+  q?: string;
+  farm_id?: string;
+  farmer_name?: string;
+  village?: string;
+  taluka?: string;
+  page?: number;
+  limit?: number;
+}
+
+export async function getArtisanAllocatedLocations() {
+  return fetchApiData<{ talukas: ArtisanAllocatedTaluka[]; villages: ArtisanAllocatedVillage[] }>(
+    '/artisan/allocated-locations',
+  );
+}
+
+export async function searchArtisanFarms(params: ArtisanFarmSearchParams = {}) {
+  const response = await apiClient.get<{
+    success: boolean;
+    message: string;
+    data: ArtisanFarmSearchRecord[];
+    pagination?: { page: number; limit: number; total: number };
+  }>('/artisan/farms/search', { params });
+
+  return response.data;
+}
+
 export async function getArtisanBiocharProductionRecords(status?: 'draft' | 'submitted') {
   return fetchApiData('/artisan/biochar-production', status ? { status } : undefined);
+}
+
+export async function getArtisanBiocharBatchPreviewCodes(params?: Record<string, string | number | undefined>) {
+  return fetchApiData('/artisan/biochar-production/next-codes', params);
 }
 
 export async function createArtisanBiocharProduction(farmId: number) {

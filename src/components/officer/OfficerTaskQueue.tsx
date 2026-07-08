@@ -58,7 +58,7 @@ export function OfficerTaskQueue({ tasks, onTaskPress }: OfficerTaskQueueProps) 
         {tasks.length === 0 ? (
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyTitle}>No pending tasks</Text>
-            <Text style={styles.emptyText}>Assigned visits and onboarding tasks will appear here.</Text>
+            <Text style={styles.emptyText}>Visited field and onboarding tasks will appear here.</Text>
           </View>
         ) : (
           tasks.map((task, index) => {

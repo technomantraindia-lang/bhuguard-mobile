@@ -3,7 +3,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { FieldOfficerDashboard } from '../screens/officer/FieldOfficerDashboard';
 import { FieldOfficerProfileScreen } from '../screens/officer/FieldOfficerProfileScreen';
 import { FieldOfficerFarmersScreen } from '../screens/officer/FieldOfficerFarmersScreen';
-import { OfficerEvidenceTabScreen } from '../screens/tabs/OfficerEvidenceTabScreen';
 import { OfficerMapTabScreen } from '../screens/tabs/OfficerMapTabScreen';
 import { OfficerReportsTabScreen } from '../screens/tabs/OfficerReportsTabScreen';
 import { OfficerVisitsTabScreen } from '../screens/tabs/OfficerVisitsTabScreen';
@@ -30,7 +29,6 @@ export function OfficerTabNavigator() {
       <Tab.Screen name="Home" component={FieldOfficerDashboard} />
       <Tab.Screen name="Farmers" component={FieldOfficerFarmersScreen} />
       <Tab.Screen name="Visits" component={OfficerVisitsTabScreen} />
-      <Tab.Screen name="Evidence" component={OfficerEvidenceTabScreen} />
       <Tab.Screen name="Reports" component={OfficerReportsTabScreen} />
       <Tab.Screen name="Profile" component={FieldOfficerProfileScreen} />
       <Tab.Screen

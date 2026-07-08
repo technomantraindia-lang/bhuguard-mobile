@@ -99,10 +99,8 @@ export const FEEDSTOCK_VERIFICATION_CHECKLIST: Array<{ key: string; label: strin
 ];
 
 export const VERIFICATION_RESULT_OPTIONS: Array<{ value: VerificationResult; label: string }> = [
-  { value: 'approved', label: 'Approved' },
-  { value: 'approved_with_remarks', label: 'Approved with Remarks' },
-  { value: 'correction_required', label: 'Correction Required' },
-  { value: 'rejected', label: 'Rejected' },
+  { value: 'approved', label: 'Approve' },
+  { value: 'approved_with_remarks', label: 'Approve with Remark' },
 ];
 
 export function defaultChecklistItems(): FeedstockChecklistItem[] {

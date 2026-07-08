@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -66,20 +66,8 @@ export function OnboardedFarmerViewScreen() {
   const mappingPending = detail?.farm_mapping_pending === true;
 
   const startBiocharActivity = () => {
-    Alert.alert('Start Biochar Activity', 'Why are you submitting on behalf of this farmer?', [
-      { text: 'Farmer has no phone', onPress: () => openBiochar('farmer_has_no_phone') },
-      { text: 'No network', onPress: () => openBiochar('no_network') },
-      { text: 'Farmer cannot use app', onPress: () => openBiochar('farmer_cannot_use_app') },
-      { text: 'Due/overdue support visit', onPress: () => openBiochar('due_overdue_support_visit') },
-      { text: 'Other', onPress: () => openBiochar('other') },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
-
-  const openBiochar = (behalfReason: string) => {
     navigation.navigate('FieldOfficerBiocharProduction', {
       farmerId: resolvedFarmerId,
-      behalfReason,
     });
   };
 
@@ -110,7 +98,7 @@ export function OnboardedFarmerViewScreen() {
             </AppCard>
 
             <View style={styles.actions}>
-              <AppButton label="Biochar Awareness" onPress={() => navigation.navigate('BiocharAwareness', { farmerId: resolvedFarmerId })} />
+              <AppButton label="Biochar Activity Awareness" onPress={() => navigation.navigate('BiocharAwareness', { farmerId: resolvedFarmerId })} />
               <AppButton label="Start Biochar Activity" onPress={startBiocharActivity} />
               <AppButton
                 label="Add Biochar Mixing"
@@ -121,11 +109,6 @@ export function OnboardedFarmerViewScreen() {
                 label="Biochar History"
                 variant="secondary"
                 onPress={() => navigation.navigate('FieldOfficerBiocharProductionList')}
-              />
-              <AppButton
-                label="Add Farm / Mapping"
-                variant="secondary"
-                onPress={() => navigation.navigate('FarmerLandDetails')}
               />
             </View>
           </>

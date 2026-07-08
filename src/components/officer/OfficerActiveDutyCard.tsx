@@ -26,7 +26,7 @@ export function OfficerActiveDutyCard({
 
       <View style={styles.statsRow}>
         <View style={[styles.statCard, styles.farmersCard]}>
-          <Text style={styles.statLabel}>Assigned Farmers</Text>
+          <Text style={styles.statLabel}>Visited Field</Text>
           <Text style={styles.farmersValue}>{assignedFarmersCount}</Text>
         </View>
 

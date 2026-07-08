@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { getApiErrorMessage } from '../api/authApi';
-import { getFarmerBiocharActivities, getFarmerServices } from '../api/farmerApi';
+import { getFarmerFarmActivities, getFarmerServices } from '../api/farmerApi';
 import {
   FARMER_ACTIVITY_SERVICE_FALLBACK,
   type FarmerActivityServiceItem,
@@ -11,7 +11,7 @@ import { extractFarmerServicesList } from '../utils/farmerServicesHelpers';
 
 export function useFarmerActivitiesHubData() {
   const [services, setServices] = useState<FarmerActivityServiceItem[]>(FARMER_ACTIVITY_SERVICE_FALLBACK);
-  const [biocharRecords, setBiocharRecords] = useState<ApiRecord[]>([]);
+  const [farmActivities, setFarmActivities] = useState<ApiRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,12 +20,12 @@ export function useFarmerActivitiesHubData() {
     setError(null);
 
     let servicesLoaded = false;
-    let biocharLoaded = false;
+    let activitiesLoaded = false;
 
     try {
-      const [servicesResult, biocharResult] = await Promise.allSettled([
+      const [servicesResult, activitiesResult] = await Promise.allSettled([
         getFarmerServices(),
-        getFarmerBiocharActivities(),
+        getFarmerFarmActivities(),
       ]);
 
       if (servicesResult.status === 'fulfilled') {
@@ -33,20 +33,20 @@ export function useFarmerActivitiesHubData() {
         servicesLoaded = true;
       }
 
-      if (biocharResult.status === 'fulfilled') {
-        setBiocharRecords(extractList(biocharResult.value as ApiRecord, ['batches', 'activities']));
-        biocharLoaded = true;
+      if (activitiesResult.status === 'fulfilled') {
+        setFarmActivities(extractList(activitiesResult.value as ApiRecord, ['farm_activities', 'farmActivities']));
+        activitiesLoaded = true;
       }
 
-      if (!servicesLoaded && !biocharLoaded) {
+      if (!servicesLoaded && !activitiesLoaded) {
         const failure =
           servicesResult.status === 'rejected'
             ? servicesResult.reason
-            : biocharResult.status === 'rejected'
-              ? biocharResult.reason
+            : activitiesResult.status === 'rejected'
+              ? activitiesResult.reason
               : new Error('Failed to load activities.');
         setError(getApiErrorMessage(failure, 'Failed to load activities.'));
-      } else if (!servicesLoaded || !biocharLoaded) {
+      } else {
         setError(null);
       }
     } catch (err) {
@@ -62,7 +62,7 @@ export function useFarmerActivitiesHubData() {
 
   return {
     services,
-    biocharRecords,
+    farmActivities,
     loading,
     error,
     reload: load,

@@ -22,10 +22,32 @@ type EditScreen =
   | 'FarmerGpsCapture'
   | 'FarmerProofUpload';
 
-const SERVICE_LABELS: Record<string, string> = {
-  regenerative_agriculture: 'Regenerative Agriculture',
-  agro_forestry: 'Agro Forestry',
-  biochar: 'Biochar',
+const OPTION_LABELS: Record<string, string> = {
+  owned: 'Owned',
+  leased: 'Leased',
+  shared: 'Shared',
+  government: 'Government',
+  community: 'Community',
+  other: 'Other',
+  black_soil: 'Black Soil',
+  red_soil: 'Red Soil',
+  sandy_soil: 'Sandy Soil',
+  clay_soil: 'Clay Soil',
+  loamy_soil: 'Loamy Soil',
+  alluvial_soil: 'Alluvial Soil',
+  laterite_soil: 'Laterite Soil',
+  mountain_soil: 'Mountain Soil',
+  mixed_soil: 'Mixed Soil',
+  rainfed: 'Rainfed',
+  drip_irrigation: 'Drip Irrigation',
+  sprinkler: 'Sprinkler',
+  canal_irrigation: 'Canal Irrigation',
+  borewell: 'Borewell',
+  open_well: 'Open Well',
+  river: 'River',
+  tank: 'Tank',
+  flood_irrigation: 'Flood Irrigation',
+  lift_irrigation: 'Lift Irrigation',
 };
 
 export function FarmerOnboardingReviewScreen() {
@@ -89,6 +111,7 @@ export function FarmerOnboardingReviewScreen() {
         <OnboardingReviewPhoto file={draft.farmer_photo} />
         <Line label="Name" value={draft.farmer_name} />
         <Line label="Mobile" value={draft.mobile} />
+        <Line label="Username" value={draft.username} />
         <Line label="Language" value={draft.preferred_language} />
         <Line label="State" value={draft.state} />
         <Line label="District" value={draft.district_name} />
@@ -106,12 +129,13 @@ export function FarmerOnboardingReviewScreen() {
       <ReviewSection title="Land details" onEdit={() => edit('FarmerLandDetails')}>
         <Line label="Survey no." value={draft.land_survey_number} />
         <Line label="Area" value={`${draft.land_area} ${draft.land_area_unit}`} />
-        <Line label="Ownership" value={draft.ownership_type} />
+        <Line label="Ownership" value={OPTION_LABELS[draft.ownership_type] ?? draft.ownership_type} />
         <Line label="Crop" value={draft.crop_type} />
-        <Line label="Irrigation" value={draft.irrigation_type} />
-        <Line label="Soil" value={draft.soil_type} />
+        <Line label="Irrigation" value={OPTION_LABELS[draft.irrigation_type] ?? draft.irrigation_type} />
+        <Line label="Soil" value={OPTION_LABELS[draft.soil_type] ?? draft.soil_type} />
         <Line label="Farming practice" value={draft.existing_farming_practice} />
-        <Line label="Service interest" value={SERVICE_LABELS[draft.service_interest] ?? draft.service_interest} />
+        <Line label="Project interest" value={draft.project_interest.join(', ')} />
+        <Line label="Service interest" value={draft.service_interests.join(', ')} />
         <Line label="Remarks" value={draft.remarks} />
       </ReviewSection>
       <ReviewSection title="GPS" onEdit={() => edit('FarmerGpsCapture')}>

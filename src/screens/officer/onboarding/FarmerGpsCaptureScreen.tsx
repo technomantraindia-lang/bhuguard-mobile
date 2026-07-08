@@ -26,24 +26,22 @@ export function FarmerGpsCaptureScreen() {
   const mappedLabel = mappedAreaLabelForDraft(draft);
 
   const next = () => {
-    const validationError = validateBoundaryMapping(draft);
-
-    if (validationError) {
-      setError(validationError);
+    if (!draft.gps_latitude || !draft.gps_longitude) {
+      setError('Capture GPS location before continuing.');
       return;
     }
 
     setError(null);
-    navigation.navigate('FarmerProofUpload');
+    navigation.navigate('FarmerConsent');
   };
 
   return (
     <OnboardingFormScreen
-      stepCurrent={4}
-      title="Mobile Land Mapping"
-      subtitle="Verify actual land size with GPS boundary mapping."
+      stepCurrent={2}
+      title="Location Data"
+      subtitle="Capture farmer location and address context."
       onNext={next}
-      nextDisabled={!mapped}
+      nextLabel="Continue to Consent & Legal"
     >
       <AppCard title="Land mapping status" subtitle="Boundary mapping is required before documents upload.">
         <View style={styles.badgeRow}>

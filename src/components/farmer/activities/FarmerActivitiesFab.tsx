@@ -6,9 +6,10 @@ import { dashboardShadow, dashboardTheme } from '../../../theme/bhuguardDashboar
 
 interface FarmerActivitiesFabProps {
   onPress: () => void;
+  label?: string;
 }
 
-export function FarmerActivitiesFab({ onPress }: FarmerActivitiesFabProps) {
+export function FarmerActivitiesFab({ onPress, label = 'Add Farm Activity' }: FarmerActivitiesFabProps) {
   const bottom = useFabBottomOffset();
 
   return (
@@ -16,10 +17,10 @@ export function FarmerActivitiesFab({ onPress }: FarmerActivitiesFabProps) {
       style={({ pressed }) => [styles.fab, dashboardShadow, { bottom }, pressed && styles.pressed]}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Add Biochar"
+      accessibilityLabel={label}
     >
       <BhuguardMaterialIcon name="add_circle" size={22} color={dashboardTheme.onPrimary} />
-      <Text style={styles.label}>Add Biochar</Text>
+      <Text style={styles.label}>{label}</Text>
     </Pressable>
   );
 }

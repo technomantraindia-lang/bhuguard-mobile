@@ -36,7 +36,7 @@ export function OfficerFieldMapOverview({ markers = [], onMarkerPress }: Officer
           <BhuguardMaterialIcon name="location_on" size={28} color={officerTheme.onSurfaceVariant} />
           <Text style={styles.emptyTitle}>No GPS-enabled visits available yet.</Text>
           <Text style={styles.emptyMessage}>
-            Assigned visits with farm or site coordinates will appear here.
+            Visited field coordinates will appear here.
           </Text>
         </View>
       </View>

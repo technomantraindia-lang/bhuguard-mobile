@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -26,23 +26,67 @@ export function FarmBoundaryPreviewScreen({ navigation }: Props) {
       <BoundaryFlowHeader title="Boundary Preview" subtitle="Review mapped farm boundary before saving." onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <BoundaryLiveMap points={boundary.points} areaLabel={boundary.areaLabel} showPolygon height={360} />
+        <BoundaryLiveMap
+          points={boundary.points}
+          walkingPoints={boundary.walkingPoints}
+          areaLabel={boundary.areaLabel}
+          showPolygon
+          height={360}
+          isOutsideTolerance={boundary.isOutsideTolerance}
+          satelliteMode={boundary.satelliteMode}
+          onToggleSatellite={boundary.toggleSatelliteMode}
+        />
+
+        {boundary.isOutsideTolerance ? (
+          <Text style={styles.warning}>
+            Boundary moved outside expected farm area. Please adjust within field boundary.
+          </Text>
+        ) : null}
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Area Calculation</Text>
           <Text style={styles.areaMain}>Area: {boundary.areaLabel}</Text>
           <Text style={styles.meta}>{boundary.metrics.areaHectare.toFixed(2)} Hectare</Text>
           <Text style={styles.meta}>{boundary.metrics.areaBigha.toFixed(2)} Bigha</Text>
+          <Text style={styles.meta}>
+            Sq ft: {Math.round(boundary.metrics.areaAcre * 43560).toLocaleString()}
+          </Text>
           <Text style={styles.meta}>Perimeter: {boundary.metrics.perimeterMeter} meters</Text>
           <Text style={styles.meta}>Total Points: {boundary.points.length}</Text>
           <Text style={styles.meta}>GPS Accuracy: {boundary.gpsAccuracyLabel}</Text>
+          <Text style={styles.meta}>Status: {boundary.mappingStatusLabel}</Text>
         </View>
 
         <Pressable
           style={styles.primaryButton}
           onPress={() => {
+            if (boundary.isOutsideTolerance) {
+              Alert.alert(
+                'Boundary outside farm area',
+                'Boundary moved outside expected farm area. Please adjust within field boundary.',
+                [
+                  { text: 'Keep editing', style: 'cancel' },
+                  {
+                    text: 'Save anyway',
+                    style: 'destructive',
+                    onPress: () => {
+                      const routes = getBoundaryFlowRoutes(boundary.sessionMode);
+                      navigation.navigate(
+                        routes.confirm as 'FarmBoundarySaveConfirm',
+                        boundaryRouteParams(boundary.farmId ?? undefined),
+                      );
+                    },
+                  },
+                ],
+              );
+              return;
+            }
+
             const routes = getBoundaryFlowRoutes(boundary.sessionMode);
-            navigation.navigate(routes.confirm as 'FarmBoundarySaveConfirm', boundaryRouteParams(boundary.farmId ?? undefined));
+            navigation.navigate(
+              routes.confirm as 'FarmBoundarySaveConfirm',
+              boundaryRouteParams(boundary.farmId ?? undefined),
+            );
           }}
         >
           <Text style={styles.primaryButtonText}>
@@ -87,6 +131,14 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '700', color: dashboardTheme.headingGreen },
   areaMain: { fontSize: 18, fontWeight: '700', color: dashboardTheme.primaryContainer },
   meta: { fontSize: 14, color: dashboardTheme.onSurface },
+  warning: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#B91C1C',
+    backgroundColor: '#FEF2F2',
+    borderRadius: 10,
+    padding: 10,
+  },
   primaryButton: {
     backgroundColor: dashboardTheme.primaryContainer,
     borderRadius: 10,

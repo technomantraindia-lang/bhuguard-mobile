@@ -288,8 +288,8 @@ export async function getBiocharProductionUnits() {
   return fetchApiData('/field-officer/biochar/production-units');
 }
 
-export async function getBiocharBatchPreviewCodes() {
-  return fetchApiData('/field-officer/biochar/batches/next-codes');
+export async function getBiocharBatchPreviewCodes(params?: Record<string, string | number | undefined>) {
+  return fetchApiData('/field-officer/biochar/batches/next-codes', params);
 }
 
 export async function createOfficerBiocharBatch(payload: FormData) {
@@ -485,7 +485,89 @@ export async function fieldOfficerLiveCheckIn(payload: ApiRecord) {
 }
 
 export async function fieldOfficerLiveCheckOut(payload: ApiRecord) {
-  return postApiData('/field-officer/check-out', payload);
+  return postApiData('/field-officer/live-check-out', payload);
+}
+
+export async function startVisitRecord(payload: ApiRecord) {
+  const response = await apiClient.post<ApiSuccessResponse<ApiRecord>>('/field-officer/visits/start', payload);
+  return response.data.data?.visit ?? response.data.data;
+}
+
+export async function visitRecordCheckIn(payload: ApiRecord) {
+  const response = await apiClient.post<ApiSuccessResponse<ApiRecord>>('/field-officer/visits/check-in', payload);
+  return response.data.data?.visit ?? response.data.data;
+}
+
+export async function saveVisitFarmerDetails(payload: ApiRecord) {
+  const response = await apiClient.post<ApiSuccessResponse<ApiRecord>>(
+    '/field-officer/visits/farmer-details',
+    payload,
+  );
+  return response.data.data?.visit ?? response.data.data;
+}
+
+export async function saveVisitMobileNetworkVerification(payload: ApiRecord) {
+  const response = await apiClient.post<ApiSuccessResponse<ApiRecord>>(
+    '/field-officer/visits/mobile-network-verification',
+    payload,
+  );
+  return response.data.data?.visit ?? response.data.data;
+}
+
+export async function visitRecordReview(assignmentId: number | string) {
+  return fetchApiData(`/field-officer/visits/${assignmentId}/review`);
+}
+
+export async function submitVisitVerification(assignmentId: number | string) {
+  const response = await apiClient.post<ApiSuccessResponse<ApiRecord>>(
+    `/field-officer/visits/${assignmentId}/submit-verification`,
+    {},
+  );
+  return response.data.data?.visit ?? response.data.data;
+}
+
+export async function approveVisitVerification(assignmentId: number | string, payload: ApiRecord = {}) {
+  const response = await apiClient.post<ApiSuccessResponse<ApiRecord>>(
+    `/field-officer/visits/${assignmentId}/approve`,
+    payload,
+  );
+  return response.data.data?.visit ?? response.data.data;
+}
+
+export async function saveOnboardingBasicDetails(payload: ApiRecord) {
+  return postApiData('/field-officer/onboard-farmer/basic-details', payload);
+}
+
+export async function saveOnboardingLocationData(payload: ApiRecord) {
+  return postApiData('/field-officer/onboard-farmer/location-data', payload);
+}
+
+export async function getOnboardingConsentLegal() {
+  return fetchApiData('/field-officer/onboard-farmer/consent-legal');
+}
+
+export async function acceptOnboardingConsent(payload: ApiRecord) {
+  return postApiData('/field-officer/onboard-farmer/consent-accept', payload);
+}
+
+export async function saveOnboardingLandRegistration(payload: ApiRecord) {
+  return postApiData('/field-officer/onboard-farmer/land-registration', payload);
+}
+
+export async function saveOnboardingLandBoundary(payload: ApiRecord) {
+  return postApiData('/field-officer/onboard-farmer/land-boundary', payload);
+}
+
+export async function saveOnboardingDocuments(payload: ApiRecord) {
+  return postApiData('/field-officer/onboard-farmer/documents', payload);
+}
+
+export async function getOnboardingReview(onboardingId: number | string) {
+  return fetchApiData(`/field-officer/onboard-farmer/${onboardingId}/review`);
+}
+
+export async function submitOnboardingForApproval(onboardingId: number | string) {
+  return postApiData(`/field-officer/onboard-farmer/${onboardingId}/submit`, {});
 }
 
 export async function recordFarmerBiocharExplanation(farmerId: number | string, payload: ApiRecord) {

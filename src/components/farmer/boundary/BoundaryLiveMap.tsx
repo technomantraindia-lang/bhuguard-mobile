@@ -1,23 +1,16 @@
-import { useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient, Path, Stop, Text as SvgText } from 'react-native-svg';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import MapView, { Marker, Polygon, Polyline, type MapType, type Region } from 'react-native-maps';
 
 import { BhuguardMaterialIcon } from '../../shared/BhuguardMaterialIcon';
 import { dashboardShadow, dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
-import {
-  buildEsriSatelliteUrl,
-  getPolygonBounds,
-  polygonCentroid,
-  projectPolygonToPixels,
-  projectToPixels,
-  toSvgPath,
-  type LatLng,
-} from '../../../utils/farmSatelliteMap';
 import type { BoundaryPoint } from '../../../utils/boundaryGeometry';
 import { boundaryPointsToLatLng } from '../../../utils/boundaryGeometry';
+import type { LatLng } from '../../../utils/farmSatelliteMap';
 
 interface BoundaryLiveMapProps {
   points: BoundaryPoint[];
+  walkingPoints?: BoundaryPoint[];
   currentLocation?: LatLng | null;
   areaLabel?: string;
   showPolygon?: boolean;
@@ -26,131 +19,193 @@ interface BoundaryLiveMapProps {
   onCenterGps?: () => void;
   onToggleSatellite?: () => void;
   satelliteMode?: boolean;
+  editable?: boolean;
+  followsUser?: boolean;
+  isOutsideTolerance?: boolean;
+  onVertexDragEnd?: (pointId: string, coordinate: LatLng) => void;
+  onVertexLongPress?: (pointId: string) => void;
+  onMapPress?: (coordinate: LatLng) => void;
 }
+
+const DEFAULT_REGION: Region = {
+  latitude: 22.3379,
+  longitude: 73.1739,
+  latitudeDelta: 0.004,
+  longitudeDelta: 0.004,
+};
 
 export function BoundaryLiveMap({
   points,
+  walkingPoints = [],
   currentLocation,
   areaLabel,
   showPolygon = true,
   height = 420,
-  width = 358,
   onCenterGps,
   onToggleSatellite,
   satelliteMode = true,
+  editable = false,
+  followsUser = false,
+  isOutsideTolerance = false,
+  onVertexDragEnd,
+  onVertexLongPress,
+  onMapPress,
 }: BoundaryLiveMapProps) {
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const mapRef = useRef<MapView | null>(null);
+  const [tileWarning, setTileWarning] = useState(false);
+  const mapType: MapType = satelliteMode ? 'hybrid' : 'standard';
+  const strokeColor = isOutsideTolerance ? '#DC2626' : '#0B6B3A';
+  const fillColor = isOutsideTolerance ? 'rgba(220, 38, 38, 0.22)' : 'rgba(11, 107, 58, 0.22)';
 
-  const polygon = useMemo(() => {
-    const latLng = boundaryPointsToLatLng(points);
-
-    if (latLng.length >= 3) {
-      return latLng;
-    }
-
+  const region = useMemo((): Region => {
     if (currentLocation) {
-      return [currentLocation];
+      return {
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+        latitudeDelta: 0.0025,
+        longitudeDelta: 0.0025,
+      };
     }
 
-    return [{ latitude: 22.3379, longitude: 73.1739 }];
-  }, [points, currentLocation]);
-
-  const bounds = useMemo(() => getPolygonBounds(polygon, 0.35 / zoomLevel), [polygon, zoomLevel]);
-  const mapUrl = useMemo(() => {
-    if (!satelliteMode) {
-      const bbox = `${bounds.minLng},${bounds.minLat},${bounds.maxLng},${bounds.maxLat}`;
-      return `https://staticmap.openstreetmap.de/staticmap.php?bbox=${encodeURIComponent(bbox)}&size=${width}x${height}&maptype=mapnik`;
+    if (points[0]) {
+      return {
+        latitude: points[0].latitude,
+        longitude: points[0].longitude,
+        latitudeDelta: 0.003,
+        longitudeDelta: 0.003,
+      };
     }
 
-    return buildEsriSatelliteUrl(bounds, width, height);
-  }, [bounds, height, width, satelliteMode]);
+    return DEFAULT_REGION;
+  }, [currentLocation, points]);
 
-  const pixelPolygon = useMemo(
-    () => (points.length >= 2 ? projectPolygonToPixels(boundaryPointsToLatLng(points), bounds, width, height) : []),
-    [points, bounds, width, height],
-  );
+  const polygonCoords = useMemo(() => boundaryPointsToLatLng(points), [points]);
+  const walkingCoords = useMemo(() => boundaryPointsToLatLng(walkingPoints), [walkingPoints]);
 
-  const centroid = useMemo(() => {
-    if (points.length >= 3) {
-      return polygonCentroid(boundaryPointsToLatLng(points));
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkConnectivity() {
+      if (!satelliteMode) {
+        setTileWarning(false);
+        return;
+      }
+
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000);
+        const response = await fetch(
+          'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer',
+          { method: 'HEAD', signal: controller.signal },
+        );
+        clearTimeout(timeout);
+
+        if (!cancelled) {
+          setTileWarning(!response.ok);
+        }
+      } catch {
+        if (!cancelled) {
+          setTileWarning(true);
+        }
+      }
     }
 
-    return currentLocation ?? polygon[0];
-  }, [points, currentLocation, polygon]);
+    void checkConnectivity();
 
-  const centroidPixel = useMemo(
-    () => projectToPixels(centroid, bounds, width, height),
-    [centroid, bounds, width, height],
-  );
+    return () => {
+      cancelled = true;
+    };
+  }, [satelliteMode]);
 
-  const currentPixel = useMemo(() => {
-    if (!currentLocation) {
-      return null;
+  useEffect(() => {
+    if (!currentLocation || !mapRef.current) {
+      return;
     }
 
-    return projectToPixels(currentLocation, bounds, width, height);
-  }, [currentLocation, bounds, width, height]);
-
-  const linePath = useMemo(() => {
-    if (pixelPolygon.length < 2) {
-      return '';
-    }
-
-    return pixelPolygon.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x},${point.y}`).join(' ');
-  }, [pixelPolygon]);
+    mapRef.current.animateToRegion(
+      {
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+        latitudeDelta: 0.0025,
+        longitudeDelta: 0.0025,
+      },
+      350,
+    );
+  }, [currentLocation?.latitude, currentLocation?.longitude]);
 
   return (
     <View style={[styles.wrap, { height }]}>
-      <Image source={{ uri: mapUrl }} style={[styles.mapImage, { width, height }]} resizeMode="cover" />
+      <MapView
+        ref={mapRef}
+        style={StyleSheet.absoluteFill}
+        mapType={mapType}
+        initialRegion={region}
+        showsUserLocation
+        followsUserLocation={followsUser}
+        showsMyLocationButton={false}
+        showsCompass
+        zoomEnabled
+        scrollEnabled
+        pitchEnabled={false}
+        rotateEnabled={false}
+        onPress={(event) => {
+          if (!onMapPress) {
+            return;
+          }
 
-      <Svg width={width} height={height} style={styles.overlay}>
-        <Defs>
-          <LinearGradient id="boundaryFill" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#0B6B3A" stopOpacity="0.3" />
-            <Stop offset="1" stopColor="#9FF5B7" stopOpacity="0.16" />
-          </LinearGradient>
-        </Defs>
+          onMapPress(event.nativeEvent.coordinate);
+        }}
+      >
+        {walkingCoords.length >= 2 && !showPolygon ? (
+          <Polyline coordinates={walkingCoords} strokeColor="#0B6B3A" strokeWidth={3} />
+        ) : null}
 
-        {linePath ? <Path d={linePath} stroke="#0B6B3A" strokeWidth={3} fill="none" strokeLinejoin="round" /> : null}
+        {points.length >= 2 && !showPolygon ? (
+          <Polyline coordinates={polygonCoords} strokeColor="#0B6B3A" strokeWidth={3} />
+        ) : null}
 
-        {showPolygon && points.length >= 3 ? (
-          <Path
-            d={toSvgPath(pixelPolygon)}
-            fill="url(#boundaryFill)"
-            stroke="#0B6B3A"
+        {showPolygon && polygonCoords.length >= 3 ? (
+          <Polygon
+            coordinates={polygonCoords}
+            strokeColor={strokeColor}
+            fillColor={fillColor}
             strokeWidth={2.5}
-            strokeLinejoin="round"
           />
         ) : null}
 
-        {pixelPolygon.map((point, index) => (
-          <Circle key={`point-${index}`} cx={point.x} cy={point.y} r={11} fill="#FFFFFF" stroke="#0B6B3A" strokeWidth={2} />
-        ))}
-
-        {pixelPolygon.map((point, index) => (
-          <SvgText
-            key={`label-${index}`}
-            x={point.x}
-            y={point.y + 4}
-            fontSize={10}
-            fontWeight="700"
-            fill="#0B6B3A"
-            textAnchor="middle"
-          >
-            {index + 1}
-          </SvgText>
-        ))}
-
-        {currentPixel ? (
-          <>
-            <Circle cx={currentPixel.x} cy={currentPixel.y} r={9} fill="#FFFFFF" stroke="#1D4ED8" strokeWidth={2.5} />
-            <Circle cx={currentPixel.x} cy={currentPixel.y} r={3} fill="#1D4ED8" />
-          </>
+        {walkingCoords.length >= 2 && showPolygon ? (
+          <Polyline coordinates={walkingCoords} strokeColor="#86EFAC" strokeWidth={2} lineDashPattern={[6, 4]} />
         ) : null}
-      </Svg>
+
+        {points.map((point) => (
+          <Marker
+            key={point.id}
+            coordinate={{ latitude: point.latitude, longitude: point.longitude }}
+            pinColor={isOutsideTolerance ? '#DC2626' : '#0B6B3A'}
+            draggable={editable}
+            onDragEnd={(event) => {
+              onVertexDragEnd?.(point.id, event.nativeEvent.coordinate);
+            }}
+            onPress={() => {
+              if (!editable || !onVertexLongPress) {
+                return;
+              }
+
+              onVertexLongPress(point.id);
+            }}
+            title={editable ? `P${point.pointNo} · tap to delete` : `P${point.pointNo}`}
+          />
+        ))}
+      </MapView>
+
+      {tileWarning ? (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineText}>Satellite map requires internet connection.</Text>
+        </View>
+      ) : null}
 
       {areaLabel && points.length >= 3 ? (
-        <View style={[styles.areaLabel, { left: centroidPixel.x - 54, top: centroidPixel.y - 14 }]}>
+        <View style={styles.areaLabel}>
           <Text style={styles.areaLabelText}>{areaLabel}</Text>
         </View>
       ) : null}
@@ -167,16 +222,26 @@ export function BoundaryLiveMap({
           </Pressable>
         ) : null}
         {onCenterGps ? (
-          <Pressable style={styles.controlButton} onPress={onCenterGps}>
+          <Pressable
+            style={styles.controlButton}
+            onPress={() => {
+              onCenterGps();
+              if (currentLocation && mapRef.current) {
+                mapRef.current.animateToRegion(
+                  {
+                    latitude: currentLocation.latitude,
+                    longitude: currentLocation.longitude,
+                    latitudeDelta: 0.0025,
+                    longitudeDelta: 0.0025,
+                  },
+                  350,
+                );
+              }
+            }}
+          >
             <Text style={styles.controlButtonText}>Center GPS</Text>
           </Pressable>
         ) : null}
-        <Pressable style={styles.controlButton} onPress={() => setZoomLevel((value) => Math.min(value + 0.2, 2))}>
-          <Text style={styles.controlButtonText}>+</Text>
-        </Pressable>
-        <Pressable style={styles.controlButton} onPress={() => setZoomLevel((value) => Math.max(value - 0.2, 0.7))}>
-          <Text style={styles.controlButtonText}>−</Text>
-        </Pressable>
       </View>
     </View>
   );
@@ -189,18 +254,26 @@ const styles = StyleSheet.create({
     backgroundColor: dashboardTheme.surfaceLow,
     ...dashboardShadow,
   },
-  mapImage: {
+  offlineBanner: {
     position: 'absolute',
-    top: 0,
-    left: 0,
+    top: 44,
+    left: 12,
+    right: 12,
+    backgroundColor: 'rgba(127,29,29,0.92)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
+  offlineText: {
+    color: '#FEF2F2',
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   areaLabel: {
     position: 'absolute',
+    alignSelf: 'center',
+    top: '46%',
     backgroundColor: 'rgba(255,255,255,0.94)',
     borderRadius: 999,
     paddingHorizontal: 12,

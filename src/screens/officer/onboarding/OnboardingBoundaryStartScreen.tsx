@@ -85,8 +85,8 @@ export function OnboardingBoundaryStartScreen() {
         </View>
 
         <Text style={styles.instruction}>
-          Stand at every corner or turning point of the land and tap Capture Point. Bhuguard will record GPS
-          coordinates and calculate the actual land area.
+          Stand at the farm edge and tap Start Walking Mapping. Points are captured automatically as you walk.
+          Use Capture Point only as a backup. Bhuguard calculates the actual land area.
         </Text>
 
         <Pressable style={styles.primaryButton} onPress={() => navigation.navigate('OnboardingBoundaryCapture')}>

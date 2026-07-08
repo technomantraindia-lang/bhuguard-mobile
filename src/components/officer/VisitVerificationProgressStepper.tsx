@@ -1,10 +1,9 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../../theme/colors';
-import {
-  VISIT_VERIFICATION_STEPS,
-  type VisitVerificationStepKey,
-} from '../../utils/visitWorkflowHelpers';
+import type { VisitVerificationStepKey } from '../../utils/visitWorkflowHelpers';
+
+import { VerificationStepper, type VerificationStepperItem } from './VerificationStepper';
 
 interface VisitVerificationProgressStepperProps {
   currentStep: VisitVerificationStepKey;
@@ -15,59 +14,50 @@ export function VisitVerificationProgressStepper({
   currentStep,
   completedSteps,
 }: VisitVerificationProgressStepperProps) {
+  const currentKey = resolveDisplayStepKey(currentStep);
+  const completedKeys = VERIFICATION_STEPPER_STEPS
+    .filter((step) => step.sourceKeys.some((key) => completedSteps.includes(key)))
+    .map((step) => step.key);
+
   return (
     <View style={styles.wrap}>
       <Text style={styles.title}>Verification process</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.row}
-      >
-        {VISIT_VERIFICATION_STEPS.map((step, index) => {
-          const completed = completedSteps.includes(step.key);
-          const active = step.key === currentStep;
-          const isLast = index === VISIT_VERIFICATION_STEPS.length - 1;
-
-          return (
-            <View key={step.key} style={styles.stepGroup}>
-              <View style={styles.stepTop}>
-                <View
-                  style={[
-                    styles.dot,
-                    completed && styles.dotCompleted,
-                    active && styles.dotActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.dotText,
-                      active && styles.dotTextActive,
-                      completed && !active && styles.dotTextCompleted,
-                    ]}
-                  >
-                    {index + 1}
-                  </Text>
-                </View>
-                {!isLast ? (
-                  <View style={[styles.line, completed && styles.lineCompleted]} />
-                ) : null}
-              </View>
-              <Text
-                style={[
-                  styles.label,
-                  completed && styles.labelCompleted,
-                  active && styles.labelActive,
-                ]}
-                numberOfLines={1}
-              >
-                {step.label}
-              </Text>
-            </View>
-          );
-        })}
-      </ScrollView>
+      <VerificationStepper
+        steps={VERIFICATION_STEPPER_STEPS}
+        currentKey={currentKey}
+        completedKeys={completedKeys}
+      />
     </View>
   );
+}
+
+interface VerificationStepperStep extends VerificationStepperItem {
+  sourceKeys: VisitVerificationStepKey[];
+}
+
+const VERIFICATION_STEPPER_STEPS: VerificationStepperStep[] = [
+  { key: 'accept', label: 'Accept', sourceKeys: ['start_visit', 'accept'] },
+  { key: 'check_in', label: 'Check-in', sourceKeys: ['check_in'] },
+  { key: 'verify', label: 'Verify', sourceKeys: ['farmer_details', 'mobile_network', 'verify', 'checklist'] },
+  { key: 'start_biochar_activity', label: 'Start Biochar Activity', sourceKeys: ['start_biochar_activity'] },
+  { key: 'biochar_process', label: 'Biochar Process', sourceKeys: ['biochar_process'] },
+  { key: 'evidence_submit', label: 'Evidence/Submit', sourceKeys: ['evidence', 'review', 'submit'] },
+];
+
+function resolveDisplayStepKey(currentStep: VisitVerificationStepKey): string {
+  if (currentStep === 'start_visit' || currentStep === 'accept') {
+    return 'accept';
+  }
+
+  if (currentStep === 'farmer_details' || currentStep === 'mobile_network' || currentStep === 'verify' || currentStep === 'checklist') {
+    return 'verify';
+  }
+
+  if (currentStep === 'evidence' || currentStep === 'review' || currentStep === 'submit') {
+    return 'evidence_submit';
+  }
+
+  return currentStep;
 }
 
 const styles = StyleSheet.create({
@@ -81,71 +71,5 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingRight: 8,
-    gap: 0,
-  },
-  stepGroup: {
-    width: 78,
-    gap: 6,
-  },
-  stepTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dotCompleted: {
-    borderColor: colors.primary,
-    backgroundColor: colors.softGreen,
-  },
-  dotActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
-  },
-  dotText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textMuted,
-  },
-  dotTextActive: {
-    color: colors.white,
-  },
-  dotTextCompleted: {
-    color: colors.primary,
-  },
-  line: {
-    width: 50,
-    height: 2,
-    backgroundColor: colors.border,
-    marginHorizontal: -2,
-  },
-  lineCompleted: {
-    backgroundColor: colors.primary,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textMuted,
-    textAlign: 'center',
-    paddingHorizontal: 2,
-  },
-  labelCompleted: {
-    color: colors.primary,
-  },
-  labelActive: {
-    color: colors.text,
-    fontWeight: '700',
   },
 });

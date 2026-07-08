@@ -6,6 +6,13 @@ export const ACRES_PER_HECTARE = 2.47105;
 export const BIGHA_PER_ACRE = 1.613;
 export const MIN_BOUNDARY_POINTS = 3;
 export const MIN_POINT_DISTANCE_METERS = 3;
+export const AUTO_CAPTURE_DISTANCE_METERS = 4;
+export const AUTO_CAPTURE_INTERVAL_MS = 4000;
+export const MAX_ACCEPTABLE_GPS_ACCURACY_METERS = 30;
+export const BOUNDARY_AREA_TOLERANCE_RATIO = 1.1;
+export const BOUNDARY_OUTSIDE_TOLERANCE_METERS = 10;
+
+export type MappingStatus = 'not_started' | 'recording' | 'paused' | 'editing' | 'completed';
 
 export interface BoundaryPoint {
   id: string;
@@ -13,6 +20,7 @@ export interface BoundaryPoint {
   latitude: number;
   longitude: number;
   accuracy: number;
+  altitude?: number | null;
   timestamp: string;
   label?: string;
   notes?: string;
@@ -34,15 +42,173 @@ export function formatGpsAccuracy(meters: number | null | undefined): string {
     return 'Unknown';
   }
 
-  if (meters <= 8) {
-    return 'Good';
+  if (meters <= 10) {
+    return 'Excellent';
   }
 
   if (meters <= 20) {
-    return 'Moderate';
+    return 'Good';
+  }
+
+  if (meters <= 30) {
+    return 'Acceptable';
   }
 
   return 'Poor';
+}
+
+export function formatMappingStatus(status: MappingStatus): string {
+  switch (status) {
+    case 'recording':
+      return 'Recording';
+    case 'paused':
+      return 'Paused';
+    case 'editing':
+      return 'Editing';
+    case 'completed':
+      return 'Completed';
+    default:
+      return 'Not Started';
+  }
+}
+
+export function pointInPolygon(point: LatLng, polygon: LatLng[]): boolean {
+  if (polygon.length < 3) {
+    return false;
+  }
+
+  let inside = false;
+
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].longitude;
+    const yi = polygon[i].latitude;
+    const xj = polygon[j].longitude;
+    const yj = polygon[j].latitude;
+    const intersect =
+      yi > point.latitude !== yj > point.latitude &&
+      point.longitude < ((xj - xi) * (point.latitude - yi)) / (yj - yi + Number.EPSILON) + xi;
+
+    if (intersect) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
+}
+
+export function distancePointToSegmentMeters(point: LatLng, start: LatLng, end: LatLng): number {
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const lat = toRad(point.latitude);
+  const x = toRad(point.longitude - start.longitude) * Math.cos((toRad(point.latitude) + toRad(start.latitude)) / 2);
+  const y = toRad(point.latitude - start.latitude);
+  const dx = toRad(end.longitude - start.longitude) * Math.cos((toRad(end.latitude) + toRad(start.latitude)) / 2);
+  const dy = toRad(end.latitude - start.latitude);
+  const lengthSq = dx * dx + dy * dy;
+
+  if (lengthSq === 0) {
+    return haversineMeters(point.latitude, point.longitude, start.latitude, start.longitude);
+  }
+
+  let t = (x * dx + y * dy) / lengthSq;
+  t = Math.max(0, Math.min(1, t));
+
+  const projLat = start.latitude + t * (end.latitude - start.latitude);
+  const projLng = start.longitude + t * (end.longitude - start.longitude);
+
+  return haversineMeters(point.latitude, point.longitude, projLat, projLng);
+}
+
+export function distanceOutsidePolygonMeters(point: LatLng, polygon: LatLng[]): number {
+  if (polygon.length < 3) {
+    return 0;
+  }
+
+  if (pointInPolygon(point, polygon)) {
+    return 0;
+  }
+
+  let minDistance = Number.POSITIVE_INFINITY;
+
+  for (let index = 0; index < polygon.length; index += 1) {
+    const start = polygon[index];
+    const end = polygon[(index + 1) % polygon.length];
+    minDistance = Math.min(minDistance, distancePointToSegmentMeters(point, start, end));
+  }
+
+  return Number.isFinite(minDistance) ? minDistance : 0;
+}
+
+export function isEditedBoundaryOutsideTolerance(
+  walkingPoints: BoundaryPoint[],
+  editedPoints: BoundaryPoint[],
+): boolean {
+  if (walkingPoints.length < 3 || editedPoints.length < 3) {
+    return false;
+  }
+
+  const walking = boundaryPointsToLatLng(walkingPoints);
+  const edited = boundaryPointsToLatLng(editedPoints);
+  const walkingMetrics = calculateBoundaryMetrics(walking);
+  const editedMetrics = calculateBoundaryMetrics(edited);
+
+  if (editedMetrics.areaAcre > walkingMetrics.areaAcre * BOUNDARY_AREA_TOLERANCE_RATIO) {
+    return true;
+  }
+
+  return edited.some(
+    (point) => distanceOutsidePolygonMeters(point, walking) > BOUNDARY_OUTSIDE_TOLERANCE_METERS,
+  );
+}
+
+export function findNearestEdgeInsertion(
+  tap: LatLng,
+  points: BoundaryPoint[],
+  maxDistanceMeters = 20,
+): { insertAfterIndex: number; distance: number } | null {
+  if (points.length < 2) {
+    return null;
+  }
+
+  let bestIndex = -1;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (let index = 0; index < points.length; index += 1) {
+    const start = points[index];
+    const end = points[(index + 1) % points.length];
+    const distance = distancePointToSegmentMeters(
+      tap,
+      { latitude: start.latitude, longitude: start.longitude },
+      { latitude: end.latitude, longitude: end.longitude },
+    );
+
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  }
+
+  if (bestIndex < 0 || bestDistance > maxDistanceMeters) {
+    return null;
+  }
+
+  return { insertAfterIndex: bestIndex, distance: bestDistance };
+}
+
+export function serializeBoundaryPointPayload(point: BoundaryPoint) {
+  return {
+    point_no: point.pointNo,
+    sequence: point.pointNo,
+    lat: point.latitude,
+    lng: point.longitude,
+    latitude: point.latitude,
+    longitude: point.longitude,
+    accuracy: point.accuracy,
+    altitude: point.altitude ?? null,
+    timestamp: point.timestamp,
+    label: point.label,
+    notes: point.notes,
+    is_manual: point.manual ?? false,
+  };
 }
 
 export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -185,8 +351,18 @@ export function buildBoundaryUploadPayload(
   unit: AreaUnit,
   points: BoundaryPoint[],
   gpsAccuracyLabel: string,
+  options?: {
+    walkingPoints?: BoundaryPoint[];
+    mappingStartedAt?: string | null;
+    mappingFinishedAt?: string | null;
+    status?: string;
+  },
 ) {
+  const walkingPoints = options?.walkingPoints?.length ? options.walkingPoints : points;
   const metrics = calculateBoundaryMetrics(boundaryPointsToLatLng(points));
+  const accuracies = points.map((point) => point.accuracy).filter((value) => Number.isFinite(value));
+  const averageAccuracy =
+    accuracies.length > 0 ? round(accuracies.reduce((sum, value) => sum + value, 0) / accuracies.length, 2) : null;
 
   return {
     farm_id: farmId,
@@ -194,18 +370,20 @@ export function buildBoundaryUploadPayload(
     area_acre: metrics.areaAcre,
     area_hectare: metrics.areaHectare,
     area_bigha: metrics.areaBigha,
+    area_sqft: round(metrics.areaAcre * 43560, 2),
     perimeter_meter: metrics.perimeterMeter,
     gps_accuracy: gpsAccuracyLabel.toLowerCase(),
-    boundary_points: points.map((point) => ({
-      point_no: point.pointNo,
-      latitude: point.latitude,
-      longitude: point.longitude,
-      accuracy: point.accuracy,
-      timestamp: point.timestamp,
-      label: point.label,
-      notes: point.notes,
-      is_manual: point.manual ?? false,
-    })),
+    gps_accuracy_average: averageAccuracy,
+    mapping_started_at: options?.mappingStartedAt ?? null,
+    mapping_finished_at: options?.mappingFinishedAt ?? null,
+    status: options?.status ?? 'completed',
+    mapping_status: options?.status ?? 'completed',
+    boundary_points: walkingPoints.map(serializeBoundaryPointPayload),
+    walking_boundary_points: walkingPoints.map(serializeBoundaryPointPayload),
+    edited_boundary_points:
+      options?.walkingPoints && options.walkingPoints.length > 0
+        ? points.map(serializeBoundaryPointPayload)
+        : null,
   };
 }
 

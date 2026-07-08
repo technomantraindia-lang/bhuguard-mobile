@@ -1,19 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
+import { BiocharProcessFormContent } from '../../components/officer/biochar/BiocharProcessFormContent';
 import { BiocharProductionSuccessModal } from '../../components/officer/biochar/BiocharProductionSuccessModal';
 import {
-  BiocharEvidenceCaptureSection,
-  FinalStageSection,
   InitialDataSection,
-  MoistureReadingsSection,
-  OfficerNotesSection,
   ProcessDataSection,
-  ProductionBatchSection,
   ProductionRecordCard,
   ProductionTimeSection,
   ProductionUnitSection,
@@ -21,16 +17,10 @@ import {
 import { OfficerBiocharProductionHeader } from '../../components/officer/biochar/OfficerBiocharProductionHeader';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
-import {
-  BIOCHAR_BATCH_EVIDENCE_SLOT,
-  BIOCHAR_MOISTURE_EVIDENCE_SLOT,
-  BIOCHAR_PROCESS_EVIDENCE_SLOTS,
-  type BiocharEvidenceKey,
-} from '../../constants/biocharProduction';
+import { type BiocharEvidenceKey } from '../../constants/biocharProduction';
 import { useBiocharProductionForm } from '../../hooks/useBiocharProductionForm';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerTheme } from '../../theme/officerDashboardTheme';
-import type { FeedstockQuantityUnit, FeedstockTypeValue } from '../../constants/feedstockTypes';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'FieldOfficerBiocharProduction'>;
 type ScreenRoute = RouteProp<FieldOfficerStackParamList, 'FieldOfficerBiocharProduction'>;
@@ -38,14 +28,50 @@ type ScreenRoute = RouteProp<FieldOfficerStackParamList, 'FieldOfficerBiocharPro
 export function FieldOfficerBiocharProductionScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<ScreenRoute>();
+  const selectionPrefill = useMemo(
+    () => ({
+      farmerName: route.params?.farmerName,
+      village: route.params?.village,
+      taluka: route.params?.taluka,
+      district: route.params?.district,
+      state: route.params?.state,
+      latitude: route.params?.latitude,
+      longitude: route.params?.longitude,
+      gpsAccuracy: route.params?.gpsAccuracy,
+      fieldOfficerId: route.params?.fieldOfficerId,
+      visitId: route.params?.visitId,
+    }),
+    [
+      route.params?.district,
+      route.params?.farmerName,
+      route.params?.fieldOfficerId,
+      route.params?.gpsAccuracy,
+      route.params?.latitude,
+      route.params?.longitude,
+      route.params?.state,
+      route.params?.taluka,
+      route.params?.village,
+      route.params?.visitId,
+    ],
+  );
   const form = useBiocharProductionForm({
     farmerId: route.params?.farmerId,
+    farmId: route.params?.farmId,
     batchId: route.params?.batchId,
-    behalfReason: route.params?.behalfReason,
+    selectionPrefill,
   });
   const [successVisible, setSuccessVisible] = useState(false);
   const [submittedBatchCode, setSubmittedBatchCode] = useState('');
   const readOnly = !form.canEdit;
+
+  const farmerCode = useMemo(() => {
+    const selected = form.farmers.find((item) => item.id === form.selectedFarmerId);
+    return (
+      form.farmerCode ??
+      selected?.farmerCode ??
+      (form.selectedFarmerId ? `BHG-FRM-${String(form.selectedFarmerId).padStart(6, '0')}` : null)
+    );
+  }, [form.farmerCode, form.farmers, form.selectedFarmerId]);
 
   useEffect(() => {
     if (route.params?.gpsRecaptured && route.params.latitude != null && route.params.longitude != null) {
@@ -61,7 +87,7 @@ export function FieldOfficerBiocharProductionScreen() {
     );
   }
 
-  if (form.error && form.units.length === 0) {
+  if (form.error && !form.productionRecordCode && form.farmers.length === 0) {
     return (
       <SafeAreaView style={styles.safe}>
         <ErrorState message={form.error} onRetry={form.reload} />
@@ -80,7 +106,7 @@ export function FieldOfficerBiocharProductionScreen() {
   const handleSaveDraft = async () => {
     const ok = await form.saveDraft();
     if (ok) {
-      Alert.alert('Draft saved', 'Biochar production record saved as draft. You can continue editing later.');
+      Alert.alert('Draft saved', 'Biochar production record saved as draft.');
     }
   };
 
@@ -90,26 +116,8 @@ export function FieldOfficerBiocharProductionScreen() {
       return;
     }
 
-    if (key === 'process_video') {
-      Alert.alert('Process video', 'Video evidence captured and ready for upload.');
-      return;
-    }
-
     navigation.navigate('OfficerFullscreenImage', { uri: asset.uri, title: 'Production Evidence' });
   };
-
-  const renderEvidenceCapture = (slot: typeof BIOCHAR_BATCH_EVIDENCE_SLOT) => (
-    <BiocharEvidenceCaptureSection
-      key={slot.key}
-      slot={slot}
-      evidence={form.evidence[slot.key]}
-      readOnly={readOnly}
-      onAddEvidence={(key) => void form.addEvidence(key)}
-      onUploadEvidence={(key) => void form.uploadEvidence(key)}
-      onRemoveEvidence={form.removeEvidence}
-      onPreviewEvidence={previewEvidence}
-    />
-  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -121,123 +129,92 @@ export function FieldOfficerBiocharProductionScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <ProductionRecordCard
-          productionRecordCode={form.productionRecordCode}
-          batchCode={form.batchCode}
-          officerName={form.officerName}
-          farmerId={form.selectedFarmerId}
-          farmerName={form.farmerName}
-          productionDate={form.productionDate}
-          onProductionDateChange={readOnly ? undefined : form.setProductionDate}
-          statusLabel={form.statusLabel}
-        />
-
-        <ProductionBatchSection
-          batchCode={form.batchCode}
-          feedstockQuantity={form.feedstockQuantity}
-          feedstockUnit={form.feedstockUnit}
-          feedstockType={form.feedstockType}
-          onGenerateBatchCode={() => void form.regenerateCodes()}
-          onBatchCodeChange={form.setBatchCode}
-          onFeedstockQuantityChange={form.setFeedstockQuantity}
-          onFeedstockUnitChange={(value) => form.setFeedstockUnit(value as FeedstockQuantityUnit)}
-          onFeedstockTypeChange={(value) => form.setFeedstockType(value as FeedstockTypeValue)}
-        />
-
-        <InitialDataSection
-          timestampDate={form.timestampDate}
-          timestampTime={form.timestampTime}
-          altitude={form.altitude}
-          villageName={form.villageName}
-          talukaName={form.talukaName}
-          districtName={form.districtName}
-          stateName={form.stateName}
-          latitude={form.latitude}
-          longitude={form.longitude}
-          accuracyM={form.accuracyM}
-          onTimestampDateChange={form.setTimestampDate}
-          onTimestampTimeChange={form.setTimestampTime}
-          onAltitudeChange={(value) => form.setAltitude(value === '' ? null : Number(value))}
-          onVillageNameChange={form.setVillageName}
-          onTalukaNameChange={form.setTalukaName}
-          onDistrictNameChange={form.setDistrictName}
-          onStateNameChange={form.setStateName}
-          onCaptureGps={() => void form.recaptureGps()}
-          onRecaptureGps={() => void form.recaptureGps()}
-          mapPreviewUrl={form.mapPreviewUrl}
-        />
-
-        {renderEvidenceCapture(BIOCHAR_BATCH_EVIDENCE_SLOT)}
-        {renderEvidenceCapture(BIOCHAR_MOISTURE_EVIDENCE_SLOT)}
-
-        <MoistureReadingsSection
-          readings={form.moistureReadings}
+        <BiocharProcessFormContent
+          form={form}
           readOnly={readOnly}
-          onAddReading={form.addMoistureReading}
-          onRemoveReading={form.removeMoistureReading}
-          onChangeReading={(key, value) => form.updateMoistureReading(key, 'moistureReading', value)}
-          onChangeNotes={(key, value) => form.updateMoistureReading(key, 'notes', value)}
-          onCapturePhoto={(key) => void form.captureMoistureReadingPhoto(key)}
-          onUploadPhoto={(key) => void form.uploadMoistureReadingPhoto(key)}
+          farmerCode={farmerCode}
+          onPreviewEvidence={previewEvidence}
+          headerSlot={
+            <ProductionRecordCard
+              productionRecordCode={form.productionRecordCode}
+              batchCode={form.batchCode}
+              officerName={form.officerName}
+              farmerId={form.selectedFarmerId}
+              farmerName={form.farmerName}
+              productionDate={form.productionDate}
+              onProductionDateChange={readOnly ? undefined : form.setProductionDate}
+              statusLabel={form.statusLabel}
+            />
+          }
+          extraSectionsSlot={
+            <>
+              <InitialDataSection
+                timestampDate={form.timestampDate}
+                timestampTime={form.timestampTime}
+                altitude={form.altitude}
+                villageName={form.villageName}
+                talukaName={form.talukaName}
+                districtName={form.districtName}
+                stateName={form.stateName}
+                latitude={form.latitude}
+                longitude={form.longitude}
+                accuracyM={form.accuracyM}
+                accuracyTier={form.gpsAccuracyTier}
+                farmerCode={farmerCode}
+                onTimestampDateChange={form.setTimestampDate}
+                onTimestampTimeChange={form.setTimestampTime}
+                onAltitudeChange={(value) => form.setAltitude(value === '' ? null : Number(value))}
+                onVillageNameChange={form.setVillageName}
+                onTalukaNameChange={form.setTalukaName}
+                onDistrictNameChange={form.setDistrictName}
+                onStateNameChange={form.setStateName}
+                onCaptureGps={() => void form.recaptureGps()}
+                onRecaptureGps={() => void form.recaptureGps()}
+                mapPreviewUrl={form.mapPreviewUrl}
+              />
+              <ProductionUnitSection
+                units={form.units}
+                kilnId={form.kilnId}
+                operatorName={form.operatorName}
+                latitude={form.latitude}
+                longitude={form.longitude}
+                accuracyM={form.accuracyM}
+                gpsCaptured={form.gpsCaptured}
+                onKilnIdChange={form.setKilnId}
+                onSelectUnit={form.selectUnit}
+                onOperatorNameChange={form.setOperatorName}
+                onRecaptureGps={() => void form.recaptureGps()}
+              />
+              <ProductionTimeSection
+                startTime={form.startTime}
+                endTime={form.endTime}
+                onStartTimeChange={form.setStartTime}
+                onEndTimeChange={form.setEndTime}
+              />
+              <ProcessDataSection
+                temperature={form.temperature}
+                residenceTime={form.residenceTime}
+                biocharOutput={form.biocharOutput}
+                biocharOutputUnit={form.biocharOutputUnit}
+                feedstockQuantity={form.feedstockQuantity}
+                onTemperatureChange={form.setTemperature}
+                onResidenceTimeChange={form.setResidenceTime}
+                onBiocharOutputChange={form.setBiocharOutput}
+                onBiocharOutputUnitChange={form.setBiocharOutputUnit}
+              />
+            </>
+          }
         />
-
-        {BIOCHAR_PROCESS_EVIDENCE_SLOTS.slice(0, 3).map(renderEvidenceCapture)}
-
-        <FinalStageSection
-          finalStageTime={form.finalStageTime}
-          quenchingTime={form.quenchingTime}
-          onFinalStageTimeChange={form.setFinalStageTime}
-          onQuenchingTimeChange={form.setQuenchingTime}
-        />
-
-        {BIOCHAR_PROCESS_EVIDENCE_SLOTS.slice(3).map(renderEvidenceCapture)}
-
-        <ProductionUnitSection
-          units={form.units}
-          kilnId={form.kilnId}
-          operatorName={form.operatorName}
-          latitude={form.latitude}
-          longitude={form.longitude}
-          accuracyM={form.accuracyM}
-          gpsCaptured={form.gpsCaptured}
-          onKilnIdChange={form.setKilnId}
-          onSelectUnit={form.selectUnit}
-          onOperatorNameChange={form.setOperatorName}
-          onRecaptureGps={() => void form.recaptureGps()}
-        />
-
-        <ProductionTimeSection
-          startTime={form.startTime}
-          endTime={form.endTime}
-          onStartTimeChange={form.setStartTime}
-          onEndTimeChange={form.setEndTime}
-        />
-
-        <ProcessDataSection
-          temperature={form.temperature}
-          residenceTime={form.residenceTime}
-          biocharOutput={form.biocharOutput}
-          biocharOutputUnit={form.biocharOutputUnit}
-          feedstockQuantity={form.feedstockQuantity}
-          onTemperatureChange={form.setTemperature}
-          onResidenceTimeChange={form.setResidenceTime}
-          onBiocharOutputChange={form.setBiocharOutput}
-          onBiocharOutputUnitChange={form.setBiocharOutputUnit}
-        />
-
-        <OfficerNotesSection value={form.officerNotes} onChange={form.setOfficerNotes} />
 
         {form.error ? <Text style={styles.error}>{form.error}</Text> : null}
 
         {form.canSubmit ? (
           <View style={styles.actions}>
-            <Pressable style={styles.primaryButton} onPress={() => void handleSubmit()} disabled={form.submitting}>
-              <Text style={styles.primaryButtonText}>
-                {form.submitting ? 'Submitting...' : 'Submit'}
-              </Text>
-            </Pressable>
             <Pressable style={styles.secondaryButton} onPress={() => void handleSaveDraft()} disabled={form.submitting}>
-              <Text style={styles.secondaryButtonText}>{form.submitting ? 'Saving...' : 'Save as Draft'}</Text>
+              <Text style={styles.secondaryButtonText}>{form.submitting ? 'Saving...' : 'Save Draft'}</Text>
+            </Pressable>
+            <Pressable style={styles.primaryButton} onPress={() => void handleSubmit()} disabled={form.submitting}>
+              <Text style={styles.primaryButtonText}>{form.submitting ? 'Submitting...' : 'Submit'}</Text>
             </Pressable>
           </View>
         ) : (
@@ -251,9 +228,16 @@ export function FieldOfficerBiocharProductionScreen() {
         visible={successVisible}
         batchCode={submittedBatchCode || form.batchCode}
         onClose={() => setSuccessVisible(false)}
-        onBackToVisits={() => {
+        onAddNewBatch={() => {
           setSuccessVisible(false);
-          navigation.navigate('FieldOfficerBiocharProductionList');
+          void form.regenerateCodes();
+          navigation.replace('FieldOfficerBiocharProduction', {
+            farmerId: form.selectedFarmerId ?? route.params?.farmerId,
+          });
+        }}
+        onBackToDashboard={() => {
+          setSuccessVisible(false);
+          navigation.navigate('FieldOfficerTabs', { screen: 'Home' });
         }}
       />
     </SafeAreaView>

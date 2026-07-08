@@ -104,6 +104,12 @@ export function OfficerNavigator() {
         <Stack.Screen name="FieldOfficerMonitoringReports" component={FieldOfficerMonitoringReportsScreen} />
         <Stack.Screen name="FieldOfficerNotifications" component={FieldOfficerNotificationsScreen} />
         <Stack.Screen
+          name="FieldOfficerVisitVerification"
+          getComponent={() =>
+            require('../screens/officer/FieldOfficerVisitVerificationScreen').FieldOfficerVisitVerificationScreen
+          }
+        />
+        <Stack.Screen
           name="VisitCheckIn"
           getComponent={() => require('../screens/officer/VisitCheckInScreen').VisitCheckInScreen}
         />

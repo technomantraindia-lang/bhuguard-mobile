@@ -8,17 +8,15 @@ interface FarmerActivityServiceCardProps {
   service: FarmerActivityServiceItem;
   onPress: () => void;
   onActionPress?: () => void;
+  displayOnly?: boolean;
 }
 
-export function FarmerActivityServiceCard({ service, onPress, onActionPress }: FarmerActivityServiceCardProps) {
+export function FarmerActivityServiceCard({ service, onPress, onActionPress, displayOnly = false }: FarmerActivityServiceCardProps) {
   const isActive = service.status === 'active';
   const actionLabel = isActive ? 'Open' : 'Coming Soon';
 
-  return (
-    <Pressable
-      style={({ pressed }) => [styles.card, dashboardShadow, pressed && styles.pressed]}
-      onPress={onPress}
-    >
+  const cardBody = (
+    <>
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View style={[styles.iconWrap, isActive ? styles.iconWrapActive : styles.iconWrapUpcoming]}>
@@ -26,7 +24,9 @@ export function FarmerActivityServiceCard({ service, onPress, onActionPress }: F
           </View>
           <View style={styles.copy}>
             <Text style={styles.title}>{service.name}</Text>
-            <Text style={styles.subtitle}>{isActive ? 'Record and submit biochar production.' : 'Available in a future release.'}</Text>
+            <Text style={styles.subtitle}>
+              {displayOnly ? 'Biochar service is active on your account.' : isActive ? 'Record and submit biochar production.' : 'Available in a future release.'}
+            </Text>
           </View>
         </View>
         <View style={[styles.badge, isActive ? styles.badgeActive : styles.badgeUpcoming]}>
@@ -36,26 +36,41 @@ export function FarmerActivityServiceCard({ service, onPress, onActionPress }: F
         </View>
       </View>
 
-      <Pressable
-        style={({ pressed }) => [
-          styles.actionButton,
-          isActive ? styles.actionButtonActive : styles.actionButtonDisabled,
-          pressed && isActive && styles.pressed,
-        ]}
-        onPress={(event) => {
-          event.stopPropagation();
-          if (isActive) {
-            onActionPress?.();
-          } else {
-            onPress();
-          }
-        }}
-        disabled={!isActive && !onPress}
-      >
-        <Text style={[styles.actionText, isActive ? styles.actionTextActive : styles.actionTextDisabled]}>
-          {actionLabel}
-        </Text>
-      </Pressable>
+      {!displayOnly ? (
+        <Pressable
+          style={({ pressed }) => [
+            styles.actionButton,
+            isActive ? styles.actionButtonActive : styles.actionButtonDisabled,
+            pressed && isActive && styles.pressed,
+          ]}
+          onPress={(event) => {
+            event.stopPropagation();
+            if (isActive) {
+              onActionPress?.();
+            } else {
+              onPress();
+            }
+          }}
+          disabled={!isActive && !onPress}
+        >
+          <Text style={[styles.actionText, isActive ? styles.actionTextActive : styles.actionTextDisabled]}>
+            {actionLabel}
+          </Text>
+        </Pressable>
+      ) : null}
+    </>
+  );
+
+  if (displayOnly) {
+    return <View style={[styles.card, dashboardShadow]}>{cardBody}</View>;
+  }
+
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.card, dashboardShadow, pressed && styles.pressed]}
+      onPress={onPress}
+    >
+      {cardBody}
     </Pressable>
   );
 }

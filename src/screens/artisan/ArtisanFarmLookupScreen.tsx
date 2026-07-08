@@ -1,158 +1,245 @@
-import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { getApiErrorMessage } from '../../api/authApi';
-import { lookupArtisanFarm } from '../../api/artisanApi';
-import { ArtisanGpsStatusCard } from '../../components/artisan/ArtisanGpsStatusCard';
+import { getArtisanAllocatedLocations, searchArtisanFarms } from '../../api/artisanApi';
+import { FormSelect, type SelectOption } from '../../components/FormSelect';
 import { ScreenHeader } from '../../components/ScreenHeader';
-import { useArtisanGpsTracker } from '../../hooks/useArtisanGpsTracker';
 import type { ArtisanStackParamList } from '../../navigation/types';
 import { colors, spacing } from '../../theme';
-import { pickString, type ApiRecord } from '../../utils/apiHelpers';
+import type {
+  ArtisanAllocatedTaluka,
+  ArtisanAllocatedVillage,
+  ArtisanFarmSearchRecord,
+  ArtisanFarmSelectionParams,
+} from '../../types/artisanFarmSearch';
 
 type Nav = NativeStackNavigationProp<ArtisanStackParamList, 'ArtisanFarmLookup'>;
 
+function toSelection(record: ArtisanFarmSearchRecord): ArtisanFarmSelectionParams {
+  return {
+    farmId: record.farm_id,
+    farmCode: record.farm_code ?? undefined,
+    farmLabel: record.farm_code ?? record.farm_name ?? `Farm ${record.farm_id}`,
+    farmerId: record.farmer_id,
+    farmerCode: record.farmer_code ?? undefined,
+    farmerName: record.farmer_name ?? undefined,
+    village: record.village ?? undefined,
+    taluka: record.taluka ?? undefined,
+    district: record.district ?? undefined,
+    state: record.state ?? undefined,
+    latitude: record.latitude ?? undefined,
+    longitude: record.longitude ?? undefined,
+  };
+}
+
 export function ArtisanFarmLookupScreen() {
   const navigation = useNavigation<Nav>();
-  const [farmIdInput, setFarmIdInput] = useState('');
-  const [farm, setFarm] = useState<ApiRecord | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [talukas, setTalukas] = useState<ArtisanAllocatedTaluka[]>([]);
+  const [villages, setVillages] = useState<ArtisanAllocatedVillage[]>([]);
+  const [selectedTalukaId, setSelectedTalukaId] = useState('');
+  const [selectedVillageId, setSelectedVillageId] = useState('');
+  const [results, setResults] = useState<ArtisanFarmSearchRecord[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(true);
+  const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const gps = useArtisanGpsTracker({ farmId: farm?.id ? Number(farm.id) : undefined });
+  const [emptyMessage, setEmptyMessage] = useState<string | null>(null);
 
-  const handleLookup = async () => {
-    const trimmed = farmIdInput.trim();
-
-    if (!trimmed) {
-      Alert.alert('Farm ID required', 'Enter or scan a Farm ID to continue.');
-      return;
-    }
-
-    setLoading(true);
+  const loadLocations = useCallback(async () => {
+    setLoadingLocations(true);
     setError(null);
-    setFarm(null);
 
     try {
-      const data = await lookupArtisanFarm(trimmed);
-      const resolvedFarm = (data.farm ?? data) as ApiRecord;
-      setFarm(resolvedFarm);
-
-      const farmId = Number(resolvedFarm.id ?? resolvedFarm.farm_id);
-      if (Number.isFinite(farmId)) {
-        await gps.captureGps('farm_lookup', { farmId, biocharProductionId: null, silent: true });
-      }
+      const data = await getArtisanAllocatedLocations();
+      setTalukas(data.talukas ?? []);
+      setVillages(data.villages ?? []);
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Farm not found. Please check Farm ID.'));
+      setError(getApiErrorMessage(err, 'Unable to load allocated locations.'));
     } finally {
-      setLoading(false);
+      setLoadingLocations(false);
     }
+  }, []);
+
+  useEffect(() => {
+    void loadLocations();
+  }, [loadLocations]);
+
+  const filteredVillages = useMemo(() => {
+    if (!selectedTalukaId) {
+      return villages;
+    }
+
+    return villages.filter((village) => String(village.taluka_id) === selectedTalukaId);
+  }, [selectedTalukaId, villages]);
+
+  const talukaOptions: SelectOption[] = talukas.map((item) => ({ id: item.id, name: item.name }));
+  const villageOptions: SelectOption[] = filteredVillages.map((item) => ({ id: item.id, name: item.name }));
+
+  const selectedTalukaName = talukas.find((item) => String(item.id) === selectedTalukaId)?.name ?? '';
+  const selectedVillageName = villages.find((item) => String(item.id) === selectedVillageId)?.name ?? '';
+
+  const runSearch = useCallback(async () => {
+    setSearching(true);
+    setError(null);
+    setEmptyMessage(null);
+
+    try {
+      const response = await searchArtisanFarms({
+        q: query.trim() || undefined,
+        taluka: selectedTalukaName || undefined,
+        village: selectedVillageName || undefined,
+        limit: 30,
+      });
+
+      if (!response.success) {
+        setResults([]);
+        setError(response.message || 'Unable to search farms.');
+        return;
+      }
+
+      setResults(response.data ?? []);
+      setEmptyMessage(response.data?.length ? null : response.message || 'No farmers or farms found in your allocated area.');
+    } catch (err) {
+      setResults([]);
+      setError(getApiErrorMessage(err, 'Unable to search farms in your allocated area.'));
+    } finally {
+      setSearching(false);
+    }
+  }, [query, selectedTalukaName, selectedVillageName]);
+
+  useEffect(() => {
+    if (!loadingLocations && talukas.length > 0) {
+      void runSearch();
+    }
+  }, [loadingLocations, talukas.length]);
+
+  const openProduction = (selection: ArtisanFarmSelectionParams) => {
+    navigation.navigate('ArtisanBiocharProduction', selection);
   };
 
-  const startProduction = () => {
-    if (!farm?.id) {
-      return;
-    }
-
-    const farmLabel = pickString(farm, 'farm_code', 'farm_name');
-    navigation.navigate('ArtisanBiocharProduction', {
-      farmId: Number(farm.id),
-      farmerId: farm.farmer_id != null ? Number(farm.farmer_id) : undefined,
-      farmLabel: farmLabel !== '-' ? farmLabel : `Farm ${farm.id}`,
-    });
+  const openMixing = (selection: ArtisanFarmSelectionParams) => {
+    navigation.navigate('ArtisanBiocharMixing', selection);
   };
 
-  const startMixing = () => {
-    if (!farm?.id) {
-      return;
-    }
+  const renderResult = ({ item }: { item: ArtisanFarmSearchRecord }) => {
+    const selection = toSelection(item);
 
-    const farmLabel = pickString(farm, 'farm_code', 'farm_name');
-    navigation.navigate('ArtisanBiocharMixing', {
-      farmId: Number(farm.id),
-      farmLabel: farmLabel !== '-' ? farmLabel : `Farm ${farm.id}`,
-    });
+    return (
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>{item.farmer_name ?? 'Farmer'}</Text>
+        <Text style={styles.cardMeta}>
+          {item.farmer_code ? `${item.farmer_code} · ` : ''}
+          Farm {item.farm_code ?? item.farm_id}
+        </Text>
+        <Text style={styles.cardMeta}>{[item.village, item.taluka, item.district].filter(Boolean).join(' · ')}</Text>
+        {item.area_acre != null ? <Text style={styles.cardMeta}>Area: {item.area_acre} acre</Text> : null}
+        {item.biochar_status ? <Text style={styles.cardStatus}>Biochar: {item.biochar_status}</Text> : null}
+        {item.next_due_date ? <Text style={styles.cardMeta}>Next due: {item.next_due_date}</Text> : null}
+
+        <View style={styles.cardActions}>
+          <Pressable style={styles.selectButton} onPress={() => openProduction(selection)}>
+            <Text style={styles.selectButtonText}>Select for Production</Text>
+          </Pressable>
+          <Pressable style={styles.secondarySelectButton} onPress={() => openMixing(selection)}>
+            <Text style={styles.secondarySelectButtonText}>Select for Mixing</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Enter Farm ID" showBrandLogo={false} />
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.label}>Farm ID</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Farm ID"
-          value={farmIdInput}
-          onChangeText={setFarmIdInput}
-          autoCapitalize="characters"
-        />
+      <ScreenHeader title="Find Farmer / Farm" showBrandLogo={false} />
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <FlatList
+          data={results}
+          keyExtractor={(item) => `${item.farm_id}-${item.farmer_id}`}
+          renderItem={renderResult}
+          contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <View style={styles.headerBlock}>
+              <Text style={styles.helper}>
+                Search only within villages and talukas allocated to you by admin.
+              </Text>
 
-        <Pressable style={[styles.button, loading && styles.buttonDisabled]} disabled={loading} onPress={() => void handleLookup()}>
-          <Text style={styles.buttonText}>{loading ? 'Searching…' : 'Find Farm'}</Text>
-        </Pressable>
+              <Text style={styles.label}>Search by Farm ID or Farmer Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Search by Farm ID or Farmer Name"
+                value={query}
+                onChangeText={setQuery}
+                autoCapitalize="none"
+                returnKeyType="search"
+                onSubmitEditing={() => void runSearch()}
+              />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+              {loadingLocations ? (
+                <View style={styles.inlineLoading}>
+                  <ActivityIndicator color={colors.primary} />
+                  <Text style={styles.inlineLoadingText}>Loading allocated filters…</Text>
+                </View>
+              ) : (
+                <>
+                  <FormSelect
+                    label="Taluka"
+                    placeholder="All allocated talukas"
+                    value={selectedTalukaId}
+                    displayValue={selectedTalukaName}
+                    options={talukaOptions}
+                    onSelect={(option) => {
+                      setSelectedTalukaId(String(option.id));
+                      setSelectedVillageId('');
+                    }}
+                  />
+                  <FormSelect
+                    label="Village"
+                    placeholder="All allocated villages"
+                    value={selectedVillageId}
+                    displayValue={selectedVillageName}
+                    options={villageOptions}
+                    disabled={villageOptions.length === 0}
+                    onSelect={(option) => setSelectedVillageId(String(option.id))}
+                  />
+                </>
+              )}
 
-        <ArtisanGpsStatusCard
-          title="Farm Arrival GPS"
-          latitude={gps.latitude}
-          longitude={gps.longitude}
-          accuracyM={gps.accuracyM}
-          accuracyTier={gps.accuracyTier}
-          lastCapturedAt={gps.lastCapturedAt}
-          capturing={gps.capturing}
-          isPoorAccuracy={gps.isPoorAccuracy}
-          onCaptureGps={() =>
-            void gps.captureGps('farm_lookup', {
-              farmId: farm?.id ? Number(farm.id) : undefined,
-              biocharProductionId: null,
-            })
+              <Pressable style={[styles.searchButton, searching && styles.buttonDisabled]} disabled={searching} onPress={() => void runSearch()}>
+                <Text style={styles.searchButtonText}>{searching ? 'Searching…' : 'Search'}</Text>
+              </Pressable>
+
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+              {!error && emptyMessage ? <Text style={styles.empty}>{emptyMessage}</Text> : null}
+              {results.length > 0 ? <Text style={styles.sectionTitle}>Matching Farms ({results.length})</Text> : null}
+            </View>
           }
-          onRetryGps={() =>
-            void gps.retryGps('farm_lookup', {
-              farmId: farm?.id ? Number(farm.id) : undefined,
-              biocharProductionId: null,
-            })
-          }
         />
-
-        {farm ? (
-          <View style={styles.detailsCard}>
-            <Text style={styles.detailsTitle}>Farm Details (read-only)</Text>
-            <DetailRow label="Farm ID" value={String(farm.farm_id ?? farm.id)} />
-            <DetailRow label="Farmer" value={pickString(farm, 'farmer_name', 'farmerName')} />
-            <DetailRow label="Village" value={pickString(farm, 'village')} />
-            <DetailRow label="Farm area" value={pickString(farm, 'area_label', 'areaLabel')} />
-            <DetailRow label="Biochar status" value={pickString(farm, 'biochar_status', 'biocharStatus')} />
-            <DetailRow label="Last production" value={pickString(farm, 'last_production_date', 'lastProductionDate')} />
-
-            <Pressable style={styles.primaryButton} onPress={startProduction}>
-              <Text style={styles.primaryButtonText}>Start Biochar Production</Text>
-            </Pressable>
-            <Pressable style={styles.secondaryButton} onPress={startMixing}>
-              <Text style={styles.secondaryButtonText}>Biochar Mixing</Text>
-            </Pressable>
-          </View>
-        ) : null}
-      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value !== '-' ? value : '—'}</Text>
-    </View>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  container: { padding: spacing.lg, gap: spacing.md },
+  flex: { flex: 1 },
+  listContent: { padding: spacing.lg, gap: spacing.md, paddingBottom: 40 },
+  headerBlock: { gap: spacing.md, marginBottom: spacing.sm },
+  helper: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
   label: { fontWeight: '600', color: colors.text },
   input: {
     borderWidth: 1,
@@ -163,44 +250,45 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     color: colors.text,
   },
-  button: {
+  inlineLoading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  inlineLoadingText: { color: colors.textMuted },
+  searchButton: {
     backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
   buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontWeight: '700' },
-  error: { color: colors.danger },
-  detailsCard: {
-    marginTop: spacing.md,
+  searchButtonText: { color: '#fff', fontWeight: '700' },
+  error: { color: colors.danger, lineHeight: 20 },
+  empty: { color: colors.textMuted, lineHeight: 20 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginTop: spacing.sm },
+  card: {
     backgroundColor: colors.surface,
     borderRadius: 16,
     padding: spacing.lg,
-    gap: spacing.sm,
+    gap: spacing.xs,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  detailsTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: spacing.xs },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
-  detailLabel: { color: colors.textMuted, flex: 1 },
-  detailValue: { color: colors.text, fontWeight: '600', flex: 1, textAlign: 'right' },
-  primaryButton: {
-    marginTop: spacing.md,
+  cardTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
+  cardMeta: { color: colors.textMuted, fontSize: 14 },
+  cardStatus: { color: colors.primaryDark, fontWeight: '600', fontSize: 14 },
+  cardActions: { gap: spacing.sm, marginTop: spacing.sm },
+  selectButton: {
     backgroundColor: colors.primary,
     borderRadius: 12,
-    paddingVertical: spacing.md,
+    paddingVertical: 12,
     alignItems: 'center',
   },
-  primaryButtonText: { color: '#fff', fontWeight: '700' },
-  secondaryButton: {
-    marginTop: spacing.sm,
+  selectButtonText: { color: '#fff', fontWeight: '700' },
+  secondarySelectButton: {
     backgroundColor: '#FFFFFF',
     borderColor: colors.primary,
-    borderRadius: 12,
     borderWidth: 1,
-    paddingVertical: spacing.md,
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
   },
-  secondaryButtonText: { color: colors.primaryDark, fontWeight: '700' },
+  secondarySelectButtonText: { color: colors.primaryDark, fontWeight: '700' },
 });

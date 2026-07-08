@@ -29,7 +29,8 @@ function statusTone(status: string): string {
 
 export function FieldOfficerBiocharProductionListScreen() {
   const navigation = useNavigation<Nav>();
-  const [records, setRecords] = useState<ApiRecord[]>([]);
+  const [drafts, setDrafts] = useState<ApiRecord[]>([]);
+  const [submitted, setSubmitted] = useState<ApiRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,8 +39,12 @@ export function FieldOfficerBiocharProductionListScreen() {
     setError(null);
 
     try {
-      const data = await getFieldOfficerBiocharBatches();
-      setRecords(extractList(data as ApiRecord, ['batches']));
+      const [draftData, submittedData] = await Promise.all([
+        getFieldOfficerBiocharBatches({ status: 'draft' }),
+        getFieldOfficerBiocharBatches({ status: 'submitted' }),
+      ]);
+      setDrafts(extractList(draftData as ApiRecord, ['batches']));
+      setSubmitted(extractList(submittedData as ApiRecord, ['batches']));
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load biochar production records.'));
     } finally {
@@ -53,10 +58,7 @@ export function FieldOfficerBiocharProductionListScreen() {
     }, [load]),
   );
 
-  const drafts = records.filter((record) => record.is_draft === true || record.status === 'draft');
-  const submitted = records.filter((record) => record.is_draft !== true && record.status !== 'draft');
-
-  if (loading && records.length === 0) {
+  if (loading && drafts.length === 0 && submitted.length === 0) {
     return (
       <SafeAreaView style={styles.safe}>
         <LoadingState message="Loading biochar production records..." />
@@ -64,7 +66,7 @@ export function FieldOfficerBiocharProductionListScreen() {
     );
   }
 
-  if (error && records.length === 0) {
+  if (error && drafts.length === 0 && submitted.length === 0) {
     return (
       <SafeAreaView style={styles.safe}>
         <ErrorState message={error} onRetry={load} />
@@ -84,7 +86,12 @@ export function FieldOfficerBiocharProductionListScreen() {
       <Pressable
         key={String(id)}
         style={[styles.card, canEdit && styles.cardDraft]}
-        onPress={() => navigation.navigate('FieldOfficerBiocharProduction', { batchId: id })}
+        onPress={() =>
+          navigation.navigate('FieldOfficerBiocharProduction', {
+            batchId: id,
+            farmerId: record.farmer_id != null ? Number(record.farmer_id) : undefined,
+          })
+        }
       >
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>{pickString(record, 'production_record_code', 'productionRecordCode')}</Text>
@@ -116,7 +123,7 @@ export function FieldOfficerBiocharProductionListScreen() {
       >
         <Pressable
           style={styles.newButton}
-          onPress={() => navigation.navigate('FieldOfficerBiocharProduction', {})}
+          onPress={() => navigation.navigate('FieldOfficerTabs', { screen: 'Farmers' })}
         >
           <Text style={styles.newButtonText}>New Production Record</Text>
         </Pressable>

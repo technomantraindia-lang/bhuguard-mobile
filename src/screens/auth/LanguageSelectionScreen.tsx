@@ -38,7 +38,7 @@ export function LanguageSelectionScreen({ navigation }: Props) {
     await setLanguage(language);
     navigation.reset({
       index: 0,
-      routes: [{ name: 'RoleSelection' }],
+      routes: [{ name: 'MobileLogin' }],
     });
   };
 

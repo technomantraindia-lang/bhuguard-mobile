@@ -42,14 +42,14 @@ export function FarmerBasicDetailsScreen() {
     }
 
     setError(null);
-    navigation.navigate('FarmerConsent');
+    navigation.navigate('FarmerGpsCapture');
   };
 
   return (
     <OnboardingStepShell
       stepCurrent={1}
-      title="Farmer Profile"
-      subtitle="Please provide the primary details for the new farmer registration."
+      title="Basic Details"
+      subtitle="Farmer profile and first-time login credentials."
       onNext={next}
       nextLabel={ONBOARDING_NEXT_LABELS[1]}
       footerError={error}
@@ -72,6 +72,33 @@ export function FarmerBasicDetailsScreen() {
           label="Mobile Number"
           value={draft.mobile}
           onChangeText={(value) => updateDraft({ mobile: value })}
+        />
+
+        <OnboardingTextField
+          label="Username"
+          value={draft.username}
+          onChangeText={(value) => updateDraft({ username: value.replace(/\s/g, '') })}
+          placeholder="letters_numbers_123"
+          maxLength={30}
+          autoCapitalize="none"
+        />
+
+        <OnboardingTextField
+          label="Password"
+          value={draft.password}
+          onChangeText={(value) => updateDraft({ password: value })}
+          placeholder="Minimum 8 characters"
+          secureTextEntry
+          autoCapitalize="none"
+        />
+
+        <OnboardingTextField
+          label="Confirm Password"
+          value={draft.confirm_password}
+          onChangeText={(value) => updateDraft({ confirm_password: value })}
+          placeholder="Re-enter password"
+          secureTextEntry
+          autoCapitalize="none"
         />
 
         <OnboardingLanguageChips

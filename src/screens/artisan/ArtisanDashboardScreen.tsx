@@ -87,13 +87,13 @@ export function ArtisanDashboardScreen() {
         <Text style={styles.hint}>Biochar production only — no farmer, officer, or admin tools.</Text>
 
         <MenuCard
-          title="Enter Farm ID"
-          subtitle="Look up a farm and start feedstock check"
+          title="Find Farmer / Farm"
+          subtitle="Search by Farm ID, farmer name, or village in your allocated area"
           onPress={() => navigation.navigate('ArtisanFarmLookup')}
         />
         <MenuCard
           title="Biochar Production"
-          subtitle="Enter Farm ID, capture feedstock, and record production"
+          subtitle="Select a farmer/farm, capture feedstock, and record production"
           onPress={() => navigation.navigate('ArtisanFarmLookup')}
         />
         <MenuCard

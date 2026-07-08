@@ -36,8 +36,20 @@ export function FarmBoundaryUploadingScreen({ navigation, route }: Props) {
 
     async function upload() {
       try {
-        const payload = buildBoundaryUploadPayload(farmId, boundary.unit, boundary.points, boundary.gpsAccuracyLabel);
+        const payload = buildBoundaryUploadPayload(
+          farmId,
+          boundary.unit,
+          boundary.points,
+          boundary.gpsAccuracyLabel,
+          {
+            walkingPoints: boundary.walkingPoints.length ? boundary.walkingPoints : boundary.points,
+            mappingStartedAt: boundary.mappingStartedAt,
+            mappingFinishedAt: boundary.mappingFinishedAt,
+            status: 'completed',
+          },
+        );
         await saveFarmerFarmBoundary(farmId, payload);
+        await boundary.clearDraft();
 
         if (!cancelled) {
           navigation.replace('FarmBoundarySuccess', {
@@ -62,7 +74,18 @@ export function FarmBoundaryUploadingScreen({ navigation, route }: Props) {
       timers.forEach(clearTimeout);
       clearTimeout(uploadTimer);
     };
-  }, [boundary.areaLabel, boundary.gpsAccuracyLabel, boundary.points, boundary.unit, farmId, navigation]);
+  }, [
+    boundary.areaLabel,
+    boundary.clearDraft,
+    boundary.gpsAccuracyLabel,
+    boundary.mappingFinishedAt,
+    boundary.mappingStartedAt,
+    boundary.points,
+    boundary.unit,
+    boundary.walkingPoints,
+    farmId,
+    navigation,
+  ]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

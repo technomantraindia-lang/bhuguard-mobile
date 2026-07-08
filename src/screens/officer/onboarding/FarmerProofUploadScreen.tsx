@@ -89,29 +89,50 @@ export function FarmerProofUploadScreen() {
 
   const displayError = error ?? landProofCapture.error ?? farmerPhotoCapture.error;
 
+  const ownership = String(draft.ownership_type ?? '').toLowerCase();
+  const requiresLandProof = ownership === 'owned';
+
+  const next = () => {
+    if (requiresLandProof && !draft.proof_of_land_ownership) {
+      setError('Proof of land ownership is required for owned land.');
+      return;
+    }
+
+    setError(null);
+    navigation.navigate('FarmerOnboardingReview');
+  };
   return (
     <OnboardingFormScreen
       stepCurrent={5}
       title="Documents"
-      subtitle="Capture live photos for land proof and farmer verification."
-      onNext={() => navigation.navigate('FarmerOnboardingReview')}
+      subtitle={
+        requiresLandProof
+          ? 'Upload proof of land ownership and farmer photo.'
+          : 'Upload farmer verification photo. Proof of land is not required for leased/rented/shared land.'
+      }
+      onNext={next}
+      footerError={displayError}
     >
-      <FileRow
-        title="Proof of land ownership"
-        subtitle="Capture a live photo of the land document"
-        file={draft.proof_of_land_ownership}
-        onRemove={() => {
-          landProofCapture.clearEvidence();
-          updateDraft({ proof_of_land_ownership: null });
-        }}
-      />
-      <LiveEvidenceCaptureCard
-        evidence={landProofCapture.evidence}
-        capturing={landProofCapture.capturing}
-        error={landProofCapture.error}
-        onOpenCamera={() => void applyLandProof()}
-        onRetake={() => void applyLandProof()}
-      />
+      {requiresLandProof ? (
+        <>
+          <FileRow
+            title="Proof of land ownership"
+            subtitle="Capture a live photo of the land document"
+            file={draft.proof_of_land_ownership}
+            onRemove={() => {
+              landProofCapture.clearEvidence();
+              updateDraft({ proof_of_land_ownership: null });
+            }}
+          />
+          <LiveEvidenceCaptureCard
+            evidence={landProofCapture.evidence}
+            capturing={landProofCapture.capturing}
+            error={landProofCapture.error}
+            onOpenCamera={() => void applyLandProof()}
+            onRetake={() => void applyLandProof()}
+          />
+        </>
+      ) : null}
 
       <FileRow
         title="Farmer photo"
@@ -130,7 +151,7 @@ export function FarmerProofUploadScreen() {
         onRetake={() => void applyFarmerPhoto()}
       />
 
-      {displayError ? <Text style={styles.error}>{displayError}</Text> : null}
+      {displayError && !requiresLandProof ? <Text style={styles.error}>{displayError}</Text> : null}
     </OnboardingFormScreen>
   );
 }

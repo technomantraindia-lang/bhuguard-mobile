@@ -15,9 +15,59 @@ import { FormField, OnboardingFormScreen } from './OnboardingFormScreen';
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
 
 const SERVICE_OPTIONS = [
-  { value: 'regenerative_agriculture', label: 'Regenerative Agriculture' },
-  { value: 'agro_forestry', label: 'Agro Forestry' },
-  { value: 'biochar', label: 'Biochar' },
+  'Biochar Production',
+  'Biochar Mixing',
+  'Farm Mapping',
+  'Carbon Monitoring',
+  'Soil Testing',
+  'Advisory',
+  'GPS Verification',
+  'Carbon Registration',
+] as const;
+
+const PROJECT_OPTIONS = [
+  'Biochar',
+  'Agroforestry',
+  'Regenerative Agriculture',
+  'Carbon Credit',
+  'Soil Health',
+  'Water Conservation',
+] as const;
+
+const OWNERSHIP_OPTIONS = [
+  { value: 'owned', label: 'Owned' },
+  { value: 'leased', label: 'Leased' },
+  { value: 'shared', label: 'Shared' },
+  { value: 'government', label: 'Government' },
+  { value: 'community', label: 'Community' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+const SOIL_OPTIONS = [
+  { value: 'black_soil', label: 'Black Soil' },
+  { value: 'red_soil', label: 'Red Soil' },
+  { value: 'sandy_soil', label: 'Sandy Soil' },
+  { value: 'clay_soil', label: 'Clay Soil' },
+  { value: 'loamy_soil', label: 'Loamy Soil' },
+  { value: 'alluvial_soil', label: 'Alluvial Soil' },
+  { value: 'laterite_soil', label: 'Laterite Soil' },
+  { value: 'mountain_soil', label: 'Mountain Soil' },
+  { value: 'mixed_soil', label: 'Mixed Soil' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+const IRRIGATION_OPTIONS = [
+  { value: 'rainfed', label: 'Rainfed' },
+  { value: 'drip_irrigation', label: 'Drip Irrigation' },
+  { value: 'sprinkler', label: 'Sprinkler' },
+  { value: 'canal_irrigation', label: 'Canal Irrigation' },
+  { value: 'borewell', label: 'Borewell' },
+  { value: 'open_well', label: 'Open Well' },
+  { value: 'river', label: 'River' },
+  { value: 'tank', label: 'Tank' },
+  { value: 'flood_irrigation', label: 'Flood Irrigation' },
+  { value: 'lift_irrigation', label: 'Lift Irrigation' },
+  { value: 'other', label: 'Other' },
 ] as const;
 
 export function FarmerLandDetailsScreen() {
@@ -34,14 +84,14 @@ export function FarmerLandDetailsScreen() {
     }
 
     setError(null);
-    navigation.navigate('FarmerGpsCapture');
+    navigation.navigate('FarmerProofUpload');
   };
 
   return (
     <OnboardingFormScreen
-      stepCurrent={3}
+      stepCurrent={4}
       title="Land Registration"
-      subtitle="Step 3 of 6 — Farm and crop information for the registered farmer."
+      subtitle="Farm, crop, and boundary mapping details."
       onNext={next}
     >
       <FormField
@@ -71,11 +121,11 @@ export function FarmerLandDetailsScreen() {
           </Pressable>
         ))}
       </View>
-      <FormField
-        label="Ownership type"
+      <SelectField
+        label="Ownership *"
         value={draft.ownership_type}
-        onChangeText={(v) => updateDraft({ ownership_type: v })}
-        placeholder="Owned / Leased / Shared"
+        options={OWNERSHIP_OPTIONS}
+        onChange={(ownership_type) => updateDraft({ ownership_type })}
       />
       <FormField
         label="Crop type"
@@ -83,17 +133,17 @@ export function FarmerLandDetailsScreen() {
         onChangeText={(v) => updateDraft({ crop_type: v })}
         placeholder="Primary crop"
       />
-      <FormField
-        label="Irrigation type"
+      <SelectField
+        label="Irrigation *"
         value={draft.irrigation_type}
-        onChangeText={(v) => updateDraft({ irrigation_type: v })}
-        placeholder="Drip / Flood / Rain-fed"
+        options={IRRIGATION_OPTIONS}
+        onChange={(irrigation_type) => updateDraft({ irrigation_type })}
       />
-      <FormField
-        label="Soil type"
+      <SelectField
+        label="Soil Type *"
         value={draft.soil_type}
-        onChangeText={(v) => updateDraft({ soil_type: v })}
-        placeholder="Loam / Clay / Sandy"
+        options={SOIL_OPTIONS}
+        onChange={(soil_type) => updateDraft({ soil_type })}
       />
       <FormField
         label="Existing farming practice"
@@ -102,16 +152,32 @@ export function FarmerLandDetailsScreen() {
         placeholder="Current practices on the farm"
       />
       <View style={styles.chipGroup}>
-        <Text style={styles.chipLabel}>Project / service interest</Text>
+        <Text style={styles.chipLabel}>Project Interest *</Text>
+        <View style={styles.chipColumn}>
+          {PROJECT_OPTIONS.map((option) => (
+            <Pressable
+              key={option}
+              style={[styles.serviceChip, draft.project_interest.includes(option) && styles.unitChipActive]}
+              onPress={() => updateDraft({ project_interest: toggleValue(draft.project_interest, option) })}
+            >
+              <Text style={[styles.unitText, draft.project_interest.includes(option) && styles.unitTextActive]}>
+                {option}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+      <View style={styles.chipGroup}>
+        <Text style={styles.chipLabel}>Service Interest *</Text>
         <View style={styles.chipColumn}>
           {SERVICE_OPTIONS.map((option) => (
             <Pressable
-              key={option.value}
-              style={[styles.serviceChip, draft.service_interest === option.value && styles.unitChipActive]}
-              onPress={() => updateDraft({ service_interest: option.value })}
+              key={option}
+              style={[styles.serviceChip, draft.service_interests.includes(option) && styles.unitChipActive]}
+              onPress={() => updateDraft({ service_interests: toggleValue(draft.service_interests, option) })}
             >
-              <Text style={[styles.unitText, draft.service_interest === option.value && styles.unitTextActive]}>
-                {option.label}
+              <Text style={[styles.unitText, draft.service_interests.includes(option) && styles.unitTextActive]}>
+                {option}
               </Text>
             </Pressable>
           ))}
@@ -143,6 +209,57 @@ export function FarmerLandDetailsScreen() {
   );
 }
 
+function toggleValue(values: string[], value: string): string[] {
+  return values.includes(value)
+    ? values.filter((item) => item !== value)
+    : [...values, value];
+}
+
+function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: readonly { value: string; label: string }[];
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((option) => option.value === value);
+
+  return (
+    <View style={styles.selectGroup}>
+      <Text style={styles.chipLabel}>{label}</Text>
+      <Pressable style={styles.selectButton} onPress={() => setOpen((current) => !current)}>
+        <Text style={[styles.selectButtonText, !selected && styles.selectPlaceholder]}>
+          {selected?.label ?? 'Select option'}
+        </Text>
+        <Text style={styles.selectCaret}>{open ? '^' : 'v'}</Text>
+      </Pressable>
+      {open ? (
+        <View style={styles.optionList}>
+          {options.map((option) => (
+            <Pressable
+              key={option.value}
+              style={[styles.optionRow, option.value === value && styles.optionRowActive]}
+              onPress={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
+            >
+              <Text style={[styles.optionText, option.value === value && styles.optionTextActive]}>
+                {option.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   unitRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   unitLabel: { fontSize: 14, fontWeight: '600', color: colors.text, width: '100%' },
@@ -168,5 +285,33 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: colors.surface,
   },
+  selectGroup: { gap: 8 },
+  selectButton: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  selectButtonText: { color: colors.text, fontSize: 14, flex: 1 },
+  selectPlaceholder: { color: colors.textMuted },
+  selectCaret: { color: colors.textMuted, fontSize: 10 },
+  optionList: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+  },
+  optionRow: { paddingHorizontal: 14, paddingVertical: 10 },
+  optionRowActive: { backgroundColor: colors.ecoLight },
+  optionText: { color: colors.textMuted, fontSize: 14 },
+  optionTextActive: { color: colors.eco, fontWeight: '700' },
   error: { color: colors.error, fontSize: 14 },
 });

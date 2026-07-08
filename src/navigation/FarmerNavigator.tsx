@@ -14,6 +14,8 @@ import { FarmerBaselineAssessmentsScreen } from '../screens/farmer/FarmerBaselin
 import { FarmerCarbonCalculationDetailScreen } from '../screens/farmer/FarmerCarbonCalculationDetailScreen';
 import { FarmerCarbonCalculationsScreen } from '../screens/farmer/FarmerCarbonCalculationsScreen';
 import { FarmerAddFarmScreen } from '../screens/farmer/FarmerAddFarmScreen';
+import { FarmerFarmActivityScreen } from '../screens/farmer/FarmerFarmActivityScreen';
+import { FarmerFarmSelectionScreen } from '../screens/farmer/FarmerFarmSelectionScreen';
 import { FarmerEditFarmScreen } from '../screens/farmer/FarmerEditFarmScreen';
 import { FarmerFarmMapFullScreen } from '../screens/farmer/FarmerFarmMapFullScreen';
 import { FarmerSubmitActivityScreen } from '../screens/farmer/FarmerSubmitActivityScreen';
@@ -129,6 +131,8 @@ export function FarmerNavigator() {
         />
         <Stack.Screen name="FarmerFarmMapFullScreen" component={FarmerFarmMapFullScreen} />
         <Stack.Screen name="FarmerEditFarm" component={FarmerEditFarmScreen} />
+        <Stack.Screen name="FarmerFarmSelection" component={FarmerFarmSelectionScreen} />
+        <Stack.Screen name="FarmerFarmActivity" component={FarmerFarmActivityScreen} />
         <Stack.Screen name="FarmerAddFarm" component={FarmerAddFarmScreen} />
         <Stack.Screen name="FarmerSubmitActivity" component={FarmerSubmitActivityScreen} />
         <Stack.Screen

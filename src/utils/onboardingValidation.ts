@@ -9,6 +9,18 @@ export function validateBasicDetails(draft: OnboardingDraft): string | null {
     return 'Mobile number must be 10 digits and start with 6-9.';
   }
 
+  if (!/^[a-zA-Z0-9_]{4,30}$/.test(draft.username.trim())) {
+    return 'Username must be 4-30 characters using letters, numbers, or underscore only.';
+  }
+
+  if (draft.password.length < 8) {
+    return 'Password must be at least 8 characters.';
+  }
+
+  if (draft.confirm_password !== draft.password) {
+    return 'Confirm password must match password.';
+  }
+
   if (draft.alternate_mobile.trim() && !/^[6-9]\d{9}$/.test(draft.alternate_mobile.trim())) {
     return 'Alternate mobile must be 10 digits and start with 6-9.';
   }
@@ -89,6 +101,26 @@ export function validateLandDetails(draft: OnboardingDraft): string | null {
 
   if (!draft.land_area_unit) {
     return 'Area unit is required.';
+  }
+
+  if (!draft.ownership_type) {
+    return 'Ownership is required.';
+  }
+
+  if (!draft.soil_type) {
+    return 'Soil type is required.';
+  }
+
+  if (!draft.irrigation_type) {
+    return 'Irrigation type is required.';
+  }
+
+  if (draft.project_interest.length < 1) {
+    return 'Select at least one project interest.';
+  }
+
+  if (draft.service_interests.length < 1) {
+    return 'Select at least one service interest.';
   }
 
   return null;

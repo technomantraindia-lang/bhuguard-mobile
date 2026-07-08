@@ -73,10 +73,10 @@ export function OfficerSummaryCard({ dashboard }: { dashboard: FieldOfficerDashb
 
 export function OfficerStatsGrid({ dashboard }: { dashboard: FieldOfficerDashboardViewModel }) {
   const stats = [
-    { label: 'Assigned', value: String(dashboard.assignedVisitsCount), unit: 'Visits', color: officerTheme.primary },
-    { label: 'Pending', value: String(dashboard.pendingVisitsCount), unit: 'Visits', color: officerTheme.secondary },
+    { label: 'Visited Field', value: String(dashboard.completedVisitsCount), unit: 'Visits', color: officerTheme.primary },
+    { label: 'Pending Visited', value: String(dashboard.pendingVisitsCount), unit: 'Visits', color: officerTheme.secondary },
     { label: 'Checked In', value: String(dashboard.checkedInVisitsCount), unit: 'Visits', color: officerTheme.tertiary },
-    { label: 'Completed', value: String(dashboard.completedVisitsCount), unit: 'Visits', color: officerTheme.primary },
+    { label: 'Total Visits', value: String(dashboard.assignedVisitsCount), unit: 'Visits', color: officerTheme.primary },
   ];
 
   return (
@@ -96,7 +96,6 @@ export function OfficerStatsGrid({ dashboard }: { dashboard: FieldOfficerDashboa
 
 export function OfficerQuickActionCards({
   onStartVerification,
-  onUploadEvidence,
   onOnboardFarmer,
   onFeedstockVerification,
   onBiocharProduction,
@@ -106,7 +105,6 @@ export function OfficerQuickActionCards({
   Pick<
     OfficerDashboardSectionsProps,
     | 'onStartVerification'
-    | 'onUploadEvidence'
     | 'onOnboardFarmer'
     | 'onFeedstockVerification'
     | 'onBiocharProduction'
@@ -122,14 +120,6 @@ export function OfficerQuickActionCards({
     ctaLabel: string;
     onPress: () => void;
   }> = [
-    {
-      id: 'biochar-evidence-upload',
-      icon: 'photo_camera',
-      title: 'Upload Evidence',
-      description: 'Capture Biochar visit photos and supporting evidence',
-      ctaLabel: 'Upload Now',
-      onPress: onUploadEvidence,
-    },
     {
       id: 'start-verification',
       icon: 'assignment',
@@ -169,14 +159,6 @@ export function OfficerQuickActionCards({
       description: 'Move biochar stock between storage and farm',
       ctaLabel: 'Open Movement',
       onPress: onInventoryMovement,
-    },
-    {
-      id: 'field-evidence-upload',
-      icon: 'photo_camera',
-      title: 'Upload Evidence',
-      description: 'Capture field photos and geo-tags',
-      ctaLabel: 'Open Camera',
-      onPress: onUploadEvidence,
     },
   ];
 
@@ -236,7 +218,7 @@ export function OfficerTodaysVisits({
         {safeVisits.length === 0 ? (
           <View style={[styles.visitCard, officerCardShadow]}>
             <Text style={styles.emptyVisitTitle}>No visits scheduled today</Text>
-            <Text style={styles.emptyVisitText}>Assigned farmer visits will appear here.</Text>
+            <Text style={styles.emptyVisitText}>Visited field tasks will appear here.</Text>
           </View>
         ) : (
           safeVisits.slice(0, 4).map((visit, index) => (
@@ -378,7 +360,7 @@ export function OfficerMapCoverage({
         <View style={[styles.mapCard, officerCardShadow]}>
           <Text style={styles.emptyMapTitle}>No GPS-enabled visits available yet.</Text>
           <Text style={styles.emptyMapMessage}>
-            Assigned visits with farm or site coordinates will appear here.
+            Visited field coordinates will appear here.
           </Text>
         </View>
       )}

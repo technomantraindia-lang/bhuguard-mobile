@@ -44,6 +44,6 @@ export function finishSecurityFlow(
 
   navigation.reset({
     index: 0,
-    routes: [{ name: 'RoleSelection' }],
+    routes: [{ name: 'MobileLogin' }],
   });
 }

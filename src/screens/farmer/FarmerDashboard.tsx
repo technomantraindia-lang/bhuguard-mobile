@@ -27,17 +27,17 @@ export function FarmerDashboard() {
   const openProfile = () => navigateTab('Profile');
   const openNotifications = () => navigateStack('FarmerNotifications');
   const openFarms = () => navigateTab('Farms');
-  const openActivities = () => navigateTab('Activities');
-  const openAddBiochar = () => navigateStack('FarmerBiocharProduction', {});
+  const openAddFarmActivity = () => navigateStack('FarmerFarmSelection');
+  const openFarmActivities = () => navigateTab('Activities');
   const openAddressDetails = () => navigateStack('FarmerAddressDetails');
   const openChatSupport = () => navigateStack('ChatbotSupport', { supportRole: 'farmer', sourceModule: 'farmer_dashboard' });
   const openSupport = () => navigateStack('SupportThreads', { supportRole: 'farmer' });
   const openServices = () => navigateStack('FarmerServices');
-  const openBiocharUpdates = () => navigateStack('FarmerBiocharActivities');
+  const openBiocharUpdates = () => navigateTab('Activities');
   const openEvidence = () => navigateStack('FarmerEvidenceList');
   const openUploadEvidence = () => navigateStack('FarmerUploadEvidence');
   const openWallet = () => navigateStack('FarmerWallet');
-  const openActivityDetail = (activityId: number) => navigateStack('FarmerActivityDetail', { activityId });
+  const openActivityDetail = (activityId: number) => navigateStack('FarmerFarmActivity', { activityId });
 
   if (loading && !data) {
     return (
@@ -115,19 +115,19 @@ export function FarmerDashboard() {
           onProfile={openProfile}
           onSupport={openChatSupport}
           onViewFarms={openFarms}
-          onSubmitActivity={openAddBiochar}
+          onSubmitActivity={openAddFarmActivity}
         />
 
         <FarmerRecentActivitiesSection
           activities={dashboard.recentActivities}
           onActivityPress={openActivityDetail}
-          onViewAllPress={openActivities}
+          onViewAllPress={openFarmActivities}
         />
 
         <View style={[styles.bottomSpacer, { height: scrollBottomPadding }]} />
       </ScrollView>
 
-      <FarmerActivitiesFab onPress={openAddBiochar} />
+      <FarmerActivitiesFab onPress={openAddFarmActivity} label="Add Farm Activity" />
     </SafeAreaView>
   );
 }

@@ -1,16 +1,23 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import type { ApiRecord } from '../utils/apiHelpers';
 import { pickString } from '../utils/apiHelpers';
 import {
   type AreaUnit,
   type BoundaryPoint,
+  type MappingStatus,
   calculateBoundaryMetrics,
   boundaryPointsToLatLng,
   formatAreaByUnit,
   formatGpsAccuracy,
+  formatMappingStatus,
+  isEditedBoundaryOutsideTolerance,
 } from '../utils/boundaryGeometry';
 import type { BoundarySessionMode } from '../utils/boundaryFlowRoutes';
+import type { LatLng } from '../utils/farmSatelliteMap';
+
+const DRAFT_STORAGE_KEY = 'bhuguard.boundary.draft.v1';
 
 interface BoundaryCaptureState {
   sessionMode: BoundarySessionMode;
@@ -22,32 +29,57 @@ interface BoundaryCaptureState {
   declaredUnit: AreaUnit;
   unit: AreaUnit;
   points: BoundaryPoint[];
+  walkingPoints: BoundaryPoint[];
   captureMethod: 'gps' | 'camera';
-  paused: boolean;
+  mappingStatus: MappingStatus;
   satelliteMode: boolean;
   currentAccuracy: number | null;
   currentLatitude: number | null;
   currentLongitude: number | null;
+  currentAltitude: number | null;
+  mappingStartedAt: string | null;
+  mappingFinishedAt: string | null;
+  poorAccuracyWarning: boolean;
 }
 
 interface BoundaryCaptureContextValue extends BoundaryCaptureState {
   metrics: ReturnType<typeof calculateBoundaryMetrics>;
   areaLabel: string;
   gpsAccuracyLabel: string;
+  mappingStatusLabel: string;
+  isOutsideTolerance: boolean;
   setFarm: (farmId: number, farmName: string, farmCode: string) => void;
-  setSession: (session: Partial<Pick<BoundaryCaptureState, 'sessionMode' | 'farmId' | 'farmName' | 'farmCode' | 'farmerName' | 'declaredArea' | 'declaredUnit' | 'unit'>>) => void;
+  setSession: (
+    session: Partial<
+      Pick<
+        BoundaryCaptureState,
+        'sessionMode' | 'farmId' | 'farmName' | 'farmCode' | 'farmerName' | 'declaredArea' | 'declaredUnit' | 'unit'
+      >
+    >,
+  ) => void;
   setUnit: (unit: AreaUnit) => void;
   setCaptureMethod: (method: 'gps' | 'camera') => void;
-  setCurrentLocation: (latitude: number, longitude: number, accuracy: number) => void;
+  setCurrentLocation: (latitude: number, longitude: number, accuracy: number, altitude?: number | null) => void;
   setPoints: (points: BoundaryPoint[]) => void;
   addPoint: (point: Omit<BoundaryPoint, 'id' | 'pointNo'>) => void;
+  updatePointCoordinate: (id: string, coordinate: LatLng) => void;
+  insertPointAfter: (afterIndex: number, point: Omit<BoundaryPoint, 'id' | 'pointNo'>) => void;
   removePoint: (id: string) => void;
   undoLastPoint: () => void;
   resetBoundary: () => void;
-  togglePaused: () => void;
+  startWalkingMapping: () => void;
+  pauseMapping: () => void;
+  resumeMapping: () => void;
+  finishBoundaryMapping: () => void;
+  enterEditing: () => void;
+  setPoorAccuracyWarning: (value: boolean) => void;
   toggleSatelliteMode: () => void;
   loadExistingBoundary: (boundary: ApiRecord) => void;
   clearSession: () => void;
+  clearDraft: () => Promise<void>;
+  /** @deprecated use mappingStatus / pauseMapping */
+  paused: boolean;
+  togglePaused: () => void;
 }
 
 const defaultState: BoundaryCaptureState = {
@@ -60,12 +92,17 @@ const defaultState: BoundaryCaptureState = {
   declaredUnit: 'acre',
   unit: 'acre',
   points: [],
+  walkingPoints: [],
   captureMethod: 'gps',
-  paused: false,
+  mappingStatus: 'not_started',
   satelliteMode: true,
   currentAccuracy: null,
   currentLatitude: null,
   currentLongitude: null,
+  currentAltitude: null,
+  mappingStartedAt: null,
+  mappingFinishedAt: null,
+  poorAccuracyWarning: false,
 };
 
 const BoundaryCaptureContext = createContext<BoundaryCaptureContextValue | null>(null);
@@ -74,8 +111,44 @@ function createPointId(): string {
   return `pt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function renumber(points: BoundaryPoint[]): BoundaryPoint[] {
+  return points.map((point, index) => ({ ...point, pointNo: index + 1 }));
+}
+
+function parseStoredPoint(item: unknown, index: number): BoundaryPoint | null {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  const record = item as ApiRecord;
+  const latitude = Number(record.latitude ?? record.lat);
+  const longitude = Number(record.longitude ?? record.lng);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return null;
+  }
+
+  return {
+    id: String(record.id ?? createPointId()),
+    pointNo: Number(record.point_no ?? record.sequence ?? index + 1),
+    latitude,
+    longitude,
+    accuracy: Number(record.accuracy ?? 0),
+    altitude:
+      record.altitude === null || record.altitude === undefined ? null : Number(record.altitude),
+    timestamp:
+      pickString(record, 'timestamp') !== '-'
+        ? pickString(record, 'timestamp')
+        : new Date().toISOString(),
+    manual: Boolean(record.is_manual ?? record.manual),
+    label: pickString(record, 'label') !== '-' ? pickString(record, 'label') : undefined,
+    notes: pickString(record, 'notes') !== '-' ? pickString(record, 'notes') : undefined,
+  };
+}
+
 export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<BoundaryCaptureState>(defaultState);
+  const [draftHydrated, setDraftHydrated] = useState(false);
 
   const metrics = useMemo(
     () => calculateBoundaryMetrics(boundaryPointsToLatLng(state.points)),
@@ -84,14 +157,117 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
 
   const areaLabel = useMemo(() => formatAreaByUnit(metrics, state.unit), [metrics, state.unit]);
   const gpsAccuracyLabel = useMemo(() => formatGpsAccuracy(state.currentAccuracy), [state.currentAccuracy]);
+  const mappingStatusLabel = useMemo(
+    () => formatMappingStatus(state.mappingStatus),
+    [state.mappingStatus],
+  );
+  const isOutsideTolerance = useMemo(
+    () => isEditedBoundaryOutsideTolerance(state.walkingPoints, state.points),
+    [state.walkingPoints, state.points],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrateDraft() {
+      try {
+        const raw = await AsyncStorage.getItem(DRAFT_STORAGE_KEY);
+        if (!raw || cancelled) {
+          return;
+        }
+
+        const draft = JSON.parse(raw) as Partial<BoundaryCaptureState>;
+        if (!draft.points?.length) {
+          return;
+        }
+
+        setState((current) => ({
+          ...current,
+          farmId: draft.farmId ?? current.farmId,
+          farmName: draft.farmName ?? current.farmName,
+          farmCode: draft.farmCode ?? current.farmCode,
+          unit: draft.unit ?? current.unit,
+          points: Array.isArray(draft.points) ? draft.points : current.points,
+          walkingPoints: Array.isArray(draft.walkingPoints) ? draft.walkingPoints : current.walkingPoints,
+          mappingStatus: draft.mappingStatus ?? current.mappingStatus,
+          mappingStartedAt: draft.mappingStartedAt ?? current.mappingStartedAt,
+          mappingFinishedAt: draft.mappingFinishedAt ?? current.mappingFinishedAt,
+          satelliteMode: draft.satelliteMode ?? true,
+          sessionMode: draft.sessionMode ?? current.sessionMode,
+        }));
+      } catch {
+        // Ignore corrupt drafts.
+      } finally {
+        if (!cancelled) {
+          setDraftHydrated(true);
+        }
+      }
+    }
+
+    void hydrateDraft();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!draftHydrated) {
+      return;
+    }
+
+    if (state.points.length === 0 && state.mappingStatus === 'not_started') {
+      void AsyncStorage.removeItem(DRAFT_STORAGE_KEY);
+      return;
+    }
+
+    const payload = {
+      farmId: state.farmId,
+      farmName: state.farmName,
+      farmCode: state.farmCode,
+      unit: state.unit,
+      points: state.points,
+      walkingPoints: state.walkingPoints,
+      mappingStatus: state.mappingStatus,
+      mappingStartedAt: state.mappingStartedAt,
+      mappingFinishedAt: state.mappingFinishedAt,
+      satelliteMode: state.satelliteMode,
+      sessionMode: state.sessionMode,
+    };
+
+    void AsyncStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
+  }, [
+    draftHydrated,
+    state.farmId,
+    state.farmName,
+    state.farmCode,
+    state.unit,
+    state.points,
+    state.walkingPoints,
+    state.mappingStatus,
+    state.mappingStartedAt,
+    state.mappingFinishedAt,
+    state.satelliteMode,
+    state.sessionMode,
+  ]);
 
   const setFarm = useCallback((farmId: number, farmName: string, farmCode: string) => {
     setState((current) => ({ ...current, farmId, farmName, farmCode }));
   }, []);
 
-  const setSession = useCallback((session: Partial<Pick<BoundaryCaptureState, 'sessionMode' | 'farmId' | 'farmName' | 'farmCode' | 'farmerName' | 'declaredArea' | 'declaredUnit' | 'unit'>>) => {
-    setState((current) => ({ ...current, ...session }));
-  }, []);
+  const setSession = useCallback(
+    (
+      session: Partial<
+        Pick<
+          BoundaryCaptureState,
+          'sessionMode' | 'farmId' | 'farmName' | 'farmCode' | 'farmerName' | 'declaredArea' | 'declaredUnit' | 'unit'
+        >
+      >,
+    ) => {
+      setState((current) => ({ ...current, ...session }));
+    },
+    [],
+  );
 
   const setUnit = useCallback((unit: AreaUnit) => {
     setState((current) => ({ ...current, unit }));
@@ -101,14 +277,24 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
     setState((current) => ({ ...current, captureMethod }));
   }, []);
 
-  const setCurrentLocation = useCallback((latitude: number, longitude: number, accuracy: number) => {
-    setState((current) => ({ ...current, currentLatitude: latitude, currentLongitude: longitude, currentAccuracy: accuracy }));
-  }, []);
+  const setCurrentLocation = useCallback(
+    (latitude: number, longitude: number, accuracy: number, altitude: number | null = null) => {
+      setState((current) => ({
+        ...current,
+        currentLatitude: latitude,
+        currentLongitude: longitude,
+        currentAccuracy: accuracy,
+        currentAltitude: altitude,
+        poorAccuracyWarning: accuracy > 30 ? true : current.poorAccuracyWarning && accuracy > 30,
+      }));
+    },
+    [],
+  );
 
   const setPoints = useCallback((points: BoundaryPoint[]) => {
     setState((current) => ({
       ...current,
-      points: points.map((point, index) => ({ ...point, pointNo: index + 1 })),
+      points: renumber(points),
     }));
   }, []);
 
@@ -120,94 +306,175 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
         pointNo: current.points.length + 1,
       };
 
-      return { ...current, points: [...current.points, nextPoint] };
+      return { ...current, points: [...current.points, nextPoint], poorAccuracyWarning: false };
+    });
+  }, []);
+
+  const updatePointCoordinate = useCallback((id: string, coordinate: LatLng) => {
+    setState((current) => ({
+      ...current,
+      mappingStatus: current.mappingStatus === 'completed' ? 'editing' : current.mappingStatus,
+      points: current.points.map((point) =>
+        point.id === id
+          ? { ...point, latitude: coordinate.latitude, longitude: coordinate.longitude }
+          : point,
+      ),
+    }));
+  }, []);
+
+  const insertPointAfter = useCallback((afterIndex: number, point: Omit<BoundaryPoint, 'id' | 'pointNo'>) => {
+    setState((current) => {
+      const next = [...current.points];
+      next.splice(afterIndex + 1, 0, {
+        ...point,
+        id: createPointId(),
+        pointNo: afterIndex + 2,
+      });
+
+      return {
+        ...current,
+        mappingStatus: current.mappingStatus === 'completed' ? 'editing' : current.mappingStatus,
+        points: renumber(next),
+      };
     });
   }, []);
 
   const removePoint = useCallback((id: string) => {
     setState((current) => ({
       ...current,
-      points: current.points.filter((point) => point.id !== id).map((point, index) => ({ ...point, pointNo: index + 1 })),
+      points: renumber(current.points.filter((point) => point.id !== id)),
     }));
   }, []);
 
   const undoLastPoint = useCallback(() => {
     setState((current) => ({
       ...current,
-      points: current.points.slice(0, -1).map((point, index) => ({ ...point, pointNo: index + 1 })),
+      points: renumber(current.points.slice(0, -1)),
     }));
   }, []);
 
   const resetBoundary = useCallback(() => {
-    setState((current) => ({ ...current, points: [] }));
+    setState((current) => ({
+      ...current,
+      points: [],
+      walkingPoints: [],
+      mappingStatus: 'not_started',
+      mappingStartedAt: null,
+      mappingFinishedAt: null,
+      poorAccuracyWarning: false,
+    }));
   }, []);
 
-  const togglePaused = useCallback(() => {
-    setState((current) => ({ ...current, paused: !current.paused }));
+  const startWalkingMapping = useCallback(() => {
+    setState((current) => ({
+      ...current,
+      mappingStatus: 'recording',
+      mappingStartedAt: current.mappingStartedAt ?? new Date().toISOString(),
+      mappingFinishedAt: null,
+      walkingPoints: [],
+      points: current.mappingStatus === 'not_started' ? [] : current.points,
+    }));
+  }, []);
+
+  const pauseMapping = useCallback(() => {
+    setState((current) =>
+      current.mappingStatus === 'recording' ? { ...current, mappingStatus: 'paused' } : current,
+    );
+  }, []);
+
+  const resumeMapping = useCallback(() => {
+    setState((current) =>
+      current.mappingStatus === 'paused' ? { ...current, mappingStatus: 'recording' } : current,
+    );
+  }, []);
+
+  const finishBoundaryMapping = useCallback(() => {
+    setState((current) => ({
+      ...current,
+      walkingPoints: current.points.map((point) => ({ ...point })),
+      mappingStatus: 'editing',
+      mappingFinishedAt: new Date().toISOString(),
+    }));
+  }, []);
+
+  const enterEditing = useCallback(() => {
+    setState((current) => ({ ...current, mappingStatus: 'editing' }));
+  }, []);
+
+  const setPoorAccuracyWarning = useCallback((value: boolean) => {
+    setState((current) => ({ ...current, poorAccuracyWarning: value }));
   }, []);
 
   const toggleSatelliteMode = useCallback(() => {
     setState((current) => ({ ...current, satelliteMode: !current.satelliteMode }));
   }, []);
 
+  const togglePaused = useCallback(() => {
+    setState((current) => {
+      if (current.mappingStatus === 'recording') {
+        return { ...current, mappingStatus: 'paused' };
+      }
+
+      if (current.mappingStatus === 'paused') {
+        return { ...current, mappingStatus: 'recording' };
+      }
+
+      return current;
+    });
+  }, []);
+
   const loadExistingBoundary = useCallback((boundary: ApiRecord) => {
     const rawPoints = Array.isArray(boundary.boundary_points) ? boundary.boundary_points : [];
     const points = rawPoints
-      .map((item, index) => {
-        if (!item || typeof item !== 'object') {
-          return null;
-        }
-
-        const record = item as ApiRecord;
-        const point: BoundaryPoint = {
-          id: String(record.id ?? createPointId()),
-          pointNo: Number(record.point_no ?? index + 1),
-          latitude: Number(record.latitude),
-          longitude: Number(record.longitude),
-          accuracy: Number(record.accuracy ?? 0),
-          timestamp: pickString(record, 'timestamp') !== '-' ? pickString(record, 'timestamp') : new Date().toISOString(),
-          manual: Boolean(record.is_manual),
-        };
-
-        const label = pickString(record, 'label');
-        const notes = pickString(record, 'notes');
-
-        if (label !== '-') {
-          point.label = label;
-        }
-
-        if (notes !== '-') {
-          point.notes = notes;
-        }
-
-        const photoUrl = pickString(record, 'photo_url');
-        if (photoUrl !== '-') {
-          point.photoUrl = photoUrl;
-          point.hasPhoto = Boolean(record.has_photo ?? true);
-        }
-
-        return Number.isFinite(point.latitude) && Number.isFinite(point.longitude) ? point : null;
-      })
+      .map((item, index) => parseStoredPoint(item, index))
       .filter((point): point is BoundaryPoint => point !== null);
+
+    const rawWalking = Array.isArray(boundary.walking_boundary_points)
+      ? boundary.walking_boundary_points
+      : rawPoints;
+    const walkingPoints = rawWalking
+      .map((item, index) => parseStoredPoint(item, index))
+      .filter((point): point is BoundaryPoint => point !== null);
+
+    const rawEdited = Array.isArray(boundary.edited_boundary_points)
+      ? boundary.edited_boundary_points
+      : null;
+    const editedPoints = rawEdited
+      ? rawEdited
+          .map((item, index) => parseStoredPoint(item, index))
+          .filter((point): point is BoundaryPoint => point !== null)
+      : points;
 
     setState((current) => ({
       ...current,
       unit: (pickString(boundary, 'unit') as AreaUnit) || current.unit,
       captureMethod: (pickString(boundary, 'capture_method') as 'gps' | 'camera') || current.captureMethod,
-      points,
+      points: renumber(editedPoints),
+      walkingPoints: renumber(walkingPoints.length ? walkingPoints : editedPoints),
+      mappingStatus: 'completed',
+      mappingStartedAt: pickString(boundary, 'mapping_started_at') !== '-' ? pickString(boundary, 'mapping_started_at') : null,
+      mappingFinishedAt: pickString(boundary, 'mapping_finished_at') !== '-' ? pickString(boundary, 'mapping_finished_at') : null,
     }));
+  }, []);
+
+  const clearDraft = useCallback(async () => {
+    await AsyncStorage.removeItem(DRAFT_STORAGE_KEY);
   }, []);
 
   const clearSession = useCallback(() => {
     setState(defaultState);
+    void AsyncStorage.removeItem(DRAFT_STORAGE_KEY);
   }, []);
 
   const value = useMemo(
     () => ({
       ...state,
+      paused: state.mappingStatus === 'paused',
       metrics,
       areaLabel,
       gpsAccuracyLabel,
+      mappingStatusLabel,
+      isOutsideTolerance,
       setFarm,
       setSession,
       setUnit,
@@ -215,19 +482,30 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
       setCurrentLocation,
       setPoints,
       addPoint,
+      updatePointCoordinate,
+      insertPointAfter,
       removePoint,
       undoLastPoint,
       resetBoundary,
-      togglePaused,
+      startWalkingMapping,
+      pauseMapping,
+      resumeMapping,
+      finishBoundaryMapping,
+      enterEditing,
+      setPoorAccuracyWarning,
       toggleSatelliteMode,
+      togglePaused,
       loadExistingBoundary,
       clearSession,
+      clearDraft,
     }),
     [
       state,
       metrics,
       areaLabel,
       gpsAccuracyLabel,
+      mappingStatusLabel,
+      isOutsideTolerance,
       setFarm,
       setSession,
       setUnit,
@@ -235,13 +513,22 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
       setCurrentLocation,
       setPoints,
       addPoint,
+      updatePointCoordinate,
+      insertPointAfter,
       removePoint,
       undoLastPoint,
       resetBoundary,
-      togglePaused,
+      startWalkingMapping,
+      pauseMapping,
+      resumeMapping,
+      finishBoundaryMapping,
+      enterEditing,
+      setPoorAccuracyWarning,
       toggleSatelliteMode,
+      togglePaused,
       loadExistingBoundary,
       clearSession,
+      clearDraft,
     ],
   );
 

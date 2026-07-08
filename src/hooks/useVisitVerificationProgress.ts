@@ -17,7 +17,7 @@ interface UseVisitVerificationProgressResult {
 }
 
 const EMPTY_PROGRESS: VisitVerificationProgress = {
-  currentStep: 'accept',
+  currentStep: 'start_visit',
   completedSteps: [],
 };
 

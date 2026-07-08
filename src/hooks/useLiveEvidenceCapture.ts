@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 
 import {
   captureLivePhotoEvidence,
+  pickStampedPhotoEvidence,
   type LiveCapturedEvidence,
 } from '../utils/liveEvidenceCapture';
 
@@ -49,6 +50,31 @@ export function useLiveEvidenceCapture(options?: UseLiveEvidenceCaptureOptions) 
     setError(null);
   }, []);
 
+  const pickGalleryEvidence = useCallback(async (): Promise<LiveCapturedEvidence | null> => {
+    setCapturing(true);
+    setError(null);
+
+    try {
+      const result = await pickStampedPhotoEvidence({
+        defaultName: options?.defaultName,
+        allowsEditing: options?.allowsEditing,
+      });
+
+      if (result.ok) {
+        setEvidence(result.evidence);
+        return result.evidence;
+      }
+
+      if (!result.cancelled && result.error) {
+        setError(result.error);
+      }
+
+      return null;
+    } finally {
+      setCapturing(false);
+    }
+  }, [options?.allowsEditing, options?.defaultName]);
+
   return {
     evidence,
     capturing,
@@ -56,6 +82,7 @@ export function useLiveEvidenceCapture(options?: UseLiveEvidenceCaptureOptions) 
     setError,
     captureEvidence,
     retakeEvidence,
+    pickGalleryEvidence,
     clearEvidence,
     gpsCaptured: evidence?.latitude != null && evidence?.longitude != null,
   };

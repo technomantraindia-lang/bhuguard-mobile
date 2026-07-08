@@ -53,7 +53,7 @@ export function FarmerQuickAccessSection({
       <Text style={styles.sectionTitle}>Quick Access</Text>
 
       <QuickAccessRow icon="eco" label="Services" buttonLabel="View Services" onPress={onServices} />
-      <QuickAccessRow icon="event_note" label="Biochar Updates" buttonLabel="View Updates" onPress={onBiocharUpdates} />
+      <QuickAccessRow icon="event_note" label="Farm Updates" buttonLabel="View Activity" onPress={onBiocharUpdates} />
       <QuickAccessRow icon="photo_camera" label="Evidence Upload" buttonLabel="Upload" onPress={onEvidenceUpload} />
       <QuickAccessRow icon="payments" label="Wallet" buttonLabel="Open Wallet" onPress={onWallet} />
       <QuickAccessRow icon="person" label="Profile" buttonLabel="Open Profile" onPress={onProfile} />
@@ -70,12 +70,12 @@ export function FarmerQuickAccessSection({
               <BhuguardMaterialIcon name="upload" size={20} color={dashboardTheme.onPrimary} />
             </View>
             <View>
-              <Text style={styles.highlightTitle}>Add Biochar Activity</Text>
-              <Text style={styles.highlightSubtitle}>Open the biochar production form</Text>
+              <Text style={styles.highlightTitle}>Add Farm Activity</Text>
+              <Text style={styles.highlightSubtitle}>Upload your farm activity photo every 20 days</Text>
             </View>
           </View>
           <View style={styles.submitButton} pointerEvents="none">
-            <Text style={styles.submitButtonText}>Add Biochar</Text>
+            <Text style={styles.submitButtonText}>Add Farm Activity</Text>
           </View>
         </DashboardPressable>
       ) : null}

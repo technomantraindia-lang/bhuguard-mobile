@@ -3,9 +3,11 @@ import * as Location from 'expo-location';
 import { Platform } from 'react-native';
 
 import { applyLivePhotoWatermark } from '../services/livePhotoWatermarkService';
-import { resolveCaptureLocation } from './livePhotoLocation';
+import { resolveValidatedCaptureLocation } from './livePhotoLocation';
 import { buildLivePhotoWatermarkMeta, type LivePhotoWatermarkMeta } from './livePhotoWatermarkFormat';
-import { getCurrentLocationDetailed, MAX_ALLOWED_ACCURACY_METERS } from './locationUtils';
+import { BIOCHAR_POOR_ACCURACY_MESSAGE } from './biocharGpsCapture';
+import { classifyArtisanGpsAccuracy } from './artisanGpsAccuracy';
+import { getCurrentLocationDetailed } from './locationUtils';
 
 export interface LiveCapturedEvidence {
   uri: string;
@@ -17,6 +19,10 @@ export interface LiveCapturedEvidence {
   longitude: number | null;
   accuracy: number | null;
   capturedAt: string;
+  village: string;
+  taluka: string;
+  district: string;
+  state: string;
   watermark: LivePhotoWatermarkMeta;
 }
 
@@ -57,11 +63,11 @@ export async function captureLivePhotoEvidence(options?: {
     };
   }
 
-  if (accuracy == null || accuracy > MAX_ALLOWED_ACCURACY_METERS) {
+  if (accuracy == null || classifyArtisanGpsAccuracy(accuracy) === 'poor') {
     return {
       ok: false,
       cancelled: false,
-      error: `GPS accuracy must be ${MAX_ALLOWED_ACCURACY_METERS}m or better before capturing evidence.`,
+      error: BIOCHAR_POOR_ACCURACY_MESSAGE,
     };
   }
 
@@ -79,18 +85,18 @@ export async function captureLivePhotoEvidence(options?: {
   const capturedAt = new Date().toISOString();
   const location =
     latitude != null && longitude != null
-      ? await resolveCaptureLocation(latitude, longitude)
-      : { village: '—', taluka: '—', district: '—', state: 'Gujarat' };
+      ? await resolveValidatedCaptureLocation(latitude, longitude)
+      : { village: '', taluka: '', district: '', state: 'Gujarat', resolved: false };
 
   const watermark = buildLivePhotoWatermarkMeta({
     capturedAt,
     latitude,
     longitude,
     accuracy,
-    village: location.village,
-    taluka: location.taluka,
-    district: location.district,
-    state: location.state,
+    village: location.village || '-',
+    taluka: location.taluka || '-',
+    district: location.district || '-',
+    state: location.state || 'Gujarat',
   });
 
   const rawUri = asset.uri;
@@ -139,6 +145,10 @@ export async function captureLivePhotoEvidence(options?: {
       longitude,
       accuracy,
       capturedAt,
+      village: location.village || '',
+      taluka: location.taluka || '',
+      district: location.district || '',
+      state: location.state || 'Gujarat',
       watermark,
     },
   };
@@ -177,11 +187,11 @@ export async function pickStampedPhotoEvidence(options?: {
     };
   }
 
-  if (accuracy == null || accuracy > MAX_ALLOWED_ACCURACY_METERS) {
+  if (accuracy == null || classifyArtisanGpsAccuracy(accuracy) === 'poor') {
     return {
       ok: false,
       cancelled: false,
-      error: `GPS accuracy must be ${MAX_ALLOWED_ACCURACY_METERS}m or better before uploading evidence.`,
+      error: BIOCHAR_POOR_ACCURACY_MESSAGE,
     };
   }
 
@@ -199,18 +209,18 @@ export async function pickStampedPhotoEvidence(options?: {
   const capturedAt = new Date().toISOString();
   const location =
     latitude != null && longitude != null
-      ? await resolveCaptureLocation(latitude, longitude)
-      : { village: 'Not Available', taluka: 'Not Available', district: 'Not Available', state: 'Gujarat' };
+      ? await resolveValidatedCaptureLocation(latitude, longitude)
+      : { village: '', taluka: '', district: '', state: 'Gujarat', resolved: false };
 
   const watermark = buildLivePhotoWatermarkMeta({
     capturedAt,
     latitude,
     longitude,
     accuracy,
-    village: location.village,
-    taluka: location.taluka,
-    district: location.district,
-    state: location.state,
+    village: location.village || '-',
+    taluka: location.taluka || '-',
+    district: location.district || '-',
+    state: location.state || 'Gujarat',
   });
 
   try {
@@ -248,6 +258,10 @@ export async function pickStampedPhotoEvidence(options?: {
         longitude,
         accuracy,
         capturedAt,
+        village: location.village || '',
+        taluka: location.taluka || '',
+        district: location.district || '',
+        state: location.state || 'Gujarat',
         watermark,
       },
     };
@@ -302,7 +316,10 @@ export function buildFormDataFilePart(
 
 export function appendClientStampMetadata(
   formData: FormData,
-  evidence: Pick<LiveCapturedEvidence, 'capturedAt' | 'latitude' | 'longitude' | 'accuracy'>,
+  evidence: Pick<
+    LiveCapturedEvidence,
+    'capturedAt' | 'latitude' | 'longitude' | 'accuracy' | 'village' | 'taluka' | 'district' | 'state'
+  >,
 ): void {
   formData.append('client_pre_stamped', '1');
   formData.append('captured_at', evidence.capturedAt);
@@ -320,6 +337,26 @@ export function appendClientStampMetadata(
   if (evidence.accuracy !== null) {
     formData.append('gps_accuracy', String(evidence.accuracy));
     formData.append('accuracy', String(evidence.accuracy));
+  }
+
+  if (evidence.village.trim()) {
+    formData.append('village_name', evidence.village.trim());
+    formData.append('village', evidence.village.trim());
+  }
+
+  if (evidence.taluka.trim()) {
+    formData.append('taluka_name', evidence.taluka.trim());
+    formData.append('taluka', evidence.taluka.trim());
+  }
+
+  if (evidence.district.trim()) {
+    formData.append('district_name', evidence.district.trim());
+    formData.append('district', evidence.district.trim());
+  }
+
+  if (evidence.state.trim()) {
+    formData.append('state_name', evidence.state.trim());
+    formData.append('state', evidence.state.trim());
   }
 }
 
