@@ -1,0 +1,728 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+{
+  extraDependencies: [],
+  coreFeatures: [],
+  modules: [
+    {
+      packageName: [32m'@expo/dom-webview'[39m,
+      projects: [
+        {
+          name: [32m'expo-dom-webview'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo\\node_modules\\@expo\\dom-webview\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.webview.DomWebViewModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'expo.modules.webview'[39m,
+            artifactId: [32m'expo.modules.webview'[39m,
+            version: [32m'56.0.6'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.6'[39m
+    },
+    {
+      packageName: [32m'@expo/log-box'[39m,
+      projects: [
+        {
+          name: [32m'expo-log-box'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo\\node_modules\\@expo\\log-box\\android'[39m,
+          modules: [],
+          services: [],
+          packages: [ [32m'expo.modules.logbox.ExpoLogBoxPackage'[39m ]
+        }
+      ],
+      packageVersion: [32m'56.0.14'[39m
+    },
+    {
+      packageName: [32m'expo'[39m,
+      projects: [
+        {
+          name: [32m'expo'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.fetch.ExpoFetchModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [ [32m'expo.modules.ExpoModulesPackage'[39m ]
+        }
+      ],
+      packageVersion: [32m'56.0.17'[39m
+    },
+    {
+      packageName: [32m'expo-asset'[39m,
+      projects: [
+        {
+          name: [32m'expo-asset'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo\\node_modules\\expo-asset\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.asset.AssetModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'expo.modules.asset'[39m,
+            artifactId: [32m'expo.modules.asset'[39m,
+            version: [32m'56.0.21'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.21'[39m
+    },
+    {
+      packageName: [32m'expo-blur'[39m,
+      projects: [
+        {
+          name: [32m'expo-blur'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-blur\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.blur.BlurModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.blur'[39m,
+            version: [32m'56.0.4'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.4'[39m
+    },
+    {
+      packageName: [32m'expo-camera'[39m,
+      projects: [
+        {
+          name: [32m'expo-camera'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-camera\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.camera.CameraViewModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.camera'[39m,
+            version: [32m'56.0.8'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.8'[39m
+    },
+    {
+      packageName: [32m'expo-constants'[39m,
+      projects: [
+        {
+          name: [32m'expo-constants'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-constants\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.constants.ConstantsModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [ [32m'expo.modules.constants.ConstantsService'[39m ],
+          packages: []
+        }
+      ],
+      packageVersion: [32m'56.0.22'[39m
+    },
+    {
+      packageName: [32m'expo-crypto'[39m,
+      projects: [
+        {
+          name: [32m'expo-crypto'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-crypto\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.crypto.CryptoModule'[39m,
+              name: [1mnull[22m
+            },
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.crypto.aes.AesCryptoModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.crypto'[39m,
+            version: [32m'56.0.4'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.4'[39m
+    },
+    {
+      packageName: [32m'expo-dev-client'[39m,
+      projects: [
+        {
+          name: [32m'expo-dev-client'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-dev-client\\android'[39m,
+          modules: [],
+          services: [],
+          packages: []
+        }
+      ],
+      packageVersion: [32m'56.0.24'[39m
+    },
+    {
+      packageName: [32m'expo-dev-launcher'[39m,
+      projects: [
+        {
+          name: [32m'expo-dev-launcher'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-dev-launcher\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.devlauncher.modules.ExpoDevLauncherModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [ [32m'expo.modules.devlauncher.DevLauncherPackage'[39m ]
+        }
+      ],
+      plugins: [
+        {
+          id: [32m'expo-dev-launcher-gradle-plugin'[39m,
+          group: [32m'expo.modules'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-dev-launcher\\expo-dev-launcher-gradle-plugin'[39m,
+          applyToRootProject: [33mtrue[39m
+        }
+      ],
+      packageVersion: [32m'56.0.25'[39m
+    },
+    {
+      packageName: [32m'expo-dev-menu'[39m,
+      projects: [
+        {
+          name: [32m'expo-dev-menu'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-dev-menu\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.devmenu.modules.DevMenuModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [ [32m'expo.modules.devmenu.DevMenuPackage'[39m ]
+        }
+      ],
+      packageVersion: [32m'56.0.21'[39m
+    },
+    {
+      packageName: [32m'expo-dev-menu-interface'[39m,
+      projects: [
+        {
+          name: [32m'expo-dev-menu-interface'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-dev-menu-interface\\android'[39m,
+          modules: [],
+          services: [],
+          packages: []
+        }
+      ],
+      packageVersion: [32m'56.0.1'[39m
+    },
+    {
+      packageName: [32m'expo-document-picker'[39m,
+      projects: [
+        {
+          name: [32m'expo-document-picker'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-document-picker\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.documentpicker.DocumentPickerModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.documentpicker'[39m,
+            version: [32m'56.0.4'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.4'[39m
+    },
+    {
+      packageName: [32m'expo-file-system'[39m,
+      projects: [
+        {
+          name: [32m'expo-file-system'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-file-system\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.filesystem.FileSystemModule'[39m,
+              name: [1mnull[22m
+            },
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.filesystem.legacy.FileSystemLegacyModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.filesystem'[39m,
+            version: [32m'56.0.8'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.8'[39m
+    },
+    {
+      packageName: [32m'expo-font'[39m,
+      projects: [
+        {
+          name: [32m'expo-font'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-font\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.font.FontLoaderModule'[39m,
+              name: [1mnull[22m
+            },
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.font.FontUtilsModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.font'[39m,
+            version: [32m'56.0.7'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.7'[39m
+    },
+    {
+      packageName: [32m'expo-image-loader'[39m,
+      projects: [
+        {
+          name: [32m'expo-image-loader'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-image-loader\\android'[39m,
+          modules: [],
+          services: [ [32m'expo.modules.imageloader.ImageLoaderService'[39m ],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.imageloader'[39m,
+            version: [32m'56.0.3'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.3'[39m
+    },
+    {
+      packageName: [32m'expo-image-manipulator'[39m,
+      projects: [
+        {
+          name: [32m'expo-image-manipulator'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-image-manipulator\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.imagemanipulator.ImageManipulatorModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.imagemanipulator'[39m,
+            version: [32m'56.0.23'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.23'[39m
+    },
+    {
+      packageName: [32m'expo-image-picker'[39m,
+      projects: [
+        {
+          name: [32m'expo-image-picker'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-image-picker\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.imagepicker.ImagePickerModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.imagepicker'[39m,
+            version: [32m'56.0.22'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.22'[39m
+    },
+    {
+      packageName: [32m'expo-json-utils'[39m,
+      projects: [
+        {
+          name: [32m'expo-json-utils'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-json-utils\\android'[39m,
+          modules: [],
+          services: [],
+          packages: []
+        }
+      ],
+      packageVersion: [32m'56.0.0'[39m
+    },
+    {
+      packageName: [32m'expo-keep-awake'[39m,
+      projects: [
+        {
+          name: [32m'expo-keep-awake'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo\\node_modules\\expo-keep-awake\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.keepawake.KeepAwakeModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.keepawake'[39m,
+            version: [32m'56.0.3'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.3'[39m
+    },
+    {
+      packageName: [32m'expo-linear-gradient'[39m,
+      projects: [
+        {
+          name: [32m'expo-linear-gradient'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-linear-gradient\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.lineargradient.LinearGradientModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.lineargradient'[39m,
+            version: [32m'56.0.4'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.4'[39m
+    },
+    {
+      packageName: [32m'expo-local-authentication'[39m,
+      projects: [
+        {
+          name: [32m'expo-local-authentication'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-local-authentication\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.localauthentication.LocalAuthenticationModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.localauthentication'[39m,
+            version: [32m'56.0.5'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.5'[39m
+    },
+    {
+      packageName: [32m'expo-location'[39m,
+      projects: [
+        {
+          name: [32m'expo-location'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-location\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.location.LocationModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.location'[39m,
+            version: [32m'56.0.22'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.22'[39m
+    },
+    {
+      packageName: [32m'expo-manifests'[39m,
+      projects: [
+        {
+          name: [32m'expo-manifests'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-manifests\\android'[39m,
+          modules: [],
+          services: [],
+          packages: []
+        }
+      ],
+      packageVersion: [32m'56.0.4'[39m
+    },
+    {
+      packageName: [32m'expo-modules-core'[39m,
+      projects: [
+        {
+          name: [32m'expo-modules-core'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-modules-core\\android'[39m,
+          modules: [],
+          services: [],
+          packages: [
+            [32m'expo.modules.adapters.react.ReactAdapterPackage'[39m,
+            [32m'expo.modules.core.BasePackage'[39m,
+            [32m'expo.modules.kotlin.edgeToEdge.EdgeToEdgePackage'[39m
+          ]
+        }
+      ],
+      plugins: [
+        {
+          id: [32m'expo-module-gradle-plugin'[39m,
+          group: [32m'expo.modules'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-modules-core\\expo-module-gradle-plugin'[39m,
+          applyToRootProject: [33mfalse[39m
+        }
+      ],
+      packageVersion: [32m'56.0.22'[39m
+    },
+    {
+      packageName: [32m'expo-print'[39m,
+      projects: [
+        {
+          name: [32m'expo-print'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-print\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.print.PrintModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.print'[39m,
+            version: [32m'56.0.4'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.4'[39m
+    },
+    {
+      packageName: [32m'expo-secure-store'[39m,
+      projects: [
+        {
+          name: [32m'expo-secure-store'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-secure-store\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.securestore.SecureStoreModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.securestore'[39m,
+            version: [32m'56.0.4'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.4'[39m
+    },
+    {
+      packageName: [32m'expo-sharing'[39m,
+      projects: [
+        {
+          name: [32m'expo-sharing'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-sharing\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.sharing.SharingModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [ [32m'expo.modules.sharing.SharingPackage'[39m ],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.sharing'[39m,
+            version: [32m'56.0.23'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.23'[39m
+    },
+    {
+      packageName: [32m'expo-splash-screen'[39m,
+      projects: [
+        {
+          name: [32m'expo-splash-screen'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-splash-screen\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.splashscreen.SplashScreenModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.splashscreen'[39m,
+            version: [32m'56.0.14'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.14'[39m
+    },
+    {
+      packageName: [32m'expo-sqlite'[39m,
+      projects: [
+        {
+          name: [32m'expo-sqlite'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-sqlite\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.sqlite.SQLiteModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [],
+          shouldUsePublicationScriptPath: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-sqlite\\android\\shouldUsePublication.groovy'[39m,
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.sqlite'[39m,
+            version: [32m'56.0.5'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.5'[39m
+    },
+    {
+      packageName: [32m'expo-status-bar'[39m,
+      projects: [
+        {
+          name: [32m'expo-status-bar'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-status-bar\\android'[39m,
+          modules: [],
+          services: [],
+          packages: [ [32m'expo.modules.statusbar.StatusBarPackage'[39m ],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.statusbar'[39m,
+            version: [32m'56.0.4'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.4'[39m
+    },
+    {
+      packageName: [32m'expo-system-ui'[39m,
+      projects: [
+        {
+          name: [32m'expo-system-ui'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-system-ui\\android'[39m,
+          modules: [
+            ExpoAndroidModuleConfig {
+              classifier: [32m'expo.modules.systemui.SystemUIModule'[39m,
+              name: [1mnull[22m
+            }
+          ],
+          services: [],
+          packages: [ [32m'expo.modules.systemui.SystemUIPackage'[39m ],
+          publication: {
+            groupId: [32m'host.exp.exponent'[39m,
+            artifactId: [32m'expo.modules.systemui'[39m,
+            version: [32m'56.0.5'[39m,
+            repository: [32m'local-maven-repo'[39m
+          }
+        }
+      ],
+      packageVersion: [32m'56.0.5'[39m
+    },
+    {
+      packageName: [32m'expo-updates-interface'[39m,
+      projects: [
+        {
+          name: [32m'expo-updates-interface'[39m,
+          sourceDir: [32m'C:\\Users\\Admin\\Desktop\\bhuguard-mobile\\node_modules\\expo-updates-interface\\android'[39m,
+          modules: [],
+          services: [],
+          packages: []
+        }
+      ],
+      packageVersion: [32m'56.0.2'[39m
+    }
+  ]
+}
