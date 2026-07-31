@@ -214,7 +214,7 @@ export function useVisitGpsCheckIn(
         }
       }
 
-      const result = await captureHighAccuracyGps();
+      const result = await captureHighAccuracyGps({ timeoutMs: 25000, maxAttempts: 4, targetAccuracyM: 25 });
       setCapture(result);
 
       if (__DEV__) {
@@ -338,22 +338,42 @@ export function useVisitGpsCheckIn(
     [assignmentId, capture, context, gpsServiceEnabled, permissionStatus, verification],
   );
 
-  return {
-    loading,
-    capturing,
-    submitting,
-    context,
-    capture,
-    verification,
-    permissionStatus,
-    gpsServiceEnabled,
-    error,
-    offlineSaved,
-    reload,
-    refreshDeviceStatus,
-    requestPermission,
-    captureGps,
-    submitCheckIn,
-    canVerifyCheckIn,
-  };
+  return useMemo(
+    () => ({
+      loading,
+      capturing,
+      submitting,
+      context,
+      capture,
+      verification,
+      permissionStatus,
+      gpsServiceEnabled,
+      error,
+      offlineSaved,
+      reload,
+      refreshDeviceStatus,
+      requestPermission,
+      captureGps,
+      submitCheckIn,
+      canVerifyCheckIn,
+    }),
+    [
+      loading,
+      capturing,
+      submitting,
+      context,
+      capture,
+      verification,
+      permissionStatus,
+      gpsServiceEnabled,
+      error,
+      offlineSaved,
+      reload,
+      refreshDeviceStatus,
+      requestPermission,
+      captureGps,
+      submitCheckIn,
+      canVerifyCheckIn,
+    ],
+  );
 }

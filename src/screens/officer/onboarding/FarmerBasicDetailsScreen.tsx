@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Svg, { Path } from 'react-native-svg';
 
-import { OnboardingAddressFields } from '../../../components/onboarding/OnboardingAddressFields';
 import { OnboardingMobileField, OnboardingTextField } from '../../../components/onboarding/OnboardingFormFields';
 import { OnboardingLanguageChips, OnboardingPhotoUpload } from '../../../components/onboarding/OnboardingPhotoUpload';
 import { OnboardingSectionCard, OnboardingStepShell } from '../../../components/onboarding/OnboardingStepShell';
@@ -11,7 +10,7 @@ import { ONBOARDING_NEXT_LABELS } from '../../../constants/onboardingSteps';
 import { useOnboarding } from '../../../context/OnboardingContext';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
-import { validateFarmerProfileStep1 } from '../../../utils/onboardingValidation';
+import { validateBasicDetails } from '../../../utils/onboardingValidation';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
 
@@ -34,7 +33,7 @@ export function FarmerBasicDetailsScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const next = () => {
-    const validationError = validateFarmerProfileStep1(draft);
+    const validationError = validateBasicDetails(draft);
 
     if (validationError) {
       setError(validationError);
@@ -49,7 +48,7 @@ export function FarmerBasicDetailsScreen() {
     <OnboardingStepShell
       stepCurrent={1}
       title="Basic Details"
-      subtitle="Farmer profile and first-time login credentials."
+      subtitle="Farmer profile and secure MPIN creation."
       onNext={next}
       nextLabel={ONBOARDING_NEXT_LABELS[1]}
       footerError={error}
@@ -61,65 +60,48 @@ export function FarmerBasicDetailsScreen() {
         />
 
         <OnboardingTextField
-          label="Farmer Full Name"
+          label="Name as per Government ID"
           value={draft.farmer_name}
           onChangeText={(value) => updateDraft({ farmer_name: value })}
-          placeholder="Enter full name as per Aadhaar"
+          placeholder="Enter name exactly as per Government ID"
           leftIcon={<PersonIcon />}
         />
 
         <OnboardingMobileField
           label="Mobile Number"
           value={draft.mobile}
-          onChangeText={(value) => updateDraft({ mobile: value })}
+          onChangeText={(value) => updateDraft({
+            mobile: value,
+            agreement_otp_verified: false,
+            agreement_verification_token: '',
+            agreement_verified_at: '',
+            agreement_verified_mobile: '',
+          })}
         />
 
         <OnboardingTextField
-          label="Username"
-          value={draft.username}
-          onChangeText={(value) => updateDraft({ username: value.replace(/\s/g, '') })}
-          placeholder="letters_numbers_123"
-          maxLength={30}
-          autoCapitalize="none"
-        />
-
-        <OnboardingTextField
-          label="Password"
-          value={draft.password}
-          onChangeText={(value) => updateDraft({ password: value })}
-          placeholder="Minimum 8 characters"
+          label="Create MPIN"
+          value={draft.mpin}
+          onChangeText={(value) => updateDraft({ mpin: value.replace(/\D/g, '').slice(0, 6) })}
+          placeholder="6-digit MPIN"
+          keyboardType="numeric"
           secureTextEntry
-          autoCapitalize="none"
+          maxLength={6}
         />
 
         <OnboardingTextField
-          label="Confirm Password"
-          value={draft.confirm_password}
-          onChangeText={(value) => updateDraft({ confirm_password: value })}
-          placeholder="Re-enter password"
+          label="Confirm MPIN"
+          value={draft.confirm_mpin}
+          onChangeText={(value) => updateDraft({ confirm_mpin: value.replace(/\D/g, '').slice(0, 6) })}
+          placeholder="Re-enter 6-digit MPIN"
+          keyboardType="numeric"
           secureTextEntry
-          autoCapitalize="none"
+          maxLength={6}
         />
 
         <OnboardingLanguageChips
           value={draft.preferred_language}
           onChange={(language) => updateDraft({ preferred_language: language })}
-        />
-      </OnboardingSectionCard>
-
-      <OnboardingSectionCard title="Location Data">
-        <OnboardingAddressFields
-          value={{
-            state: draft.state,
-            district_id: draft.district_id,
-            district_name: draft.district_name,
-            taluka_id: draft.taluka_id,
-            taluka_name: draft.taluka_name,
-            village_id: draft.village_id,
-            village_name: draft.village_name,
-            pincode: draft.pincode,
-          }}
-          onChange={(patch) => updateDraft(patch)}
         />
       </OnboardingSectionCard>
     </OnboardingStepShell>

@@ -1,13 +1,17 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { LOGO_SIZES } from '../../constants/branding';
+import { useProfilePhotoDisplay } from '../../hooks/useProfilePhotoDisplay';
 import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
 import { BhuguardLogo } from '../shared/BhuguardLogo';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
 
 interface OfficerDashboardHeaderProps {
   officerName: string;
+  photoUrl?: string | null;
+  unreadCount?: number;
   onNotificationsPress?: () => void;
+  onProfilePress?: () => void;
 }
 
 function getInitials(name: string): string {
@@ -21,7 +25,16 @@ function getInitials(name: string): string {
   return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
 }
 
-export function OfficerDashboardHeader({ officerName, onNotificationsPress }: OfficerDashboardHeaderProps) {
+export function OfficerDashboardHeader({
+  officerName,
+  photoUrl,
+  unreadCount = 0,
+  onNotificationsPress,
+  onProfilePress,
+}: OfficerDashboardHeaderProps) {
+  const displayUri = useProfilePhotoDisplay(photoUrl, 'officer-dashboard-avatar.jpg');
+  const badgeLabel = unreadCount > 99 ? '99+' : String(unreadCount);
+
   return (
     <View style={styles.bar}>
       <View style={styles.leading}>
@@ -37,17 +50,31 @@ export function OfficerDashboardHeader({ officerName, onNotificationsPress }: Of
       </View>
 
       <View style={styles.trailing}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{getInitials(officerName)}</Text>
-        </View>
+        <Pressable
+          style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
+          onPress={onProfilePress}
+          accessibilityRole="button"
+          accessibilityLabel="Open profile"
+        >
+          {displayUri ? (
+            <Image source={{ uri: displayUri }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarText}>{getInitials(officerName)}</Text>
+          )}
+        </Pressable>
 
         <Pressable
           style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
           onPress={onNotificationsPress}
           accessibilityRole="button"
-          accessibilityLabel="Notifications"
+          accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
         >
           <BhuguardMaterialIcon name="notifications" size={22} color={officerTheme.primary} />
+          {unreadCount > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{badgeLabel}</Text>
+            </View>
+          ) : null}
         </Pressable>
       </View>
     </View>
@@ -94,6 +121,11 @@ const styles = StyleSheet.create({
     borderColor: officerTheme.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarText: {
     color: officerTheme.primary,
@@ -120,8 +152,27 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: officerTheme.surfaceLow,
   },
+  badge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    backgroundColor: '#C62828',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
+    lineHeight: 11,
+  },
   pressed: {
     opacity: 0.85,
     transform: [{ scale: 0.96 }],
   },
 });
+

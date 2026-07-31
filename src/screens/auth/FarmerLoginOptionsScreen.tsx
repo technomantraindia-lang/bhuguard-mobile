@@ -7,6 +7,7 @@ import { getApiErrorMessage, loginBiometricToken } from '../../api/authApi';
 import { LoginOptionCard } from '../../components/auth/LoginOptionCard';
 import { BhuguardLogo } from '../../components/shared/BhuguardLogo';
 import { LOGO_SIZES } from '../../constants/branding';
+import { APP_VARIANT } from '../../config/env';
 import { useTranslation } from '../../i18n/I18nContext';
 import type { RootStackParamList } from '../../navigation/types';
 import { getBiometricLoginEnabled } from '../../storage/biometricPreference';
@@ -132,9 +133,11 @@ export function FarmerLoginOptionsScreen({ navigation }: Props) {
         <Pressable onPress={() => navigation.navigate('ForgotPassword')}>
           <Text style={styles.link}>{t('farmerLogin.contactSupport')}</Text>
         </Pressable>
-        <Pressable onPress={() => navigation.navigate('ApiServerSettings')}>
-          <Text style={styles.link}>{t('apiServer.openSettings')}</Text>
-        </Pressable>
+        {__DEV__ || APP_VARIANT !== 'production' ? (
+          <Pressable onPress={() => navigation.navigate('ApiServerSettings')}>
+            <Text style={styles.link}>{t('apiServer.openSettings')}</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

@@ -46,7 +46,7 @@ export function SuccessModal({ visible, title, message, onClose }: SuccessModalP
 
           <Text style={styles.message}>{message}</Text>
 
-          <AppButton label="Done" onPress={onClose} />
+          <AppButton label="Ok" onPress={onClose} />
 
         </Pressable>
 

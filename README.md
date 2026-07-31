@@ -1,146 +1,265 @@
-# Bhuguard Mobile App
+# Bhuguard Mobile
 
-React Native **Expo** mobile client for Farmer, Company User, Field Officer, and Artisan roles.
+React Native (Expo) mobile client for **Farmer**, **Field Officer**, **Artisan / Artisan Pro**, and related Bhuguard field workflows.
 
-## Related backend
+This repository is intended for **private** multi-device development. Both the office desktop and other laptops talk to the same live Laravel API — no local Laravel or MySQL is required.
 
-Laravel API + admin lives in:
+---
 
-```
-C:\Users\Admin\Desktop\bhuguard-latest
-```
+## 1. Project name
 
-Full project documentation: **`../bhuguard-latest/docs/`** (especially [MODULE_MAP.md](../bhuguard-latest/docs/MODULE_MAP.md) and [DEPLOYMENT_GUIDE.md](../bhuguard-latest/docs/DEPLOYMENT_GUIDE.md)).
+**bhuguard-mobile** (`com.bhuguard.app`)
 
-## Quick start
+---
 
-```bash
+## 2. Mobile project overview
+
+| Area | Location |
+|------|----------|
+| API clients | `src/api/` |
+| Screens | `src/screens/` |
+| Navigation | `src/navigation/` |
+| Config / API URL | `src/config/` |
+| Offline / storage | `src/storage/` |
+| Evidence / watermark | `src/services/`, `src/components/evidence/` |
+
+Package manager: **npm** (`package-lock.json`).
+
+---
+
+## 3. Required software
+
+On each computer:
+
+- **Git**
+- **Node.js** compatible with Expo SDK 56 (recommend current LTS; verify with `node -v`)
+- **npm** (comes with Node)
+- **Cursor** or **VS Code**
+- **Expo Go** on a physical Android phone (for day-to-day UI testing)
+
+Optional (only for native APK/AAB or emulator work):
+
+- Android Studio + Android SDK
+- Java / JDK used by Android Gradle builds
+- EAS CLI (`npm i -g eas-cli`) for cloud builds
+
+---
+
+## 4. First-time installation
+
+```powershell
+git clone <PRIVATE_GITHUB_REPOSITORY_URL> bhuguard-mobile
+cd bhuguard-mobile
 npm install
-npx expo start --go --lan --clear
+Copy-Item .env.example .env
+npx expo start -c
 ```
+
+Then open the project in Expo Go (same network or tunnel) or a development build.
+
+---
+
+## 5. Environment configuration
+
+Every computer must have a local `.env` (never committed):
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Required values:
+
+```env
+EXPO_PUBLIC_APP_URL=https://erp.bhuguard.com
+EXPO_PUBLIC_API_URL=https://erp.bhuguard.com/api
+```
+
+After creating or changing `.env`, restart Metro with cache clear:
+
+```powershell
+npx expo start -c
+```
+
+Add your MapTiler key in `.env` for Field Officer Hybrid maps (`EXPO_PUBLIC_MAPTILER_API_KEY`). Do not commit the real `.env`.
+
+---
+
+## 6. Starting Expo
+
+```powershell
+cd bhuguard-mobile
+npx expo start -c
+```
+
+Useful scripts from `package.json`:
+
+| Command | Purpose |
+|---------|---------|
+| `npm start` | Project start script |
+| `npm run start:go` | Expo Go on LAN port 8081 |
+| `npm run start:tunnel` | Expo Go via tunnel |
+| `npm run start:dev-client` | Custom dev client |
+
+---
+
+## 7. Testing on a physical Android device
+
+1. Install **Expo Go** (or your Bhuguard dev-client APK).
+2. Ensure the phone can reach the Metro URL shown in the terminal (same Wi‑Fi for LAN, or use tunnel).
+3. Scan the QR code.
+4. Confirm login and dashboards load data from **https://erp.bhuguard.com/api**.
+
+The phone does **not** need:
+
+- Local Laravel
+- Local MySQL
+- Office desktop powered on
+- Office LAN IP / port `8000`
+
+---
+
+## 8. Git synchronization workflow
+
+### Before starting work (every computer)
+
+```powershell
+git pull origin main
+```
+
+> If your default branch is still `master`, use `git pull origin master` until the team standardizes on `main`.
+
+### After completing and testing changes
+
+```powershell
+git status
+git add .
+git commit -m "Describe the completed change"
+git pull --rebase origin main
+git push origin main
+```
+
+**Rules**
+
+- Never edit the same file on two computers without pulling first.
+- Never use `git reset --hard` or `git push --force` unless explicitly requested and a backup exists.
+- Do not commit `.env`, keystores, APK/AAB files, or tokens.
+
+---
+
+## 9. Production API URL
+
+| Setting | Value |
+|---------|--------|
+| App / media origin | `https://erp.bhuguard.com` |
+| API base URL | `https://erp.bhuguard.com/api` |
+
+Client requests use paths such as `/auth/login` (no extra `/api` prefix). The Axios `baseURL` already includes `/api`, so URLs must not become `/api/api/...`.
+
+Central config: `src/config/env.ts` and `src/config/apiConfig.ts`.
+
+---
+
+## 10. APK / AAB build instructions
+
+Local scripts (Windows):
+
+```powershell
+npm run build:production-apk
+npm run build:production-aab
+npm run build:demo-apk
+npm run build:dev-client
+```
+
+EAS profiles live in `eas.json` (`development`, `preview`, `demo`, `production`).
+
+Signing credentials and any production keystore must stay **off GitHub**. Transfer them privately when needed (see security section).
+
+---
+
+## 11. Important security rules
+
+**Never commit**
+
+- `.env` / real API tokens / passwords / MPIN / OTP
+- Android keystores (`*.jks`, `*.keystore`) and passwords
+- `google-services.json` / `GoogleService-Info.plist`
+- EAS / cloud tokens
+- APK / AAB binaries
+- Laravel `.env` or database credentials
+
+**Do commit**
+
+- Source under `src/`
+- `package.json` / `package-lock.json`
+- `app.json` / `app.config.js` / `eas.json` (without secrets)
+- `.env.example` (public URLs + placeholders only)
+- README and safe scripts
+
+---
+
+## 12. Troubleshooting
+
+| Symptom | What to try |
+|---------|-------------|
+| App points at old tunnel / LAN URL | Delete app data or reset Server Settings; ensure `.env` uses `erp.bhuguard.com`; restart with `npx expo start -c` |
+| `.env` not loading | Confirm file is named `.env` in project root; restart Metro with `-c` |
+| Cannot reach API | Check phone internet; open `https://erp.bhuguard.com/up` in a browser |
+| Module install errors | Delete `node_modules`, run `npm install` again |
+| Git push rejected | `git pull --rebase origin main` then push; do not force-push |
+| Map tiles blank | Set a real `EXPO_PUBLIC_MAPTILER_API_KEY` in local `.env` |
+
+---
+
+## Laptop setup (copy/paste)
+
+```powershell
+cd C:\Users\<LAPTOP_USERNAME>\Desktop
+git clone <PRIVATE_GITHUB_REPOSITORY_URL> bhuguard-mobile
+cd bhuguard-mobile
+npm install
+Copy-Item .env.example .env
+# Edit .env and set MapTiler key if maps are required
+npx expo start -c
+```
+
+---
+
+## Recommended branch workflow (larger changes)
+
+```powershell
+git checkout -b feature/change-name
+# ... implement and test ...
+git add .
+git commit -m "Complete change name"
+git push -u origin feature/change-name
+```
+
+Merge to `main` only after the app opens and the related module works.
+
+---
 
 ## Source layout
 
 ```
 src/
-├── api/           # API clients (auth, farmer, company, fieldOfficer, evidence, …)
-├── components/    # Shared + role-specific UI
-├── config/        # API URL, env
-├── constants/     # Branding, checklist constants
-├── hooks/         # Data hooks per screen
-├── navigation/    # Root, Farmer, Company, Officer navigators + tab bars
-├── screens/       # auth/, farmer/, company/, officer/, tabs/
-├── services/      # Cross-cutting services (e.g. watermark)
-├── storage/       # AsyncStorage helpers
-├── theme/         # Colors, spacing, role themes
-└── utils/         # Helpers
+├── api/
+├── components/
+├── config/
+├── constants/
+├── hooks/
+├── navigation/
+├── screens/
+├── services/
+├── storage/
+├── theme/
+└── utils/
 ```
 
-## API URL
+---
 
-Production default (baked into EAS production builds):
+## Related live backend
 
-```
-https://yourdomain.com/api
-```
+- Admin / ERP: https://erp.bhuguard.com  
+- API: https://erp.bhuguard.com/api  
 
-Replace `yourdomain.com` with your live HTTPS API domain before release.
-
-Demo/staging (internal testing):
-
-```
-https://demo.bhuguard.com/api
-```
-
-Local development (same Wi‑Fi only) — copy `.env.example` → `.env.development`:
-
-```
-EXPO_PUBLIC_API_URL=http://YOUR-PC-IP:8000/api
-```
-
-Server Settings on the login screen can override the API URL without rebuilding.
-
-## Android / Play Store readiness
-
-| Item | Value |
-|------|-------|
-| App name | Bhuguard |
-| Package | `com.bhuguard.app` |
-| Production build | EAS `production` profile → AAB (`app-bundle`) |
-| Preview APK | EAS `preview` or `demo` profile → APK |
-
-### Android permissions used
-
-- **Camera** — Biochar and evidence capture
-- **Location** — Farm GPS, check-in, Artisan production tracking
-- **Photo library / media** — Evidence image and video selection
-- **Microphone** — Biochar process video recording
-- **Biometric** — Secure login
-
-### EAS Android build
-
-**Cloud build** (uses EAS quota — free plan is limited per month):
-
-```bash
-npx eas-cli@latest build -p android --profile preview
-npx eas-cli@latest build -p android --profile production
-```
-
-**Local build** (no EAS cloud quota — use when free plan limit is reached):
-
-```bash
-# Gradle APK on your PC (Android Studio required)
-npm run build:production-apk
-
-# Gradle AAB for Play Store on your PC
-npm run build:production-aab
-
-# Or EAS local build (same credentials, runs on your machine)
-npm run build:eas:local:android
-```
-
-Output APK/AAB is copied to `releases/`.
-
-## iOS / App Store readiness
-
-| Item | Value |
-|------|-------|
-| App name | Bhuguard |
-| Bundle ID | `com.bhuguard.app` |
-| Apple Developer Account | Required for TestFlight / App Store |
-| Production API URL | Required — HTTPS live domain |
-| Privacy Policy URL | Required for App Store Connect |
-| Support URL / email | Required for App Store Connect (e.g. support@bhuguard.com) |
-
-### iOS permissions used
-
-- **Camera** — Biochar activity, farm, feedstock, moisture, production, and evidence images
-- **Location (when in use)** — Farm verification, Biochar GPS, Field Officer check-in, Artisan production location
-- **Photo library** — Select and upload evidence images
-- **Microphone** — Biochar process video recording
-- **Face ID** — Secure biometric login
-
-Push notifications are **not** used natively; in-app notifications are fetched from the API.
-
-### EAS iOS build
-
-```bash
-npm install
-npx tsc --noEmit
-npm install -g eas-cli
-eas login
-eas build:configure
-npx eas-cli@latest build -p ios --profile production
-```
-
-Submit to App Store / TestFlight after a successful build:
-
-```bash
-eas submit -p ios --profile production
-```
-
-## Typecheck
-
-```bash
-npx tsc --noEmit
-```
+Backend code is maintained separately. This mobile repo must not modify Laravel, Admin Panel, or the production database.

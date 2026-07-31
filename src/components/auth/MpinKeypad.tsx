@@ -1,7 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
-import { colors } from '../../theme/colors';
+import { authBrand } from '../../theme/authBrand';
 
 interface MpinKeypadProps {
   onDigit: (digit: string) => void;
@@ -18,46 +17,6 @@ const ROWS = [
   ['7', '8', '9'],
 ];
 
-function FingerprintIcon({ size = 26 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 10.5V14.5M9.5 9.5C9.5 7.5 10.6 6 12 6C13.4 6 14.5 7.2 14.5 9V11.5"
-        stroke={colors.primary}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M7 12.5C7 16.1 9.4 18.5 12 18.5C14.6 18.5 17 16.1 17 12.5V11"
-        stroke={colors.primary}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M5 14C5.5 17.5 8.2 20 12 20C15.8 20 18.5 17.5 19 14"
-        stroke={colors.primary}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
-      <Path d="M12 20V22" stroke={colors.primary} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-function BackspaceIcon({ size = 26 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M7 6H18C19.1 6 20 6.9 20 8V16C20 17.1 19.1 18 18 18H7L3 12L7 6Z"
-        stroke={colors.text}
-        strokeWidth={1.8}
-        strokeLinejoin="round"
-      />
-      <Path d="M13 10L15 12M15 10L13 12" stroke={colors.text} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
 export function MpinKeypad({
   onDigit,
   onBackspace,
@@ -66,28 +25,33 @@ export function MpinKeypad({
   disabled = false,
   compact = false,
 }: MpinKeypadProps) {
-  const keySize = compact ? 64 : 74;
-  const keyRadius = compact ? 32 : 37;
-  const rowGap = compact ? 10 : 18;
-  const wrapGap = compact ? 10 : 14;
-  const keyTextSize = compact ? 24 : 28;
-  const iconSize = compact ? 24 : 26;
+  const { width, height } = useWindowDimensions();
+  const shortPhone = height < 700 || compact;
+  const narrow = width < 360;
+
+  const keyWidth = shortPhone || narrow ? 58 : width < 400 ? 64 : 70;
+  const keyHeight = shortPhone || narrow ? 44 : width < 400 ? 50 : 54;
+  const keyRadius = keyHeight / 2;
+  const rowGap = shortPhone ? 8 : 12;
+  const wrapGap = shortPhone ? 8 : 10;
+  const keyTextSize = shortPhone ? 22 : 26;
+  const iconSize = shortPhone ? 20 : 24;
 
   const keyStyle = (extra?: object) => [
     styles.key,
-    { width: keySize, height: keySize, borderRadius: keyRadius },
+    { width: keyWidth, height: keyHeight, borderRadius: keyRadius },
     extra,
     disabled && styles.keyDisabled,
   ];
 
   return (
-    <View style={[styles.wrap, { gap: wrapGap, paddingHorizontal: compact ? 4 : 8 }]}>
+    <View style={[styles.wrap, { gap: wrapGap }, shortPhone && styles.wrapCompact]}>
       {ROWS.map((row) => (
         <View key={row.join('-')} style={[styles.row, { gap: rowGap }]}>
           {row.map((digit) => (
             <Pressable
               key={digit}
-              style={keyStyle()}
+              style={({ pressed }) => [...keyStyle(), pressed && styles.keyPressed]}
               onPress={() => onDigit(digit)}
               disabled={disabled}
             >
@@ -100,28 +64,38 @@ export function MpinKeypad({
       <View style={[styles.row, { gap: rowGap }]}>
         {showBiometric && onBiometric ? (
           <Pressable
-            style={keyStyle(styles.keyBiometric)}
+            style={({ pressed }) => [
+              ...keyStyle(styles.keyBiometric),
+              pressed && styles.keyPressed,
+            ]}
             onPress={onBiometric}
             disabled={disabled}
             accessibilityLabel="Biometric login"
           >
-            <FingerprintIcon size={iconSize} />
+            <Text style={[styles.iconText, { fontSize: iconSize }]}>◉</Text>
           </Pressable>
         ) : (
-          <View style={{ width: keySize, height: keySize }} />
+          <View style={{ width: keyWidth, height: keyHeight }} />
         )}
 
-        <Pressable style={keyStyle()} onPress={() => onDigit('0')} disabled={disabled}>
+        <Pressable
+          style={({ pressed }) => [...keyStyle(), pressed && styles.keyPressed]}
+          onPress={() => onDigit('0')}
+          disabled={disabled}
+        >
           <Text style={[styles.keyText, { fontSize: keyTextSize }]}>0</Text>
         </Pressable>
 
         <Pressable
-          style={keyStyle(styles.keyBackspace)}
+          style={({ pressed }) => [
+            ...keyStyle(styles.keyBackspace),
+            pressed && styles.keyPressed,
+          ]}
           onPress={onBackspace}
           disabled={disabled}
           accessibilityLabel="Backspace"
         >
-          <BackspaceIcon size={iconSize} />
+          <Text style={[styles.iconText, { fontSize: iconSize }]}>⌫</Text>
         </Pressable>
       </View>
     </View>
@@ -129,7 +103,18 @@ export function MpinKeypad({
 }
 
 const styles = StyleSheet.create({
-  wrap: {},
+  wrap: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+  },
+  wrapCompact: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   row: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -137,24 +122,31 @@ const styles = StyleSheet.create({
   },
   key: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: colors.white,
+    borderColor: 'rgba(255, 255, 255, 0.45)',
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  keyPressed: {
+    opacity: 0.72,
+  },
   keyBiometric: {
-    backgroundColor: '#EAF7EF',
-    borderColor: '#CFE8D8',
+    backgroundColor: 'rgba(234, 247, 239, 0.95)',
+    borderColor: 'rgba(255, 255, 255, 0.55)',
   },
   keyBackspace: {
-    backgroundColor: '#F8FAF9',
-    borderColor: '#D1D5DB',
+    backgroundColor: 'rgba(248, 250, 249, 0.92)',
+    borderColor: 'rgba(255, 255, 255, 0.45)',
   },
   keyDisabled: {
     opacity: 0.55,
   },
   keyText: {
     fontWeight: '700',
-    color: colors.text,
+    color: authBrand.tertiary,
+  },
+  iconText: {
+    fontWeight: '700',
+    color: authBrand.primary,
   },
 });

@@ -117,7 +117,7 @@ export function FarmerFarmDetailScreen({ navigation, route }: Props) {
         <FarmDetailActionButtons
           onOpenGoogleMaps={openMaps}
           onEditFarm={() => navigation.navigate('FarmerEditFarm', { farmId })}
-          onAddActivity={() => navigation.navigate('FarmerSubmitActivity', { farmId })}
+          onAddActivity={() => navigation.navigate('FarmerFarmActivity', { farmId })}
           onBiocharUpdates={() => navigation.navigate('FarmerBiocharUpdates')}
         />
       </ScrollView>

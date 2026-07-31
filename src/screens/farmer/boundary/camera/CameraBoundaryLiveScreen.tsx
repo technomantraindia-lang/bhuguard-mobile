@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { CameraView, useCameraPermissions, type CameraType, type FlashMode } from 'expo-camera';
+import { CameraView, useCameraPermissions, type FlashMode } from 'expo-camera';
 import * as Location from 'expo-location';
 
 import { BoundaryLiveMap } from '../../../../components/farmer/boundary/BoundaryLiveMap';
@@ -18,7 +18,7 @@ import {
 } from '../../../../utils/boundaryGeometry';
 import { getBoundaryFlowRoutes } from '../../../../utils/boundaryFlowRoutes';
 import { boundaryRouteParams } from '../../../../utils/boundaryNavigation';
-import { applyLivePhotoWatermark } from '../../../../services/livePhotoWatermarkService';
+import { applyLivePhotoWatermarkDetailed } from '../../../../services/livePhotoWatermarkService';
 import { resolveCaptureLocation } from '../../../../utils/livePhotoLocation';
 import { buildLivePhotoWatermarkMeta } from '../../../../utils/livePhotoWatermarkFormat';
 
@@ -32,7 +32,6 @@ export function CameraBoundaryLiveScreen({ navigation }: Props) {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [locationGranted, setLocationGranted] = useState<boolean | null>(null);
   const [capturing, setCapturing] = useState(false);
-  const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState<FlashMode>('off');
 
   useEffect(() => {
@@ -159,7 +158,7 @@ export function CameraBoundaryLiveScreen({ navigation }: Props) {
       let stampedUri: string;
 
       try {
-        stampedUri = await applyLivePhotoWatermark(photo.uri, watermark, {
+        const stampResult = await applyLivePhotoWatermarkDetailed(photo.uri, watermark, {
           uri: photo.uri,
           name: `boundary-point-${boundary.points.length + 1}.jpg`,
           type: 'image/jpeg',
@@ -172,6 +171,7 @@ export function CameraBoundaryLiveScreen({ navigation }: Props) {
           district: location.district,
           state: location.state,
         });
+        stampedUri = stampResult.uri;
       } catch (error) {
         Alert.alert(
           'Stamp failed',
@@ -220,7 +220,7 @@ export function CameraBoundaryLiveScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.cameraWrap}>
-        <CameraView ref={cameraRef} style={styles.camera} facing={facing} flash={flash} />
+        <CameraView ref={cameraRef} style={styles.camera} facing="back" flash={flash} />
 
         <View style={styles.overlayTop}>
           <Pressable style={styles.iconButton} onPress={() => navigation.goBack()}>
@@ -268,9 +268,7 @@ export function CameraBoundaryLiveScreen({ navigation }: Props) {
             <View style={styles.captureInner} />
           </Pressable>
 
-          <Pressable style={styles.sideButton} onPress={() => setFacing((value) => (value === 'back' ? 'front' : 'back'))}>
-            <Text style={styles.sideButtonText}>Flip</Text>
-          </Pressable>
+          <View style={styles.sideButtonSpacer} />
         </View>
 
         <Text style={styles.captureLabel}>Capture Point Photo</Text>
@@ -365,6 +363,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 8,
+  },
+  sideButtonSpacer: {
+    width: 58,
+    height: 34,
   },
   sideButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
   captureLabel: {

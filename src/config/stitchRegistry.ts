@@ -151,15 +151,14 @@ export const STITCH_REGISTRY: Record<string, StitchScreenConfig> = {
   biochar_feedstock_list: { title: 'Biochar Feedstock', mode: 'list', role: 'farmer', apiPath: '/farmer/biochar/feedstock', listKeys: ['feedstock', 'feedstock_collections'] },
   add_feedstock_collection: { title: 'Feedstock Collection', mode: 'form', role: 'farmer' },
   feedstock_verification: { title: 'Feedstock Verification', mode: 'form', role: 'officer' },
-  officer_biochar_production: { title: 'Biochar Production', mode: 'form', role: 'officer' },
   biochar_quality_test: { title: 'Biochar Quality Test', mode: 'form', role: 'farmer', pending: true },
   biochar_inventory: { title: 'Biochar Inventory', mode: 'list', role: 'farmer', pending: true },
   biochar_application_screen: { title: 'Biochar Application', mode: 'list', role: 'farmer', apiPath: '/farmer/biochar/applications', listKeys: ['applications'] },
   biochar_credit_calculator: { title: 'Biochar Credit Calculator', mode: 'form', role: 'farmer', pending: true },
   biochar_carbon_removal_estimate: { title: 'Carbon Removal Estimate', mode: 'info', role: 'farmer', pending: true },
-  artisan_registration: { title: 'Artisan Registration', mode: 'form', role: 'officer', pending: false },
-  artisan_profile: { title: 'Artisan Profile', mode: 'detail', role: 'farmer', pending: true },
-  artisan_production_sites: { title: 'Artisan Production Sites', mode: 'list', role: 'farmer', pending: true },
+  artisan_registration: { title: 'Artisan Pro Registration', mode: 'form', role: 'officer', pending: false },
+  artisan_profile: { title: 'Artisan Pro Profile', mode: 'detail', role: 'farmer', pending: true },
+  artisan_production_sites: { title: 'Artisan Pro Production Sites', mode: 'list', role: 'farmer', pending: true },
 
   // DMRV — Agroforestry
   agroforestry_dashboard: {
@@ -316,7 +315,7 @@ export const STITCH_REGISTRY: Record<string, StitchScreenConfig> = {
     title: 'DMRV Modules',
     mode: 'hub',
     role: 'officer',
-    hubChildren: ['verification_dashboard', 'officer_farmers_list', 'officer_activity_logs', 'officer_baseline_assessments', 'officer_soil_samples', 'officer_monitoring_reports', 'officer_inventory_tasks', 'officer_feedstock_verifications', 'officer_biochar_applications', 'officer_create_activity_log', 'officer_create_baseline', 'officer_create_soil_sample', 'officer_create_monitoring_report', 'photo_verification', 'gps_verification'],
+    hubChildren: ['verification_dashboard', 'officer_farmers_list', 'officer_activity_logs', 'officer_baseline_assessments', 'officer_soil_samples', 'officer_inventory_tasks', 'officer_feedstock_verifications', 'officer_biochar_applications', 'officer_create_activity_log', 'officer_create_baseline', 'officer_create_soil_sample', 'photo_verification', 'gps_verification'],
   },
   company_dmrv_hub: {
     title: 'DMRV Modules',

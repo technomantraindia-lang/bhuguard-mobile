@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 
 import {
@@ -18,17 +19,16 @@ import {
   saveVisitMobileNetworkVerification,
   startVisitRecord,
   submitVisitVerification,
-  visitRecordCheckIn,
   visitRecordReview,
 } from '../../api/fieldOfficerApi';
 import { AppButton } from '../../components/AppButton';
 import { AppCard } from '../../components/AppCard';
 import { ErrorState } from '../../components/ErrorState';
-import { EvidenceUploadForm } from '../../components/evidence/EvidenceUploadForm';
 import { LoadingState } from '../../components/LoadingState';
 import { VisitVerificationProgressStepper } from '../../components/officer/VisitVerificationProgressStepper';
 import { ScreenHeader } from '../../components/ScreenHeader';
-import { OFFICER_EVIDENCE_CATEGORY_OPTIONS } from '../../constants/evidenceCategories';
+import { OFFICER_UPLOAD_EVIDENCE_OPTIONS } from '../../constants/evidenceCategories';
+import { OfficerVerificationEvidenceUpload } from '../../components/officer/evidence/OfficerVerificationEvidenceUpload';
 import { useEvidenceUpload } from '../../hooks/useEvidenceUpload';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerTheme } from '../../theme/officerDashboardTheme';
@@ -44,7 +44,6 @@ import {
 import type { LiveCapturedEvidence } from '../../utils/liveEvidenceCapture';
 
 type Props = NativeStackScreenProps<FieldOfficerStackParamList, 'FieldOfficerVisitVerification'>;
-type BiocharActivityParams = NonNullable<FieldOfficerStackParamList['FieldOfficerBiocharProduction']>;
 
 type YesNo = 'yes' | 'no' | null;
 
@@ -62,27 +61,6 @@ function pickString(record: ApiRecord | null, ...keys: string[]): string {
   }
 
   return '-';
-}
-
-function pickNumber(record: ApiRecord | null, ...keys: string[]): number | undefined {
-  if (!record) {
-    return undefined;
-  }
-
-  for (const key of keys) {
-    const value = record[key];
-    const numberValue = Number(value);
-
-    if (Number.isFinite(numberValue) && numberValue > 0) {
-      return numberValue;
-    }
-  }
-
-  return undefined;
-}
-
-function cleanParam(value: string): string | undefined {
-  return value !== '-' ? value : undefined;
 }
 
 export function FieldOfficerVisitVerificationScreen({ route, navigation }: Props) {
@@ -127,29 +105,6 @@ export function FieldOfficerVisitVerificationScreen({ route, navigation }: Props
     return embedded && typeof embedded === 'object' ? (embedded as ApiRecord) : null;
   }, [assignment]);
 
-  const biocharActivityParams = useMemo<BiocharActivityParams>(() => {
-    const farmerUser = farmer?.user && typeof farmer.user === 'object' ? (farmer.user as ApiRecord) : null;
-    const fieldOfficer =
-      assignment?.field_officer && typeof assignment.field_officer === 'object'
-        ? (assignment.field_officer as ApiRecord)
-        : null;
-
-    return {
-      farmerId: pickNumber(farmer, 'id') ?? pickNumber(assignment, 'farmer_id') ?? initialFarmerId,
-      farmerName: cleanParam(pickString(farmerUser, 'name', 'farmer_name')) ?? cleanParam(pickString(farmer, 'name', 'farmer_name')),
-      farmId: pickNumber(farm, 'id') ?? pickNumber(assignment, 'farm_id') ?? initialFarmId,
-      fieldOfficerId: pickNumber(fieldOfficer, 'id') ?? pickNumber(assignment, 'field_officer_id'),
-      visitId: assignmentId ?? pickNumber(assignment, 'id', 'visit_id', 'visit_assignment_id'),
-      village: cleanParam(pickString(farm, 'village', 'village_name')) ?? cleanParam(pickString(farmer, 'village')),
-      taluka: cleanParam(pickString(farm, 'taluka', 'taluka_name')) ?? cleanParam(pickString(farmer, 'taluka')),
-      district: cleanParam(pickString(farm, 'district', 'district_name')) ?? cleanParam(pickString(farmer, 'district')),
-      state: cleanParam(pickString(farm, 'state', 'state_name')) ?? cleanParam(pickString(farmer, 'state')),
-      latitude: pickNumber(assignment, 'check_in_latitude', 'latitude', 'gps_latitude') ?? pickNumber(farm, 'latitude', 'gps_latitude'),
-      longitude: pickNumber(assignment, 'check_in_longitude', 'longitude', 'gps_longitude') ?? pickNumber(farm, 'longitude', 'gps_longitude'),
-      gpsAccuracy: pickNumber(assignment, 'check_in_gps_accuracy', 'gps_accuracy') ?? pickNumber(farm, 'gps_accuracy'),
-    };
-  }, [assignment, assignmentId, farm, farmer, initialFarmId, initialFarmerId]);
-
   const applyVisitProgress = useCallback((record: ApiRecord) => {
     const progress = resolveVisitVerificationProgress(record);
     setCompletedSteps(progress.completedSteps);
@@ -185,11 +140,15 @@ export function FieldOfficerVisitVerificationScreen({ route, navigation }: Props
     }
   }, [applyVisitProgress]);
 
-  useEffect(() => {
-    if (initialAssignmentId) {
-      void loadAssignment(initialAssignmentId);
-    }
-  }, [initialAssignmentId, loadAssignment]);
+  useFocusEffect(
+    useCallback(() => {
+      const id = assignmentId ?? initialAssignmentId;
+
+      if (id) {
+        void loadAssignment(id);
+      }
+    }, [assignmentId, initialAssignmentId, loadAssignment]),
+  );
 
   const markCompleted = (step: VisitVerificationStepKey) => {
     setCompletedSteps((current) => (current.includes(step) ? current : [...current, step]));
@@ -210,6 +169,7 @@ export function FieldOfficerVisitVerificationScreen({ route, navigation }: Props
         setAssignmentId(Number(started.id));
         markCompleted('start_visit');
         goToStep('check_in');
+        navigation.navigate('VisitCheckIn', { assignmentId: Number(started.id) });
         return;
       }
 
@@ -227,50 +187,9 @@ export function FieldOfficerVisitVerificationScreen({ route, navigation }: Props
       setAssignment(visit);
       markCompleted('start_visit');
       goToStep('check_in');
+      navigation.navigate('VisitCheckIn', { assignmentId: id });
     } catch (err) {
       setError(getApiErrorMessage(err, 'Unable to start visit.'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCheckIn = async () => {
-    if (!assignmentId) {
-      setError('Start the visit before check-in.');
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-
-    try {
-      const permission = await Location.requestForegroundPermissionsAsync();
-
-      if (!permission.granted) {
-        throw new Error('Location permission is required for check-in. Please enable GPS and try again.');
-      }
-
-      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      const started = await ensureVisitReadyForGpsCheckIn(assignmentId);
-      setAssignment(started);
-      setAssignmentId(Number(started.id));
-      markCompleted('start_visit');
-
-      const response = await visitRecordCheckIn({
-        visit_id: Number(started.id),
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        gps_accuracy: position.coords.accuracy,
-        altitude: position.coords.altitude ?? undefined,
-      });
-      const visit = unwrapAssignmentRecord(response as ApiRecord);
-      setAssignment(visit);
-      setError(null);
-      markCompleted('check_in');
-      goToStep('farmer_details');
-      Alert.alert('Check-in completed', 'Check-in completed successfully.');
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Check-in failed.'));
     } finally {
       setSaving(false);
     }
@@ -333,8 +252,8 @@ export function FieldOfficerVisitVerificationScreen({ route, navigation }: Props
 
   const handleStartBiocharActivity = () => {
     markCompleted('start_biochar_activity');
-    goToStep('biochar_process');
-    navigation.navigate('FieldOfficerBiocharProduction', biocharActivityParams);
+    markCompleted('biochar_process');
+    goToStep('evidence');
   };
 
   const handleEvidenceUpload = async (file: LiveCapturedEvidence | { uri: string; name: string; type: string }) => {
@@ -448,8 +367,20 @@ export function FieldOfficerVisitVerificationScreen({ route, navigation }: Props
 
         {activeStep === 'check_in' ? (
           <AppCard title="Step 2: Check-in" subtitle="Capture GPS location at the farmer field.">
-            <Text style={styles.body}>Your live location will be shared with Admin while you are checked in.</Text>
-            <AppButton label={saving ? 'Checking in...' : 'Check In Now'} onPress={() => void handleCheckIn()} disabled={saving} />
+            <Text style={styles.body}>
+              Open GPS Check-in to verify you are inside the farm radius before continuing verification.
+            </Text>
+            <AppButton
+              label="Open GPS Check-in"
+              onPress={() => {
+                if (!assignmentId) {
+                  setError('Start the visit before check-in.');
+                  return;
+                }
+
+                navigation.navigate('VisitCheckIn', { assignmentId });
+              }}
+            />
           </AppCard>
         ) : null}
 
@@ -506,52 +437,38 @@ export function FieldOfficerVisitVerificationScreen({ route, navigation }: Props
         ) : null}
 
         {activeStep === 'start_biochar_activity' ? (
-          <AppCard title="Step 5: Start Biochar Activity" subtitle="Open Biochar Process for this selected farmer and farm.">
-            <DetailLine label="Farmer" value={biocharActivityParams.farmerName ?? '-'} />
-            <DetailLine label="Farmer ID" value={biocharActivityParams.farmerId ? String(biocharActivityParams.farmerId) : '-'} />
-            <DetailLine label="Farm ID" value={biocharActivityParams.farmId ? String(biocharActivityParams.farmId) : '-'} />
-            <DetailLine label="Visit ID" value={biocharActivityParams.visitId ? String(biocharActivityParams.visitId) : '-'} />
+          <AppCard title="Step 5: Biochar Activity" subtitle="Artisan biochar production is reviewed in the artisan workflow.">
             <AppButton
-              label="Start Biochar Activity"
+              label="Continue to Evidence"
               onPress={handleStartBiocharActivity}
-              disabled={!biocharActivityParams.farmerId}
             />
           </AppCard>
         ) : null}
 
         {activeStep === 'biochar_process' ? (
-          <AppCard title="Step 6: Biochar Process" subtitle="Complete the Biochar Process activity, then continue with evidence submission.">
-            <Text style={styles.body}>Biochar Process opens with the selected farmer, farm, visit, and GPS details prefilled.</Text>
-            <View style={styles.actions}>
-              <AppButton
-                label="Open Biochar Process"
-                onPress={handleStartBiocharActivity}
-                disabled={!biocharActivityParams.farmerId}
-              />
-              <AppButton
-                label="Continue to Evidence/Submit"
-                variant="secondary"
-                onPress={() => {
-                  markCompleted('biochar_process');
-                  goToStep('evidence');
-                }}
-              />
-            </View>
+          <AppCard title="Step 6: Biochar Activity" subtitle="Continue with visit evidence after completing the artisan workflow.">
+            <AppButton
+              label="Continue to Evidence"
+              onPress={() => {
+                markCompleted('biochar_process');
+                goToStep('evidence');
+              }}
+            />
           </AppCard>
         ) : null}
 
         {activeStep === 'evidence' ? (
-          <AppCard title="Step 7: Evidence/Submit" subtitle="Capture verification evidence with GPS/timestamp stamp.">
-            <EvidenceUploadForm
-              categories={OFFICER_EVIDENCE_CATEGORY_OPTIONS}
-              selectedCategory={evidenceCategory}
-              onCategoryChange={setEvidenceCategory}
-              remarks={evidenceRemarks}
-              onRemarksChange={setEvidenceRemarks}
-              onSubmit={handleEvidenceUpload}
-              uploading={evidenceUpload.uploading}
-              submitLabel="Save Evidence"
-            />
+          <AppCard title="Evidence Upload" subtitle="Before Photo, During Photo, and After Photo are required.">
+            {assignmentId ? (
+              <OfficerVerificationEvidenceUpload
+                assignmentId={assignmentId}
+                onProgressChange={() => void evidenceUpload.refreshList()}
+                onSubmitVerification={() => {
+                  markCompleted('evidence');
+                  goToStep('review');
+                }}
+              />
+            ) : null}
             <AppButton label="Continue to Review" variant="secondary" onPress={() => void handleLoadReview()} disabled={saving} />
           </AppCard>
         ) : null}

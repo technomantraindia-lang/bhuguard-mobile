@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -7,11 +7,12 @@ import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { ReportDownloadFormat } from '../../api/reportsApi';
-import { deleteFieldOfficerReportDraft } from '../../api/fieldOfficerApi';
+import { deleteFieldOfficerReportDraft, getBiocharReport, getBiocharReports } from '../../api/fieldOfficerApi';
 import { getApiErrorMessage } from '../../api/authApi';
 import { AppButton } from '../../components/AppButton';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { ErrorState } from '../../components/ErrorState';
+import { OfficerListState } from '../../components/officer/OfficerListState';
 import { OfficerReportCard } from '../../components/officer/OfficerReportCard';
 import { OfficerReportQuickActions } from '../../components/officer/OfficerReportQuickActions';
 import { OfficerReportSkeletonCards } from '../../components/officer/OfficerReportSkeletonCards';
@@ -20,12 +21,17 @@ import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIc
 import { useFieldOfficerReportsData } from '../../hooks/useFieldOfficerReportsData';
 import type { FieldOfficerStackParamList, FieldOfficerTabParamList } from '../../navigation/types';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
-import { downloadFieldOfficerReport } from '../../utils/roleReportDownload';
+import {
+  alertBiocharDownloadResult,
+  saveAndShareBiocharReport,
+} from '../../utils/biocharReportDownload';
+import { extractList, pickString, type ApiRecord } from '../../utils/apiHelpers';
 import type { FieldOfficerReportFilter, FieldOfficerReportItem } from '../../utils/fieldOfficerReportHelpers';
+import { downloadFieldOfficerReport } from '../../utils/roleReportDownload';
 import { clearVisitReportDraft } from '../../utils/visitVerificationStorage';
 
 type Nav = CompositeNavigationProp<
-  BottomTabNavigationProp<FieldOfficerTabParamList, 'Reports'>,
+  BottomTabNavigationProp<FieldOfficerTabParamList, 'Home'>,
   NativeStackNavigationProp<FieldOfficerStackParamList>
 >;
 
@@ -47,10 +53,35 @@ export function FieldOfficerReportsScreen() {
   const [deleteTarget, setDeleteTarget] = useState<FieldOfficerReportItem | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const [biocharReports, setBiocharReports] = useState<ApiRecord[]>([]);
+  const [biocharLoading, setBiocharLoading] = useState(true);
+  const [biocharError, setBiocharError] = useState<string | null>(null);
+  const [biocharDetail, setBiocharDetail] = useState<ApiRecord | null>(null);
+  const [biocharDownloadingId, setBiocharDownloadingId] = useState<number | null>(null);
+
   const { filteredReports, summary, loading, refreshing, error, reload, refresh } = useFieldOfficerReportsData({
     searchQuery,
     filter,
   });
+
+  const loadBiocharReports = useCallback(async () => {
+    setBiocharLoading(true);
+    setBiocharError(null);
+
+    try {
+      const data = await getBiocharReports();
+      setBiocharReports(extractList(data as ApiRecord, ['reports', 'data']));
+    } catch (err) {
+      setBiocharError(getApiErrorMessage(err, 'Failed to load biochar reports.'));
+      setBiocharReports([]);
+    } finally {
+      setBiocharLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadBiocharReports();
+  }, [loadBiocharReports]);
 
   const statCards = useMemo(
     () => [
@@ -91,6 +122,25 @@ export function FieldOfficerReportsScreen() {
     }
   };
 
+  const openBiocharDetail = async (reportId: number) => {
+    try {
+      const data = await getBiocharReport(reportId);
+      setBiocharDetail((data.report ?? data) as ApiRecord);
+    } catch (err) {
+      Alert.alert('Error', getApiErrorMessage(err, 'Unable to load biochar report detail.'));
+    }
+  };
+
+  const handleBiocharDownload = async (reportId: number, format: 'pdf' | 'csv') => {
+    setBiocharDownloadingId(reportId);
+    try {
+      const result = await saveAndShareBiocharReport(reportId, format, `biochar-report-${reportId}`);
+      alertBiocharDownloadResult(result);
+    } finally {
+      setBiocharDownloadingId(null);
+    }
+  };
+
   const confirmDeleteDraft = async () => {
     if (!deleteTarget) {
       return;
@@ -121,14 +171,14 @@ export function FieldOfficerReportsScreen() {
     }
   };
 
+  const handleRefresh = () => {
+    refresh();
+    void loadBiocharReports();
+  };
+
   if (loading && filteredReports.length === 0 && !error) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <OfficerReportsHeader
-          onBack={() => navigation.navigate('Home')}
-          onNotificationsPress={() => navigation.navigate('FieldOfficerNotifications')}
-          onProfilePress={() => navigation.navigate('Profile')}
-        />
+      <SafeReportsShell navigation={navigation}>
         <ScrollView contentContainerStyle={styles.container}>
           <View style={styles.statsGrid}>
             {statCards.map((card) => (
@@ -140,37 +190,26 @@ export function FieldOfficerReportsScreen() {
           </View>
           <OfficerReportSkeletonCards />
         </ScrollView>
-      </SafeAreaView>
+      </SafeReportsShell>
     );
   }
 
   if (error && filteredReports.length === 0) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <OfficerReportsHeader
-          onBack={() => navigation.navigate('Home')}
-          onNotificationsPress={() => navigation.navigate('FieldOfficerNotifications')}
-          onProfilePress={() => navigation.navigate('Profile')}
-        />
+      <SafeReportsShell navigation={navigation}>
         <ErrorState message="Unable to load reports" onRetry={reload} />
-      </SafeAreaView>
+      </SafeReportsShell>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <OfficerReportsHeader
-        onBack={() => navigation.navigate('Home')}
-        onNotificationsPress={() => navigation.navigate('FieldOfficerNotifications')}
-        onProfilePress={() => navigation.navigate('Profile')}
-      />
-
+    <SafeReportsShell navigation={navigation}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={officerTheme.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={officerTheme.primary} />
         }
       >
         <View style={styles.statsGrid}>
@@ -235,6 +274,82 @@ export function FieldOfficerReportsScreen() {
             ))}
           </View>
         )}
+
+        <Text style={styles.sectionTitle}>Completed Biochar Reports</Text>
+
+        {biocharLoading && biocharReports.length === 0 ? (
+          <OfficerListState kind="loading" message="Loading biochar reports…" />
+        ) : biocharError && biocharReports.length === 0 ? (
+          <OfficerListState kind="error" message={biocharError} onRetry={() => void loadBiocharReports()} />
+        ) : biocharReports.length === 0 ? (
+          <OfficerListState
+            kind="empty"
+            title="No biochar reports"
+            message="Completed biochar production reports will appear here."
+          />
+        ) : (
+          <View style={styles.list}>
+            {biocharReports.map((report) => {
+              const reportId = Number(report.batch_id ?? report.report_id ?? report.id);
+              const busy = biocharDownloadingId === reportId;
+
+              return (
+                <View key={`biochar-${reportId}`} style={[styles.biocharCard, officerCardShadow]}>
+                  <Text style={styles.biocharTitle}>
+                    {pickString(report, 'report_id') !== '-'
+                      ? pickString(report, 'report_id')
+                      : `Batch ${reportId}`}
+                  </Text>
+                  <Text style={styles.biocharMeta}>
+                    {pickString(report, 'farmer_name')} • {pickString(report, 'farm_name')}
+                  </Text>
+                  <Text style={styles.biocharMeta}>
+                    Output: {pickString(report, 'biochar_output')} kg • {pickString(report, 'production_date')}
+                  </Text>
+                  <Text style={styles.biocharStatus}>{pickString(report, 'verification_status', 'status')}</Text>
+                  <View style={styles.biocharActions}>
+                    <Pressable style={styles.biocharBtn} onPress={() => void openBiocharDetail(reportId)}>
+                      <Text style={styles.biocharBtnText}>Detail</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.biocharBtn}
+                      disabled={busy}
+                      onPress={() => void handleBiocharDownload(reportId, 'pdf')}
+                    >
+                      <Text style={styles.biocharBtnText}>{busy ? '…' : 'PDF'}</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.biocharBtnPrimary}
+                      disabled={busy}
+                      onPress={() => void handleBiocharDownload(reportId, 'csv')}
+                    >
+                      <Text style={styles.biocharBtnPrimaryText}>CSV</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {biocharDetail ? (
+          <View style={[styles.detailCard, officerCardShadow]}>
+            <Text style={styles.sectionTitle}>Biochar report detail</Text>
+            <Text style={styles.detailLine}>Report: {pickString(biocharDetail, 'report_id')}</Text>
+            <Text style={styles.detailLine}>Farmer: {pickString(biocharDetail, 'farmer_name')}</Text>
+            <Text style={styles.detailLine}>Farm: {pickString(biocharDetail, 'farm_name')}</Text>
+            <Text style={styles.detailLine}>Feedstock: {pickString(biocharDetail, 'feedstock_type')}</Text>
+            <Text style={styles.detailLine}>Output: {pickString(biocharDetail, 'biochar_output')} kg</Text>
+            <Text style={styles.detailLine}>Utilization: {pickString(biocharDetail, 'utilization_label')}</Text>
+            <Text style={styles.detailLine}>Applied: {pickString(biocharDetail, 'quantity_applied')} kg</Text>
+            <Text style={styles.detailLine}>Sold: {pickString(biocharDetail, 'quantity_sold')} kg</Text>
+            <Text style={styles.detailLine}>Remaining: {pickString(biocharDetail, 'remaining_stock')} kg</Text>
+            <Text style={styles.detailLine}>Status: {pickString(biocharDetail, 'verification_status')}</Text>
+            <Pressable style={styles.biocharBtn} onPress={() => setBiocharDetail(null)}>
+              <Text style={styles.biocharBtnText}>Close</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </ScrollView>
 
       <ConfirmationModal
@@ -246,6 +361,24 @@ export function FieldOfficerReportsScreen() {
         onConfirm={() => void confirmDeleteDraft()}
         onCancel={() => setDeleteTarget(null)}
       />
+    </SafeReportsShell>
+  );
+}
+
+function SafeReportsShell({
+  children,
+  navigation,
+}: {
+  children: ReactNode;
+  navigation: Nav;
+}) {
+  return (
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <OfficerReportsHeader
+        onNotificationsPress={() => navigation.navigate('FieldOfficerNotifications')}
+        onProfilePress={() => navigation.navigate('Profile')}
+      />
+      {children}
     </SafeAreaView>
   );
 }
@@ -357,5 +490,70 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: officerTheme.onSurfaceVariant,
     fontWeight: '600',
+  },
+  biocharCard: {
+    backgroundColor: officerTheme.surfaceLowest,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: officerTheme.outlineVariant,
+    gap: 4,
+  },
+  biocharTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: officerTheme.onSurface,
+  },
+  biocharMeta: {
+    fontSize: 12,
+    color: officerTheme.onSurfaceVariant,
+  },
+  biocharStatus: {
+    marginTop: 4,
+    fontSize: 12,
+    fontWeight: '700',
+    color: officerTheme.tertiary,
+    textTransform: 'capitalize',
+  },
+  biocharActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  biocharBtn: {
+    borderWidth: 1,
+    borderColor: officerTheme.outlineVariant,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  biocharBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: officerTheme.onSurface,
+  },
+  biocharBtnPrimary: {
+    backgroundColor: officerTheme.primary,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  biocharBtnPrimaryText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: officerTheme.onPrimary,
+  },
+  detailCard: {
+    backgroundColor: officerTheme.surfaceLowest,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: officerTheme.outlineVariant,
+    gap: 6,
+  },
+  detailLine: {
+    fontSize: 13,
+    color: officerTheme.onSurface,
   },
 });

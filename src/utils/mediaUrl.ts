@@ -1,12 +1,15 @@
 import { getCachedApiBaseUrl } from '../storage/apiConfigStorage';
+import { shouldRewriteMediaHost } from '../config/apiUrlValidation';
 import { pickString, type ApiRecord } from './apiHelpers';
 
 function apiOrigin(): string {
   return getCachedApiBaseUrl().replace(/\/api\/?$/, '');
 }
 
-const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0']);
-
+/**
+ * Resolve relative or absolute media/storage paths against the live API origin.
+ * Avoids /storage/storage and /api/api duplication.
+ */
 export function resolveMediaUrl(url: string | null | undefined): string | null {
   if (!url || url === '-') {
     return null;
@@ -14,23 +17,22 @@ export function resolveMediaUrl(url: string | null | undefined): string | null {
 
   const trimmed = url.trim();
 
-  if (trimmed.startsWith('file://')) {
+  if (trimmed.startsWith('file://') || trimmed.startsWith('content://') || trimmed.startsWith('data:')) {
     return trimmed;
   }
 
+  const origin = apiOrigin();
+
   if (trimmed.startsWith('/api/')) {
     const base = getCachedApiBaseUrl().replace(/\/$/, '');
-
     return `${base}${trimmed.slice(4)}`;
   }
-
-  const origin = apiOrigin();
 
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
     try {
       const parsed = new URL(trimmed);
 
-      if (LOCAL_HOSTS.has(parsed.hostname)) {
+      if (shouldRewriteMediaHost(parsed.hostname)) {
         return `${origin}${parsed.pathname}${parsed.search}`;
       }
     } catch {
@@ -40,7 +42,14 @@ export function resolveMediaUrl(url: string | null | undefined): string | null {
     return trimmed;
   }
 
-  return `${origin}${trimmed.startsWith('/') ? trimmed : `/${trimmed}`}`;
+  const normalizedPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+
+  // Prevent accidental /storage/storage/... when callers already include storage/
+  if (normalizedPath.startsWith('/storage/storage/')) {
+    return `${origin}${normalizedPath.replace(/^\/storage\/storage\//, '/storage/')}`;
+  }
+
+  return `${origin}${normalizedPath}`;
 }
 
 export function extractProfilePhotoUrl(data: ApiRecord): string | null {

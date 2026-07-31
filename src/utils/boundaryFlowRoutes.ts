@@ -18,7 +18,7 @@ export function getBoundaryFlowRoutes(mode: BoundarySessionMode): BoundaryFlowRo
   if (mode === 'onboarding') {
     return {
       start: 'OnboardingBoundaryStart',
-      capture: 'OnboardingBoundaryCapture',
+      capture: 'FarmBoundaryMap',
       preview: 'OnboardingBoundaryPreview',
       confirm: 'OnboardingBoundaryPreview',
       uploading: 'OnboardingBoundaryPreview',

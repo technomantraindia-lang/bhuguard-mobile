@@ -7,12 +7,7 @@ import type {
   VisitFilterKey,
 } from '../../../hooks/useFieldOfficerVisitsData';
 import { officerCardShadow, officerShadow, officerTheme } from '../../../theme/officerDashboardTheme';
-import {
-  OfficerCompactQuickActionCard,
-  OfficerQuickActionsSectionHeader,
-} from '../OfficerPremiumQuickActionCard';
 import { BhuguardMaterialIcon } from '../../shared/BhuguardMaterialIcon';
-import type { BhuguardIconName } from '../../shared/BhuguardMaterialIcon';
 
 export const VISIT_FILTER_OPTIONS: Array<{ key: VisitFilterKey; label: string }> = [
   { key: 'all', label: 'All' },
@@ -231,50 +226,6 @@ function DetailRow({
       <Text style={styles.detailValue} numberOfLines={1}>
         {value}
       </Text>
-    </View>
-  );
-}
-
-interface OfficerVisitsQuickActionsProps {
-  onGpsCheckIn: () => void;
-  onFeedstockVerification: () => void;
-  onBiocharProduction: () => void;
-  onInventoryMovement: () => void;
-  onUploadEvidence: () => void;
-  onReportsQueue: () => void;
-}
-
-export function OfficerVisitsQuickActions({
-  onGpsCheckIn,
-  onFeedstockVerification,
-  onBiocharProduction,
-  onInventoryMovement,
-  onReportsQueue,
-}: OfficerVisitsQuickActionsProps) {
-  const actions: Array<{ key: string; label: string; icon: BhuguardIconName; onPress: () => void }> = [
-    { key: 'gps', label: 'GPS Check-In', icon: 'share_location', onPress: onGpsCheckIn },
-    { key: 'feedstock', label: 'Feedstock Verify', icon: 'science', onPress: onFeedstockVerification },
-    { key: 'biochar', label: 'Biochar Production', icon: 'eco', onPress: onBiocharProduction },
-    { key: 'inventory', label: 'Inventory Movement', icon: 'sync', onPress: onInventoryMovement },
-    { key: 'reports', label: 'Reports Queue', icon: 'pending_actions', onPress: onReportsQueue },
-  ];
-
-  return (
-    <View style={styles.section}>
-      <OfficerQuickActionsSectionHeader
-        title="Quick Officer Actions"
-        subtitle="Run visit verification and biochar workflows."
-      />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickActionsRow}>
-        {actions.map((action) => (
-          <OfficerCompactQuickActionCard
-            key={action.key}
-            icon={action.icon}
-            label={action.label}
-            onPress={action.onPress}
-          />
-        ))}
-      </ScrollView>
     </View>
   );
 }
@@ -621,11 +572,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: officerTheme.onSurfaceVariant,
     marginTop: 4,
-  },
-  quickActionsRow: {
-    gap: 12,
-    paddingRight: 8,
-    paddingBottom: 4,
   },
   activityList: {
     gap: 14,

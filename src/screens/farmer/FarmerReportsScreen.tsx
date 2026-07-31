@@ -12,6 +12,7 @@ import { FarmerReportHistorySection } from '../../components/farmer/FarmerReport
 import { FarmerReportsHeader } from '../../components/farmer/FarmerReportsHeader';
 import { useFarmerReportsData } from '../../hooks/useFarmerReportsData';
 import { useScrollBottomPadding } from '../../hooks/useTabBarLayout';
+import { useUnreadNotificationCount } from '../../hooks/useUnreadNotificationCount';
 import type { FarmerStackParamList } from '../../navigation/types';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 import type { FarmerReportItem } from '../../utils/farmerReportHelpers';
@@ -21,6 +22,7 @@ type Nav = NativeStackNavigationProp<FarmerStackParamList>;
 export function FarmerReportsScreen() {
   const navigation = useNavigation<Nav>();
   const { reports, history, summary, loading, error, reload } = useFarmerReportsData();
+  const { unreadCount } = useUnreadNotificationCount();
   const scrollBottomPadding = useScrollBottomPadding();
 
   const handleViewReport = (report: FarmerReportItem) => {
@@ -69,6 +71,7 @@ export function FarmerReportsScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <FarmerReportsHeader
         onBack={() => navigation.navigate('FarmerTabs', { screen: 'Home' })}
+        unreadCount={unreadCount}
         onNotificationsPress={() => navigation.navigate('FarmerNotifications')}
         onProfilePress={() => navigation.navigate('FarmerTabs', { screen: 'Profile' })}
       />

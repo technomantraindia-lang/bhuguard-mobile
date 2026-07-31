@@ -12,8 +12,8 @@ interface OfficerBiocharSummaryCardsProps {
   assignedFarmersCount: number;
   dueBiocharCount: number;
   overdueFarmersCount: number;
-  draftBiocharCount: number;
-  submittedBiocharCount: number;
+  myArtisansCount: number;
+  artisanBiocharBatchesCount: number;
 }
 
 function SummaryCard({
@@ -46,24 +46,34 @@ export function OfficerBiocharSummaryCards({
   assignedFarmersCount,
   dueBiocharCount,
   overdueFarmersCount,
-  draftBiocharCount,
-  submittedBiocharCount,
+  myArtisansCount,
+  artisanBiocharBatchesCount,
 }: OfficerBiocharSummaryCardsProps) {
   const navigation = useNavigation<Nav>();
 
   return (
     <View style={styles.wrap}>
       <View style={styles.header}>
-        <BhuguardMaterialIcon name="eco" size={20} color={officerTheme.primary} />
-        <Text style={styles.title}>Biochar Program</Text>
+        <BhuguardMaterialIcon name="agriculture" size={20} color={officerTheme.primary} />
+        <Text style={styles.title}>Farm Activity</Text>
       </View>
 
       <View style={styles.grid}>
         <SummaryCard label="My Farmers" value={assignedFarmersCount} onPress={() => navigation.navigate('FieldOfficerTabs', { screen: 'Farmers' })} />
-        <SummaryCard label="Due Soon" value={dueBiocharCount} tone="warning" onPress={() => navigation.navigate('FieldOfficerTabs', { screen: 'Farmers' })} />
-        <SummaryCard label="Overdue" value={overdueFarmersCount} tone="danger" onPress={() => navigation.navigate('FieldOfficerTabs', { screen: 'Farmers' })} />
-        <SummaryCard label="Draft Activities" value={draftBiocharCount} onPress={() => navigation.navigate('FieldOfficerBiocharProductionList')} />
-        <SummaryCard label="Submitted" value={submittedBiocharCount} tone="success" onPress={() => navigation.navigate('FieldOfficerBiocharProductionList')} />
+        <SummaryCard
+          label="Due"
+          value={dueBiocharCount}
+          tone="warning"
+          onPress={() => navigation.navigate('FieldOfficerBiocharDueOverdue', { initialFilter: 'due' })}
+        />
+        <SummaryCard
+          label="Overdue"
+          value={overdueFarmersCount}
+          tone="danger"
+          onPress={() => navigation.navigate('FieldOfficerBiocharDueOverdue', { initialFilter: 'overdue' })}
+        />
+        <SummaryCard label="My Artisan Pros" value={myArtisansCount} onPress={() => navigation.navigate('FieldOfficerTabs', { screen: 'MyArtisans' })} />
+        <SummaryCard label="Biochar Batches of Artisan" value={artisanBiocharBatchesCount} tone="success" onPress={() => navigation.navigate('ArtisanBiocharBatches')} />
       </View>
     </View>
   );

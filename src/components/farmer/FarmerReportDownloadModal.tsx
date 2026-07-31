@@ -42,7 +42,7 @@ export function FarmerReportDownloadModal({
           </View>
 
           <Pressable style={({ pressed }) => [styles.button, pressed && styles.pressed]} onPress={onClose}>
-            <Text style={styles.buttonText}>Done</Text>
+            <Text style={styles.buttonText}>Ok</Text>
           </Pressable>
         </View>
       </View>
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: dashboardTheme.onPrimary,
+    color: '#FFFFFF',
   },
   pressed: {
     opacity: 0.92,

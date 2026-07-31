@@ -1,0 +1,45 @@
+export const loginTheme = {
+  deepGreen: '#0B2E1F',
+  darkText: '#123D28',
+  primaryGreen: '#85C95C',
+  ctaGreen: '#0F7A45',
+  ctaHover: '#0C6639',
+  secondaryYellow: '#E7DF7C',
+  cream: '#F4F0DF',
+  white: '#FFFFFF',
+  glassFill: 'rgba(244, 240, 223, 0.42)',
+  glassFillStrong: 'rgba(244, 240, 223, 0.48)',
+  glassBorder: 'rgba(255, 255, 255, 0.45)',
+  glassBorderSoft: 'rgba(255, 255, 255, 0.35)',
+  glassHighlight: 'rgba(255, 255, 255, 0.28)',
+  inputFill: '#FFFFFF',
+  inputBorder: 'rgba(18, 61, 40, 0.12)',
+  inputBorderFocused: '#0F7A45',
+  textDark: '#123D28',
+  textMuted: 'rgba(11, 46, 31, 0.65)',
+  textLight: 'rgba(244, 240, 223, 0.95)',
+  textOnDark: 'rgba(244, 240, 223, 0.88)',
+  divider: 'rgba(11, 46, 31, 0.14)',
+  featureDivider: 'rgba(244, 240, 223, 0.28)',
+  error: '#B53B3B',
+  shadow: '#02120C',
+  overlayTop: 'rgba(11, 46, 31, 0.38)',
+  overlayMid: 'rgba(11, 46, 31, 0.12)',
+  overlayBottom: 'rgba(11, 46, 31, 0.48)',
+  vignette: 'rgba(0, 0, 0, 0.22)',
+  /** @deprecated use deepGreen */
+  darkGreen: '#0B2E1F',
+  /** @deprecated use ctaGreen */
+  primary: '#0F7A45',
+  /** @deprecated use ctaHover */
+  primaryHover: '#0C6639',
+  forest: '#0B2E1F',
+  accent: '#E7DF7C',
+  fonts: {
+    bold: 'PlusJakartaSans_700Bold',
+    semiBold: 'PlusJakartaSans_600SemiBold',
+    medium: 'PlusJakartaSans_500Medium',
+  },
+} as const;
+
+export type LoginTheme = typeof loginTheme;

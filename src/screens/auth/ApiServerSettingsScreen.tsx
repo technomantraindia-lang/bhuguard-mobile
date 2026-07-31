@@ -109,7 +109,7 @@ export function ApiServerSettingsScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
             <Text style={styles.backText}>← {t('common.back')}</Text>
@@ -140,7 +140,7 @@ export function ApiServerSettingsScreen({ navigation }: Props) {
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
-            placeholder="https://yourdomain.com"
+            placeholder="https://erp.bhuguard.com"
             editable={!testing && !saving}
           />
 

@@ -1,0 +1,22 @@
+export const artisanTheme = {
+  primary: '#85C95C',
+  secondary: '#E7DF7C',
+  tertiary: '#0B2E1F',
+  cream: '#F4F0DF',
+  creamBg: '#F8F8F1',
+  deepText: '#102219',
+  actionGreen: '#0B7541',
+  lightGreenSurface: 'rgba(133, 201, 92, 0.10)',
+  softBorder: 'rgba(11, 46, 31, 0.12)',
+  secondaryText: 'rgba(16, 34, 25, 0.66)',
+  white: '#FFFFFF',
+  error: '#DC2626',
+  tealAccent: '#2A9D8F',
+  cardShadow: {
+    shadowColor: '#0B2E1F',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+} as const;

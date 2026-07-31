@@ -4,23 +4,34 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 
 interface PinBoxInputProps {
-  label: string;
+  label?: string;
   length?: number;
   value: string;
   onChange: (value: string) => void;
   masked?: boolean;
   autoFocus?: boolean;
   activeBorderColor?: string;
+  /** Stable key prefix — never Date.now()/Math.random(). */
+  keyPrefix?: string;
+  hideLabel?: boolean;
+  boxBackgroundColor?: string;
+  inactiveBorderColor?: string;
+  digitColor?: string;
 }
 
 export function PinBoxInput({
-  label,
+  label = 'PIN',
   length = 6,
   value,
   onChange,
   masked = true,
   autoFocus = false,
   activeBorderColor = dashboardTheme.primary,
+  keyPrefix = 'pin-box',
+  hideLabel = false,
+  boxBackgroundColor = dashboardTheme.surfaceLowest,
+  inactiveBorderColor = dashboardTheme.outlineVariant,
+  digitColor = dashboardTheme.onSurface,
 }: PinBoxInputProps) {
   const inputRef = useRef<TextInput>(null);
 
@@ -31,7 +42,7 @@ export function PinBoxInput({
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>{label}</Text>
+      {!hideLabel ? <Text style={styles.label}>{label}</Text> : null}
       <Pressable style={styles.row} onPress={() => inputRef.current?.focus()}>
         {Array.from({ length }).map((_, index) => {
           const filled = value[index] !== undefined;
@@ -39,18 +50,19 @@ export function PinBoxInput({
 
           return (
             <View
-              key={`${label}-${index}`}
+              key={`${keyPrefix}-${index}`}
               style={[
                 styles.box,
+                { backgroundColor: boxBackgroundColor, borderColor: inactiveBorderColor },
                 active && [styles.boxActive, { borderColor: activeBorderColor }],
                 filled && { borderColor: activeBorderColor },
               ]}
             >
               {filled ? (
                 masked ? (
-                  <View style={styles.dot} />
+                  <View style={[styles.dot, { backgroundColor: digitColor }]} />
                 ) : (
-                  <Text style={styles.digit}>{value[index]}</Text>
+                  <Text style={[styles.digit, { color: digitColor }]}>{value[index]}</Text>
                 )
               ) : active ? (
                 <View style={[styles.cursor, { backgroundColor: activeBorderColor }]} />
@@ -67,6 +79,9 @@ export function PinBoxInput({
         maxLength={length}
         autoFocus={autoFocus}
         caretHidden
+        textContentType="oneTimeCode"
+        autoComplete="sms-otp"
+        importantForAutofill="yes"
         style={styles.hiddenInput}
         accessibilityLabel={label}
       />
@@ -97,34 +112,25 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: dashboardTheme.outlineVariant,
-    backgroundColor: dashboardTheme.surfaceLowest,
     alignItems: 'center',
     justifyContent: 'center',
   },
   boxActive: {
-    borderColor: dashboardTheme.primary,
     borderWidth: 2,
-  },
-  boxFilled: {
-    borderColor: dashboardTheme.primary,
   },
   dot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: dashboardTheme.onSurface,
   },
   digit: {
     fontSize: 18,
     fontWeight: '700',
-    color: dashboardTheme.onSurface,
   },
   cursor: {
     width: 2,
     height: 22,
     borderRadius: 1,
-    backgroundColor: dashboardTheme.primary,
   },
   hiddenInput: {
     position: 'absolute',

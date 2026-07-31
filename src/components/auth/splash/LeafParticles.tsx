@@ -1,15 +1,5 @@
-import { useEffect, useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
-import Animated, {
-  Easing,
-  cancelAnimation,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import { useEffect, useMemo, useRef } from 'react';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { LEAF_START_DELAY_MS, SPLASH_LEAF_COLORS } from './SplashTransition';
@@ -43,44 +33,48 @@ function LeafShape({ color, size }: { color: string; size: number }) {
 }
 
 function FloatingLeaf({ leaf }: { leaf: LeafSpec }) {
-  const progress = useSharedValue(0);
-  const opacity = useSharedValue(0);
+  const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    opacity.value = withDelay(
-      leaf.delay,
-      withTiming(0.2, { duration: 900, easing: Easing.out(Easing.cubic) }),
+    const float = Animated.loop(
+      Animated.sequence([
+        Animated.delay(leaf.delay),
+        Animated.timing(progress, {
+          toValue: 1,
+          duration: leaf.duration,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(progress, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ]),
     );
 
-    progress.value = withDelay(
-      leaf.delay,
-      withRepeat(
-        withSequence(
-          withTiming(1, {
-            duration: leaf.duration,
-            easing: Easing.inOut(Easing.sin),
-          }),
-          withTiming(0, { duration: 0 }),
-        ),
-        -1,
-        false,
-      ),
-    );
+    float.start();
 
     return () => {
-      cancelAnimation(progress);
-      cancelAnimation(opacity);
+      float.stop();
+      progress.stopAnimation();
     };
-  }, [leaf.delay, leaf.duration, opacity, progress]);
+  }, [leaf.delay, leaf.duration, progress]);
 
-  const style = useAnimatedStyle(() => {
-    const y = -progress.value * 86;
-    const x = Math.sin(progress.value * Math.PI * 2) * leaf.driftX;
+  const translateY = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -86],
+  });
 
-    return {
-      opacity: opacity.value * (1 - progress.value * 0.45),
-      transform: [{ translateY: y }, { translateX: x }, { rotate: `${-12 + progress.value * 24}deg` }],
-    };
+  const translateX = progress.interpolate({
+    inputRange: [0, 0.25, 0.5, 0.75, 1],
+    outputRange: [0, leaf.driftX, 0, -leaf.driftX, 0],
+  });
+
+  const rotate = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['-12deg', '12deg'],
+  });
+
+  const leafOpacity = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.2, 0.11],
   });
 
   return (
@@ -92,8 +86,9 @@ function FloatingLeaf({ leaf }: { leaf: LeafSpec }) {
           bottom: leaf.bottom,
           width: leaf.size,
           height: leaf.size,
+          opacity: leafOpacity,
+          transform: [{ translateY }, { translateX }, { rotate }],
         },
-        style,
       ]}
       pointerEvents="none"
     >

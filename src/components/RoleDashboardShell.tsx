@@ -12,6 +12,7 @@ import { AppButton } from './AppButton';
 import type { DashboardMenuItem } from './DashboardMenu';
 import { DashboardMenu } from './DashboardMenu';
 import { LoadingState } from './LoadingState';
+import { RoleEnvironmentalBackground } from './shared/RoleEnvironmentalBackground';
 import { StatusBadge } from './StatusBadge';
 
 interface RoleDashboardShellProps {
@@ -54,6 +55,7 @@ export function RoleDashboardShell({
 
   return (
     <SafeAreaView style={styles.safe}>
+      <RoleEnvironmentalBackground />
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerText}>
@@ -130,7 +132,7 @@ export function useProfileLoader(loadFn: () => Promise<{ status?: string; detail
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1, backgroundColor: 'transparent' },
   container: { padding: 20, gap: 16 },
   header: {
     flexDirection: 'row',

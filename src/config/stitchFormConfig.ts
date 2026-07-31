@@ -301,7 +301,7 @@ export const STITCH_FORM_CONFIGS: Record<string, ApiFormConfig> = {
       import('../api/fieldOfficerApi').then((m) => m.createOfficerAgroforestryPlantation(values)),
   },
   artisan_registration: {
-    title: 'Artisan Registration',
+    title: 'Artisan Pro Registration',
     subtitle: 'POST /field-officer/artisans',
     fields: [
       textField('name', 'Artisan name', { required: true }),

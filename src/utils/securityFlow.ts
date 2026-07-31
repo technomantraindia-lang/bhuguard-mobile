@@ -2,6 +2,7 @@ import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { SecurityFlowOrigin } from '../navigation/types';
+import { safeNavigationReset } from '../navigation/safeNavigationReset';
 
 export function formatMobileDisplay(mobile: string): string {
   const digits = mobile.replace(/\D/g, '');
@@ -42,7 +43,7 @@ export function finishSecurityFlow(
     return;
   }
 
-  navigation.reset({
+  safeNavigationReset(navigation, {
     index: 0,
     routes: [{ name: 'MobileLogin' }],
   });

@@ -10,7 +10,8 @@ $env:ANDROID_HOME = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { "$env:LO
 $env:GRADLE_USER_HOME = if ($env:GRADLE_USER_HOME) { $env:GRADLE_USER_HOME } else { Join-Path $env:USERPROFILE ".gradle" }
 $env:PATH = "$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:PATH"
 $env:EXPO_PUBLIC_APP_VARIANT = "production"
-$env:EXPO_PUBLIC_API_URL = if ($env:EXPO_PUBLIC_API_URL) { $env:EXPO_PUBLIC_API_URL } else { "https://demo.bhuguard.com/api" }
+$env:EXPO_PUBLIC_APP_URL = if ($env:EXPO_PUBLIC_APP_URL) { $env:EXPO_PUBLIC_APP_URL } else { "https://erp.bhuguard.com" }
+$env:EXPO_PUBLIC_API_URL = if ($env:EXPO_PUBLIC_API_URL) { $env:EXPO_PUBLIC_API_URL } else { "https://erp.bhuguard.com/api" }
 $env:NODE_ENV = "production"
 
 Write-Host "Building Bhuguard production AAB locally (API: $env:EXPO_PUBLIC_API_URL)" -ForegroundColor Cyan

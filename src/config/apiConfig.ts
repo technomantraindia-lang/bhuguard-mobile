@@ -6,6 +6,7 @@ import { BUILD_API_BASE_URL } from './apiDefaults';
  */
 export const API_BASE_URL = BUILD_API_BASE_URL;
 export {
+  APP_URL,
   APP_VARIANT,
   DEMO_API_BASE_URL,
   IS_DEMO_BUILD,

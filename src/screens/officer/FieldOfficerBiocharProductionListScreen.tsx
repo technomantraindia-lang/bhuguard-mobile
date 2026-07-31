@@ -1,8 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 
 import { getApiErrorMessage } from '../../api/authApi';
 import { getFieldOfficerBiocharBatches } from '../../api/fieldOfficerApi';
@@ -12,45 +13,68 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerTheme } from '../../theme/officerDashboardTheme';
 import { extractList, pickString, type ApiRecord } from '../../utils/apiHelpers';
+import { formatStatusLabel } from '../../utils/statusLabels';
 
-type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
+type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'FieldOfficerBiocharProductionList'>;
+type ScreenRoute = RouteProp<FieldOfficerStackParamList, 'FieldOfficerBiocharProductionList'>;
 
 function statusTone(status: string): string {
-  if (status === 'draft' || status === 'correction_required') {
+  const normalized = status.toLowerCase();
+  if (normalized === 'draft' || normalized === 'correction_required') {
     return '#CA8A04';
   }
 
-  if (status === 'submitted_for_review') {
+  if (normalized === 'submitted_for_review' || normalized === 'reviewed' || normalized === 'produced') {
     return officerTheme.primaryContainer;
+  }
+
+  if (normalized === 'completed' || normalized === 'approved') {
+    return officerTheme.primary;
   }
 
   return officerTheme.onSurfaceVariant;
 }
 
+function displayValue(value: string | number | null | undefined): string {
+  if (value == null) {
+    return '—';
+  }
+  const text = String(value).trim();
+  return !text || text === '-' ? '—' : text;
+}
+
 export function FieldOfficerBiocharProductionListScreen() {
   const navigation = useNavigation<Nav>();
-  const [drafts, setDrafts] = useState<ApiRecord[]>([]);
-  const [submitted, setSubmitted] = useState<ApiRecord[]>([]);
+  const route = useRoute<ScreenRoute>();
+  const [batches, setBatches] = useState<ApiRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const context = route.params;
+  const farmerId = context?.farmerId != null ? Number(context.farmerId) : undefined;
+  const farmId = context?.farmId != null ? Number(context.farmId) : undefined;
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const [draftData, submittedData] = await Promise.all([
-        getFieldOfficerBiocharBatches({ status: 'draft' }),
-        getFieldOfficerBiocharBatches({ status: 'submitted' }),
-      ]);
-      setDrafts(extractList(draftData as ApiRecord, ['batches']));
-      setSubmitted(extractList(submittedData as ApiRecord, ['batches']));
+      const data = await getFieldOfficerBiocharBatches({
+        farmer_id: farmerId,
+        farm_id: farmId,
+      });
+      const list = extractList(data as ApiRecord, ['batches']).sort((left, right) => {
+        const leftId = Number(left.id ?? 0);
+        const rightId = Number(right.id ?? 0);
+        return rightId - leftId;
+      });
+      setBatches(list);
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to load biochar production records.'));
+      setError(getApiErrorMessage(err, 'Failed to load Biochar production batches.'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [farmId, farmerId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -58,15 +82,40 @@ export function FieldOfficerBiocharProductionListScreen() {
     }, [load]),
   );
 
-  if (loading && drafts.length === 0 && submitted.length === 0) {
+  const subtitle = useMemo(() => {
+    if (context?.farmName && context.farmName !== '-') {
+      return `${context.farmerName ?? 'Farmer'} · ${context.farmName}`;
+    }
+    if (context?.farmerName && context.farmerName !== '-') {
+      return context.farmerName;
+    }
+    return 'Draft, in-progress, and completed batches';
+  }, [context?.farmName, context?.farmerName]);
+
+  const openCreateBatch = () => {
+    navigation.navigate('FieldOfficerBiocharProduction', {
+      farmerId,
+      farmerCode: context?.farmerCode,
+      farmerName: context?.farmerName,
+      farmId,
+      farmCode: context?.farmCode,
+      farmName: context?.farmName,
+      village: context?.village,
+      taluka: context?.taluka,
+      district: context?.district,
+      state: context?.state,
+    });
+  };
+
+  if (loading && batches.length === 0) {
     return (
       <SafeAreaView style={styles.safe}>
-        <LoadingState message="Loading biochar production records..." />
+        <LoadingState message="Loading Biochar production batches..." />
       </SafeAreaView>
     );
   }
 
-  if (error && drafts.length === 0 && submitted.length === 0) {
+  if (error && batches.length === 0) {
     return (
       <SafeAreaView style={styles.safe}>
         <ErrorState message={error} onRetry={load} />
@@ -78,9 +127,20 @@ export function FieldOfficerBiocharProductionListScreen() {
     const id = Number(record.id);
     const batchCode = pickString(record, 'batch_code', 'batchCode');
     const farmerName = pickString(record, 'farmer_name', 'farmerName');
+    const farmName = pickString(record, 'farm_name', 'farmName');
     const status = pickString(record, 'status');
-    const statusLabel = pickString(record, 'status_label', 'statusLabel');
+    const statusLabel =
+      pickString(record, 'status_label', 'statusLabel') !== '-'
+        ? pickString(record, 'status_label', 'statusLabel')
+        : formatStatusLabel(status);
     const canEdit = record.can_edit === true;
+    const productionQty = record.biochar_output != null
+      ? `${record.biochar_output} ${pickString(record, 'biochar_output_unit') !== '-' ? pickString(record, 'biochar_output_unit') : 'kg'}`
+      : '—';
+    const availableStock =
+      record.available_stock_kg != null || record.current_available_stock != null
+        ? `${record.available_stock_kg ?? record.current_available_stock} kg`
+        : '—';
 
     return (
       <Pressable
@@ -89,50 +149,80 @@ export function FieldOfficerBiocharProductionListScreen() {
         onPress={() =>
           navigation.navigate('FieldOfficerBiocharProduction', {
             batchId: id,
-            farmerId: record.farmer_id != null ? Number(record.farmer_id) : undefined,
+            farmerId: record.farmer_id != null ? Number(record.farmer_id) : farmerId,
+            farmerCode: pickString(record, 'farmer_code') !== '-' ? pickString(record, 'farmer_code') : context?.farmerCode,
+            farmerName: farmerName !== '-' ? farmerName : context?.farmerName,
+            farmId: record.farm_id != null ? Number(record.farm_id) : farmId,
+            farmCode: pickString(record, 'farm_code') !== '-' ? pickString(record, 'farm_code') : context?.farmCode,
+            farmName: farmName !== '-' ? farmName : context?.farmName,
+            village: context?.village,
+            taluka: context?.taluka,
+            district: context?.district,
+            state: context?.state,
           })
         }
       >
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>{pickString(record, 'production_record_code', 'productionRecordCode')}</Text>
-          <Text style={[styles.statusBadge, { color: statusTone(status) }]}>{statusLabel !== '-' ? statusLabel : status}</Text>
+          <Text style={styles.cardTitle}>{displayValue(batchCode !== '-' ? batchCode : `Batch #${id}`)}</Text>
+          <Text style={[styles.statusBadge, { color: statusTone(status) }]}>{statusLabel}</Text>
         </View>
-        <Text style={styles.meta}>Project: Biochar · {pickString(record, 'production_date_label', 'productionDateLabel')}</Text>
-        {record.feedstock_quantity != null ? (
-          <Text style={styles.meta}>Feedstock: {String(record.feedstock_quantity)} {pickString(record, 'feedstock_unit')}</Text>
+
+        <Text style={styles.meta}>
+          Farmer: {displayValue(farmerName)} ({displayValue(record.farmer_id ?? record.farmer_code)})
+        </Text>
+        <Text style={styles.meta}>
+          Farm: {displayValue(farmName)} ({displayValue(record.farm_id ?? record.farm_code)})
+        </Text>
+        <Text style={styles.meta}>Production date: {displayValue(pickString(record, 'production_date_label', 'production_date'))}</Text>
+        <Text style={styles.meta}>Feedstock: {displayValue(pickString(record, 'feedstock_type'))}</Text>
+        <Text style={styles.meta}>Production quantity: {productionQty}</Text>
+        <Text style={styles.meta}>Available stock: {availableStock}</Text>
+        <Text style={styles.meta}>
+          Mixing: {displayValue(pickString(record, 'mixing_status_label', 'mixing_status'))}
+        </Text>
+        <Text style={styles.meta}>
+          Inventory: {displayValue(pickString(record, 'inventory_status_label', 'inventory_status'))}
+        </Text>
+        <Text style={styles.meta}>
+          Created by: {displayValue(pickString(record, 'created_by_role', 'source_label'))} ·{' '}
+          {displayValue(pickString(record, 'created_by_user_name', 'officer_name'))}
+        </Text>
+        {status === 'completed' && pickString(record, 'completed_date', 'completed_at', 'approved_at') !== '-' ? (
+          <Text style={styles.meta}>Completed: {displayValue(pickString(record, 'completed_date', 'completed_at', 'approved_at'))}</Text>
         ) : null}
-        <View style={styles.fieldBlock}>
-          <Text style={styles.fieldLabel}>Batch ID</Text>
-          <Text style={styles.fieldValue}>{batchCode !== '-' ? batchCode : `Record #${id}`}</Text>
-        </View>
-        <View style={styles.fieldBlock}>
-          <Text style={styles.fieldLabel}>Farmer Name</Text>
-          <Text style={styles.fieldValue}>{farmerName !== '-' ? farmerName : '—'}</Text>
-        </View>
-        <Text style={styles.action}>{canEdit ? 'Tap to continue draft' : 'Tap to view record'}</Text>
+        <Text style={styles.action}>{canEdit ? 'Tap to continue draft' : 'Tap to view batch'}</Text>
       </Pressable>
     );
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Biochar Activity" />
+      <ScreenHeader title="Biochar Production Batches" subtitle={subtitle} />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={officerTheme.primary} />}
       >
-        <Pressable
-          style={styles.newButton}
-          onPress={() => navigation.navigate('FieldOfficerTabs', { screen: 'Farmers' })}
-        >
-          <Text style={styles.newButtonText}>New Production Record</Text>
+        <Pressable style={styles.newButton} onPress={openCreateBatch}>
+          <Text style={styles.newButtonText}>Add Biochar Production Batch</Text>
         </Pressable>
 
-        <Text style={styles.sectionTitle}>Draft Records ({drafts.length})</Text>
-        {drafts.length === 0 ? <Text style={styles.empty}>No draft records yet.</Text> : drafts.map(renderRecord)}
+        {farmId || farmerId ? (
+          <Text style={styles.scopeHint}>
+            Showing batches for {farmerId ? `Farmer #${farmerId}` : 'selected farmer'}
+            {farmId ? ` · Farm #${farmId}` : ''}
+          </Text>
+        ) : null}
 
-        <Text style={styles.sectionTitle}>Submitted Records ({submitted.length})</Text>
-        {submitted.length === 0 ? <Text style={styles.empty}>No submitted records yet.</Text> : submitted.map(renderRecord)}
+        <Text style={styles.sectionTitle}>All Batches ({batches.length})</Text>
+        {batches.length === 0 ? (
+          <Text style={styles.empty}>
+            {farmId
+              ? 'No Biochar production batches found for this farm.'
+              : 'No Biochar production batches found.'}
+          </Text>
+        ) : (
+          batches.map(renderRecord)
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -148,6 +238,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   newButtonText: { color: officerTheme.onPrimary, fontWeight: '700', fontSize: 16 },
+  scopeHint: { color: officerTheme.onSurfaceVariant, fontSize: 13 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: officerTheme.onSurface, marginTop: 8 },
   empty: { color: officerTheme.onSurfaceVariant, fontSize: 14 },
   card: {
@@ -161,10 +252,7 @@ const styles = StyleSheet.create({
   cardDraft: { borderColor: '#CA8A04', backgroundColor: '#FFFBEB' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   cardTitle: { fontSize: 16, fontWeight: '700', color: officerTheme.onSurface, flex: 1 },
-  statusBadge: { fontSize: 12, fontWeight: '700', textTransform: 'capitalize' },
+  statusBadge: { fontSize: 12, fontWeight: '700' },
   meta: { fontSize: 13, color: officerTheme.onSurfaceVariant },
-  fieldBlock: { marginTop: 4, gap: 2 },
-  fieldLabel: { fontSize: 11, fontWeight: '700', color: officerTheme.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: 0.4 },
-  fieldValue: { fontSize: 15, fontWeight: '600', color: officerTheme.onSurface },
   action: { fontSize: 12, fontWeight: '600', color: officerTheme.primaryContainer, marginTop: 8 },
 });

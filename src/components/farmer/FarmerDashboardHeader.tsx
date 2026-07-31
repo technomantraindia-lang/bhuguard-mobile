@@ -1,31 +1,35 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
-import { BrandedHeaderLogo } from '../shared/BrandedHeaderLogo';
 import { LOGO_SIZES } from '../../constants/branding';
 import { useProfilePhotoDisplay } from '../../hooks/useProfilePhotoDisplay';
-import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
+import { useTranslation } from '../../i18n/I18nContext';
+import { farmerTheme } from '../../theme/farmerTheme';
+import { BhuguardLogo } from '../shared/BhuguardLogo';
+import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
 
 interface FarmerDashboardHeaderProps {
   firstName: string;
   fullName?: string;
   photoUrl?: string | null;
+  greeting?: string;
+  subtitle?: string;
+  unreadCount?: number;
   onNotificationsPress: () => void;
   onProfilePress: () => void;
 }
 
-function getGreeting(): string {
+function getGreetingKey(): 'farmer.dashboard.greetingMorning' | 'farmer.dashboard.greetingAfternoon' | 'farmer.dashboard.greetingEvening' {
   const hour = new Date().getHours();
 
   if (hour < 12) {
-    return 'Good Morning';
+    return 'farmer.dashboard.greetingMorning';
   }
 
   if (hour < 17) {
-    return 'Good Afternoon';
+    return 'farmer.dashboard.greetingAfternoon';
   }
 
-  return 'Good Evening';
+  return 'farmer.dashboard.greetingEvening';
 }
 
 function getInitials(name: string): string {
@@ -46,22 +50,31 @@ export function FarmerDashboardHeader({
   firstName,
   fullName,
   photoUrl,
+  greeting,
+  subtitle,
+  unreadCount = 0,
   onNotificationsPress,
   onProfilePress,
 }: FarmerDashboardHeaderProps) {
+  const { t } = useTranslation();
   const displayUri = useProfilePhotoDisplay(photoUrl, 'farmer-dashboard-avatar.jpg');
   const initialsSource = (fullName ?? firstName).trim() || 'Farmer';
-  const displayName = firstName.endsWith('bhai') ? firstName : `${firstName}bhai`;
+  const displayName = firstName.trim() || 'Farmer';
+  const resolvedGreeting = greeting ?? t(getGreetingKey());
+  const resolvedSubtitle = subtitle ?? t('farmer.dashboard.subtitle');
+  const badgeLabel = unreadCount > 99 ? '99+' : String(unreadCount);
 
   return (
     <View style={styles.wrap}>
       <View style={styles.left}>
-        <BrandedHeaderLogo size={LOGO_SIZES.dashboardHeader} />
+        <BhuguardLogo size={LOGO_SIZES.dashboardHeader} animation="none" />
         <View style={styles.copy}>
           <Text style={styles.greeting} numberOfLines={2}>
-            {getGreeting()}, {displayName}
+            {resolvedGreeting}, {displayName}
           </Text>
-          <Text style={styles.subtitle}>Your Bhuguard farm dashboard</Text>
+          <Text style={styles.subtitle} numberOfLines={1}>
+            {resolvedSubtitle}
+          </Text>
         </View>
       </View>
 
@@ -70,9 +83,14 @@ export function FarmerDashboardHeader({
           style={({ pressed }) => [styles.iconButton, pressed && styles.iconPressed]}
           onPress={onNotificationsPress}
           accessibilityRole="button"
-          accessibilityLabel="Notifications"
+          accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
         >
-          <BhuguardMaterialIcon name="notifications" size={24} color={dashboardTheme.primary} />
+          <BhuguardMaterialIcon name="notifications" size={22} color={farmerTheme.actionGreen} />
+          {unreadCount > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{badgeLabel}</Text>
+            </View>
+          ) : null}
         </Pressable>
 
         <Pressable
@@ -99,64 +117,86 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: dashboardTheme.marginMobile,
+    paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 12,
-    backgroundColor: dashboardTheme.surface,
+    backgroundColor: farmerTheme.white,
     borderBottomWidth: 1,
-    borderBottomColor: dashboardTheme.outlineVariant,
+    borderBottomColor: farmerTheme.softBorder,
   },
   left: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
     flex: 1,
-    paddingRight: 8,
+    minWidth: 0,
+    marginRight: 8,
   },
   copy: {
     flex: 1,
-    gap: 1,
+    minWidth: 0,
+    marginLeft: 10,
     justifyContent: 'center',
   },
   greeting: {
     fontSize: 17,
-    lineHeight: 24,
-    fontWeight: '700',
-    color: dashboardTheme.headingGreen,
+    lineHeight: 22,
+    fontWeight: '800',
+    color: farmerTheme.headingGreen,
   },
   subtitle: {
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '500',
-    color: dashboardTheme.textMuted,
-    marginTop: 1,
+    color: farmerTheme.secondaryText,
+    marginTop: 2,
   },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
   },
   iconButton: {
+    position: 'relative',
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: dashboardTheme.background,
+    backgroundColor: farmerTheme.lightGreenSurface,
     borderWidth: 1,
-    borderColor: dashboardTheme.outlineVariant,
+    borderColor: farmerTheme.softBorder,
+    marginRight: 8,
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    backgroundColor: '#DC2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: farmerTheme.white,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    lineHeight: 12,
   },
   iconPressed: {
-    backgroundColor: `${dashboardTheme.secondaryContainer}80`,
-    transform: [{ scale: 0.95 }],
+    opacity: 0.9,
+    transform: [{ scale: 0.96 }],
   },
   avatarButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: dashboardTheme.surfaceLowest,
+    borderColor: farmerTheme.primary,
   },
   avatarImage: {
     width: '100%',
@@ -166,11 +206,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: dashboardTheme.surfaceLow,
+    backgroundColor: farmerTheme.actionGreen,
   },
   avatarText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: dashboardTheme.primary,
+    fontWeight: '800',
+    color: farmerTheme.white,
   },
 });

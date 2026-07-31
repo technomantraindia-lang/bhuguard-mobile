@@ -6,8 +6,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 
 
-import { AppButton } from '../../components/AppButton';
-
 import { ActivityEvidenceImagePreview } from '../../components/evidence/ActivityEvidenceImagePreview';
 
 import { ErrorState } from '../../components/ErrorState';
@@ -21,8 +19,6 @@ import { useFarmerActivityDetail } from '../../hooks/useFarmerActivityDetail';
 import type { FarmerStackParamList } from '../../navigation/types';
 
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
-
-import { downloadActivityEvidenceFile } from '../../utils/evidenceFileDownload';
 
 import { buildActivityTimelineSteps } from '../../utils/farmerActivityHelpers';
 
@@ -81,22 +77,6 @@ export function FarmerActivityDetailScreen({ navigation, route }: Props) {
       message: `${activity.title} (${activity.activityId})\nFarm: ${activity.farmName}\nStatus: ${activity.statusLabel}\nDate: ${activity.dateLabel}`,
 
     });
-
-  };
-
-
-
-  const handleDownloadEvidence = async () => {
-
-    const result = await downloadActivityEvidenceFile(activityId);
-
-
-
-    if (!result.success) {
-
-      Alert.alert('Download failed', result.message ?? 'Unable to download activity evidence photo.');
-
-    }
 
   };
 
@@ -230,8 +210,6 @@ export function FarmerActivityDetailScreen({ navigation, route }: Props) {
               activityId={activityId}
               onOpenFullscreen={(uri, title) => navigation.navigate('FullscreenImage', { uri, title })}
             />
-
-            <AppButton label="Download Evidence Photo" variant="secondary" onPress={() => void handleDownloadEvidence()} />
 
           </View>
 

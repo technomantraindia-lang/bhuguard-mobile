@@ -25,6 +25,13 @@ export type ResetPasswordParams = {
 export type CreateMpinParams = {
   mobile?: string;
   flowOrigin?: SecurityFlowOrigin;
+  /** First-login setup uses authenticated /auth/mpin/setup. */
+  mode?: 'setup' | 'reset';
+};
+
+export type BiometricSetupParams = {
+  mobile?: string;
+  name?: string;
 };
 
 export type SecurityScreensParamList = {
@@ -45,6 +52,8 @@ export type MpinLoginParams = {
   mobile?: string;
   name?: string;
   role?: AppLoginRole;
+  /** Unlock an already-validated cold-start session without OTP. */
+  mode?: 'login' | 'unlock';
 };
 
 export type PasswordLoginParams = {
@@ -64,6 +73,7 @@ export type RootStackParamList = {
   ForgotPassword: ForgotPasswordParams | undefined;
   MpinLogin: MpinLoginParams;
   CreateMpin: CreateMpinParams | undefined;
+  BiometricSetup: BiometricSetupParams | undefined;
   OtpVerification: OtpVerificationParams;
   ResetPassword: ResetPasswordParams;
   ArtisanLogin: undefined;
@@ -91,14 +101,38 @@ export type FieldOfficerTabParamList = {
   Home: undefined;
   Farmers: undefined;
   Visits: undefined;
-  Reports: undefined;
+  MyArtisans: undefined;
   Map: undefined;
   Profile: undefined;
 };
 
 export type ArtisanStackParamList = {
   ArtisanDashboard: undefined;
-  ArtisanFarmLookup: undefined;
+  ArtisanNotifications: undefined;
+  ArtisanProfile: undefined;
+  ArtisanSettings: undefined;
+  ArtisanFarmLookup:
+    | {
+        purpose?: 'find' | 'production' | 'mixing' | 'application';
+      }
+    | undefined;
+  ArtisanBiocharApplication:
+    | {
+        farmId?: number;
+        farmerId?: number;
+        farmerCode?: string;
+        farmerName?: string;
+        farmCode?: string;
+        farmLabel?: string;
+        farmName?: string;
+        village?: string;
+        taluka?: string;
+        district?: string;
+        state?: string;
+        mixingId?: number;
+        selectedBatchIds?: number[];
+      }
+    | undefined;
   ArtisanBiocharProduction: {
     farmId: number;
     farmerId?: number;
@@ -113,7 +147,27 @@ export type ArtisanStackParamList = {
     latitude?: number;
     longitude?: number;
     batchId?: number;
+    submissionUuid?: string;
+    viewOnly?: boolean;
     gpsRecaptured?: boolean;
+  };
+  ArtisanBiocharProductionStatus: {
+    submissionUuid: string;
+    farmId: number;
+    farmerId?: number;
+    farmerCode?: string;
+    farmerName?: string;
+    farmCode?: string;
+    farmLabel?: string;
+    village?: string;
+    taluka?: string;
+    district?: string;
+    state?: string;
+    latitude?: number;
+    longitude?: number;
+    batchCode?: string;
+    status?: string;
+    savedAt?: string;
   };
   ArtisanBiocharMixing: {
     farmId: number;
@@ -128,9 +182,29 @@ export type ArtisanStackParamList = {
     state?: string;
     recordId?: number;
   };
-  ArtisanProductionRecords: { status: 'draft' | 'submitted' };
-  ArtisanProfile: undefined;
+  ArtisanProductionRecords: { status: 'submitted' };
   FullscreenImage: { uri: string; title?: string };
+  FieldOfficerFarmActivityStart: FieldOfficerStackParamList['FieldOfficerFarmActivityStart'];
+  FarmVerificationActivity: FieldOfficerStackParamList['FarmVerificationActivity'];
+  FarmerOnboardingStart: FieldOfficerStackParamList['FarmerOnboardingStart'];
+  FarmerBasicDetails: FieldOfficerStackParamList['FarmerBasicDetails'];
+  FarmerConsent: FieldOfficerStackParamList['FarmerConsent'];
+  FarmerAddress: FieldOfficerStackParamList['FarmerAddress'];
+  FarmerLandDetails: FieldOfficerStackParamList['FarmerLandDetails'];
+  FarmerGpsCapture: FieldOfficerStackParamList['FarmerGpsCapture'];
+  OnboardingBoundaryStart: FieldOfficerStackParamList['OnboardingBoundaryStart'];
+  OnboardingBoundaryCapture: FieldOfficerStackParamList['OnboardingBoundaryCapture'];
+  FarmBoundaryMap: FieldOfficerStackParamList['FarmBoundaryMap'];
+  OnboardingBoundaryPreview: FieldOfficerStackParamList['OnboardingBoundaryPreview'];
+  OnboardingCameraBoundaryStart: FieldOfficerStackParamList['OnboardingCameraBoundaryStart'];
+  OnboardingCameraBoundaryLive: FieldOfficerStackParamList['OnboardingCameraBoundaryLive'];
+  OnboardingCameraBoundaryPoints: FieldOfficerStackParamList['OnboardingCameraBoundaryPoints'];
+  OnboardingCameraBoundaryPreview: FieldOfficerStackParamList['OnboardingCameraBoundaryPreview'];
+  FarmerProofUpload: FieldOfficerStackParamList['FarmerProofUpload'];
+  FarmerOnboardingReview: FieldOfficerStackParamList['FarmerOnboardingReview'];
+  FarmerOnboardingSuccess: FieldOfficerStackParamList['FarmerOnboardingSuccess'];
+  OnboardedFarmerView: FieldOfficerStackParamList['OnboardedFarmerView'];
+  BiocharAwareness: FieldOfficerStackParamList['BiocharAwareness'];
 };
 
 export type FarmerStackParamList = {
@@ -225,6 +299,20 @@ export type CompanyStackParamList = {
 export type FieldOfficerStackParamList = {
   FieldOfficerTabs: NavigatorScreenParams<FieldOfficerTabParamList> | undefined;
   StitchScreen: { screenKey: string; itemId?: number };
+  FieldOfficerFarmLookup: undefined;
+  FieldOfficerFarmActivityStart:
+    | {
+        farmerId?: number;
+        farmId?: number;
+        farmerCode?: string;
+        farmerName?: string;
+        farmCode?: string;
+        lockFarmSelection?: boolean;
+        overdue?: boolean;
+      }
+    | undefined;
+  FieldOfficerCallFarmer: undefined;
+  FieldOfficerNavigate: undefined;
   FieldOfficerDashboard: undefined;
   FieldOfficerProfile: undefined;
   FieldOfficerProfileSection: { section: 'personal' | 'work' | 'documents' | 'security' };
@@ -246,6 +334,7 @@ export type FieldOfficerStackParamList = {
   FieldOfficerActivityLogs: undefined;
   FieldOfficerMonitoringReports: undefined;
   FieldOfficerNotifications: undefined;
+  FieldOfficerSchedule: undefined;
   VisitCheckIn: { assignmentId: number; visitContext?: import('../utils/visitCheckInHelpers').VisitCheckInRouteContext };
   FieldOfficerVisitVerification: { assignmentId?: number; farmerId?: number; farmId?: number };
   VisitLocationVerify: {
@@ -254,21 +343,97 @@ export type FieldOfficerStackParamList = {
     verification: VisitLocationVerification;
   };
   FarmVerificationChecklist: { assignmentId: number };
+  FarmVerificationActivity: {
+    assignmentId?: number;
+    farmerId: number;
+    farmId: number;
+    farmCode?: string;
+    farmerName?: string;
+    farmerCode?: string;
+    farmName?: string;
+    village?: string;
+    taluka?: string;
+    district?: string;
+    state?: string;
+  };
   BiocharApplicationVerification: { applicationId?: number; assignmentId?: number };
   EvidenceVerification: { assignmentId: number };
   VerificationChecklist: { assignmentId: number };
   VisitEvidenceUpload: { assignmentId: number };
   VisitReportReview: { assignmentId: number };
   VisitReportSuccess: { assignmentId: number };
+  FieldOfficerBiocharDueOverdue: { initialFilter?: 'due' | 'overdue' | 'all' } | undefined;
   FarmerOnboardingStart: undefined;
   FarmerBasicDetails: undefined;
-  FarmerConsent: undefined;
+  FarmerConsent:
+    | {
+        returnTo?: 'OnboardingBoundaryStart';
+        farmerId?: number;
+        farmId?: number;
+        farmerName?: string;
+        farmerCode?: string;
+        farmName?: string;
+        farmCode?: string;
+        village?: string;
+        mappingStatus?: 'pending' | 'completed';
+      }
+    | undefined;
   FarmerAddress: undefined;
   FarmerLandDetails: undefined;
   FarmerGpsCapture: undefined;
-  OnboardingBoundaryStart: undefined;
-  OnboardingBoundaryCapture: undefined;
-  OnboardingBoundaryPreview: undefined;
+  OnboardingBoundaryStart:
+    | {
+        farmerId?: number;
+        farmId?: number;
+        farmerName?: string;
+        farmerCode?: string;
+        farmName?: string;
+        farmCode?: string;
+        village?: string;
+        landArea?: string;
+        landAreaUnit?: 'acre' | 'hectare' | 'bigha';
+        mappingStatus?: 'pending' | 'completed';
+      }
+    | undefined;
+  OnboardingBoundaryCapture: {
+    farmerId: number;
+    farmId: number;
+    farmerName: string;
+    farmerCode?: string;
+    farmName?: string;
+    farmCode?: string;
+    village?: string;
+    mappingStatus?: 'pending' | 'completed';
+    declaredArea?: string;
+    declaredAreaUnit?: 'acre' | 'hectare' | 'bigha';
+    returnScreen?: 'OnboardingBoundaryStart';
+  };
+  /** In-app MapLibre Farm Boundary (primary FO mapping route). */
+  FarmBoundaryMap: {
+    farmerId: number;
+    farmId: number;
+    farmerName: string;
+    farmerCode?: string;
+    farmName?: string;
+    farmCode?: string;
+    village?: string;
+    mappingStatus?: 'pending' | 'completed';
+    declaredArea?: string;
+    declaredAreaUnit?: 'acre' | 'hectare' | 'bigha';
+    returnScreen?: 'OnboardingBoundaryStart';
+  };
+  OnboardingBoundaryPreview:
+    | {
+        farmerId?: number;
+        farmId?: number;
+        farmerName?: string;
+        farmerCode?: string;
+        farmName?: string;
+        farmCode?: string;
+        village?: string;
+        mappingStatus?: 'pending' | 'completed';
+      }
+    | undefined;
   OnboardingCameraBoundaryStart: undefined;
   OnboardingCameraBoundaryLive: undefined;
   OnboardingCameraBoundaryPoints: undefined;
@@ -278,7 +443,7 @@ export type FieldOfficerStackParamList = {
   FarmerOnboardingSuccess: undefined;
   OnboardedFarmerView: { farmerId?: number } | undefined;
   BiocharAwareness: { farmerId: number };
-  FieldOfficerCreateVisit: { farmerId: number };
+  FieldOfficerCreateVisit: { farmerId?: number } | undefined;
   OfficerGpsValidation: {
     latitude: number;
     longitude: number;
@@ -298,11 +463,27 @@ export type FieldOfficerStackParamList = {
   FieldOfficerFeedstockVerification:
     | { verificationId?: number; gpsVerified?: boolean; assignmentId?: number }
     | undefined;
-  FieldOfficerBiocharProductionList: undefined;
-    FieldOfficerBiocharProduction: {
+  FieldOfficerBiocharProductionList:
+    | {
+        farmerId?: number;
+        farmerCode?: string;
+        farmerName?: string;
+        farmId?: number;
+        farmCode?: string;
+        farmName?: string;
+        village?: string;
+        taluka?: string;
+        district?: string;
+        state?: string;
+      }
+    | undefined;
+  FieldOfficerBiocharProduction: {
       farmerId?: number;
+      farmerCode?: string;
       farmerName?: string;
       farmId?: number;
+      farmCode?: string;
+      farmName?: string;
       fieldOfficerId?: number;
       visitId?: number;
       village?: string;
@@ -315,9 +496,39 @@ export type FieldOfficerStackParamList = {
       latitude?: number;
       longitude?: number;
     } | undefined;
-  FieldOfficerBiocharMixing: { farmerId: number; recordId?: number } | undefined;
-  FieldOfficerInventoryMovement: { farmerId?: number; movementId?: number } | undefined;
+  FieldOfficerBiocharMixing: {
+    farmerId: number;
+    farmId?: number;
+    recordId?: number;
+    farmerCode?: string;
+    farmerName?: string;
+    farmCode?: string;
+    farmLabel?: string;
+    village?: string;
+    taluka?: string;
+    district?: string;
+    state?: string;
+  } | undefined;
+  FieldOfficerBiocharApplication: {
+    farmerId?: number;
+    farmId?: number;
+    farmerCode?: string;
+    farmerName?: string;
+    farmCode?: string;
+    farmName?: string;
+    village?: string;
+    taluka?: string;
+    district?: string;
+    state?: string;
+    mixingId?: number;
+    selectedBatchIds?: number[];
+  } | undefined;
+  FieldOfficerInventoryMovement: { farmerId?: number; farmId?: number; movementId?: number } | undefined;
   FieldOfficerInventoryTasks: undefined;
   FieldOfficerInventoryTaskDetail: { taskId: number };
   FieldOfficerCreateRecord: { formKey: string };
+  MyArtisans: undefined;
+  RegisterArtisan: undefined;
+  ArtisanDetail: { artisanId: number };
+  ArtisanBiocharBatches: undefined;
 } & SupportScreensParamList & SecurityScreensParamList;

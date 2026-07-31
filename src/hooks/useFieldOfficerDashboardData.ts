@@ -10,6 +10,7 @@ import {
 } from '../api/fieldOfficerApi';
 import { getAuthUser } from '../storage/authStorage';
 import { extractList, pickNestedString, pickString, type ApiRecord } from '../utils/apiHelpers';
+import { resolveMediaUrl } from '../utils/mediaUrl';
 
 export type OfficerTaskStatus = 'pending' | 'scheduled' | 'in_progress' | 'waiting';
 
@@ -22,6 +23,9 @@ export interface OfficerDashboardVisit {
   status: OfficerTaskStatus;
   statusLabel: string;
   assignmentId?: number;
+  farmerId?: number;
+  farmId?: number;
+  farmCode?: string;
   farmerPhone?: string | null;
   /** @deprecated use farmerName */
   title?: string;
@@ -50,13 +54,18 @@ export interface OfficerMapMarker {
 export interface FieldOfficerDashboardViewModel {
   officerName: string;
   officerCode: string;
+  photoUrl: string | null;
   regionLabel: string;
   greeting: string;
   isActive: boolean;
   visitsTodayCount: number;
+  /** Unique farms visited — prefers API `visited_fields_count`. */
+  visitedFieldsCount: number;
   assignedVisitsCount: number;
+  totalVisitsCount: number;
   pendingVisitsCount: number;
   checkedInVisitsCount: number;
+  activeCheckinsCount: number;
   completedVisitsCount: number;
   todayTargetsCount: number;
   pendingReportsCount: number;
@@ -66,9 +75,9 @@ export interface FieldOfficerDashboardViewModel {
   urgentPendingCount: number;
   pipeline: {
     pending: number;
-    review: number;
-    correction: number;
     approved: number;
+    rejected: number;
+    total: number;
   };
   coverageTotal: number;
   coverageMapped: number;
@@ -81,8 +90,8 @@ export interface FieldOfficerDashboardViewModel {
   primaryFarmerPhone: string | null;
   dueBiocharCount: number;
   overdueFarmersCount: number;
-  draftBiocharCount: number;
-  submittedBiocharCount: number;
+  myArtisansCount: number;
+  artisanBiocharBatchesCount: number;
 }
 
 const PENDING_STATUSES = new Set(['assigned', 'accepted', 'correction_requested']);
@@ -91,6 +100,16 @@ const IN_PROGRESS_STATUSES = new Set(['started', 'checked_in', 'verification_in_
 function parseNumber(value: unknown): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function dashboardCount(dashboard: ApiRecord, ...keys: string[]): number | undefined {
+  for (const key of keys) {
+    if (dashboard[key] !== undefined && dashboard[key] !== null) {
+      return parseNumber(dashboard[key]);
+    }
+  }
+
+  return undefined;
 }
 
 function getGreeting(): string {
@@ -284,6 +303,11 @@ function buildVisits(assignments: ApiRecord[]): OfficerDashboardVisit[] {
       status: mapped.status,
       statusLabel: mapped.label,
       assignmentId: parseNumber(assignment.id) || undefined,
+      farmerId: parseNumber(assignment.farmer_id) || parseNumber(pickNestedString(assignment, 'farmer.id')) || undefined,
+      farmId: parseNumber(assignment.farm_id) || parseNumber(pickNestedString(assignment, 'farm.id')) || undefined,
+      farmCode: pickNestedString(assignment, 'farm.farm_code') !== '-'
+        ? pickNestedString(assignment, 'farm.farm_code')
+        : undefined,
       farmerPhone: extractFarmerPhone(assignment),
     };
   });
@@ -381,11 +405,13 @@ async function loadOptional<T>(loader: () => Promise<T>, fallback: T): Promise<T
   }
 }
 
-export function useFieldOfficerDashboardData() {
+export function useFieldOfficerDashboardData(options?: { from?: string; to?: string }) {
   const [data, setData] = useState<FieldOfficerDashboardViewModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const from = options?.from;
+  const to = options?.to;
 
   const load = useCallback(async (silent = false) => {
     if (silent) {
@@ -399,7 +425,7 @@ export function useFieldOfficerDashboardData() {
     try {
       const [user, dashboardData, assignmentsData, farmersData, profileData, monitoringData] = await Promise.all([
         getAuthUser(),
-        getFieldOfficerDashboard(),
+        getFieldOfficerDashboard(from, to),
         loadOptional(() => getVisitAssignments(), {}),
         loadOptional(() => getFieldOfficerFarmers(), {}),
         loadOptional(() => getFieldOfficerProfile(), { user: {} }),
@@ -408,8 +434,14 @@ export function useFieldOfficerDashboardData() {
 
       const dashboard = (dashboardData.dashboard ?? dashboardData) as ApiRecord;
       const profileUser = (profileData.user ?? profileData) as ApiRecord;
-      const fieldOfficer = (profileUser.field_officer ?? profileUser.fieldOfficer ?? {}) as ApiRecord;
-      const assignmentStatus = (dashboard.assignment_status ?? {}) as ApiRecord;
+      const fieldOfficer = (profileUser.field_officer_profile ??
+        profileUser.field_officer ??
+        profileUser.fieldOfficer ??
+        {}) as ApiRecord;
+      const photoUrl = resolveMediaUrl(
+        pickString(fieldOfficer, 'photo_url') !== '-' ? pickString(fieldOfficer, 'photo_url') : null,
+      );
+      const artisanApprovalPipeline = (dashboard.artisan_approval_pipeline ?? {}) as ApiRecord;
       const assignments = extractList(assignmentsData as ApiRecord, ['assignments', 'data']);
       const farmers = extractList(farmersData as ApiRecord, ['farmers', 'data']);
       const monitoringReports = extractList(monitoringData as ApiRecord, ['monitoring_reports', 'reports']);
@@ -429,42 +461,58 @@ export function useFieldOfficerDashboardData() {
       const regionLabel = taluka !== '-' ? `${taluka}, ${district}` : district;
 
       const assignedFarmersCount =
-        parseNumber(dashboard.assigned_farmers_count) || farmers.length;
+        dashboardCount(dashboard, 'my_farmers_count', 'assigned_farmers_count') ?? farmers.length;
 
       const pendingVerificationsCount =
         parseNumber(dashboard.pending_verifications_count) ||
-        parseNumber(assignmentStatus.pending) ||
         assignments.filter((assignment) =>
           PENDING_STATUSES.has(pickString(assignment, 'assignment_status', 'status').toLowerCase()) ||
           IN_PROGRESS_STATUSES.has(pickString(assignment, 'assignment_status', 'status').toLowerCase()),
         ).length;
 
-      const visitsTodayCount = assignments.filter((assignment) => isToday(assignment)).length;
-      const assignedVisitsCount = parseNumber(assignmentStatus.total_assignments) || assignments.length;
-      const pendingVisitsCount = countByStatuses(assignments, ['assigned', 'accepted', 'started']);
-      const checkedInVisitsCount = countByStatuses(assignments, [
-        'checked_in',
-        'verification_in_progress',
-      ]);
-      const completedVisitsCount = countByStatuses(assignments, ['approved', 'submitted_to_admin']);
+      const visitsTodayCount =
+        parseNumber(dashboard.today_visits_count) ||
+        assignments.filter((assignment) => isToday(assignment)).length;
+
+      const visitedFieldsCount =
+        parseNumber(dashboard.visited_fields_count) ||
+        parseNumber(dashboard.visited_field_count) ||
+        countByStatuses(assignments, ['approved', 'submitted_to_admin', 'completed']);
+
+      const pendingVisitsCount =
+        dashboardCount(dashboard, 'pending_visits') ??
+        (parseNumber(dashboard.pending_visited_count) ||
+          countByStatuses(assignments, ['assigned', 'accepted', 'started']));
+
+      const activeCheckinsCount =
+        dashboardCount(dashboard, 'active_visits') ??
+        (parseNumber(dashboard.active_checkins_count) ||
+          countByStatuses(assignments, ['checked_in', 'verification_in_progress']));
+
+      const totalVisitsCount =
+        dashboardCount(dashboard, 'total_visits', 'total_visits_count') ??
+        assignments.length;
+
+      const assignedVisitsCount = totalVisitsCount;
+      const checkedInVisitsCount = activeCheckinsCount;
+      const completedVisitsCount = visitedFieldsCount;
       const todayTargetsCount = visitsTodayCount || Math.min(8, pendingVerificationsCount);
       const pendingReportsCount =
-        parseNumber(assignmentStatus.submitted_to_admin) + parseNumber(assignmentStatus.correction_requested) ||
-        monitoringReports.length;
-      const monthDoneCount = parseNumber(assignmentStatus.approved);
+        dashboardCount(dashboard, 'reminder_count') ?? monitoringReports.length;
+      const monthDoneCount = dashboardCount(dashboard, 'completed_visits', 'completed_visits_count') ?? 0;
 
       const pipeline = {
-        pending: parseNumber(assignmentStatus.pending) || pendingVerificationsCount,
-        review: parseNumber(assignmentStatus.submitted_to_admin),
-        correction: parseNumber(assignmentStatus.correction_requested),
-        approved: parseNumber(assignmentStatus.approved),
+        pending: parseNumber(artisanApprovalPipeline.pending),
+        approved: parseNumber(artisanApprovalPipeline.approved),
+        rejected: parseNumber(artisanApprovalPipeline.rejected),
+        total: parseNumber(artisanApprovalPipeline.total),
       };
 
       const coverageMapped = countMappedFarmers(farmers);
       const coverageTotal = assignedFarmersCount || farmers.length || coverageMapped;
 
       const approvedCount = pipeline.approved;
-      const totalReports = approvedCount + pipeline.review + pipeline.pending;
+      const totalReports = pipeline.total || approvedCount + pipeline.pending + pipeline.rejected;
       const accuracyPercent =
         totalReports > 0 ? Math.round((approvedCount / Math.max(totalReports, 1)) * 100) : 0;
       const reportRateLabel = totalReports > 0 ? `${approvedCount}/${totalReports}` : `${monthDoneCount}/0`;
@@ -478,24 +526,29 @@ export function useFieldOfficerDashboardData() {
       setData({
         officerName,
         officerCode,
+        photoUrl,
         regionLabel,
         greeting: getGreeting(),
         isActive: true,
         visitsTodayCount: todayTargetsCount,
+        visitedFieldsCount,
         assignedVisitsCount,
+        totalVisitsCount,
         pendingVisitsCount,
         checkedInVisitsCount,
-        completedVisitsCount,
+        activeCheckinsCount,
+        completedVisitsCount:
+          dashboardCount(dashboard, 'completed_visits', 'completed_visits_count') ?? completedVisitsCount,
         todayTargetsCount,
         pendingReportsCount,
         monthDoneCount,
         assignedFarmersCount,
         pendingVerificationsCount,
         urgentPendingCount: parseNumber(dashboard.urgent_pending_count),
-        dueBiocharCount: parseNumber(dashboard.due_biochar_updates_count),
-        overdueFarmersCount: parseNumber(dashboard.overdue_farmers_count),
-        draftBiocharCount: parseNumber(dashboard.draft_biochar_production_count),
-        submittedBiocharCount: parseNumber(dashboard.submitted_biochar_production_count),
+        dueBiocharCount: dashboardCount(dashboard, 'due_soon_count', 'due_biochar_updates_count') ?? 0,
+        overdueFarmersCount: dashboardCount(dashboard, 'overdue_count', 'overdue_farmers_count') ?? 0,
+        myArtisansCount: dashboardCount(dashboard, 'my_artisans_count') ?? 0,
+        artisanBiocharBatchesCount: dashboardCount(dashboard, 'artisan_biochar_batches_count') ?? 0,
         pipeline,
         coverageTotal,
         coverageMapped,
@@ -513,7 +566,7 @@ export function useFieldOfficerDashboardData() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [from, to]);
 
   useEffect(() => {
     void load(false);

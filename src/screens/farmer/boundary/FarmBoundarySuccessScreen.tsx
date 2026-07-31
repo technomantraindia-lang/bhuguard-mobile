@@ -39,7 +39,7 @@ export function FarmBoundarySuccessScreen({ navigation, route }: Props) {
         <Pressable style={styles.primaryButton} onPress={() => navigation.navigate('FarmerFarmDetail', { farmId })}>
           <Text style={styles.primaryButtonText}>View Farm Details</Text>
         </Pressable>
-        <Pressable style={styles.outlineButton} onPress={() => navigation.navigate('FarmerSubmitActivity', { farmId })}>
+        <Pressable style={styles.outlineButton} onPress={() => navigation.navigate('FarmerFarmActivity', { farmId })}>
           <Text style={styles.outlineButtonText}>Add Activity</Text>
         </Pressable>
       </View>

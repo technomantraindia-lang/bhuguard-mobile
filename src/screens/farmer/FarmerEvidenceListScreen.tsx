@@ -92,13 +92,13 @@ export function FarmerEvidenceListScreen() {
 
       refetchOnFocus
 
-      emptyTitle="No evidence uploaded yet"
+      emptyTitle="No Evidence Uploaded"
 
       emptyMessage="Capture photos and documents linked to your farms and activities."
 
       headerAction={{
 
-        label: 'Upload Evidence',
+        label: 'Upload Photo',
 
         onPress: () => navigation.navigate('FarmerUploadEvidence'),
 
@@ -176,7 +176,7 @@ export function FarmerEvidenceListScreen() {
 
               <AppButton
 
-                label="View / Download"
+                label="View Photo"
 
                 variant="secondary"
 

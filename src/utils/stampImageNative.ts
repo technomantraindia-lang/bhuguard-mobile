@@ -1,8 +1,45 @@
 import { Image, NativeModules } from 'react-native';
-import RNPhotoManipulator, { TextAlign, TextDirection, type MimeType } from 'react-native-photo-manipulator';
 
 import type { LivePhotoWatermarkMeta } from './livePhotoWatermarkFormat';
 import { getLivePhotoWatermarkLines } from './livePhotoWatermarkFormat';
+
+type PhotoManipulatorModule = {
+  printText: (
+    uri: string,
+    texts: Array<Record<string, unknown>>,
+    mimeType: string,
+  ) => Promise<string>;
+  TextAlign?: { END: string };
+  TextDirection?: { LTR: string };
+};
+
+function resolvePhotoManipulatorModule(): PhotoManipulatorModule | null {
+  if (!NativeModules.RNPhotoManipulator && !NativeModules.PhotoManipulator) {
+    return null;
+  }
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require('react-native-photo-manipulator') as {
+      default?: PhotoManipulatorModule;
+      printText?: PhotoManipulatorModule['printText'];
+      TextAlign?: PhotoManipulatorModule['TextAlign'];
+      TextDirection?: PhotoManipulatorModule['TextDirection'];
+    };
+    const printText = mod.default?.printText ?? mod.printText;
+    if (typeof printText !== 'function') {
+      return null;
+    }
+
+    return {
+      printText,
+      TextAlign: mod.TextAlign ?? mod.default?.TextAlign,
+      TextDirection: mod.TextDirection ?? mod.default?.TextDirection,
+    };
+  } catch {
+    return null;
+  }
+}
 
 function getImageSize(uri: string): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
@@ -18,7 +55,7 @@ export function isPhotoManipulatorAvailable(): boolean {
   return Boolean(
     NativeModules.RNPhotoManipulator ??
       NativeModules.PhotoManipulator ??
-      (typeof RNPhotoManipulator?.printText === 'function'),
+      resolvePhotoManipulatorModule(),
   );
 }
 
@@ -30,6 +67,11 @@ export async function stampImageWithPhotoManipulator(
   uri: string,
   meta: LivePhotoWatermarkMeta,
 ): Promise<string> {
+  const RNPhotoManipulator = resolvePhotoManipulatorModule();
+  if (!RNPhotoManipulator) {
+    throw new Error('Photo manipulator native module is unavailable on this install.');
+  }
+
   const { width, height } = await getImageSize(uri);
   const lines = getLivePhotoWatermarkLines(meta);
   const fontSize = Math.max(11, Math.round(width * 0.028));
@@ -38,6 +80,8 @@ export async function stampImageWithPhotoManipulator(
   const totalTextHeight = lines.length * lineHeight;
   const startY = height - padding - totalTextHeight;
   const anchorX = width - padding;
+  const align = RNPhotoManipulator.TextAlign?.END ?? 'END';
+  const direction = RNPhotoManipulator.TextDirection?.LTR ?? 'LTR';
 
   const texts = lines.flatMap((line, index) => {
     const y = startY + index * lineHeight;
@@ -49,16 +93,16 @@ export async function stampImageWithPhotoManipulator(
         textSize: fontSize,
         color: '#000000',
         thickness: 3,
-        align: TextAlign.END,
-        direction: TextDirection.LTR,
+        align,
+        direction,
       },
       {
         position: { x: anchorX, y },
         text: line,
         textSize: fontSize,
         color: '#FFFFFF',
-        align: TextAlign.END,
-        direction: TextDirection.LTR,
+        align,
+        direction,
         shadowRadius: 4,
         shadowOffset: { x: 0, y: 1 },
         shadowColor: '#000000',
@@ -66,5 +110,5 @@ export async function stampImageWithPhotoManipulator(
     ];
   });
 
-  return RNPhotoManipulator.printText(uri, texts, 'image/jpeg' as MimeType);
+  return RNPhotoManipulator.printText(uri, texts, 'image/jpeg');
 }

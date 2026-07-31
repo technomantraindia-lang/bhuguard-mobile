@@ -1,15 +1,5 @@
-import { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
-import Animated, {
-  Easing,
-  cancelAnimation,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet } from 'react-native';
 
 import { SPLASH_DOT_COLOR } from './SplashTransition';
 
@@ -17,54 +7,57 @@ interface LoadingDotsProps {
   visible?: boolean;
 }
 
+function pulseDot(value: Animated.Value, delayMs: number): Animated.CompositeAnimation {
+  return Animated.loop(
+    Animated.sequence([
+      Animated.delay(delayMs),
+      Animated.timing(value, {
+        toValue: 1,
+        duration: 420,
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(value, {
+        toValue: 0.28,
+        duration: 420,
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]),
+  );
+}
+
 export function LoadingDots({ visible = true }: LoadingDotsProps) {
-  const a = useSharedValue(0.28);
-  const b = useSharedValue(0.28);
-  const c = useSharedValue(0.28);
-  const containerOpacity = useSharedValue(visible ? 1 : 0);
+  const a = useRef(new Animated.Value(0.28)).current;
+  const b = useRef(new Animated.Value(0.28)).current;
+  const c = useRef(new Animated.Value(0.28)).current;
+  const containerOpacity = useRef(new Animated.Value(visible ? 1 : 0)).current;
 
   useEffect(() => {
-    containerOpacity.value = withTiming(visible ? 1 : 0, { duration: 280 });
+    Animated.timing(containerOpacity, {
+      toValue: visible ? 1 : 0,
+      duration: 280,
+      useNativeDriver: true,
+    }).start();
   }, [containerOpacity, visible]);
 
   useEffect(() => {
-    const pulse = (delayMs: number) =>
-      withDelay(
-        delayMs,
-        withRepeat(
-          withSequence(
-            withTiming(1, { duration: 420, easing: Easing.inOut(Easing.quad) }),
-            withTiming(0.28, { duration: 420, easing: Easing.inOut(Easing.quad) }),
-          ),
-          -1,
-          false,
-        ),
-      );
-
-    a.value = pulse(0);
-    b.value = pulse(180);
-    c.value = pulse(360);
+    const animations = [pulseDot(a, 0), pulseDot(b, 180), pulseDot(c, 360)];
+    animations.forEach((animation) => animation.start());
 
     return () => {
-      cancelAnimation(a);
-      cancelAnimation(b);
-      cancelAnimation(c);
+      animations.forEach((animation) => animation.stop());
+      a.stopAnimation();
+      b.stopAnimation();
+      c.stopAnimation();
     };
   }, [a, b, c]);
 
-  const wrapStyle = useAnimatedStyle(() => ({
-    opacity: containerOpacity.value,
-  }));
-
-  const aStyle = useAnimatedStyle(() => ({ opacity: a.value }));
-  const bStyle = useAnimatedStyle(() => ({ opacity: b.value }));
-  const cStyle = useAnimatedStyle(() => ({ opacity: c.value }));
-
   return (
-    <Animated.View style={[styles.row, wrapStyle]} accessibilityLabel="Loading">
-      <Animated.View style={[styles.dot, aStyle]} />
-      <Animated.View style={[styles.dot, bStyle]} />
-      <Animated.View style={[styles.dot, cStyle]} />
+    <Animated.View style={[styles.row, { opacity: containerOpacity }]} accessibilityLabel="Loading">
+      <Animated.View style={[styles.dot, { opacity: a }]} />
+      <Animated.View style={[styles.dot, { opacity: b }]} />
+      <Animated.View style={[styles.dot, { opacity: c }]} />
     </Animated.View>
   );
 }

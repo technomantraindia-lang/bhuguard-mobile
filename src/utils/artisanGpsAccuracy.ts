@@ -8,7 +8,20 @@ export type ArtisanGpsActivityStage =
   | 'process_evidence'
   | 'production_finish'
   | 'output_image'
-  | 'submit';
+  | 'submit'
+  | 'farm_arrival'
+  | 'moisture_reading'
+  | 'pyrolysis_start'
+  | 'mid_process'
+  | 'end_process'
+  | 'quenching'
+  | 'mixing_start'
+  | 'mixing_finish'
+  | 'application_start'
+  | 'application_finish'
+  | 'artisan_check_in'
+  | 'artisan_check_out'
+  | 'live_location_update';
 
 export type ArtisanGpsAccuracyTier = 'excellent' | 'good' | 'acceptable' | 'poor' | 'unknown';
 

@@ -2,8 +2,6 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { getApiErrorMessage } from '../../api/authApi';
@@ -14,7 +12,7 @@ import {
 } from '../../api/fieldOfficerApi';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
 import { useApiList } from '../../hooks/useApiList';
-import type { FieldOfficerStackParamList, FieldOfficerTabParamList } from '../../navigation/types';
+import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
 import { downloadFieldOfficerReport } from '../../utils/fieldOfficerReportDownload';
 import { mapFieldOfficerReport } from '../../utils/fieldOfficerReportHelpers';
@@ -29,10 +27,7 @@ type ReportsFilterKey =
   | 'rejected'
   | 'correction_requested';
 
-type Nav = CompositeNavigationProp<
-  BottomTabNavigationProp<FieldOfficerTabParamList, 'Reports'>,
-  NativeStackNavigationProp<FieldOfficerStackParamList>
->;
+type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
 
 function resolveReportStatus(assignment: ApiRecord): ReportsFilterKey {
   const status = pickNestedString(assignment, 'verification_report.admin_review_status');

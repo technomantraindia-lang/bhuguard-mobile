@@ -1,5 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { clearColdStartSessionGate } from '../auth/startup/coldStartGate';
+import {
+  clearSecureAuthToken,
+  getSecureAuthToken,
+  setSecureAuthToken,
+} from '../storage/secureAuthStorage';
 import type { AuthUser } from '../types/auth';
 
 export const AUTH_TOKEN_KEY = 'bhuguard_token';
@@ -7,15 +13,15 @@ export const AUTH_USER_KEY = 'bhuguard_user';
 export const AUTH_USER_TYPE_KEY = 'bhuguard_user_type';
 
 export async function saveAuthToken(token: string): Promise<void> {
-  await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
+  await setSecureAuthToken(token);
 }
 
 export async function getAuthToken(): Promise<string | null> {
-  return AsyncStorage.getItem(AUTH_TOKEN_KEY);
+  return getSecureAuthToken();
 }
 
 export async function removeAuthToken(): Promise<void> {
-  await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+  await clearSecureAuthToken();
 }
 
 export async function saveAuthUser(user: AuthUser): Promise<void> {
@@ -48,8 +54,10 @@ export async function removeAuthUser(): Promise<void> {
 }
 
 export async function clearAuthStorage(): Promise<void> {
+  clearColdStartSessionGate();
+
   await Promise.all([
-    AsyncStorage.removeItem(AUTH_TOKEN_KEY),
+    clearSecureAuthToken(),
     AsyncStorage.removeItem(AUTH_USER_KEY),
     AsyncStorage.removeItem(AUTH_USER_TYPE_KEY),
   ]);

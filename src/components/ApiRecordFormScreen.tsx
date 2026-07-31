@@ -95,7 +95,7 @@ export function ApiRecordFormScreen({ config }: ApiRecordFormScreenProps) {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <ScreenHeader title={config.title} subtitle={config.subtitle} />

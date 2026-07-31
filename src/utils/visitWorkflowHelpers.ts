@@ -40,8 +40,8 @@ export const VISIT_VERIFICATION_STEPS: VisitVerificationStep[] = [
   { key: 'check_in', label: 'Check-in' },
   { key: 'farmer_details', label: 'Farmer Details' },
   { key: 'mobile_network', label: 'Mobile / Network' },
-  { key: 'start_biochar_activity', label: 'Start Biochar Activity' },
-  { key: 'biochar_process', label: 'Biochar Process' },
+  { key: 'start_biochar_activity', label: 'Biochar Activity' },
+  { key: 'biochar_process', label: 'Biochar Activity' },
   { key: 'evidence', label: 'Evidence/Submit' },
 ];
 
@@ -167,15 +167,23 @@ export async function ensureVisitReadyForGpsCheckIn(
     return assignment;
   }
 
-  if (status === 'assigned') {
-    await acceptVisit(assignmentId);
-    assignment = await refreshAssignment(assignmentId);
+  // Scheduled visits are usually assigned/accepted; advance them to started for GPS.
+  if (status === 'assigned' || status === 'scheduled') {
+    const accepted = await acceptVisit(assignmentId);
+    assignment = unwrapAssignmentRecord((accepted ?? (await refreshAssignment(assignmentId))) as ApiRecord);
     status = getAssignmentStatus(assignment);
   }
 
-  if (status === 'accepted') {
-    await startVisit(assignmentId);
-    assignment = await refreshAssignment(assignmentId);
+  if (status === 'accepted' || status === 'scheduled') {
+    const started = await startVisit(assignmentId);
+    assignment = unwrapAssignmentRecord((started ?? (await refreshAssignment(assignmentId))) as ApiRecord);
+    status = getAssignmentStatus(assignment);
+  }
+
+  if (!['started', 'checked_in', 'verification_in_progress'].includes(status)) {
+    throw new Error(
+      `Unable to prepare this visit for GPS check-in (status: ${status || 'unknown'}). Please reopen the visit and try again.`,
+    );
   }
 
   return assignment;

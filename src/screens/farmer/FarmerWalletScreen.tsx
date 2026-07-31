@@ -116,7 +116,7 @@ export function FarmerWalletScreen() {
                 <Text style={styles.txMeta}>Company: {pickString(tx, 'company_name')}</Text>
               ) : null}
               <Text style={styles.txMeta}>
-                {pickString(tx, 'transaction_date')} · {pickString(tx, 'type')}
+                {pickString(tx, 'transaction_date')} ┬╖ {pickString(tx, 'type')}
               </Text>
               {pickString(tx, 'remarks') !== '-' ? <Text style={styles.txMeta}>{pickString(tx, 'remarks')}</Text> : null}
             </View>

@@ -21,6 +21,7 @@ interface LiveEvidenceCaptureCardProps {
   uploadLabel?: string;
   showUploadButton?: boolean;
   hideInlinePreview?: boolean;
+  readOnly?: boolean;
   onOpenPreview?: (uri: string) => void;
 }
 
@@ -35,6 +36,7 @@ export function LiveEvidenceCaptureCard({
   uploadLabel = 'Upload Evidence',
   showUploadButton = false,
   hideInlinePreview = false,
+  readOnly = false,
   onOpenPreview,
 }: LiveEvidenceCaptureCardProps) {
   const busy = capturing || uploading;
@@ -96,36 +98,39 @@ export function LiveEvidenceCaptureCard({
           </View>
         ) : null}
 
-        <View style={styles.actions}>
-          {!evidence ? (
-            <AppButton
-              label={capturing ? 'Opening camera...' : 'Open Camera'}
-              onPress={onOpenCamera}
-              loading={capturing}
-              disabled={busy}
-            />
-          ) : (
-            <>
+        {!readOnly ? (
+          <View style={styles.actions}>
+            {!evidence ? (
               <AppButton
-                label={capturing ? 'Opening camera...' : 'Retake Photo'}
-                onPress={onRetake}
-                variant="secondary"
+                label={capturing ? 'Processing…' : 'Open Camera'}
+                onPress={onOpenCamera}
                 loading={capturing}
                 disabled={busy}
               />
-              {showUploadButton && onUpload ? (
+            ) : (
+              <>
                 <AppButton
-                  label={uploadLabel}
-                  onPress={onUpload}
-                  loading={uploading}
+                  label={capturing ? 'Processing…' : 'Retake Photo'}
+                  onPress={onRetake}
+                  variant="secondary"
+                  loading={capturing}
                   disabled={busy}
                 />
-              ) : null}
-            </>
-          )}
-        </View>
+                {showUploadButton && onUpload ? (
+                  <AppButton
+                    label={uploading ? 'Uploading…' : uploadLabel}
+                    onPress={onUpload}
+                    loading={uploading}
+                    disabled={busy}
+                  />
+                ) : null}
+              </>
+            )}
+          </View>
+        ) : null}
       </View>
 
+      {uploading ? <Text style={styles.statusText}>Uploading…</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
@@ -175,5 +180,6 @@ const styles = StyleSheet.create({
   coords: { fontSize: 12, color: colors.textMuted, fontWeight: '500' },
   locationMeta: { fontSize: 12, color: colors.textMuted, fontWeight: '500' },
   actions: { gap: 10 },
+  statusText: { color: colors.primary, fontSize: 13, fontWeight: '600', lineHeight: 18 },
   error: { color: colors.error, fontSize: 13, lineHeight: 18 },
 });

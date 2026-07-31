@@ -43,8 +43,14 @@ export interface GpsCaptureOptions {
   timeoutMs?: number;
 }
 
-export async function captureHighAccuracyGps(): Promise<OfficerGpsCaptureResult> {
-  return getCurrentLocationDetailed();
+export async function captureHighAccuracyGps(
+  options: GpsCaptureOptions = {},
+): Promise<OfficerGpsCaptureResult> {
+  return getCurrentLocationDetailed({
+    timeoutMs: options.timeoutMs ?? 25000,
+    maxAttempts: options.maxAttempts ?? 4,
+    targetAccuracyM: options.targetAccuracyM ?? 25,
+  });
 }
 
 export function buildGoogleMapsUrl(latitude: number, longitude: number): string {

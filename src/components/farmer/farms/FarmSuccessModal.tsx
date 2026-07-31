@@ -25,7 +25,7 @@ export function FarmSuccessModal({
           <Text style={styles.message}>{message}</Text>
 
           <Pressable style={styles.button} onPress={onClose}>
-            <Text style={styles.buttonText}>Done</Text>
+            <Text style={styles.buttonText}>Ok</Text>
           </Pressable>
         </View>
       </View>
@@ -72,6 +72,6 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: dashboardTheme.onPrimary,
+    color: '#FFFFFF',
   },
 });

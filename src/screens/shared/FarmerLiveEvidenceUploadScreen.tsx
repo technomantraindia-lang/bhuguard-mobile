@@ -11,7 +11,7 @@ import { AppButton } from '../../components/AppButton';
 import { LiveEvidenceCaptureCard } from '../../components/evidence/LiveEvidenceCaptureCard';
 import { EvidenceCapturedPreview } from '../../components/evidence/EvidenceCapturedPreview';
 import { ScreenHeader } from '../../components/ScreenHeader';
-import { FARMER_EVIDENCE_CATEGORY_OPTIONS, getDefaultFarmerEvidenceCategory, getFarmerEvidenceFormTitle, type FarmerEvidenceCategoryKey } from '../../constants/evidenceCategories';
+import { FARMER_UPLOAD_EVIDENCE_OPTIONS, getDefaultFarmerEvidenceCategory, getFarmerEvidenceFormTitle, type FarmerEvidenceCategoryKey } from '../../constants/evidenceCategories';
 import { useLiveEvidenceCapture } from '../../hooks/useLiveEvidenceCapture';
 import type { FarmerStackParamList } from '../../navigation/types';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
@@ -135,9 +135,9 @@ export function FarmerLiveEvidenceUploadScreen({
       setNotes('');
       await loadEvidenceCount();
 
-      Alert.alert('Evidence uploaded', 'Your live photo evidence was saved successfully.');
+      Alert.alert('Evidence Uploaded Successfully', 'Your live photo evidence was saved successfully.');
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Evidence upload failed.'));
+      setError(getApiErrorMessage(err, 'Evidence Upload Failed'));
     } finally {
       setUploading(false);
     }
@@ -182,9 +182,9 @@ export function FarmerLiveEvidenceUploadScreen({
           <Text style={styles.selectedFarm}>Uploading for: {selectedFarm.name}</Text>
         ) : null}
 
-        <Text style={styles.label}>Evidence category</Text>
+        <Text style={styles.label}>Evidence type</Text>
         <View style={styles.categoryRow}>
-          {FARMER_EVIDENCE_CATEGORY_OPTIONS.map((opt) => {
+          {FARMER_UPLOAD_EVIDENCE_OPTIONS.map((opt) => {
             const active = opt.key === category;
 
             return (
@@ -207,7 +207,7 @@ export function FarmerLiveEvidenceUploadScreen({
           onOpenCamera={() => void liveEvidence.captureEvidence()}
           onRetake={() => void liveEvidence.retakeEvidence()}
           onUpload={() => void uploadEvidence()}
-          uploadLabel="Upload Evidence"
+          uploadLabel="Upload Photo"
           showUploadButton
           hideInlinePreview
         />

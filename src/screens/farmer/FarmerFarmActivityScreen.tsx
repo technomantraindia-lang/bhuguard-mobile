@@ -8,9 +8,10 @@ import { LiveEvidenceCaptureCard } from '../../components/evidence/LiveEvidenceC
 import { LoadingState } from '../../components/LoadingState';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { useFarmerFarmActivityForm } from '../../hooks/useFarmerFarmActivityForm';
+import { useTranslation } from '../../i18n/I18nContext';
 import type { FarmerStackParamList } from '../../navigation/types';
-import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTheme';
-import { formatActivityDisplayDate } from '../../utils/activityDateHelpers';
+import { farmerTheme } from '../../theme/farmerTheme';
+import { formatLocalizedDate } from '../../utils/localizedDate';
 
 type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmerFarmActivity'>;
 
@@ -24,31 +25,29 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
 }
 
 export function FarmerFarmActivityScreen({ navigation, route }: Props) {
+  const { t, language } = useTranslation();
   const form = useFarmerFarmActivityForm({ farmId: route.params?.farmId, activityId: route.params?.activityId });
   const farm = form.selectedFarm;
+  const isSubmittedReadOnly = form.status === 'submitted';
 
   const handleSubmit = async () => {
+    if (isSubmittedReadOnly) {
+      return;
+    }
+
     const ok = await form.submit();
 
     if (ok) {
-      Alert.alert('Farm Activity submitted', 'Your farm update has been recorded successfully.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+      Alert.alert(t('farmer.activity.submittedTitle'), t('farmer.activity.submittedMessage'), [
+        { text: t('common.close'), onPress: () => navigation.goBack() },
       ]);
-    }
-  };
-
-  const handleSaveDraft = async () => {
-    const ok = await form.saveDraft();
-
-    if (ok) {
-      Alert.alert('Draft saved', 'You can continue this Farm Activity later.', [{ text: 'OK' }]);
     }
   };
 
   if (form.loading) {
     return (
       <SafeAreaView style={styles.safe}>
-        <LoadingState message="Loading Farm Activity form..." />
+        <LoadingState message={t('farmer.activity.loading')} />
       </SafeAreaView>
     );
   }
@@ -56,85 +55,105 @@ export function FarmerFarmActivityScreen({ navigation, route }: Props) {
   if (!farm) {
     return (
       <SafeAreaView style={styles.safe}>
-        <ErrorState message="No linked farm selected." onRetry={() => navigation.replace('FarmerFarmSelection')} />
+        <ErrorState
+          message={t('farmer.activity.noFarm')}
+          onRetry={() => navigation.replace('FarmerFarmSelection')}
+        />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Farm Activity" subtitle="Add Farm Activity" showBack onBackPress={() => navigation.goBack()} />
+      <ScreenHeader
+        title={t('farmer.activity.title')}
+        subtitle={isSubmittedReadOnly ? 'Submitted — view only' : t('farmer.activity.subtitle')}
+        showBack
+        onBackPress={() => navigation.goBack()}
+      />
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={[styles.card, dashboardShadow]}>
-            <Text style={styles.sectionTitle}>Selected Farm Summary</Text>
-            <SummaryCard label="Farm ID" value={farm.farmCode !== '-' ? farm.farmCode : String(farm.farmId)} />
-            <SummaryCard label="Farmer ID" value={farm.farmerCode !== '-' ? farm.farmerCode : String(farm.farmerId)} />
-            <SummaryCard label="Farmer Name" value={farm.farmerName !== '-' ? farm.farmerName : '—'} />
-            <SummaryCard label="Village" value={farm.village !== '-' ? farm.village : '—'} />
-            <SummaryCard label="Taluka" value={farm.taluka !== '-' ? farm.taluka : '—'} />
-            <SummaryCard label="District" value={farm.district !== '-' ? farm.district : '—'} />
-            <SummaryCard label="State" value={farm.state !== '-' ? farm.state : '—'} />
+          <View style={[styles.card, farmerTheme.cardShadow]}>
+            <Text style={styles.sectionTitle}>{t('farmer.activity.farmSummary')}</Text>
+            <SummaryCard label={t('farmer.activity.farmId')} value={farm.farmCode !== '-' ? farm.farmCode : String(farm.farmId)} />
+            <SummaryCard label={t('farmer.activity.farmerId')} value={farm.farmerCode !== '-' ? farm.farmerCode : String(farm.farmerId)} />
+            <SummaryCard label={t('farmer.activity.farmerName')} value={farm.farmerName !== '-' ? farm.farmerName : '—'} />
+            <SummaryCard label={t('farmer.activity.village')} value={farm.village !== '-' ? farm.village : '—'} />
+            <SummaryCard label={t('farmer.activity.taluka')} value={farm.taluka !== '-' ? farm.taluka : '—'} />
+            <SummaryCard label={t('farmer.activity.district')} value={farm.district !== '-' ? farm.district : '—'} />
+            <SummaryCard label={t('farmer.activity.state')} value={farm.state !== '-' ? farm.state : '—'} />
           </View>
 
-          <View style={[styles.card, dashboardShadow]}>
-            <Text style={styles.sectionTitle}>Activity Date</Text>
-            <TextInput
-              value={form.activityDate}
-              onChangeText={form.setActivityDate}
-              placeholder="YYYY-MM-DD"
-              style={styles.input}
+          <View style={[styles.card, farmerTheme.cardShadow]}>
+            <Text style={styles.sectionTitle}>{t('farmer.activity.activityDate')}</Text>
+            <View style={styles.readOnlyField}>
+              <Text style={styles.readOnlyValue}>{formatLocalizedDate(form.activityDate, language)}</Text>
+            </View>
+            <Text style={styles.helper}>{t('farmer.activity.activityDateHelper')}</Text>
+          </View>
+
+          <View style={[styles.card, farmerTheme.cardShadow]}>
+            <Text style={styles.sectionTitle}>{t('farmer.activity.gps')}</Text>
+            {!isSubmittedReadOnly ? (
+              <AppButton
+                label={form.capturingGps ? t('farmer.activity.capturingGps') : t('farmer.activity.captureGps')}
+                onPress={() => void form.captureGps()}
+                disabled={form.capturingGps}
+              />
+            ) : null}
+            <SummaryCard label={t('farmer.activity.latitude')} value={form.latitude != null ? String(form.latitude) : '—'} />
+            <SummaryCard label={t('farmer.activity.longitude')} value={form.longitude != null ? String(form.longitude) : '—'} />
+            <SummaryCard
+              label={t('farmer.activity.gpsAccuracy')}
+              value={form.accuracy != null ? `${form.accuracy} m` : '—'}
             />
-            <Text style={styles.helper}>Selected: {formatActivityDisplayDate(form.activityDate)}</Text>
           </View>
 
-          <View style={[styles.card, dashboardShadow]}>
-            <Text style={styles.sectionTitle}>GPS Location</Text>
-            <AppButton label={form.capturingGps ? 'Capturing GPS...' : 'Capture GPS'} onPress={() => void form.captureGps()} disabled={form.capturingGps} />
-            <SummaryCard label="Latitude" value={form.latitude != null ? String(form.latitude) : '—'} />
-            <SummaryCard label="Longitude" value={form.longitude != null ? String(form.longitude) : '—'} />
-            <SummaryCard label="GPS Accuracy" value={form.accuracy != null ? `${form.accuracy} m` : '—'} />
-          </View>
-
-          <View style={[styles.card, dashboardShadow]}>
-            <Text style={styles.sectionTitle}>Farm Activity Photo</Text>
+          <View style={[styles.card, farmerTheme.cardShadow]}>
+            <Text style={styles.sectionTitle}>{t('farmer.activity.photo')}</Text>
             <LiveEvidenceCaptureCard
               evidence={form.liveEvidence.evidence}
               capturing={form.liveEvidence.capturing}
               error={form.liveEvidence.error}
+              readOnly={isSubmittedReadOnly}
               onOpenCamera={() => void form.liveEvidence.captureEvidence()}
               onRetake={() => void form.liveEvidence.retakeEvidence()}
               onUpload={() => void form.liveEvidence.pickGalleryEvidence()}
-              uploadLabel="Upload from Gallery"
-              showUploadButton
-              onOpenPreview={(uri) => navigation.navigate('FullscreenImage', { uri, title: 'Farm Activity Photo' })}
+              uploadLabel={t('farmer.activity.uploadGallery')}
+              showUploadButton={!isSubmittedReadOnly}
+              onOpenPreview={(uri) =>
+                navigation.navigate('FullscreenImage', { uri, title: t('farmer.activity.photo') })
+              }
             />
           </View>
 
-          <View style={[styles.card, dashboardShadow]}>
-            <Text style={styles.sectionTitle}>Notes (optional)</Text>
-            <TextInput
-              value={form.notes}
-              onChangeText={form.setNotes}
-              placeholder="Add optional notes"
-              multiline
-              style={[styles.input, styles.notesInput]}
-            />
+          <View style={[styles.card, farmerTheme.cardShadow]}>
+            <Text style={styles.sectionTitle}>{t('farmer.activity.notes')}</Text>
+            {isSubmittedReadOnly ? (
+              <Text style={styles.readOnlyValue}>{form.notes.trim() || '—'}</Text>
+            ) : (
+              <TextInput
+                value={form.notes}
+                onChangeText={form.setNotes}
+                placeholder={t('farmer.activity.notesPlaceholder')}
+                multiline
+                style={[styles.input, styles.notesInput]}
+              />
+            )}
           </View>
-
-          {form.status === 'draft' && form.recordId ? (
-            <View style={styles.draftBadge}>
-              <Text style={styles.draftBadgeText}>Draft saved</Text>
-            </View>
-          ) : null}
 
           {form.error ? <Text style={styles.errorText}>{form.error}</Text> : null}
 
-          <View style={styles.actions}>
-            <AppButton label="Save Draft" variant="secondary" onPress={() => void handleSaveDraft()} loading={form.savingDraft} />
-            <AppButton label="Submit Farm Activity" onPress={() => void handleSubmit()} loading={form.submitting} />
-          </View>
+          {!isSubmittedReadOnly ? (
+            <View style={styles.actions}>
+              <AppButton
+                label={t('farmer.activity.submit')}
+                onPress={() => void handleSubmit()}
+                loading={form.submitting}
+              />
+            </View>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -142,40 +161,41 @@ export function FarmerFarmActivityScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: dashboardTheme.background },
+  safe: { flex: 1, backgroundColor: farmerTheme.cream },
   flex: { flex: 1 },
-  content: { padding: dashboardTheme.marginMobile, gap: 16, paddingBottom: 40 },
+  content: { padding: 16, gap: 16, paddingBottom: 40 },
   card: {
-    backgroundColor: dashboardTheme.surfaceLowest,
+    backgroundColor: farmerTheme.white,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: dashboardTheme.outlineVariant,
+    borderColor: farmerTheme.softBorder,
     padding: 16,
     gap: 10,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: dashboardTheme.onSurface },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: farmerTheme.headingGreen },
   summaryRow: { gap: 2 },
-  summaryLabel: { fontSize: 12, color: dashboardTheme.textMuted, fontWeight: '600' },
-  summaryValue: { fontSize: 14, color: dashboardTheme.onSurface },
+  summaryLabel: { fontSize: 12, color: farmerTheme.secondaryText, fontWeight: '600' },
+  summaryValue: { fontSize: 14, color: farmerTheme.deepText },
+  readOnlyField: {
+    borderWidth: 1,
+    borderColor: farmerTheme.softBorder,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: farmerTheme.lightGreenSurface,
+  },
+  readOnlyValue: { fontSize: 15, fontWeight: '600', color: farmerTheme.headingGreen },
   input: {
     borderWidth: 1,
-    borderColor: dashboardTheme.outlineVariant,
+    borderColor: farmerTheme.softBorder,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: dashboardTheme.onSurface,
-    backgroundColor: dashboardTheme.surfaceLowest,
+    color: farmerTheme.deepText,
+    backgroundColor: farmerTheme.white,
   },
   notesInput: { minHeight: 90, textAlignVertical: 'top' },
-  helper: { fontSize: 12, color: dashboardTheme.textMuted },
+  helper: { fontSize: 12, color: farmerTheme.secondaryText },
   actions: { gap: 12 },
-  errorText: { color: dashboardTheme.error, fontSize: 14 },
-  draftBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#FEF3C7',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  draftBadgeText: { color: '#CA8A04', fontWeight: '700', fontSize: 12 },
+  errorText: { color: farmerTheme.error, fontSize: 14 },
 });

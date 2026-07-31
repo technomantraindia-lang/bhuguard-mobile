@@ -1,3 +1,10 @@
+import {
+  evidenceTimestampFromIso,
+  formatEvidenceStampLabel,
+  parseEvidenceInstant,
+  type EvidenceCaptureTimestamp,
+} from './evidenceDateTime';
+
 export interface LivePhotoWatermarkMeta {
   capturedAtLabel: string;
   latitudeLabel: string;
@@ -9,19 +16,12 @@ export interface LivePhotoWatermarkMeta {
   stateLabel: string;
 }
 
+/**
+ * Format burned-in watermark timestamp in device local time.
+ * Never formats a UTC ISO string as if its wall-clock digits were local.
+ */
 export function formatWatermarkTimestamp(iso: string): string {
-  const date = new Date(iso);
-  const day = date.getDate();
-  const month = date.toLocaleString('en-GB', { month: 'short' });
-  const year = date.getFullYear();
-  const time = date.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true,
-  });
-
-  return `${day} ${month} ${year} ${time}`;
+  return formatEvidenceStampLabel(parseEvidenceInstant(iso));
 }
 
 export function buildLivePhotoWatermarkMeta(input: {
@@ -33,9 +33,12 @@ export function buildLivePhotoWatermarkMeta(input: {
   taluka: string;
   district: string;
   state: string;
+  timestamp?: EvidenceCaptureTimestamp;
 }): LivePhotoWatermarkMeta {
+  const timestamp = input.timestamp ?? evidenceTimestampFromIso(input.capturedAt);
+
   return {
-    capturedAtLabel: formatWatermarkTimestamp(input.capturedAt),
+    capturedAtLabel: timestamp.stampLabel,
     latitudeLabel:
       input.latitude != null ? `Lat: ${input.latitude.toFixed(6)}` : 'Lat: —',
     longitudeLabel:

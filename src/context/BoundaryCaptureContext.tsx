@@ -13,6 +13,8 @@ import {
   formatGpsAccuracy,
   formatMappingStatus,
   isEditedBoundaryOutsideTolerance,
+  POOR_GPS_WARNING_METERS,
+  removeNearDuplicatePoints,
 } from '../utils/boundaryGeometry';
 import type { BoundarySessionMode } from '../utils/boundaryFlowRoutes';
 import type { LatLng } from '../utils/farmSatelliteMap';
@@ -22,6 +24,7 @@ const DRAFT_STORAGE_KEY = 'bhuguard.boundary.draft.v1';
 interface BoundaryCaptureState {
   sessionMode: BoundarySessionMode;
   farmId: number | null;
+  farmerId: number | null;
   farmName: string;
   farmCode: string;
   farmerName: string;
@@ -30,9 +33,8 @@ interface BoundaryCaptureState {
   unit: AreaUnit;
   points: BoundaryPoint[];
   walkingPoints: BoundaryPoint[];
-  captureMethod: 'gps' | 'camera';
+  captureMethod: 'gps' | 'camera' | 'manual';
   mappingStatus: MappingStatus;
-  satelliteMode: boolean;
   currentAccuracy: number | null;
   currentLatitude: number | null;
   currentLongitude: number | null;
@@ -53,12 +55,12 @@ interface BoundaryCaptureContextValue extends BoundaryCaptureState {
     session: Partial<
       Pick<
         BoundaryCaptureState,
-        'sessionMode' | 'farmId' | 'farmName' | 'farmCode' | 'farmerName' | 'declaredArea' | 'declaredUnit' | 'unit'
+        'sessionMode' | 'farmId' | 'farmerId' | 'farmName' | 'farmCode' | 'farmerName' | 'declaredArea' | 'declaredUnit' | 'unit'
       >
     >,
   ) => void;
   setUnit: (unit: AreaUnit) => void;
-  setCaptureMethod: (method: 'gps' | 'camera') => void;
+  setCaptureMethod: (method: 'gps' | 'camera' | 'manual') => void;
   setCurrentLocation: (latitude: number, longitude: number, accuracy: number, altitude?: number | null) => void;
   setPoints: (points: BoundaryPoint[]) => void;
   addPoint: (point: Omit<BoundaryPoint, 'id' | 'pointNo'>) => void;
@@ -68,12 +70,13 @@ interface BoundaryCaptureContextValue extends BoundaryCaptureState {
   undoLastPoint: () => void;
   resetBoundary: () => void;
   startWalkingMapping: () => void;
+  startBoundaryWithPoint: (point: Omit<BoundaryPoint, 'id' | 'pointNo'>) => void;
   pauseMapping: () => void;
   resumeMapping: () => void;
+  resumeWalkingMapping: () => void;
   finishBoundaryMapping: () => void;
   enterEditing: () => void;
   setPoorAccuracyWarning: (value: boolean) => void;
-  toggleSatelliteMode: () => void;
   loadExistingBoundary: (boundary: ApiRecord) => void;
   clearSession: () => void;
   clearDraft: () => Promise<void>;
@@ -85,6 +88,7 @@ interface BoundaryCaptureContextValue extends BoundaryCaptureState {
 const defaultState: BoundaryCaptureState = {
   sessionMode: 'farm',
   farmId: null,
+  farmerId: null,
   farmName: 'Farm',
   farmCode: 'BG-FARM-000',
   farmerName: 'Farmer',
@@ -95,7 +99,6 @@ const defaultState: BoundaryCaptureState = {
   walkingPoints: [],
   captureMethod: 'gps',
   mappingStatus: 'not_started',
-  satelliteMode: true,
   currentAccuracy: null,
   currentLatitude: null,
   currentLongitude: null,
@@ -113,6 +116,20 @@ function createPointId(): string {
 
 function renumber(points: BoundaryPoint[]): BoundaryPoint[] {
   return points.map((point, index) => ({ ...point, pointNo: index + 1 }));
+}
+
+function pointsAreEqual(left: BoundaryPoint[], right: BoundaryPoint[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every(
+    (point, index) =>
+      point.id === right[index].id
+      && point.latitude === right[index].latitude
+      && point.longitude === right[index].longitude
+      && point.pointNo === right[index].pointNo,
+  );
 }
 
 function parseStoredPoint(item: unknown, index: number): BoundaryPoint | null {
@@ -192,7 +209,6 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
           mappingStatus: draft.mappingStatus ?? current.mappingStatus,
           mappingStartedAt: draft.mappingStartedAt ?? current.mappingStartedAt,
           mappingFinishedAt: draft.mappingFinishedAt ?? current.mappingFinishedAt,
-          satelliteMode: draft.satelliteMode ?? true,
           sessionMode: draft.sessionMode ?? current.sessionMode,
         }));
       } catch {
@@ -231,7 +247,6 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
       mappingStatus: state.mappingStatus,
       mappingStartedAt: state.mappingStartedAt,
       mappingFinishedAt: state.mappingFinishedAt,
-      satelliteMode: state.satelliteMode,
       sessionMode: state.sessionMode,
     };
 
@@ -247,7 +262,6 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
     state.mappingStatus,
     state.mappingStartedAt,
     state.mappingFinishedAt,
-    state.satelliteMode,
     state.sessionMode,
   ]);
 
@@ -273,29 +287,53 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
     setState((current) => ({ ...current, unit }));
   }, []);
 
-  const setCaptureMethod = useCallback((captureMethod: 'gps' | 'camera') => {
-    setState((current) => ({ ...current, captureMethod }));
+  const setCaptureMethod = useCallback((captureMethod: 'gps' | 'camera' | 'manual') => {
+    setState((current) =>
+      current.captureMethod === captureMethod ? current : { ...current, captureMethod },
+    );
   }, []);
 
   const setCurrentLocation = useCallback(
     (latitude: number, longitude: number, accuracy: number, altitude: number | null = null) => {
-      setState((current) => ({
-        ...current,
-        currentLatitude: latitude,
-        currentLongitude: longitude,
-        currentAccuracy: accuracy,
-        currentAltitude: altitude,
-        poorAccuracyWarning: accuracy > 30 ? true : current.poorAccuracyWarning && accuracy > 30,
-      }));
+      setState((current) => {
+        if (
+          current.currentLatitude === latitude
+          && current.currentLongitude === longitude
+          && current.currentAccuracy === accuracy
+          && current.currentAltitude === altitude
+        ) {
+          return current;
+        }
+
+        return {
+          ...current,
+          currentLatitude: latitude,
+          currentLongitude: longitude,
+          currentAccuracy: accuracy,
+          currentAltitude: altitude,
+          poorAccuracyWarning:
+            accuracy > POOR_GPS_WARNING_METERS
+              ? true
+              : current.poorAccuracyWarning && accuracy > POOR_GPS_WARNING_METERS,
+        };
+      });
     },
     [],
   );
 
   const setPoints = useCallback((points: BoundaryPoint[]) => {
-    setState((current) => ({
-      ...current,
-      points: renumber(points),
-    }));
+    setState((current) => {
+      const renumbered = renumber(points);
+
+      if (pointsAreEqual(current.points, renumbered)) {
+        return current;
+      }
+
+      return {
+        ...current,
+        points: renumbered,
+      };
+    });
   }, []);
 
   const addPoint = useCallback((point: Omit<BoundaryPoint, 'id' | 'pointNo'>) => {
@@ -365,6 +403,24 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const startBoundaryWithPoint = useCallback((point: Omit<BoundaryPoint, 'id' | 'pointNo'>) => {
+    const startPoint: BoundaryPoint = {
+      ...point,
+      id: createPointId(),
+      pointNo: 1,
+    };
+
+    setState((current) => ({
+      ...current,
+      points: [startPoint],
+      walkingPoints: [],
+      mappingStatus: 'recording',
+      mappingStartedAt: new Date().toISOString(),
+      mappingFinishedAt: null,
+      poorAccuracyWarning: point.accuracy > POOR_GPS_WARNING_METERS,
+    }));
+  }, []);
+
   const startWalkingMapping = useCallback(() => {
     setState((current) => ({
       ...current,
@@ -382,6 +438,14 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const resumeWalkingMapping = useCallback(() => {
+    setState((current) =>
+      current.points.length > 0
+        ? { ...current, mappingStatus: 'recording', mappingFinishedAt: null }
+        : current,
+    );
+  }, []);
+
   const resumeMapping = useCallback(() => {
     setState((current) =>
       current.mappingStatus === 'paused' ? { ...current, mappingStatus: 'recording' } : current,
@@ -389,12 +453,17 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const finishBoundaryMapping = useCallback(() => {
-    setState((current) => ({
-      ...current,
-      walkingPoints: current.points.map((point) => ({ ...point })),
-      mappingStatus: 'editing',
-      mappingFinishedAt: new Date().toISOString(),
-    }));
+    setState((current) => {
+      const cleaned = removeNearDuplicatePoints(current.points);
+
+      return {
+        ...current,
+        points: cleaned,
+        walkingPoints: cleaned.map((point) => ({ ...point })),
+        mappingStatus: 'completed',
+        mappingFinishedAt: new Date().toISOString(),
+      };
+    });
   }, []);
 
   const enterEditing = useCallback(() => {
@@ -403,10 +472,6 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
 
   const setPoorAccuracyWarning = useCallback((value: boolean) => {
     setState((current) => ({ ...current, poorAccuracyWarning: value }));
-  }, []);
-
-  const toggleSatelliteMode = useCallback(() => {
-    setState((current) => ({ ...current, satelliteMode: !current.satelliteMode }));
   }, []);
 
   const togglePaused = useCallback(() => {
@@ -448,7 +513,7 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
     setState((current) => ({
       ...current,
       unit: (pickString(boundary, 'unit') as AreaUnit) || current.unit,
-      captureMethod: (pickString(boundary, 'capture_method') as 'gps' | 'camera') || current.captureMethod,
+      captureMethod: (pickString(boundary, 'capture_method') as 'gps' | 'camera' | 'manual') || current.captureMethod,
       points: renumber(editedPoints),
       walkingPoints: renumber(walkingPoints.length ? walkingPoints : editedPoints),
       mappingStatus: 'completed',
@@ -488,12 +553,13 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
       undoLastPoint,
       resetBoundary,
       startWalkingMapping,
+      startBoundaryWithPoint,
       pauseMapping,
       resumeMapping,
+      resumeWalkingMapping,
       finishBoundaryMapping,
       enterEditing,
       setPoorAccuracyWarning,
-      toggleSatelliteMode,
       togglePaused,
       loadExistingBoundary,
       clearSession,
@@ -519,12 +585,13 @@ export function BoundaryCaptureProvider({ children }: { children: ReactNode }) {
       undoLastPoint,
       resetBoundary,
       startWalkingMapping,
+      startBoundaryWithPoint,
       pauseMapping,
       resumeMapping,
+      resumeWalkingMapping,
       finishBoundaryMapping,
       enterEditing,
       setPoorAccuracyWarning,
-      toggleSatelliteMode,
       togglePaused,
       loadExistingBoundary,
       clearSession,

@@ -8,6 +8,8 @@ interface BiocharProductionSuccessModalProps {
   batchCode: string;
   onClose: () => void;
   onAddNewBatch?: () => void;
+  onViewSubmitted?: () => void;
+  onViewBatchStatus?: () => void;
   onBackToDashboard?: () => void;
   /** @deprecated Use onBackToDashboard */
   onBackToVisits?: () => void;
@@ -18,6 +20,8 @@ export function BiocharProductionSuccessModal({
   batchCode,
   onClose,
   onAddNewBatch,
+  onViewSubmitted,
+  onViewBatchStatus,
   onBackToDashboard,
   onBackToVisits,
 }: BiocharProductionSuccessModalProps) {
@@ -30,16 +34,28 @@ export function BiocharProductionSuccessModal({
           <View style={styles.iconWrap}>
             <BhuguardMaterialIcon name="verified" size={36} color={officerTheme.primaryContainer} />
           </View>
-          <Text style={styles.title}>Record Submitted</Text>
+          <Text style={styles.title}>Biochar Production Submitted Successfully</Text>
           <Text style={styles.message}>
-            Biochar Production Batch <Text style={styles.batchCode}>{batchCode}</Text> has been successfully submitted.
+            Biochar Production Batch <Text style={styles.batchCode}>{batchCode}</Text> has been submitted for review and is now read-only.
           </Text>
-          <Pressable style={styles.button} onPress={onAddNewBatch ?? onClose}>
-            <Text style={styles.buttonText}>Add New Batch</Text>
-          </Pressable>
+          {onViewSubmitted ? (
+            <Pressable style={styles.button} onPress={onViewSubmitted}>
+              <Text style={styles.buttonText}>View Submitted Production</Text>
+            </Pressable>
+          ) : null}
+          {onViewBatchStatus ? (
+            <Pressable style={styles.secondaryButton} onPress={onViewBatchStatus}>
+              <Text style={styles.secondaryButtonText}>View Batch Status</Text>
+            </Pressable>
+          ) : null}
           <Pressable style={styles.secondaryButton} onPress={handleDashboard}>
-            <Text style={styles.secondaryButtonText}>Go To Dashboard</Text>
+            <Text style={styles.secondaryButtonText}>Go to Dashboard</Text>
           </Pressable>
+          {onAddNewBatch ? (
+            <Pressable style={styles.tertiaryButton} onPress={onAddNewBatch}>
+              <Text style={styles.tertiaryButtonText}>Add New Batch</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     </Modal>
@@ -71,7 +87,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
   },
-  title: { fontSize: 20, fontWeight: '700', color: officerTheme.onSurface, marginBottom: 8 },
+  title: { fontSize: 18, fontWeight: '700', color: officerTheme.onSurface, marginBottom: 8, textAlign: 'center' },
   message: { fontSize: 15, lineHeight: 22, color: officerTheme.onSurfaceVariant, textAlign: 'center', marginBottom: 16 },
   batchCode: { fontWeight: '700', color: officerTheme.primary },
   button: {
@@ -89,6 +105,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
+    marginBottom: 10,
   },
   secondaryButtonText: { color: officerTheme.primaryContainer, fontSize: 15, fontWeight: '700' },
+  tertiaryButton: {
+    width: '100%',
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  tertiaryButtonText: { color: officerTheme.onSurfaceVariant, fontSize: 14, fontWeight: '600' },
 });

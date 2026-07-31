@@ -32,11 +32,9 @@ interface FarmerQuickStatsGridProps {
   onVerificationPress: () => void;
   activeServicesCount?: number;
   weeklyUpdatesPendingCount?: number;
-  evidenceUploadedCount?: number;
   reportsAvailableCount?: number;
   onServicesPress?: () => void;
   onWeeklyUpdatesPress?: () => void;
-  onEvidencePress?: () => void;
   onReportsPress?: () => void;
 }
 
@@ -83,11 +81,9 @@ export function FarmerQuickStatsGrid({
   onVerificationPress,
   activeServicesCount = 0,
   weeklyUpdatesPendingCount = 0,
-  evidenceUploadedCount = 0,
   reportsAvailableCount = 0,
   onServicesPress,
   onWeeklyUpdatesPress,
-  onEvidencePress,
   onReportsPress,
 }: FarmerQuickStatsGridProps) {
   return (
@@ -129,11 +125,6 @@ export function FarmerQuickStatsGrid({
           label="Pending Weekly Updates"
           value={String(weeklyUpdatesPendingCount)}
           onPress={onWeeklyUpdatesPress ?? onActivitiesPress}
-        />
-        <CompactStat
-          label="Evidence Uploaded"
-          value={String(evidenceUploadedCount)}
-          onPress={onEvidencePress ?? onActivitiesPress}
         />
         <CompactStat
           label="Reports Available"

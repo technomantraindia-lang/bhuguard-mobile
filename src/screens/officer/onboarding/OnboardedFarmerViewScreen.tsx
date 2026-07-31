@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -16,11 +16,20 @@ import { ScreenHeader } from '../../../components/ScreenHeader';
 import { useOnboarding } from '../../../context/OnboardingContext';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
-import { pickString, type ApiRecord } from '../../../utils/apiHelpers';
+import { extractList, pickString, type ApiRecord } from '../../../utils/apiHelpers';
 import { formatFarmerCode } from '../../../utils/onboardingNotes';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'OnboardedFarmerView'>;
 type ScreenRoute = RouteProp<FieldOfficerStackParamList, 'OnboardedFarmerView'>;
+
+function resolvePrimaryFarm(detail: ApiRecord | null): ApiRecord | null {
+  const farms = extractList(detail ?? {}, ['farms']);
+  if (farms.length === 0) {
+    return null;
+  }
+
+  return farms[0] ?? null;
+}
 
 export function OnboardedFarmerViewScreen() {
   const navigation = useNavigation<Nav>();
@@ -28,7 +37,7 @@ export function OnboardedFarmerViewScreen() {
   const { result, draft } = useOnboarding();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [detail, setDetail] = useState<Record<string, unknown> | null>(null);
+  const [detail, setDetail] = useState<ApiRecord | null>(null);
 
   const routeFarmerId = route.params?.farmerId;
   const resolvedFarmerId = Number(routeFarmerId ?? result?.farmer_id ?? 0);
@@ -44,7 +53,7 @@ export function OnboardedFarmerViewScreen() {
 
     try {
       const data = await getFieldOfficerFarmerDetail(resolvedFarmerId);
-      setDetail((data.farmer as Record<string, unknown>) ?? null);
+      setDetail((data.farmer as ApiRecord) ?? null);
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load farmer details.'));
     } finally {
@@ -56,25 +65,66 @@ export function OnboardedFarmerViewScreen() {
     void load();
   }, [resolvedFarmerId]);
 
+  const primaryFarm = useMemo(() => resolvePrimaryFarm(detail), [detail]);
+
   const farmerName = String(detail?.name ?? result?.farmer_name ?? '-');
+  const farmerCode = pickString(detail, 'farmer_code', 'farmerCode');
   const mobile = String(detail?.mobile ?? result?.mobile ?? '-');
   const photoUrl = pickString(detail, 'photo_url') !== '-' ? pickString(detail, 'photo_url') : result?.photo_url;
-  const biocharStatus = pickString(detail, 'biochar_status', 'biochar_cycle_status');
-  const nextDue = pickString(detail, 'biochar_next_due_date', 'next_biochar_due_date');
-  const lastUpdate = pickString(detail, 'biochar_last_update_date', 'last_biochar_update_date');
-  const isOverdue = detail?.biochar_is_overdue === true || biocharStatus === 'overdue';
-  const mappingPending = detail?.farm_mapping_pending === true;
+  const mappingStatus = pickString(primaryFarm, 'boundary_status') !== '-'
+    ? pickString(primaryFarm, 'boundary_status')
+    : pickString(detail, 'mapping_status');
+  const mappingCompleted =
+    mappingStatus === 'mapped'
+    || Boolean(primaryFarm?.boundary_mapped)
+    || Number(primaryFarm?.boundary_point_count ?? 0) >= 3;
+  const mappingPending = !mappingCompleted;
 
-  const startBiocharActivity = () => {
-    navigation.navigate('FieldOfficerBiocharProduction', {
+  const declaredAreaLabel = useMemo(() => {
+    if (!primaryFarm) {
+      return '—';
+    }
+    const area = pickString(primaryFarm, 'land_area', 'area_acres');
+    const unit = pickString(primaryFarm, 'land_area_unit');
+    if (area === '-') {
+      return '—';
+    }
+    return unit !== '-' ? `${area} ${unit}` : area;
+  }, [primaryFarm]);
+
+  const mappedAreaLabel = useMemo(() => {
+    if (!primaryFarm) {
+      return '—';
+    }
+    const acres = primaryFarm.area_acres ?? primaryFarm.mapped_area_acres;
+    if (acres != null && acres !== '' && Number.isFinite(Number(acres))) {
+      return `${Number(acres).toFixed(4)} acres`;
+    }
+    return mappingCompleted ? 'See map for calculated area' : 'Not mapped yet';
+  }, [mappingCompleted, primaryFarm]);
+
+  const boundaryPointCount = Number(primaryFarm?.boundary_point_count ?? 0);
+
+  const farmContext = useMemo(() => {
+    const farmId = Number(primaryFarm?.id ?? 0) || undefined;
+    return {
       farmerId: resolvedFarmerId,
-    });
-  };
+      farmerCode: farmerCode !== '-' ? farmerCode : formatFarmerCode(resolvedFarmerId),
+      farmerName: farmerName !== '-' ? farmerName : undefined,
+      farmId,
+      farmCode: primaryFarm ? pickString(primaryFarm, 'farm_code', 'farmCode') : undefined,
+      farmName: primaryFarm ? pickString(primaryFarm, 'farm_name', 'farmName') : undefined,
+      village: String(detail?.village ?? primaryFarm?.village ?? result?.village ?? '') || undefined,
+      taluka: String(detail?.taluka ?? primaryFarm?.taluka ?? result?.taluka ?? '') || undefined,
+      district: String(detail?.district ?? primaryFarm?.district ?? result?.district ?? '') || undefined,
+      state: String(detail?.state ?? primaryFarm?.state ?? '') || undefined,
+    };
+  }, [detail, farmerCode, farmerName, primaryFarm, resolvedFarmerId, result?.district, result?.taluka, result?.village]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.container}>
-        <ScreenHeader title="Farmer Detail" subtitle="Profile, farms, and Biochar activity" />
+        <ScreenHeader title="Farmer Detail" subtitle="Profile and farm actions" />
         {loading ? <LoadingState message="Loading farmer..." /> : null}
         {error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
         {!loading && !error ? (
@@ -83,33 +133,106 @@ export function OnboardedFarmerViewScreen() {
               <View style={styles.photoWrap}>
                 <OnboardingReviewPhoto file={draft.farmer_photo} remotePhotoUrl={photoUrl} />
               </View>
-              <Text style={styles.line}>Farmer code: {resolvedFarmerId ? formatFarmerCode(resolvedFarmerId) : '-'}</Text>
-              <Text style={styles.line}>Village: {String(detail?.village ?? result?.village ?? '-')}</Text>
-              <Text style={styles.line}>Taluka: {String(detail?.taluka ?? result?.taluka ?? '-')}</Text>
-              <Text style={styles.line}>District: {String(detail?.district ?? result?.district ?? '-')}</Text>
-              <Text style={[styles.line, isOverdue && styles.overdue]}>
-                Biochar status: {biocharStatus !== '-' ? biocharStatus : '—'}
+              <Text style={styles.line}>
+                Farmer code: {farmerCode !== '-' ? farmerCode : resolvedFarmerId ? formatFarmerCode(resolvedFarmerId) : '—'}
               </Text>
-              {lastUpdate !== '-' ? <Text style={styles.line}>Last Biochar update: {lastUpdate}</Text> : null}
-              {nextDue !== '-' ? <Text style={styles.line}>Next due: {nextDue}</Text> : null}
-              {mappingPending ? (
-                <Text style={styles.warning}>Farm mapping is pending. Please complete mapping when possible.</Text>
+              <Text style={styles.line}>Farmer ID: {resolvedFarmerId || '—'}</Text>
+              {farmContext.farmId ? (
+                <>
+                  <Text style={styles.line}>Farm: {farmContext.farmName && farmContext.farmName !== '-' ? farmContext.farmName : '—'}</Text>
+                  <Text style={styles.line}>Farm ID: {farmContext.farmId}</Text>
+                  <Text style={styles.line}>
+                    Farm code: {farmContext.farmCode && farmContext.farmCode !== '-' ? farmContext.farmCode : '—'}
+                  </Text>
+                </>
               ) : null}
+              <Text style={styles.line}>Village: {String(detail?.village ?? result?.village ?? '—')}</Text>
+              <Text style={styles.line}>Taluka: {String(detail?.taluka ?? result?.taluka ?? '—')}</Text>
+              <Text style={styles.line}>District: {String(detail?.district ?? result?.district ?? '—')}</Text>
+              <Text style={styles.line}>
+                Mapping Status: {mappingCompleted ? 'Completed' : mappingPending ? 'Mapping Pending' : 'Not mapped yet'}
+              </Text>
+              <Text style={styles.line}>Declared Area: {declaredAreaLabel}</Text>
+              <Text style={styles.line}>Mapped Area: {mappedAreaLabel}</Text>
+              <Text style={styles.line}>
+                Boundary Points: {boundaryPointCount > 0 ? String(boundaryPointCount) : mappingCompleted ? '—' : 'None'}
+              </Text>
             </AppCard>
 
             <View style={styles.actions}>
-              <AppButton label="Biochar Activity Awareness" onPress={() => navigation.navigate('BiocharAwareness', { farmerId: resolvedFarmerId })} />
-              <AppButton label="Start Biochar Activity" onPress={startBiocharActivity} />
+              {farmContext.farmId && mappingCompleted ? (
+                <AppButton
+                  label="View Saved Mapping"
+                  onPress={() =>
+                    navigation.navigate('FarmBoundaryMap', {
+                      farmerId: farmContext.farmerId,
+                      farmId: farmContext.farmId!,
+                      farmerName: farmContext.farmerName || 'Farmer',
+                      farmerCode: farmContext.farmerCode,
+                      farmName: farmContext.farmName !== '-' ? farmContext.farmName : undefined,
+                      farmCode: farmContext.farmCode !== '-' ? farmContext.farmCode : undefined,
+                      village: farmContext.village,
+                      mappingStatus: 'completed',
+                      declaredArea: primaryFarm ? String(primaryFarm.land_area ?? '') : undefined,
+                      declaredAreaUnit: primaryFarm?.land_area_unit as 'acre' | 'hectare' | 'bigha' | undefined,
+                    })
+                  }
+                />
+              ) : null}
+              <AppButton label="Biochar Awareness" onPress={() => navigation.navigate('BiocharAwareness', { farmerId: resolvedFarmerId })} />
               <AppButton
-                label="Add Biochar Mixing"
-                variant="secondary"
-                onPress={() => navigation.navigate('FieldOfficerBiocharMixing', { farmerId: resolvedFarmerId })}
+                label="Farm Activity"
+                onPress={() =>
+                  navigation.navigate('FieldOfficerFarmActivityStart', {
+                    farmerId: resolvedFarmerId || farmContext.farmerId,
+                    farmId: farmContext.farmId,
+                    farmCode: farmContext.farmCode !== '-' ? farmContext.farmCode : undefined,
+                    farmerCode: farmContext.farmerCode,
+                    farmerName: farmContext.farmerName,
+                  })
+                }
               />
               <AppButton
-                label="Biochar History"
+                label="Biochar Mixing"
                 variant="secondary"
-                onPress={() => navigation.navigate('FieldOfficerBiocharProductionList')}
+                onPress={() =>
+                  navigation.navigate('FieldOfficerBiocharMixing', {
+                    farmerId: farmContext.farmerId,
+                    farmId: farmContext.farmId,
+                    farmCode: farmContext.farmCode !== '-' ? farmContext.farmCode : undefined,
+                    farmLabel: farmContext.farmName !== '-' ? farmContext.farmName : undefined,
+                    farmerCode: farmContext.farmerCode,
+                    farmerName: farmContext.farmerName,
+                    village: farmContext.village,
+                    taluka: farmContext.taluka,
+                    district: farmContext.district,
+                    state: farmContext.state,
+                  })
+                }
               />
+              <AppButton
+                label="Biochar Application"
+                onPress={() => navigation.navigate('FieldOfficerBiocharApplication', farmContext)}
+              />
+              {farmContext.farmId ? (
+                <AppButton
+                  label={mappingPending ? 'Mapping Pending – Complete Now' : 'Complete Farm Mapping'}
+                  variant="secondary"
+                  onPress={() =>
+                    navigation.navigate('OnboardingBoundaryStart', {
+                      farmerId: farmContext.farmerId,
+                      farmId: farmContext.farmId,
+                      farmerName: farmContext.farmerName,
+                      farmerCode: farmContext.farmerCode,
+                      farmName: farmContext.farmName !== '-' ? farmContext.farmName : undefined,
+                      farmCode: farmContext.farmCode !== '-' ? farmContext.farmCode : undefined,
+                      village: farmContext.village,
+                      landArea: primaryFarm ? String(primaryFarm.land_area ?? '') : undefined,
+                      landAreaUnit: primaryFarm?.land_area_unit as 'acre' | 'hectare' | 'bigha' | undefined,
+                    })
+                  }
+                />
+              ) : null}
             </View>
           </>
         ) : null}
@@ -120,10 +243,8 @@ export function OnboardedFarmerViewScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  container: { padding: 20, gap: 16 },
-  photoWrap: { alignItems: 'center', marginBottom: 8 },
-  line: { fontSize: 14, color: colors.text, marginTop: 4 },
-  overdue: { color: '#B91C1C', fontWeight: '700' },
-  warning: { marginTop: 8, fontSize: 13, color: '#B45309' },
+  container: { padding: 16, gap: 16, paddingBottom: 40 },
+  photoWrap: { marginBottom: 8 },
+  line: { color: colors.textMuted, marginTop: 4, fontSize: 14 },
   actions: { gap: 10 },
 });

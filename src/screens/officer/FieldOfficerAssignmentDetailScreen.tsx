@@ -30,7 +30,6 @@ import { buildVisitDetailModel } from '../../utils/visitDetailModel';
 import { resolveVisitVerificationProgress, unwrapAssignmentRecord } from '../../utils/visitWorkflowHelpers';
 
 type Props = NativeStackScreenProps<FieldOfficerStackParamList, 'FieldOfficerAssignmentDetail'>;
-type BiocharActivityParams = NonNullable<FieldOfficerStackParamList['FieldOfficerBiocharProduction']>;
 
 function nestedRecord(record: Record<string, unknown> | null, key: string): Record<string, unknown> | null {
   const value = record?.[key];
@@ -152,27 +151,17 @@ export function FieldOfficerAssignmentDetailScreen({ route, navigation }: Props)
     navigation.navigate('FieldOfficerVisitVerification', { assignmentId });
   };
 
-  const openBiocharActivity = () => {
+  const openFarmVerificationActivity = () => {
     const farmer = nestedRecord(assignment, 'farmer');
-    const farmerUser = nestedRecord(farmer, 'user');
     const farm = nestedRecord(assignment, 'farm');
-    const fieldOfficer = nestedRecord(assignment, 'field_officer');
-    const params: BiocharActivityParams = {
-      farmerId: pickNumber(farmer, 'id') ?? pickNumber(assignment, 'farmer_id'),
+    const farmerUser = nestedRecord(farmer, 'user');
+    navigation.navigate('FarmVerificationActivity', {
+      assignmentId,
+      farmerId: pickNumber(farmer, 'id') ?? pickNumber(assignment, 'farmer_id') ?? 0,
+      farmId: pickNumber(farm, 'id') ?? pickNumber(assignment, 'farm_id') ?? 0,
+      farmCode: pickText(farm, 'farm_code', 'id'),
       farmerName: pickText(farmerUser, 'name', 'farmer_name') ?? pickText(farmer, 'name', 'farmer_name'),
-      farmId: pickNumber(farm, 'id') ?? pickNumber(assignment, 'farm_id'),
-      fieldOfficerId: pickNumber(fieldOfficer, 'id') ?? pickNumber(assignment, 'field_officer_id'),
-      visitId: assignmentId,
-      village: pickText(farm, 'village', 'village_name') ?? pickText(farmer, 'village'),
-      taluka: pickText(farm, 'taluka', 'taluka_name') ?? pickText(farmer, 'taluka'),
-      district: pickText(farm, 'district', 'district_name') ?? pickText(farmer, 'district'),
-      state: pickText(farm, 'state', 'state_name') ?? pickText(farmer, 'state'),
-      latitude: pickNumber(assignment, 'check_in_latitude', 'latitude', 'gps_latitude') ?? pickNumber(farm, 'latitude', 'gps_latitude'),
-      longitude: pickNumber(assignment, 'check_in_longitude', 'longitude', 'gps_longitude') ?? pickNumber(farm, 'longitude', 'gps_longitude'),
-      gpsAccuracy: pickNumber(assignment, 'check_in_gps_accuracy', 'gps_accuracy') ?? pickNumber(farm, 'gps_accuracy'),
-    };
-
-    navigation.navigate('FieldOfficerBiocharProduction', params);
+    });
   };
 
   const handleStartCheckIn = () => {
@@ -202,14 +191,6 @@ export function FieldOfficerAssignmentDetailScreen({ route, navigation }: Props)
 
   const showStartCheckIn =
     detail.canStartVisit || detail.canCheckIn || detail.showVerificationActions;
-  const showStartBiocharActivity =
-    progress.completedSteps.includes('mobile_network') ||
-    progress.currentStep === 'start_biochar_activity' ||
-    progress.currentStep === 'biochar_process' ||
-    progress.currentStep === 'evidence' ||
-    progress.currentStep === 'review' ||
-    progress.currentStep === 'submit';
-
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.appBar}>
@@ -308,6 +289,15 @@ export function FieldOfficerAssignmentDetailScreen({ route, navigation }: Props)
           </View>
         </DetailCard>
 
+        <Pressable
+          style={[styles.secondaryAction, actionLoading && styles.actionDisabled]}
+          onPress={openFarmVerificationActivity}
+          disabled={actionLoading}
+        >
+          <BhuguardMaterialIcon name="verified" size={20} color={officerTheme.primary} />
+          <Text style={styles.secondaryActionText}>Farm Verification Activity</Text>
+        </Pressable>
+
         {detail.showVerificationActions ? (
           <Pressable
             style={[styles.secondaryAction, actionLoading && styles.actionDisabled]}
@@ -316,17 +306,6 @@ export function FieldOfficerAssignmentDetailScreen({ route, navigation }: Props)
           >
             <BhuguardMaterialIcon name="verified" size={20} color={officerTheme.primary} />
             <Text style={styles.secondaryActionText}>Start Verification</Text>
-          </Pressable>
-        ) : null}
-
-        {showStartBiocharActivity ? (
-          <Pressable
-            style={[styles.secondaryAction, actionLoading && styles.actionDisabled]}
-            onPress={openBiocharActivity}
-            disabled={actionLoading}
-          >
-            <BhuguardMaterialIcon name="eco" size={20} color={officerTheme.primary} />
-            <Text style={styles.secondaryActionText}>Start Biochar Activity</Text>
           </Pressable>
         ) : null}
 

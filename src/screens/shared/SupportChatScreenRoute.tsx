@@ -7,5 +7,11 @@ type FarmerProps = NativeStackScreenProps<FarmerStackParamList, 'SupportChat'>;
 type OfficerProps = NativeStackScreenProps<FieldOfficerStackParamList, 'SupportChat'>;
 
 export function SupportChatScreenRoute({ route }: FarmerProps | OfficerProps) {
-  return <SupportChatScreen threadId={route.params.threadId} />;
+  const threadId = route?.params?.threadId ?? null;
+
+  if (threadId == null) {
+    return null;
+  }
+
+  return <SupportChatScreen threadId={threadId} />;
 }

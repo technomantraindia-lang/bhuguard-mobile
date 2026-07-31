@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   meta: { gap: 4 },
   metaLine: { fontSize: 13, color: officerTheme.onSurfaceVariant },
   button: {
-    backgroundColor: officerTheme.primaryContainer,
+    backgroundColor: officerTheme.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

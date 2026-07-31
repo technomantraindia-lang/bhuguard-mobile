@@ -53,7 +53,7 @@ export const EVIDENCE_CATEGORIES: EvidenceCategoryDefinition[] = [
   {
     value: 'application_photo',
     label: 'Application Photo',
-    allowedRoles: ['farmer'],
+    allowedRoles: ['company_user'],
     acceptedFileTypes: ['image/jpeg', 'image/png', 'image/webp'],
     requiresGps: false,
     requiresRelatedRecord: true,
@@ -85,7 +85,7 @@ export const EVIDENCE_CATEGORIES: EvidenceCategoryDefinition[] = [
   {
     value: 'weekly_progress_photo',
     label: 'Weekly Progress',
-    allowedRoles: ['farmer'],
+    allowedRoles: ['company_user', 'field_officer'],
     acceptedFileTypes: ['image/jpeg', 'image/png', 'image/webp'],
     requiresGps: false,
     requiresRelatedRecord: true,
@@ -93,7 +93,7 @@ export const EVIDENCE_CATEGORIES: EvidenceCategoryDefinition[] = [
   {
     value: 'gps_record',
     label: 'GPS Record',
-    allowedRoles: ['farmer', 'company_user', 'field_officer'],
+    allowedRoles: ['company_user', 'field_officer'],
     acceptedFileTypes: ['image/jpeg', 'image/png', 'application/pdf'],
     requiresGps: true,
     requiresRelatedRecord: false,
@@ -101,7 +101,7 @@ export const EVIDENCE_CATEGORIES: EvidenceCategoryDefinition[] = [
   {
     value: 'weight_slip',
     label: 'Weight Slip',
-    allowedRoles: ['farmer', 'company_user', 'field_officer'],
+    allowedRoles: ['company_user', 'field_officer'],
     acceptedFileTypes: ['image/jpeg', 'image/png', 'application/pdf'],
     requiresGps: false,
     requiresRelatedRecord: false,
@@ -109,7 +109,7 @@ export const EVIDENCE_CATEGORIES: EvidenceCategoryDefinition[] = [
   {
     value: 'document',
     label: 'Document',
-    allowedRoles: ['farmer', 'company_user', 'field_officer'],
+    allowedRoles: ['company_user', 'field_officer'],
     acceptedFileTypes: ['image/jpeg', 'image/png', 'application/pdf', 'application/msword'],
     requiresGps: false,
     requiresRelatedRecord: false,
@@ -157,7 +157,7 @@ export const EVIDENCE_CATEGORIES: EvidenceCategoryDefinition[] = [
   {
     value: 'supporting_document',
     label: 'Supporting Document',
-    allowedRoles: ['farmer'],
+    allowedRoles: ['company_user', 'field_officer'],
     acceptedFileTypes: ['image/jpeg', 'image/png', 'application/pdf'],
     requiresGps: false,
     requiresRelatedRecord: false,
@@ -231,8 +231,14 @@ export function getCategoryLabel(value: string): string {
   return definition?.label ?? value.replace(/_/g, ' ');
 }
 
-export const FARMER_EVIDENCE_CATEGORY_OPTIONS = getEvidenceCategoriesForRole('farmer').map((item) => ({
-  key: item.value,
+export const FARMER_UPLOAD_EVIDENCE_OPTIONS = [
+  { key: 'before_photo' as const, label: 'Before Photo' },
+  { key: 'during_photo' as const, label: 'During Photo' },
+  { key: 'after_photo' as const, label: 'After Photo' },
+];
+
+export const FARMER_EVIDENCE_CATEGORY_OPTIONS = FARMER_UPLOAD_EVIDENCE_OPTIONS.map((item) => ({
+  key: item.key,
   label: item.label,
 }));
 
@@ -241,8 +247,14 @@ export const COMPANY_EVIDENCE_CATEGORY_OPTIONS = getEvidenceCategoriesForRole('c
   label: item.label,
 }));
 
-export const OFFICER_EVIDENCE_CATEGORY_OPTIONS = getEvidenceCategoriesForRole('field_officer').map((item) => ({
-  key: item.value,
+export const OFFICER_UPLOAD_EVIDENCE_OPTIONS = [
+  { key: 'before_photo' as const, label: 'Before Photo' },
+  { key: 'during_photo' as const, label: 'During Photo' },
+  { key: 'after_photo' as const, label: 'After Photo' },
+];
+
+export const OFFICER_EVIDENCE_CATEGORY_OPTIONS = OFFICER_UPLOAD_EVIDENCE_OPTIONS.map((item) => ({
+  key: item.key,
   label: item.label,
 }));
 
@@ -252,18 +264,10 @@ export type OfficerEvidenceCategoryKey = (typeof OFFICER_EVIDENCE_CATEGORY_OPTIO
 
 export function getDefaultFarmerEvidenceCategory(screenKey: string): FarmerEvidenceCategoryKey {
   switch (screenKey) {
-    case 'add_baseline_assessment':
-      return 'document';
-    case 'add_soil_sample':
-      return 'supporting_document';
     case 'add_practice_record':
       return 'after_photo';
-    case 'monitoring_evidence_upload':
-      return 'application_photo';
-    case 'audit_evidence_upload':
-      return 'document';
     default:
-      return 'application_photo';
+      return 'before_photo';
   }
 }
 

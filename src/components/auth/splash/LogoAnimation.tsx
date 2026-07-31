@@ -1,116 +1,95 @@
-import { useEffect } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
-import Animated, {
-  Easing,
-  cancelAnimation,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, Easing, Image, StyleSheet, View } from 'react-native';
 
 import { BHUGUARD_LOGO, LOGO_SIZES } from '../../../constants/branding';
-import {
-  LOGO_OPACITY_MS,
-  LOGO_SCALE_MS,
-  SPLASH_GLOW_COLOR,
-  SPLASH_RIPPLE_COLOR,
-} from './SplashTransition';
+import { LOGO_OPACITY_MS, LOGO_SCALE_MS } from './SplashTransition';
 
 interface LogoAnimationProps {
   size?: number;
 }
 
 export function LogoAnimation({ size = LOGO_SIZES.splash }: LogoAnimationProps) {
-  const opacity = useSharedValue(0);
-  const scale = useSharedValue(0.75);
-  const glowOpacity = useSharedValue(0);
-  const rippleScale = useSharedValue(0.55);
-  const rippleOpacity = useSharedValue(0);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.92)).current;
+  const floatY = useRef(new Animated.Value(0)).current;
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
-    opacity.value = withTiming(1, {
-      duration: LOGO_OPACITY_MS,
-      easing: Easing.out(Easing.cubic),
+    let active = true;
+
+    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (active) {
+        setReduceMotion(enabled);
+      }
     });
 
-    scale.value = withSequence(
-      withSpring(1.08, {
-        damping: 14,
-        stiffness: 120,
-        mass: 0.9,
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: LOGO_OPACITY_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
       }),
-      withSpring(1, {
-        damping: 16,
-        stiffness: 140,
-        mass: 0.85,
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: LOGO_SCALE_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
       }),
+    ]).start();
+
+    if (reduceMotion) {
+      return () => {
+        opacity.stopAnimation();
+        scale.stopAnimation();
+      };
+    }
+
+    const breathe = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatY, {
+          toValue: -6,
+          duration: 1800,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatY, {
+          toValue: 0,
+          duration: 1800,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
     );
 
-    glowOpacity.value = withDelay(
-      420,
-      withTiming(0.1, {
-        duration: Math.max(400, LOGO_SCALE_MS - 200),
-        easing: Easing.out(Easing.quad),
-      }),
-    );
-
-    rippleOpacity.value = withDelay(
-      500,
-      withRepeat(
-        withSequence(
-          withTiming(1, { duration: 0 }),
-          withTiming(0, { duration: 2800, easing: Easing.out(Easing.quad) }),
-        ),
-        -1,
-        false,
-      ),
-    );
-
-    rippleScale.value = withDelay(
-      500,
-      withRepeat(
-        withSequence(
-          withTiming(0.55, { duration: 0 }),
-          withTiming(1.7, { duration: 2800, easing: Easing.out(Easing.quad) }),
-        ),
-        -1,
-        false,
-      ),
-    );
+    const timer = setTimeout(() => breathe.start(), 400);
 
     return () => {
-      cancelAnimation(opacity);
-      cancelAnimation(scale);
-      cancelAnimation(glowOpacity);
-      cancelAnimation(rippleOpacity);
-      cancelAnimation(rippleScale);
+      clearTimeout(timer);
+      breathe.stop();
+      opacity.stopAnimation();
+      scale.stopAnimation();
+      floatY.stopAnimation();
     };
-  }, [glowOpacity, opacity, rippleOpacity, rippleScale, scale]);
-
-  const logoStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ scale: scale.value }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-    transform: [{ scale: 1 + (1 - scale.value) * 0.15 }],
-  }));
-
-  const rippleStyle = useAnimatedStyle(() => ({
-    opacity: rippleOpacity.value * 0.9,
-    transform: [{ scale: rippleScale.value }],
-  }));
+  }, [floatY, opacity, reduceMotion, scale]);
 
   return (
-    <View style={[styles.wrap, { width: size * 2.2, height: size * 2.2 }]}>
-      <Animated.View style={[styles.ripple, rippleStyle]} />
-      <Animated.View style={[styles.glow, glowStyle]} />
-      <Animated.View style={[styles.logoWrap, logoStyle]}>
+    <View style={[styles.wrap, { width: size * 1.4, height: size * 1.4 }]}>
+      <Animated.View
+        style={[
+          styles.logoWrap,
+          {
+            opacity,
+            transform: [{ scale }, { translateY: floatY }],
+          },
+        ]}
+      >
         <Image source={BHUGUARD_LOGO} style={{ width: size, height: size }} resizeMode="contain" />
       </Animated.View>
     </View>
@@ -121,20 +100,6 @@ const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  glow: {
-    position: 'absolute',
-    width: 168,
-    height: 168,
-    borderRadius: 999,
-    backgroundColor: SPLASH_GLOW_COLOR,
-  },
-  ripple: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 999,
-    backgroundColor: SPLASH_RIPPLE_COLOR,
   },
   logoWrap: {
     alignItems: 'center',

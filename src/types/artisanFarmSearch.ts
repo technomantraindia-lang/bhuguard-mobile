@@ -8,6 +8,8 @@ export interface ArtisanAllocatedVillage {
   name: string;
   taluka_id: number;
   taluka_name?: string;
+  district_id?: number;
+  district_name?: string;
 }
 
 export interface ArtisanFarmSearchRecord {

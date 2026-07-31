@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   primaryAction: {
     minWidth: '22%',
     flexGrow: 1,
-    backgroundColor: officerTheme.primaryContainer,
+    backgroundColor: officerTheme.primary,
     borderRadius: 14,
     paddingVertical: 10,
     alignItems: 'center',
@@ -222,14 +222,14 @@ const styles = StyleSheet.create({
     gap: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(173, 238, 195, 0.25)',
+    backgroundColor: 'rgba(11, 46, 31, 0.08)',
     borderRadius: 14,
     paddingVertical: 10,
   },
   secondaryActionText: {
     fontSize: 13,
     fontWeight: '700',
-    color: officerTheme.primaryContainer,
+    color: officerTheme.primary,
   },
   dangerAction: {
     width: 48,

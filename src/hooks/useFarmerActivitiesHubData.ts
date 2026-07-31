@@ -25,7 +25,7 @@ export function useFarmerActivitiesHubData() {
     try {
       const [servicesResult, activitiesResult] = await Promise.allSettled([
         getFarmerServices(),
-        getFarmerFarmActivities(),
+        getFarmerFarmActivities('submitted'),
       ]);
 
       if (servicesResult.status === 'fulfilled') {

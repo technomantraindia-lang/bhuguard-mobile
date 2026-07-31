@@ -43,13 +43,13 @@
     "plugins": [
       "expo-dev-client",
       "expo-font",
-      "expo-blur",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F7FAF6",
-          "image": "./assets/splash-icon.png",
-          "imageWidth": 200
+          "backgroundColor": "#03150D",
+          "image": "./assets/splash-native-blank.png",
+          "imageWidth": 1,
+          "resizeMode": "contain"
         }
       ],
       [

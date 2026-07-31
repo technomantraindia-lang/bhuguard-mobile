@@ -133,7 +133,7 @@ export function FieldOfficerFeedstockVerificationScreen() {
             <Text style={styles.emptyButton}>Refresh</Text>
           </Pressable>
         </View>
-        <OfficerScreenBottomNav activeTab="Visits" />
+        <OfficerScreenBottomNav activeTab="Home" />
       </SafeAreaView>
     );
   }
@@ -414,7 +414,7 @@ export function FieldOfficerFeedstockVerificationScreen() {
         />
       </ScrollView>
 
-      <OfficerScreenBottomNav activeTab="Visits" />
+      <OfficerScreenBottomNav activeTab="Home" />
 
       <FeedstockVerificationModals
         draftSavedVisible={draftSavedVisible}

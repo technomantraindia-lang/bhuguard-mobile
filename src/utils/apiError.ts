@@ -2,6 +2,15 @@ import axios, { type AxiosError } from 'axios';
 
 import type { ApiErrorResponse } from '../types/auth';
 
+function looksLikeHtml(value: unknown): boolean {
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  const trimmed = value.trim().toLowerCase();
+  return trimmed.startsWith('<!doctype html') || trimmed.startsWith('<html');
+}
+
 export function isApiNotFound(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 404;
 }
@@ -38,7 +47,13 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
   if (axios.isAxiosError<ApiErrorResponse>(error)) {
     const data = error.response?.data;
 
-    if (data?.message) {
+    if (looksLikeHtml(data)) {
+      return fallback === 'Request failed.'
+        ? 'Unable to connect to the Bhuguard server.'
+        : fallback;
+    }
+
+    if (data?.message && !looksLikeHtml(data.message)) {
       return data.message;
     }
 
@@ -49,28 +64,40 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
       }
     }
 
+    if (error.response?.status === 401) {
+      return 'Your session has expired. Please log in again.';
+    }
+
     if (error.response?.status === 403) {
       return 'You do not have permission to perform this action.';
     }
 
+    if (error.response?.status === 404) {
+      return 'The requested service is temporarily unavailable.';
+    }
+
     if (error.response?.status === 422) {
-      return 'Validation failed. Please check your input.';
+      return 'Please check the entered information.';
+    }
+
+    if (error.response?.status === 429) {
+      return 'Too many requests. Please wait a moment and try again.';
     }
 
     if ((error.response?.status ?? 0) >= 500) {
-      return 'Server error. Please try again later.';
+      return 'The requested service is temporarily unavailable.';
     }
 
     if (isTimeoutError(error)) {
-      return 'Request timed out. Check your connection and try again.';
+      return 'Unable to connect to the Bhuguard server. Please try again.';
     }
 
-    if (error.message) {
+    if (error.message && !looksLikeHtml(error.message) && !/request failed with status code/i.test(error.message)) {
       return error.message;
     }
   }
 
-  if (error instanceof Error && error.message) {
+  if (error instanceof Error && error.message && !looksLikeHtml(error.message)) {
     return error.message;
   }
 
@@ -80,11 +107,10 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
 export const PENDING_API_MESSAGE =
   'This module is ready in mobile. Backend API is pending or no records exist yet.';
 
-export const NETWORK_ERROR_MESSAGE =
-  'Unable to connect to server. Please check backend and Wi-Fi.';
+export const NETWORK_ERROR_MESSAGE = 'Internet connection is unavailable.';
 
-export function formatApiUnreachableMessage(baseUrl: string): string {
-  return `Cannot reach API at ${baseUrl}. Please check server settings and network.`;
+export function formatApiUnreachableMessage(_baseUrl: string): string {
+  return 'Unable to connect to the Bhuguard server.';
 }
 
 export const EMPTY_DATA_MESSAGE =

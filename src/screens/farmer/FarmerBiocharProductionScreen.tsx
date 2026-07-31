@@ -68,11 +68,12 @@ export function FarmerBiocharProductionScreen() {
   }
 
   const handleSubmit = async () => {
-    const code = await form.submit();
-    if (code) {
-      setSubmittedBatchCode(code);
-      setSuccessVisible(true);
+    const result = await form.submit();
+    if (!result) {
+      return;
     }
+    setSubmittedBatchCode(typeof result === 'string' ? result : result.batchCode);
+    setSuccessVisible(true);
   };
 
   const handleSaveDraft = async () => {
@@ -144,7 +145,7 @@ export function FarmerBiocharProductionScreen() {
                 farmerCode={farmerCode}
                 onTimestampDateChange={form.setTimestampDate}
                 onTimestampTimeChange={form.setTimestampTime}
-                onAltitudeChange={(value) => form.setAltitude(value === '' ? null : Number(value))}
+                onAltitudeChange={form.setAltitudeInput}
                 onVillageNameChange={form.setVillageName}
                 onTalukaNameChange={form.setTalukaName}
                 onDistrictNameChange={form.setDistrictName}

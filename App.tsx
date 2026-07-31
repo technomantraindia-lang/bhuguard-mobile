@@ -1,19 +1,21 @@
-import { Component, type ErrorInfo, type ReactNode, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, type ErrorInfo, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
+import AnimatedLogoSplash from './src/components/AnimatedLogoSplash';
 import { I18nProvider } from './src/i18n/I18nContext';
+import { NotificationProvider } from './src/context/NotificationContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
-import { ThemeProvider } from './src/theme/ThemeContext';
 import { registerLivePhotoWatermarkProcessor } from './src/services/livePhotoWatermarkService';
 import type { LivePhotoWatermarkProcessorHandle } from './src/components/evidence/LivePhotoWatermarkProcessor';
+import { ThemeProvider } from './src/theme/ThemeContext';
 
 interface AppErrorBoundaryState {
   error: Error | null;
 }
 
-class AppErrorBoundary extends Component<{ children: ReactNode }, AppErrorBoundaryState> {
+class AppErrorBoundary extends React.Component<{ children: ReactNode }, AppErrorBoundaryState> {
   state: AppErrorBoundaryState = { error: null };
 
   static getDerivedStateFromError(error: Error): AppErrorBoundaryState {
@@ -39,7 +41,8 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, AppErrorBounda
   }
 }
 
-function WatermarkHost() {
+/** Defer native view-shot processor until after first paint. */
+function LivePhotoWatermarkHost() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -64,14 +67,28 @@ function WatermarkHost() {
 }
 
 export default function App() {
+  const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
+
+  const handleAnimatedSplashFinish = useCallback(() => {
+    setShowAnimatedSplash(false);
+  }, []);
+
   return (
     <AppErrorBoundary>
       <SafeAreaProvider>
         <ThemeProvider>
           <I18nProvider>
-            <AppNavigator />
-            <WatermarkHost />
-            <StatusBar style="auto" />
+            <NotificationProvider>
+              {showAnimatedSplash ? (
+                <AnimatedLogoSplash onFinish={handleAnimatedSplashFinish} />
+              ) : (
+                <>
+                  <AppNavigator />
+                  <LivePhotoWatermarkHost />
+                </>
+              )}
+              <StatusBar style="auto" />
+            </NotificationProvider>
           </I18nProvider>
         </ThemeProvider>
       </SafeAreaProvider>

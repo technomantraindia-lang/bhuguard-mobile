@@ -1,10 +1,19 @@
+import { useMemo, useRef } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-import { ONBOARDING_STEPS } from '../../../constants/onboardingSteps';
+import {
+  getFarmerOnboardingStepDisplayTone,
+  getFarmerOnboardingStepStatusLabel,
+  getNextIncompleteFarmerOnboardingStep,
+  hasFarmerOnboardingProgress,
+  ONBOARDING_STEPS,
+  type FarmerOnboardingStep,
+  type OnboardingStepDisplayTone,
+} from '../../../constants/onboardingSteps';
 import { useOnboarding } from '../../../context/OnboardingContext';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { dashboardShadow, dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
@@ -12,17 +21,25 @@ import { BhuguardMaterialIcon } from '../../../components/shared/BhuguardMateria
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
 
-function StepIcon({ icon }: { icon: (typeof ONBOARDING_STEPS)[number]['icon'] }) {
+function StepIcon({
+  icon,
+  tone,
+}: {
+  icon: FarmerOnboardingStep['icon'];
+  tone: OnboardingStepDisplayTone;
+}) {
+  const color =
+    tone === 'completed'
+      ? dashboardTheme.onPrimary
+      : tone === 'current'
+        ? dashboardTheme.primary
+        : dashboardTheme.onSurfaceVariant;
+
   if (icon === 'consent') {
     return (
       <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-        <Path
-          d="M7 3h7l5 5v13H7V3z"
-          stroke={dashboardTheme.primary}
-          strokeWidth={1.6}
-          strokeLinejoin="round"
-        />
-        <Path d="M14 3v5h5M10 13h6M10 17h4" stroke={dashboardTheme.primary} strokeWidth={1.6} />
+        <Path d="M7 3h7l5 5v13H7V3z" stroke={color} strokeWidth={1.6} strokeLinejoin="round" />
+        <Path d="M14 3v5h5M10 13h6M10 17h4" stroke={color} strokeWidth={1.6} />
       </Svg>
     );
   }
@@ -32,7 +49,7 @@ function StepIcon({ icon }: { icon: (typeof ONBOARDING_STEPS)[number]['icon'] })
       <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
         <Path
           d="M4 8h16v11H4V8zM4 8l2-4h6l2 2h6v2"
-          stroke={dashboardTheme.primary}
+          stroke={color}
           strokeWidth={1.6}
           strokeLinejoin="round"
         />
@@ -49,17 +66,68 @@ function StepIcon({ icon }: { icon: (typeof ONBOARDING_STEPS)[number]['icon'] })
           ? 'assignment_turned_in'
           : 'person';
 
-  return <BhuguardMaterialIcon name={iconName} size={18} color={dashboardTheme.primary} />;
+  return <BhuguardMaterialIcon name={iconName} size={18} color={color} />;
 }
 
 export function FarmerOnboardingStartScreen() {
   const navigation = useNavigation<Nav>();
-  const { resetDraft } = useOnboarding();
+  const insets = useSafeAreaInsets();
+  const { draft, result, resetDraft } = useOnboarding();
+  const isNavigatingRef = useRef(false);
 
-  const start = () => {
-    resetDraft();
-    navigation.navigate('FarmerBasicDetails');
+  const nextStep = useMemo(
+    () => getNextIncompleteFarmerOnboardingStep(draft, result),
+    [draft, result],
+  );
+  const hasProgress = useMemo(() => hasFarmerOnboardingProgress(draft) || result != null, [draft, result]);
+  const currentKey = nextStep?.key ?? null;
+
+  const ctaLabel = useMemo(() => {
+    if (result != null) {
+      return 'View Submission';
+    }
+    if (!hasProgress) {
+      return 'Begin Onboarding';
+    }
+    if (!nextStep) {
+      return 'Open Final Review & Submit';
+    }
+    return 'Continue Onboarding';
+  }, [hasProgress, nextStep, result]);
+
+  const startOrContinue = () => {
+    if (isNavigatingRef.current) {
+      return;
+    }
+    isNavigatingRef.current = true;
+
+    try {
+      if (result != null) {
+        navigation.navigate('FarmerOnboardingSuccess');
+        return;
+      }
+
+      if (!hasProgress) {
+        resetDraft();
+        navigation.navigate('FarmerBasicDetails');
+        return;
+      }
+
+      const target = getNextIncompleteFarmerOnboardingStep(draft, result);
+      if (!target) {
+        navigation.navigate('FarmerOnboardingReview');
+        return;
+      }
+
+      navigation.navigate(target.route);
+    } finally {
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 600);
+    }
   };
+
+  const footerPad = Math.max(insets.bottom, 12) + 12;
 
   return (
     <View style={styles.root}>
@@ -83,7 +151,10 @@ export function FarmerOnboardingStartScreen() {
           <View style={styles.headerSpacer} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingBottom: 100 + footerPad }]}
+          showsVerticalScrollIndicator={false}
+        >
           <Text style={styles.title}>New Farmer Onboarding</Text>
           <Text style={styles.subtitle}>
             Follow these steps to register a new farmer in the DMRV ecosystem.
@@ -92,25 +163,68 @@ export function FarmerOnboardingStartScreen() {
           <View style={[styles.stepperCard, dashboardShadow]}>
             {ONBOARDING_STEPS.map((step, index) => {
               const isLast = index === ONBOARDING_STEPS.length - 1;
+              const tone = getFarmerOnboardingStepDisplayTone(step.key, draft, result, currentKey);
+              const statusLabel = getFarmerOnboardingStepStatusLabel(step.key, draft, tone);
 
               return (
-                <View key={step.id} style={styles.stepRow}>
+                <View key={step.key} style={styles.stepRow}>
                   <View style={styles.stepRail}>
-                    <View style={styles.stepCircle}>
-                      <StepIcon icon={step.icon} />
+                    <View
+                      style={[
+                        styles.stepCircle,
+                        tone === 'completed' && styles.stepCircleCompleted,
+                        tone === 'current' && styles.stepCircleCurrent,
+                        tone === 'pending' && styles.stepCirclePending,
+                      ]}
+                    >
+                      {tone === 'completed' ? (
+                        <BhuguardMaterialIcon name="verified" size={18} color={dashboardTheme.onPrimary} />
+                      ) : (
+                        <StepIcon icon={step.icon} tone={tone} />
+                      )}
                     </View>
-                    {!isLast ? <View style={styles.stepLine} /> : null}
+                    {!isLast ? (
+                      <View
+                        style={[
+                          styles.stepLine,
+                          tone === 'completed' && styles.stepLineCompleted,
+                        ]}
+                      />
+                    ) : null}
                   </View>
-                  <Text style={styles.stepLabel}>{step.label}</Text>
+                  <View style={styles.stepTextCol}>
+                    <Text
+                      style={[
+                        styles.stepLabel,
+                        tone === 'pending' && styles.stepLabelPending,
+                        tone === 'current' && styles.stepLabelCurrent,
+                        tone === 'completed' && styles.stepLabelCompleted,
+                      ]}
+                    >
+                      {step.label}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.stepStatus,
+                        tone === 'completed' && styles.stepStatusCompleted,
+                        tone === 'current' && styles.stepStatusCurrent,
+                      ]}
+                    >
+                      {statusLabel}
+                    </Text>
+                  </View>
                 </View>
               );
             })}
           </View>
         </ScrollView>
 
-        <View style={styles.footer}>
-          <Pressable style={({ pressed }) => [styles.startButton, pressed && styles.startPressed]} onPress={start}>
-            <Text style={styles.startLabel}>Begin Onboarding</Text>
+        <View style={[styles.footer, { paddingBottom: footerPad }]}>
+          <Pressable
+            style={({ pressed }) => [styles.startButton, pressed && styles.startPressed]}
+            onPress={startOrContinue}
+          >
+            <Text style={styles.startLabel}>{ctaLabel}</Text>
             <BhuguardMaterialIcon name="arrow_forward" size={20} color={dashboardTheme.onPrimary} />
           </Pressable>
         </View>
@@ -156,7 +270,6 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: dashboardTheme.marginMobile,
-    paddingBottom: 120,
     gap: 16,
   },
   title: {
@@ -181,6 +294,7 @@ const styles = StyleSheet.create({
   stepRow: {
     flexDirection: 'row',
     gap: 14,
+    minHeight: 56,
   },
   stepRail: {
     alignItems: 'center',
@@ -196,20 +310,61 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  stepCircleCompleted: {
+    backgroundColor: dashboardTheme.primary,
+    borderColor: dashboardTheme.primary,
+  },
+  stepCircleCurrent: {
+    borderColor: dashboardTheme.primary,
+    borderWidth: 2,
+    backgroundColor: dashboardTheme.surfaceLowest,
+  },
+  stepCirclePending: {
+    backgroundColor: dashboardTheme.surfaceLow,
+    borderColor: dashboardTheme.outlineVariant,
+  },
   stepLine: {
     flex: 1,
     width: 2,
-    minHeight: 28,
+    minHeight: 20,
     backgroundColor: dashboardTheme.outlineVariant,
     marginVertical: 4,
   },
-  stepLabel: {
+  stepLineCompleted: {
+    backgroundColor: dashboardTheme.primary,
+  },
+  stepTextCol: {
     flex: 1,
+    paddingTop: 4,
+    paddingBottom: 16,
+    justifyContent: 'center',
+  },
+  stepLabel: {
     fontSize: 16,
     fontWeight: '700',
     color: dashboardTheme.onSurface,
-    paddingTop: 6,
-    paddingBottom: 22,
+  },
+  stepLabelPending: {
+    color: dashboardTheme.onSurfaceVariant,
+    fontWeight: '600',
+  },
+  stepLabelCurrent: {
+    color: dashboardTheme.primary,
+  },
+  stepLabelCompleted: {
+    color: dashboardTheme.primary,
+  },
+  stepStatus: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '600',
+    color: dashboardTheme.onSurfaceVariant,
+  },
+  stepStatusCompleted: {
+    color: dashboardTheme.primary,
+  },
+  stepStatusCurrent: {
+    color: dashboardTheme.secondary,
   },
   footer: {
     position: 'absolute',
@@ -217,7 +372,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingHorizontal: dashboardTheme.marginMobile,
-    paddingBottom: 24,
     paddingTop: 12,
     backgroundColor: dashboardTheme.background,
   },

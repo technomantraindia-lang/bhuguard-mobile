@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { BhuguardMaterialIcon, type BhuguardIconName } from '../shared/BhuguardMaterialIcon';
 import { DashboardPressable } from '../shared/DashboardPressable';
-import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTheme';
+import { farmerTheme } from '../../theme/farmerTheme';
 
 interface FarmerHeroSummaryCardProps {
   farmerCode: string;
@@ -50,12 +50,12 @@ function SectionHeader({ icon, title, showChevron }: { icon: BhuguardIconName; t
     <View style={styles.sectionHeader}>
       <View style={styles.sectionHeaderLeft}>
         <View style={styles.sectionIconWrap}>
-          <BhuguardMaterialIcon name={icon} size={16} color={dashboardTheme.primaryContainer} />
+          <BhuguardMaterialIcon name={icon} size={16} color={farmerTheme.actionGreen} />
         </View>
         <Text style={styles.sectionTitle}>{title}</Text>
       </View>
       {showChevron ? (
-        <BhuguardMaterialIcon name="chevron_right" size={18} color={dashboardTheme.outline} />
+        <BhuguardMaterialIcon name="chevron_right" size={18} color={farmerTheme.secondaryText} />
       ) : null}
     </View>
   );
@@ -110,7 +110,7 @@ export function FarmerHeroSummaryCard({
   const hasLocation = Boolean(location.village || location.taluka || location.district || location.pincode);
 
   return (
-    <View style={[styles.card, dashboardShadow]}>
+    <View style={[styles.card, farmerTheme.cardShadow]}>
       <View style={styles.accentBar} />
 
       <View style={styles.header}>
@@ -130,7 +130,7 @@ export function FarmerHeroSummaryCard({
 
         {isVerified ? (
           <View style={styles.verifiedBadge}>
-            <BhuguardMaterialIcon name="verified" size={14} color={dashboardTheme.primaryContainer} filled />
+            <BhuguardMaterialIcon name="verified" size={14} color={farmerTheme.actionGreen} filled />
             <Text style={styles.verifiedText}>Verified</Text>
           </View>
         ) : null}
@@ -205,14 +205,14 @@ export function FarmerHeroSummaryCard({
 const styles = StyleSheet.create({
   card: {
     borderRadius: 20,
-    backgroundColor: dashboardTheme.surfaceLowest,
+    backgroundColor: farmerTheme.white,
     borderWidth: 1,
-    borderColor: dashboardTheme.outlineVariant,
+    borderColor: farmerTheme.softBorder,
     overflow: 'hidden',
   },
   accentBar: {
     height: 4,
-    backgroundColor: dashboardTheme.primaryContainer,
+    backgroundColor: farmerTheme.actionGreen,
   },
   header: {
     flexDirection: 'row',
@@ -226,16 +226,16 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: dashboardTheme.surfaceLow,
+    backgroundColor: farmerTheme.lightGreenSurface,
     borderWidth: 2,
-    borderColor: dashboardTheme.secondaryContainer,
+    borderColor: farmerTheme.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     fontSize: 18,
     fontWeight: '700',
-    color: dashboardTheme.primaryContainer,
+    color: farmerTheme.actionGreen,
     letterSpacing: 0.5,
   },
   headerCopy: {
@@ -246,25 +246,25 @@ const styles = StyleSheet.create({
     fontSize: 20,
     lineHeight: 26,
     fontWeight: '700',
-    color: dashboardTheme.headingGreen,
+    color: farmerTheme.headingGreen,
   },
   idChip: {
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: dashboardTheme.background,
+    backgroundColor: farmerTheme.creamSurface,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: dashboardTheme.outlineVariant,
+    borderColor: farmerTheme.softBorder,
   },
   idChipLabel: {
     fontSize: 10,
     lineHeight: 14,
     fontWeight: '700',
-    color: dashboardTheme.textMuted,
+    color: farmerTheme.secondaryText,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
@@ -272,23 +272,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 14,
     fontWeight: '700',
-    color: dashboardTheme.onSurface,
+    color: farmerTheme.deepText,
   },
   verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: dashboardTheme.surfaceLow,
+    backgroundColor: farmerTheme.lightGreenSurface,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: dashboardTheme.secondaryContainer,
+    borderColor: farmerTheme.primary,
   },
   verifiedText: {
     fontSize: 11,
     fontWeight: '700',
-    color: dashboardTheme.primaryContainer,
+    color: farmerTheme.actionGreen,
   },
   section: {
     paddingHorizontal: 16,
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: dashboardTheme.surfaceLow,
+    backgroundColor: farmerTheme.lightGreenSurface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -317,14 +317,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '700',
-    color: dashboardTheme.headingGreen,
+    color: farmerTheme.headingGreen,
     letterSpacing: 0.2,
   },
   infoPanel: {
-    backgroundColor: dashboardTheme.background,
+    backgroundColor: farmerTheme.creamSurface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: dashboardTheme.outlineVariant,
+    borderColor: farmerTheme.softBorder,
     padding: 12,
     gap: 10,
   },
@@ -341,20 +341,20 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
     fontWeight: '700',
-    color: dashboardTheme.textMuted,
+    color: farmerTheme.secondaryText,
     letterSpacing: 0.8,
   },
   infoValue: {
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '600',
-    color: dashboardTheme.onSurface,
+    color: farmerTheme.deepText,
   },
   highlightValue: {
     fontSize: 15,
     lineHeight: 22,
     fontWeight: '600',
-    color: dashboardTheme.onSurface,
+    color: farmerTheme.deepText,
   },
   landPanel: {
     gap: 6,
@@ -363,12 +363,12 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 30,
     fontWeight: '700',
-    color: dashboardTheme.primary,
+    color: farmerTheme.actionGreen,
   },
   landUnit: {
     fontSize: 16,
     fontWeight: '600',
-    color: dashboardTheme.primaryContainer,
+    color: farmerTheme.primary,
   },
   landSecondaryRow: {
     flexDirection: 'row',
@@ -380,19 +380,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '500',
-    color: dashboardTheme.onSurfaceVariant,
+    color: farmerTheme.secondaryText,
   },
   landDot: {
     fontSize: 13,
-    color: dashboardTheme.outline,
+    color: farmerTheme.secondaryText,
   },
   statsWrap: {
     marginHorizontal: 16,
     marginBottom: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: dashboardTheme.outlineVariant,
-    backgroundColor: dashboardTheme.background,
+    borderColor: farmerTheme.softBorder,
+    backgroundColor: farmerTheme.creamSurface,
     overflow: 'hidden',
   },
   statsRow: {
@@ -409,24 +409,24 @@ const styles = StyleSheet.create({
   },
   statDividerV: {
     width: 1,
-    backgroundColor: dashboardTheme.outlineVariant,
+    backgroundColor: farmerTheme.softBorder,
   },
   statDividerH: {
     height: 1,
-    backgroundColor: dashboardTheme.outlineVariant,
+    backgroundColor: farmerTheme.softBorder,
   },
   statValue: {
     fontSize: 18,
     lineHeight: 24,
     fontWeight: '700',
-    color: dashboardTheme.onSurface,
+    color: farmerTheme.deepText,
     textAlign: 'center',
   },
   statLabel: {
     fontSize: 11,
     lineHeight: 14,
     fontWeight: '600',
-    color: dashboardTheme.textMuted,
+    color: farmerTheme.secondaryText,
     textAlign: 'center',
   },
 });

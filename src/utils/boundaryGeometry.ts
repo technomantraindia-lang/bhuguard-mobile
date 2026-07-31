@@ -1,16 +1,25 @@
 import type { LatLng } from './farmSatelliteMap';
+import { formatGpsAccuracy as formatGpsAccuracyParts } from './formatGpsAccuracy';
 
 export type AreaUnit = 'acre' | 'hectare' | 'bigha';
 
 export const ACRES_PER_HECTARE = 2.47105;
+/** Gujarat / project-configured bigha factor (bigha per acre). */
 export const BIGHA_PER_ACRE = 1.613;
+/** When false, UI should hide Bigha and prefer acre/hectare. */
+export const BIGHA_CONVERSION_CONFIGURED = true;
+export const BIGHA_CONVERSION_REGION = 'Gujarat';
 export const MIN_BOUNDARY_POINTS = 3;
-export const MIN_POINT_DISTANCE_METERS = 3;
-export const AUTO_CAPTURE_DISTANCE_METERS = 4;
-export const AUTO_CAPTURE_INTERVAL_MS = 4000;
+export const MIN_POINT_DISTANCE_METERS = 1.5;
+export const AUTO_CAPTURE_DISTANCE_METERS = 2;
+export const AUTO_CAPTURE_INTERVAL_MS = 2000;
+export const POOR_GPS_WARNING_METERS = 10;
+export const AUTO_CAPTURE_REJECT_ACCURACY_METERS = 25;
 export const MAX_ACCEPTABLE_GPS_ACCURACY_METERS = 30;
+export const MAX_REALISTIC_SPEED_MPS = 4;
 export const BOUNDARY_AREA_TOLERANCE_RATIO = 1.1;
 export const BOUNDARY_OUTSIDE_TOLERANCE_METERS = 10;
+export const SQUARE_FEET_PER_ACRE = 43560;
 
 export type MappingStatus = 'not_started' | 'recording' | 'paused' | 'editing' | 'completed';
 
@@ -34,41 +43,31 @@ export interface BoundaryMetrics {
   areaAcre: number;
   areaHectare: number;
   areaBigha: number;
+  areaSquareFeet: number;
+  areaSquareMeters: number;
   perimeterMeter: number;
 }
 
+/**
+ * String GPS accuracy for legacy callers.
+ * Prefer `formatGpsAccuracy` from `./formatGpsAccuracy` for structured UI.
+ */
 export function formatGpsAccuracy(meters: number | null | undefined): string {
-  if (meters === null || meters === undefined || !Number.isFinite(meters)) {
-    return 'Unknown';
-  }
-
-  if (meters <= 10) {
-    return 'Excellent';
-  }
-
-  if (meters <= 20) {
-    return 'Good';
-  }
-
-  if (meters <= 30) {
-    return 'Acceptable';
-  }
-
-  return 'Poor';
+  return formatGpsAccuracyParts(meters).valueText;
 }
 
 export function formatMappingStatus(status: MappingStatus): string {
   switch (status) {
     case 'recording':
-      return 'Recording';
+      return 'Recording Boundary';
     case 'paused':
-      return 'Paused';
+      return 'Mapping Paused';
     case 'editing':
-      return 'Editing';
+      return 'Boundary Completed';
     case 'completed':
-      return 'Completed';
+      return 'Boundary Completed';
     default:
-      return 'Not Started';
+      return 'Ready to Map';
   }
 }
 
@@ -240,6 +239,8 @@ export function calculateBoundaryMetrics(points: LatLng[]): BoundaryMetrics {
     areaAcre,
     areaHectare,
     areaBigha,
+    areaSquareFeet: round(areaAcre * SQUARE_FEET_PER_ACRE, 0),
+    areaSquareMeters: round(areaSqMeters, 2),
     perimeterMeter: Math.round(perimeter),
   };
 }
@@ -297,6 +298,70 @@ export function formatAreaByUnit(metrics: BoundaryMetrics, unit: AreaUnit): stri
 
 export function boundaryPointsToLatLng(points: BoundaryPoint[]): LatLng[] {
   return points.map((point) => ({ latitude: point.latitude, longitude: point.longitude }));
+}
+
+export function simplifyBoundaryPointsForEdit(points: BoundaryPoint[], maxVertices = 12): BoundaryPoint[] {
+  if (points.length <= maxVertices) {
+    return points;
+  }
+
+  const step = Math.max(1, Math.floor(points.length / maxVertices));
+  const simplified = points.filter((_, index) => index % step === 0 || index === points.length - 1);
+
+  if (simplified.length < MIN_BOUNDARY_POINTS) {
+    return points.slice(0, maxVertices);
+  }
+
+  return simplified;
+}
+
+export function removeNearDuplicatePoints(points: BoundaryPoint[], minDistanceMeters = 1): BoundaryPoint[] {
+  if (points.length === 0) {
+    return points;
+  }
+
+  const filtered: BoundaryPoint[] = [points[0]];
+
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = filtered[filtered.length - 1];
+    const current = points[index];
+    const distance = haversineMeters(
+      previous.latitude,
+      previous.longitude,
+      current.latitude,
+      current.longitude,
+    );
+
+    if (distance >= minDistanceMeters) {
+      filtered.push(current);
+    }
+  }
+
+  return renumberBoundaryPoints(filtered);
+}
+
+function renumberBoundaryPoints(points: BoundaryPoint[]): BoundaryPoint[] {
+  return points.map((point, index) => ({ ...point, pointNo: index + 1 }));
+}
+
+export function summarizeGpsAccuracies(points: BoundaryPoint[]): {
+  minimum: number | null;
+  average: number | null;
+  maximum: number | null;
+} {
+  const accuracies = points.map((point) => point.accuracy).filter((value) => Number.isFinite(value));
+
+  if (accuracies.length === 0) {
+    return { minimum: null, average: null, maximum: null };
+  }
+
+  const sum = accuracies.reduce((total, value) => total + value, 0);
+
+  return {
+    minimum: round(Math.min(...accuracies), 2),
+    average: round(sum / accuracies.length, 2),
+    maximum: round(Math.max(...accuracies), 2),
+  };
 }
 
 export function hasSelfIntersection(points: LatLng[]): boolean {
@@ -360,9 +425,13 @@ export function buildBoundaryUploadPayload(
 ) {
   const walkingPoints = options?.walkingPoints?.length ? options.walkingPoints : points;
   const metrics = calculateBoundaryMetrics(boundaryPointsToLatLng(points));
-  const accuracies = points.map((point) => point.accuracy).filter((value) => Number.isFinite(value));
-  const averageAccuracy =
-    accuracies.length > 0 ? round(accuracies.reduce((sum, value) => sum + value, 0) / accuracies.length, 2) : null;
+  const accuracySummary = summarizeGpsAccuracies(walkingPoints);
+  const totalDistance = walkingPoints.length >= 2
+    ? walkingPoints.slice(1).reduce((total, point, index) => {
+        const previous = walkingPoints[index];
+        return total + haversineMeters(previous.latitude, previous.longitude, point.latitude, point.longitude);
+      }, 0)
+    : 0;
 
   return {
     farm_id: farmId,
@@ -370,10 +439,14 @@ export function buildBoundaryUploadPayload(
     area_acre: metrics.areaAcre,
     area_hectare: metrics.areaHectare,
     area_bigha: metrics.areaBigha,
-    area_sqft: round(metrics.areaAcre * 43560, 2),
+    area_sqft: metrics.areaSquareFeet,
+    area_square_meters: metrics.areaSquareMeters,
     perimeter_meter: metrics.perimeterMeter,
+    total_distance_meters: Math.round(totalDistance),
     gps_accuracy: gpsAccuracyLabel.toLowerCase(),
-    gps_accuracy_average: averageAccuracy,
+    gps_accuracy_average: accuracySummary.average,
+    gps_accuracy_minimum: accuracySummary.minimum,
+    gps_accuracy_maximum: accuracySummary.maximum,
     mapping_started_at: options?.mappingStartedAt ?? null,
     mapping_finished_at: options?.mappingFinishedAt ?? null,
     status: options?.status ?? 'completed',

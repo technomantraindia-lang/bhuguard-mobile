@@ -17,6 +17,7 @@ import { AuthField } from '../../components/auth/AuthField';
 import { BhuguardLogo } from '../../components/shared/BhuguardLogo';
 import { LOGO_SIZES } from '../../constants/branding';
 import { getDemoLoginForRole, type AppLoginRole } from '../../config/authRoles';
+import { APP_VARIANT } from '../../config/env';
 import { useTranslation } from '../../i18n/I18nContext';
 import type { RootStackParamList } from '../../navigation/types';
 import { colors, spacing } from '../../theme';
@@ -133,7 +134,7 @@ export function PasswordLoginScreen({ navigation, route }: Props) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Pressable onPress={() => navigation.navigate(getBackRoute(role))} style={styles.backButton}>
             <Text style={styles.backText}>← {t('common.back')}</Text>
@@ -180,9 +181,15 @@ export function PasswordLoginScreen({ navigation, route }: Props) {
           />
 
           {errorMessage ? (
-            <Pressable onPress={() => navigation.navigate('ApiServerSettings')}>
+            <Pressable
+              onPress={() => {
+                if (__DEV__ || APP_VARIANT !== 'production') {
+                  navigation.navigate('ApiServerSettings');
+                }
+              }}
+            >
               <Text style={styles.error}>{errorMessage}</Text>
-              {errorMessage.includes('Cannot reach API') ? (
+              {errorMessage.includes('Cannot reach API') && (__DEV__ || APP_VARIANT !== 'production') ? (
                 <Text style={styles.serverLink}>{t('apiServer.openSettings')} →</Text>
               ) : null}
             </Pressable>
@@ -198,9 +205,11 @@ export function PasswordLoginScreen({ navigation, route }: Props) {
             </Text>
           </Pressable>
 
-          <Pressable onPress={() => navigation.navigate('ApiServerSettings')} style={styles.serverSettingsLink}>
-            <Text style={styles.serverSettingsText}>{t('apiServer.openSettings')}</Text>
-          </Pressable>
+          {__DEV__ || APP_VARIANT !== 'production' ? (
+            <Pressable onPress={() => navigation.navigate('ApiServerSettings')} style={styles.serverSettingsLink}>
+              <Text style={styles.serverSettingsText}>{t('apiServer.openSettings')}</Text>
+            </Pressable>
+          ) : null}
 
           {role === 'farmer' ? (
             <View style={styles.infoBox}>

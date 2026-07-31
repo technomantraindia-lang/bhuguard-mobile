@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -38,6 +38,8 @@ export function FieldOfficerCheckInScreen({ route, navigation }: Props) {
   const [preparingVisit, setPreparingVisit] = useState(true);
   const [prepareError, setPrepareError] = useState<string | null>(null);
   const [overrideReason, setOverrideReason] = useState('');
+  const autoCaptureAttempted = useRef(false);
+  const prepareStarted = useRef(false);
 
   const prepareVisit = useCallback(async () => {
     setPreparingVisit(true);
@@ -52,21 +54,43 @@ export function FieldOfficerCheckInScreen({ route, navigation }: Props) {
     } finally {
       setPreparingVisit(false);
     }
-  }, [assignmentId, gps, reloadProgress]);
+  }, [assignmentId, gps.reload, reloadProgress]);
 
   useEffect(() => {
+    if (prepareStarted.current) {
+      return;
+    }
+
+    prepareStarted.current = true;
     void prepareVisit();
-  }, [assignmentId]);
+  }, [prepareVisit]);
 
   useEffect(() => {
-    if (preparingVisit || gps.loading || !gps.context || gps.capture || gps.capturing) {
+    if (
+      preparingVisit ||
+      gps.loading ||
+      !gps.context ||
+      gps.capture ||
+      gps.capturing ||
+      autoCaptureAttempted.current
+    ) {
       return;
     }
 
     if (gps.permissionStatus === 'granted' && gps.gpsServiceEnabled !== false) {
+      autoCaptureAttempted.current = true;
       void gps.captureGps();
     }
-  }, [preparingVisit, gps.loading, gps.context, gps.capture, gps.capturing, gps.permissionStatus, gps.gpsServiceEnabled]);
+  }, [
+    preparingVisit,
+    gps.loading,
+    gps.context,
+    gps.capture,
+    gps.capturing,
+    gps.permissionStatus,
+    gps.gpsServiceEnabled,
+    gps.captureGps,
+  ]);
 
   const handleVerifyCheckIn = async () => {
     setPrepareError(null);
@@ -85,10 +109,13 @@ export function FieldOfficerCheckInScreen({ route, navigation }: Props) {
     }
 
     await reloadProgress();
-    Alert.alert('GPS check-in complete', 'You are verified inside the farm radius. Starting verification.', [
+    Alert.alert('GPS check-in complete', 'You are verified inside the farm radius. Continue verification steps.', [
       {
         text: 'Continue',
-        onPress: () => navigation.replace('VisitEvidenceUpload', { assignmentId }),
+        onPress: () =>
+          navigation.replace('FieldOfficerVisitVerification', {
+            assignmentId: Number(assignmentId),
+          }),
       },
     ]);
   };
@@ -110,11 +137,27 @@ export function FieldOfficerCheckInScreen({ route, navigation }: Props) {
     );
   };
 
-  if (preparingVisit || gps.loading) {
+  const visitSubtitle =
+    visitContext?.visitId && visitContext.visitId !== '-'
+      ? visitContext.visitId
+      : gps.context?.visitId && gps.context.visitId !== '-'
+        ? gps.context.visitId
+        : `Visit #${assignmentId}`;
+
+  if (preparingVisit) {
     return (
       <SafeAreaView style={styles.safe}>
-        <ScreenHeader title="GPS Check-in" subtitle={`Visit #${assignmentId}`} />
-        <LoadingState message="Capturing accurate GPS location..." />
+        <ScreenHeader title="GPS Check-in" subtitle={visitSubtitle} />
+        <LoadingState message="Preparing visit for GPS check-in..." />
+      </SafeAreaView>
+    );
+  }
+
+  if (gps.loading && !gps.context) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <ScreenHeader title="GPS Check-in" subtitle={visitSubtitle} />
+        <LoadingState message="Loading visit GPS details..." />
       </SafeAreaView>
     );
   }
@@ -122,10 +165,14 @@ export function FieldOfficerCheckInScreen({ route, navigation }: Props) {
   if (!gps.context) {
     return (
       <SafeAreaView style={styles.safe}>
-        <ScreenHeader title="GPS Check-in" subtitle={`Visit #${assignmentId}`} />
+        <ScreenHeader title="GPS Check-in" subtitle={visitSubtitle} />
         <ErrorState
           message={prepareError ?? gps.error ?? 'Unable to load visit GPS data.'}
-          onRetry={() => void prepareVisit()}
+          onRetry={() => {
+            prepareStarted.current = false;
+            autoCaptureAttempted.current = false;
+            void prepareVisit();
+          }}
         />
       </SafeAreaView>
     );
@@ -137,10 +184,11 @@ export function FieldOfficerCheckInScreen({ route, navigation }: Props) {
   const missingTargetCoordinates = Boolean(gps.context && !gps.context.hasTargetCoordinates);
   const needsFarmRegistration = Boolean(gps.context?.needsFarmCoordinates);
   const statusLabel = gps.context.checkinStatus.replace(/_/g, ' ');
+  const captureTimedOut = Boolean(gps.error && /unable to capture location/i.test(gps.error));
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScreenHeader title="GPS Check-in" subtitle={gps.context.visitId} />
+      <ScreenHeader title="GPS Check-in" subtitle={visitSubtitle} />
       <View style={styles.statusBadgeRow}>
         <View style={styles.statusBadge}>
           <Text style={styles.statusBadgeText}>{statusLabel}</Text>
@@ -176,7 +224,15 @@ export function FieldOfficerCheckInScreen({ route, navigation }: Props) {
 
         <VisitGpsPermissionDeniedCard
           visible={gps.permissionStatus === 'denied'}
-          onAllowPermission={() => void gps.requestPermission().then(() => gps.captureGps())}
+          onAllowPermission={() => {
+            autoCaptureAttempted.current = false;
+            void gps.requestPermission().then((status) => {
+              if (status === 'granted') {
+                autoCaptureAttempted.current = true;
+                void gps.captureGps();
+              }
+            });
+          }}
           onOpenSettings={() => void openDeviceSettings()}
         />
 
@@ -187,6 +243,20 @@ export function FieldOfficerCheckInScreen({ route, navigation }: Props) {
 
         {gps.capturing ? (
           <VisitGpsAlertBanner tone="warning" message="Capturing accurate GPS location..." />
+        ) : null}
+
+        {captureTimedOut && !gps.capturing ? (
+          <VisitGpsAlertBanner
+            tone="danger"
+            message="Unable to capture location. Please move to an open area and try again."
+          />
+        ) : null}
+
+        {isOutsideRadius ? (
+          <VisitGpsAlertBanner
+            tone="danger"
+            message={`Out of Zone${gps.capture ? ` · ${gps.capture.latitude.toFixed(5)}, ${gps.capture.longitude.toFixed(5)}` : ''}`}
+          />
         ) : null}
 
         <VisitGpsStatusCard
@@ -207,7 +277,10 @@ export function FieldOfficerCheckInScreen({ route, navigation }: Props) {
 
         <VisitGpsPoorAccuracyBanner
           visible={isPoorAccuracy}
-          onRetry={() => void gps.captureGps()}
+          onRetry={() => {
+            autoCaptureAttempted.current = true;
+            void gps.captureGps();
+          }}
         />
 
         {isInsideRadius && !isPoorAccuracy ? <VisitGpsInsideRadiusCard /> : null}
@@ -218,7 +291,10 @@ export function FieldOfficerCheckInScreen({ route, navigation }: Props) {
             accuracyM={gps.capture?.accuracyM ?? null}
             overrideReason={overrideReason}
             onOverrideReasonChange={setOverrideReason}
-            onRefresh={() => void gps.captureGps()}
+            onRefresh={() => {
+              autoCaptureAttempted.current = true;
+              void gps.captureGps();
+            }}
             onRequestOverride={() => void handleOutsideRadiusRequest()}
             submitting={gps.submitting}
           />
@@ -232,9 +308,12 @@ export function FieldOfficerCheckInScreen({ route, navigation }: Props) {
 
         <View style={styles.actions}>
           <AppButton
-            label={gps.capturing ? 'Refreshing Location…' : 'Refresh Location'}
+            label={gps.capturing ? 'Capturing…' : captureTimedOut || !gps.capture ? 'Retry' : 'Refresh Location'}
             variant="secondary"
-            onPress={() => void gps.captureGps()}
+            onPress={() => {
+              autoCaptureAttempted.current = true;
+              void gps.captureGps();
+            }}
             disabled={gps.capturing || gps.permissionStatus === 'denied' || gps.gpsServiceEnabled === false}
           />
           <AppButton
@@ -275,4 +354,3 @@ const styles = StyleSheet.create({
   error: { color: officerTheme.error, fontSize: 13 },
   actions: { gap: 10, marginTop: 4 },
 });
-

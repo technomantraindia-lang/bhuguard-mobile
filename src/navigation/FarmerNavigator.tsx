@@ -20,7 +20,6 @@ import { FarmerEditFarmScreen } from '../screens/farmer/FarmerEditFarmScreen';
 import { FarmerFarmMapFullScreen } from '../screens/farmer/FarmerFarmMapFullScreen';
 import { FarmerSubmitActivityScreen } from '../screens/farmer/FarmerSubmitActivityScreen';
 import { FarmerFarmDetailScreen } from '../screens/farmer/FarmerFarmDetailScreen';
-import { FarmBoundaryPreviewScreen } from '../screens/farmer/boundary/FarmBoundaryPreviewScreen';
 import { FarmBoundarySaveConfirmScreen } from '../screens/farmer/boundary/FarmBoundarySaveConfirmScreen';
 import { FarmBoundarySuccessScreen } from '../screens/farmer/boundary/FarmBoundarySuccessScreen';
 import { FarmBoundaryUploadingScreen } from '../screens/farmer/boundary/FarmBoundaryUploadingScreen';
@@ -61,10 +60,18 @@ import type { FarmerStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<FarmerStackParamList>();
 
+if (__DEV__) {
+  console.log('[FARMER WALLET ROUTE]', {
+    FarmerWalletScreen,
+    isValid: typeof FarmerWalletScreen === 'function',
+  });
+}
+
 export function FarmerNavigator() {
   return (
     <BoundaryCaptureProvider>
       <Stack.Navigator
+        id="FarmerRootStack"
         initialRouteName="FarmerTabs"
         screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
       >
@@ -85,7 +92,10 @@ export function FarmerNavigator() {
           name="FarmBoundaryCapture"
           getComponent={() => require('../screens/farmer/boundary/FarmBoundaryCaptureScreen').FarmBoundaryCaptureScreen}
         />
-        <Stack.Screen name="FarmBoundaryPreview" component={FarmBoundaryPreviewScreen} />
+        <Stack.Screen
+          name="FarmBoundaryPreview"
+          getComponent={() => require('../screens/farmer/boundary/FarmBoundaryPreviewScreen').FarmBoundaryPreviewScreen}
+        />
         <Stack.Screen name="FarmBoundarySaveConfirm" component={FarmBoundarySaveConfirmScreen} />
         <Stack.Screen name="FarmBoundaryUploading" component={FarmBoundaryUploadingScreen} />
         <Stack.Screen name="FarmBoundarySuccess" component={FarmBoundarySuccessScreen} />
@@ -146,7 +156,10 @@ export function FarmerNavigator() {
         <Stack.Screen name="FarmerBiocharActivities" component={FarmerBiocharActivitiesScreen} />
         <Stack.Screen name="FarmerBiocharProduction" component={FarmerBiocharProductionScreen} />
         <Stack.Screen name="FarmerBiocharMixing" component={FarmerBiocharMixingScreen} />
-        <Stack.Screen name="FarmerWallet" component={FarmerWalletScreen} />
+        <Stack.Screen
+          name="FarmerWallet"
+          getComponent={() => require('../screens/farmer/FarmerWalletScreen').FarmerWalletScreen}
+        />
         <Stack.Screen name="FarmerLegal" component={FarmerLegalScreen} />
         <Stack.Screen name="FarmerEvidenceList" component={FarmerEvidenceListScreen} />
         <Stack.Screen name="FarmerUploadEvidence" component={FarmerUploadEvidenceScreen} />

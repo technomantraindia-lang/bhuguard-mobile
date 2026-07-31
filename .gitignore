@@ -5,59 +5,113 @@ node_modules/
 
 # Expo
 .expo/
+.expo-shared/
+.expo-bundle-check/
+.expo-export-test/
+.expo-export-test2/
+.expo-test-bundle/
+.expo-test-bundle2/
+.expo-test-bundle3/
+.expo-tmp-export/
 dist/
+dist-*/
 web-build/
+build/
+coverage/
 expo-env.d.ts
 
-# Native
+# Native / local prebuild output (regenerate with `npx expo prebuild` when needed)
 .kotlin/
 *.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+/ios
+/android
+android/
+android_old/
+ios/
+ios/Pods/
+ios/build/
+android/.gradle/
+android/app/build/
+android/build/
 
-# Metro
+# Metro / Gradle local caches
 .metro-health-check*
 .metro-tmp/
+.metro-temp/
+.metro-cache/
+.metro-export-log.txt
+.gradle-user-home/
 node_modules/.cache/
 
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
+# debug / logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+*.log.gz
+debug-aar-error.txt
+assemble-debug-full.txt
+gradle-local.log
+eas-build*.log*
+eas-build-*.tar.gz
+eas-decoded.log
+eas-build-view*.json
+rn-config.err
+rn-config.json
+.tmp-*
+.tmp-*/
 
-# macOS
+# OS / IDE
 .DS_Store
-*.pem
+Thumbs.db
+.vscode/
+.idea/
 
-# local env files
+# local env files (never commit secrets)
 .env
-.env*.local
+.env.*
+!.env.example
+!.env.local.example
 
-# local export artifacts
+# local export / zip artifacts
 .expo-export-test/
 .expo-export-test2/
 sitemap-001.xml.gz
+*.zip
+Bhuguard-dev-build-scripts.zip
+bhuguard-mobile.zip
 
 # typescript
 *.tsbuildinfo
-
-# generated native folders
-/ios
-/android
-
-# Build/generated folders
-android_old/
-android/
-ios/
-.expo/
-node_modules/
 
 # Build outputs
 releases/
 *.apk
 *.aab
 *.ipa
-*.zip
+
+# Signing / certificates / private keys
+*.jks
+*.keystore
+*.p12
+*.p8
+*.pem
+*.key
+*.mobileprovision
+
+# Firebase / Google services (transfer privately if required)
+google-services.json
+GoogleService-Info.plist
+
+# Local backup / sync staging folders (not source of truth)
+_migration_backup_*/
+_ubuntu_sync_stage/
+.claude/
+
+# Local one-off backup copies created during fixes
+*.before-*
+*.backup
+app.config.js.backup
+app.json.backup
+package.json.backup

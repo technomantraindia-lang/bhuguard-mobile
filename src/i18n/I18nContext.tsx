@@ -1,7 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import { getStoredLanguage, saveStoredLanguage } from '../storage/languageStorage';
+import {
+  getDeviceLanguage,
+  resolvePreferredLanguage,
+  saveDeviceLanguage,
+  saveScopedLanguage,
+} from '../storage/languageStorage';
+import { getAuthUser } from '../utils/authStorage';
+import { resolveUserRole } from '../utils/authRole';
+import { normalizeAppLanguage } from '../utils/preferredLanguage';
 
+import { registerLanguageApplyHandler } from './languageSyncBridge';
 import type { AppLanguage } from './types';
 
 type TranslationTree = Record<string, unknown>;
@@ -42,6 +51,7 @@ interface I18nContextValue {
   language: AppLanguage;
   ready: boolean;
   setLanguage: (language: AppLanguage) => Promise<void>;
+  applyScopedLanguageForCurrentUser: () => Promise<void>;
   t: (key: string, params?: Record<string, string>) => string;
 }
 
@@ -52,20 +62,76 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    void (async () => {
-      const stored = await getStoredLanguage();
+    let active = true;
 
-      if (stored) {
+    void (async () => {
+      const stored = (await resolvePreferredLanguage()) ?? (await getDeviceLanguage());
+
+      if (active && stored) {
         setLanguageState(stored);
       }
 
-      setReady(true);
+      if (active) {
+        setReady(true);
+      }
     })();
+
+    return () => {
+      active = false;
+    };
   }, []);
+
+  const applyScopedLanguageForCurrentUser = useCallback(async () => {
+    const user = await getAuthUser();
+
+    if (!user) {
+      const device = await getDeviceLanguage();
+
+      if (device) {
+        setLanguageState(device);
+      }
+
+      return;
+    }
+
+    const role = resolveUserRole(user) ?? user.user_type;
+    const stored = await resolvePreferredLanguage({
+      role: role ? String(role) : undefined,
+      userId: user.id,
+    });
+    const fromBackend = normalizeAppLanguage(user.farmer_profile?.preferred_language);
+    // Backend preference wins after login when present; otherwise keep local scoped language.
+    const nextLanguage = fromBackend ?? stored;
+
+    if (nextLanguage) {
+      setLanguageState(nextLanguage);
+
+      if (role) {
+        await saveScopedLanguage(String(role), user.id, nextLanguage);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    registerLanguageApplyHandler(applyScopedLanguageForCurrentUser);
+
+    return () => {
+      registerLanguageApplyHandler(null);
+    };
+  }, [applyScopedLanguageForCurrentUser]);
 
   const setLanguage = useCallback(async (nextLanguage: AppLanguage) => {
     setLanguageState(nextLanguage);
-    await saveStoredLanguage(nextLanguage);
+
+    const user = await getAuthUser();
+    const role = user ? resolveUserRole(user) ?? user.user_type : null;
+
+    if (user && role) {
+      await saveScopedLanguage(String(role), user.id, nextLanguage);
+      return;
+    }
+
+    await saveDeviceLanguage(nextLanguage);
   }, []);
 
   const t = useCallback(
@@ -85,9 +151,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       language,
       ready,
       setLanguage,
+      applyScopedLanguageForCurrentUser,
       t,
     }),
-    [language, ready, setLanguage, t],
+    [language, ready, setLanguage, applyScopedLanguageForCurrentUser, t],
   );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

@@ -1,7 +1,7 @@
 import { fetchApiData, type ApiRecord } from '../utils/apiHelpers';
 
 import { apiClient } from './client';
-import { postApiData, putApiData, deleteApiData } from './postHelpers';
+import { postApiData, putApiData, putFormData, deleteApiData } from './postHelpers';
 
 export { getNotifications as getFarmerNotifications, markNotificationRead, markAllNotificationsRead } from './notificationsApi';
 
@@ -314,12 +314,23 @@ export async function getFarmerBiocharMixingRecords(params?: Record<string, stri
   return fetchApiData('/farmer/biochar-mixing', params);
 }
 
+export async function getFarmerBiocharMixingEligibleBatches(params: {
+  farm_id?: number | string;
+  farm_code?: string;
+}) {
+  return fetchApiData('/farmer/biochar-mixing/eligible-batches', params);
+}
+
 export async function getFarmerBiocharMixing(id: number | string) {
   return fetchApiData(`/farmer/biochar-mixing/${id}`);
 }
 
 export async function createFarmerBiocharMixing(payload: FormData) {
   return postApiData('/farmer/biochar-mixing', payload);
+}
+
+export async function completeFarmerBiocharMixing(payload: FormData) {
+  return postApiData('/farmer/biochar-mixing/complete', payload);
 }
 
 export async function saveFarmerBiocharMixingDraft(id: number | string, payload: FormData) {
@@ -382,6 +393,26 @@ export const getFarmerReports = getFarmerFinalReports;
 
 export async function getFarmerProfileDocuments() {
   return fetchApiData('/farmer/profile/documents');
+}
+
+export async function getFarmerDocuments() {
+  return fetchApiData<{ documents: ApiRecord[] }>('/farmer/documents');
+}
+
+export async function uploadFarmerDocument(formData: FormData) {
+  return postApiData<{ document: ApiRecord }>('/farmer/documents', formData);
+}
+
+export async function replaceFarmerDocument(documentId: number | string, formData: FormData) {
+  return putFormData<{ document: ApiRecord }>(`/farmer/documents/${documentId}`, formData);
+}
+
+export async function deleteFarmerDocument(documentId: number | string) {
+  return deleteApiData(`/farmer/documents/${documentId}`);
+}
+
+export function getFarmerDocumentPreviewUrl(documentId: number | string) {
+  return `/farmer/documents/${documentId}/preview`;
 }
 
 export async function getFarmerSupportInfo() {

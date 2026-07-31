@@ -5,11 +5,12 @@ import { apiClient } from './client';
 import { buildFormDataFilePart } from '../utils/liveEvidenceCapture';
 
 interface StampImageResponse {
-  success: boolean;
-  data: {
-    stamped_image_base64: string;
-    mime_type: string;
+  success?: boolean;
+  data?: {
+    stamped_image_base64?: string;
+    mime_type?: string;
   };
+  stamped_image_base64?: string;
 }
 
 export interface ClientStampImageInput {
@@ -17,6 +18,10 @@ export interface ClientStampImageInput {
   name: string;
   type: string;
   capturedAt: string;
+  capturedAtLocal?: string;
+  timezone?: string;
+  utcOffsetMinutes?: number;
+  stampLabel?: string;
   latitude: number | null;
   longitude: number | null;
   accuracy: number | null;
@@ -28,12 +33,32 @@ export interface ClientStampImageInput {
 
 export async function stampImageOnServer(input: ClientStampImageInput): Promise<string> {
   const formData = new FormData();
+  const safeName = input.name.includes('.') ? input.name : `${input.name || 'live-evidence'}.jpg`;
+  const safeType = input.type && input.type.startsWith('image/') ? input.type : 'image/jpeg';
 
   formData.append(
     'image',
-    buildFormDataFilePart(input.uri, input.name, input.type) as unknown as Blob,
+    buildFormDataFilePart(input.uri, safeName, safeType) as unknown as Blob,
   );
   formData.append('captured_at', input.capturedAt);
+
+  if (input.capturedAtLocal) {
+    formData.append('captured_at_local', input.capturedAtLocal);
+  }
+
+  if (input.timezone) {
+    formData.append('timezone', input.timezone);
+    formData.append('captured_timezone', input.timezone);
+  }
+
+  if (input.utcOffsetMinutes != null) {
+    formData.append('utc_offset_minutes', String(input.utcOffsetMinutes));
+    formData.append('captured_utc_offset_minutes', String(input.utcOffsetMinutes));
+  }
+
+  if (input.stampLabel) {
+    formData.append('stamp_captured_at_label', input.stampLabel);
+  }
 
   if (input.latitude != null) {
     formData.append('latitude', String(input.latitude));
@@ -66,20 +91,26 @@ export async function stampImageOnServer(input: ClientStampImageInput): Promise<
     formData.append('state', input.state);
   }
 
-  const response = await apiClient.post<StampImageResponse>('/mobile/stamp-image', formData);
-  const base64 = response.data.data.stamped_image_base64;
+  const response = await apiClient.post<StampImageResponse>('/mobile/stamp-image', formData, {
+    timeout: 60000,
+  });
+
+  const base64 =
+    response.data?.data?.stamped_image_base64 ?? response.data?.stamped_image_base64 ?? null;
 
   if (!base64) {
     throw new Error('Server did not return a stamped image.');
   }
 
-  const directory = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+  const directory = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
 
   if (!directory) {
     throw new Error('Unable to save stamped image on this device.');
   }
 
-  const targetPath = `${directory}stamped-${Date.now()}.jpg`;
+  const stampDir = `${directory}BhuguardDrafts/stamped/`;
+  await FileSystem.makeDirectoryAsync(stampDir, { intermediates: true });
+  const targetPath = `${stampDir}stamped-${Date.now()}.jpg`;
   await FileSystem.writeAsStringAsync(targetPath, base64, {
     encoding: FileSystem.EncodingType.Base64,
   });

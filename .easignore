@@ -1,0 +1,77 @@
+# EAS uses .easignore instead of .gitignore when present.
+# Keep in sync with .gitignore, plus migration/build artifacts.
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native (generated on EAS)
+.kotlin/
+/ios
+/android
+android_old/
+android/
+ios/
+
+# Metro
+.metro-health-check*
+.metro-tmp/
+node_modules/.cache/
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files (MapTiler key comes from eas.json env)
+.env
+.env*.local
+!.env.local.example
+
+# local export artifacts
+.expo-export-test/
+.expo-export-test2/
+sitemap-001.xml.gz
+
+# typescript
+*.tsbuildinfo
+
+# Build outputs / temp
+releases/
+*.apk
+*.aab
+*.ipa
+*.zip
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Migration backups (can include stale android trees)
+_migration_backup_maplibre_*/
+_migration_backup_eas_apk_*/
+_migration_backup_*/
+
+# Local diagnostics / local gradle
+eas-*.log
+eas-*.json
+eas-*.bin
+eas-build*
+gradle-local.log
+rn-config.json
+rn-config.err
+autolink-resolve.json
+_tmp_*.py
+.gradle-user-home/
+.tmp-build/

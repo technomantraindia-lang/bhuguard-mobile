@@ -25,6 +25,7 @@ import { FarmerFarmsSummaryCard } from '../../components/farmer/FarmerFarmsSumma
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
 import { useFarmerFarmsData } from '../../hooks/useFarmerFarmsData';
 import { useFabBottomOffset, useScrollBottomPadding } from '../../hooks/useTabBarLayout';
+import { useUnreadNotificationCount } from '../../hooks/useUnreadNotificationCount';
 import type { FarmerStackParamList, FarmerTabParamList } from '../../navigation/types';
 import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 import { openGoogleMaps } from '../../utils/farmMapHelpers';
@@ -44,6 +45,7 @@ const FILTER_LABELS = {
 
 export function FarmerFarmsScreen() {
   const navigation = useNavigation<Nav>();
+  const { unreadCount } = useUnreadNotificationCount();
   const {
     farms,
     allFarms,
@@ -96,7 +98,10 @@ export function FarmerFarmsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <FarmerFarmsHeader onNotificationsPress={() => navigation.navigate('FarmerNotifications')} />
+      <FarmerFarmsHeader
+        unreadCount={unreadCount}
+        onNotificationsPress={() => navigation.navigate('FarmerNotifications')}
+      />
 
       <FlatList
         data={farms}

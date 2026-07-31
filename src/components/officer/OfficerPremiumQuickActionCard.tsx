@@ -10,7 +10,7 @@ interface OfficerQuickActionsSectionHeaderProps {
 
 export function OfficerQuickActionsSectionHeader({
   title = 'Quick Actions',
-  subtitle = 'Access verification, biochar, and field evidence workflows.',
+  subtitle = 'Farm activities, visits, and reports.',
 }: OfficerQuickActionsSectionHeaderProps) {
   return (
     <View style={styles.sectionHeader}>
@@ -49,6 +49,35 @@ export function OfficerPremiumQuickActionCard({
       <Text style={styles.description} numberOfLines={2}>
         {description}
       </Text>
+      <View style={styles.button}>
+        <Text style={styles.buttonText}>{ctaLabel}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+export function OfficerLargeQuickActionCard({
+  icon,
+  title,
+  description,
+  ctaLabel,
+  onPress,
+}: OfficerPremiumQuickActionCardProps) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.largeCard, officerCardShadow, pressed && styles.cardPressed]}
+      onPress={onPress}
+    >
+      <View style={styles.accentBar} />
+      <View style={styles.largeCardBody}>
+        <View style={styles.iconWrap}>
+          <BhuguardMaterialIcon name={icon} size={30} color={officerTheme.primaryContainer} filled />
+        </View>
+        <View style={styles.largeCardCopy}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.largeDescription}>{description}</Text>
+        </View>
+      </View>
       <View style={styles.button}>
         <Text style={styles.buttonText}>{ctaLabel}</Text>
       </View>
@@ -98,6 +127,32 @@ const styles = StyleSheet.create({
     color: officerTheme.primary,
   },
   sectionSubtitle: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: officerTheme.onSurfaceVariant,
+    fontWeight: '500',
+  },
+  largeCard: {
+    width: '100%',
+    minHeight: 168,
+    backgroundColor: officerTheme.surfaceLowest,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(11, 107, 58, 0.14)',
+    padding: 18,
+    gap: 14,
+    overflow: 'hidden',
+  },
+  largeCardBody: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+  },
+  largeCardCopy: {
+    flex: 1,
+    gap: 6,
+  },
+  largeDescription: {
     fontSize: 13,
     lineHeight: 20,
     color: officerTheme.onSurfaceVariant,

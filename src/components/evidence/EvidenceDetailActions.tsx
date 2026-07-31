@@ -33,6 +33,9 @@ interface EvidenceDetailActionsProps {
 
 
 export function EvidenceDetailActions({ role, evidence }: EvidenceDetailActionsProps) {
+  if (role === 'farmer') {
+    return null;
+  }
 
   const evidenceId = evidence.id as number | string;
 

@@ -12,6 +12,7 @@ const FARMER_AVATAR_URI =
 
 interface FarmerReportsHeaderProps {
   onBack: () => void;
+  unreadCount?: number;
   onNotificationsPress: () => void;
   onProfilePress?: () => void;
 }
@@ -30,7 +31,12 @@ function getInitials(name: string): string {
   return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
 }
 
-export function FarmerReportsHeader({ onBack, onNotificationsPress, onProfilePress }: FarmerReportsHeaderProps) {
+export function FarmerReportsHeader({
+  onBack,
+  unreadCount = 0,
+  onNotificationsPress,
+  onProfilePress,
+}: FarmerReportsHeaderProps) {
   const [displayName, setDisplayName] = useState('Farmer');
   const [imageError, setImageError] = useState(false);
 
@@ -64,7 +70,7 @@ export function FarmerReportsHeader({ onBack, onNotificationsPress, onProfilePre
       <View style={styles.actions}>
         <Pressable style={[styles.iconButton, dashboardShadow]} onPress={onNotificationsPress}>
           <BhuguardMaterialIcon name="notifications" size={22} color={dashboardTheme.primary} />
-          <View style={styles.notificationDot} />
+          {unreadCount > 0 ? <View style={styles.notificationDot} /> : null}
         </Pressable>
 
         <Pressable style={styles.avatarButton} onPress={onProfilePress}>

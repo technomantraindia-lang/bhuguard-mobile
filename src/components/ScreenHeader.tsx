@@ -14,6 +14,7 @@ interface ScreenHeaderProps {
   subtitle?: string;
   showBack?: boolean;
   showBrandLogo?: boolean;
+  logoOnPress?: () => void;
   onBackPress?: () => void;
   rightAction?: { label: string; onPress: () => void };
   rightSlot?: ReactNode;
@@ -24,6 +25,7 @@ export function ScreenHeader({
   subtitle,
   showBack = true,
   showBrandLogo = true,
+  logoOnPress,
   onBackPress,
   rightAction,
   rightSlot,
@@ -59,7 +61,9 @@ export function ScreenHeader({
         )}
 
         <View style={styles.center}>
-          {showBrandLogo ? <BrandedHeaderLogo size={LOGO_SIZES.moduleHeader} /> : null}
+          {showBrandLogo ? (
+            <BrandedHeaderLogo size={LOGO_SIZES.moduleHeader} onPress={logoOnPress} />
+          ) : null}
           <View style={styles.titleCopy}>
             <Text style={styles.title} numberOfLines={1}>
               {title}

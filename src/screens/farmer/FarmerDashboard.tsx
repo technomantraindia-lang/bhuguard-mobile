@@ -1,10 +1,8 @@
-import { useCallback } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
-import { FarmerActivitiesFab } from '../../components/farmer/activities/FarmerActivitiesFab';
 import { FarmerBiocharDashboardStats } from '../../components/farmer/FarmerBiocharDashboardStats';
 import { FarmerDashboardHeader } from '../../components/farmer/FarmerDashboardHeader';
 import { FarmerHeroSummaryCard } from '../../components/farmer/FarmerHeroSummaryCard';
@@ -13,13 +11,18 @@ import { FarmerRecentActivitiesSection } from '../../components/farmer/FarmerRec
 import { useFarmerStackNavigation, useFarmerTabNavigation } from '../../hooks/useBrandedNavigation';
 import { useFarmerDashboardData } from '../../hooks/useFarmerDashboardData';
 import { useFocusSilentRefresh } from '../../hooks/useFocusSilentRefresh';
+import { useUnreadNotificationCount } from '../../hooks/useUnreadNotificationCount';
 import { useScrollBottomPadding } from '../../hooks/useTabBarLayout';
-import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
+import { useTranslation } from '../../i18n/I18nContext';
+import { RoleEnvironmentalBackground } from '../../components/shared/RoleEnvironmentalBackground';
+import { farmerTheme } from '../../theme/farmerTheme';
 
 export function FarmerDashboard() {
+  const { t } = useTranslation();
   const navigateStack = useFarmerStackNavigation();
   const navigateTab = useFarmerTabNavigation();
   const { data, loading, refreshing, error, reload, refresh } = useFarmerDashboardData();
+  const { unreadCount } = useUnreadNotificationCount();
   const scrollBottomPadding = useScrollBottomPadding(24);
 
   useFocusSilentRefresh(refresh, Boolean(data));
@@ -27,22 +30,16 @@ export function FarmerDashboard() {
   const openProfile = () => navigateTab('Profile');
   const openNotifications = () => navigateStack('FarmerNotifications');
   const openFarms = () => navigateTab('Farms');
-  const openAddFarmActivity = () => navigateStack('FarmerFarmSelection');
   const openFarmActivities = () => navigateTab('Activities');
   const openAddressDetails = () => navigateStack('FarmerAddressDetails');
   const openChatSupport = () => navigateStack('ChatbotSupport', { supportRole: 'farmer', sourceModule: 'farmer_dashboard' });
-  const openSupport = () => navigateStack('SupportThreads', { supportRole: 'farmer' });
   const openServices = () => navigateStack('FarmerServices');
-  const openBiocharUpdates = () => navigateTab('Activities');
-  const openEvidence = () => navigateStack('FarmerEvidenceList');
-  const openUploadEvidence = () => navigateStack('FarmerUploadEvidence');
+  const openBiocharUpdates = () => navigateStack('FarmerActivityLogs');
   const openWallet = () => navigateStack('FarmerWallet');
-  const openActivityDetail = (activityId: number) => navigateStack('FarmerFarmActivity', { activityId });
-
   if (loading && !data) {
     return (
       <SafeAreaView style={styles.safe}>
-        <LoadingState message="Loading your dashboard..." />
+        <LoadingState message={t('farmer.dashboard.loading')} />
       </SafeAreaView>
     );
   }
@@ -59,10 +56,12 @@ export function FarmerDashboard() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <RoleEnvironmentalBackground />
       <FarmerDashboardHeader
         firstName={dashboard.firstName}
         fullName={dashboard.fullName}
         photoUrl={dashboard.photoUrl}
+        unreadCount={unreadCount}
         onNotificationsPress={openNotifications}
         onProfilePress={openProfile}
       />
@@ -73,7 +72,7 @@ export function FarmerDashboard() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={dashboardTheme.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={farmerTheme.actionGreen} />
         }
       >
         <FarmerHeroSummaryCard
@@ -96,47 +95,46 @@ export function FarmerDashboard() {
 
         <FarmerBiocharDashboardStats
           serviceStatusLabel={dashboard.biocharServiceStatusLabel}
-          daysRemainingLabel={dashboard.biocharDaysRemainingLabel}
-          cycleStatusLabel={dashboard.biocharCycleStatusLabel}
+          nextUpdateLabel={
+            dashboard.biocharNextUpdateLabel === 'Not Scheduled'
+              ? t('farmer.dashboard.notScheduled')
+              : dashboard.biocharNextUpdateLabel
+          }
+          cycleStatusLabel={t(`farmer.status.${dashboard.biocharCycleStatusKey}`)}
           cycleTone={dashboard.biocharCycleTone}
           walletAmountLabel={dashboard.walletAmountLabel}
-          evidenceCount={dashboard.evidenceUploadedCount}
+          cycleLoading={dashboard.biocharCycleLoading}
           onServicePress={openServices}
           onUpdatesPress={openBiocharUpdates}
           onWalletPress={openWallet}
-          onEvidencePress={openEvidence}
         />
 
         <FarmerQuickAccessSection
           onServices={openServices}
           onBiocharUpdates={openBiocharUpdates}
-          onEvidenceUpload={openUploadEvidence}
           onWallet={openWallet}
           onProfile={openProfile}
           onSupport={openChatSupport}
           onViewFarms={openFarms}
-          onSubmitActivity={openAddFarmActivity}
+          onSubmitActivity={openFarmActivities}
         />
 
         <FarmerRecentActivitiesSection
           activities={dashboard.recentActivities}
-          onActivityPress={openActivityDetail}
           onViewAllPress={openFarmActivities}
         />
 
         <View style={[styles.bottomSpacer, { height: scrollBottomPadding }]} />
       </ScrollView>
-
-      <FarmerActivitiesFab onPress={openAddFarmActivity} label="Add Farm Activity" />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: dashboardTheme.background },
+  safe: { flex: 1, backgroundColor: 'transparent' },
   scroll: { flex: 1 },
   container: {
-    paddingHorizontal: dashboardTheme.marginMobile,
+    paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 8,
     gap: 24,

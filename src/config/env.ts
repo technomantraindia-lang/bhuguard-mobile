@@ -1,21 +1,28 @@
-/**
+﻿/**
  * Central API environment configuration.
  * Values come from EXPO_PUBLIC_* at build time (.env / EAS profile).
  * Do not hardcode URLs in screens — import from apiDefaults or apiConfigStorage.
  */
 
-/** Live HTTPS API for production / TestFlight / App Store builds. Replace yourdomain.com before release. */
-export const PRODUCTION_API_BASE_URL = 'https://yourdomain.com/api';
+/** Live app origin (media, storage, /up health checks). */
+export const APP_URL =
+  process.env.EXPO_PUBLIC_APP_URL?.trim() || 'https://erp.bhuguard.com';
 
-/** Public demo server — used when production URL is still a placeholder. */
-export const DEMO_API_BASE_URL = 'https://demo.bhuguard.com/api';
+/** Live HTTPS API for production / TestFlight / App Store builds. */
+export const PRODUCTION_API_BASE_URL = 'https://erp.bhuguard.com/api';
 
 /**
- * Dev-only preset for "Use local PC" in Server settings.
- * Override with EXPO_PUBLIC_DEV_LOCAL_API_URL in .env.development or EAS development profile.
+ * Demo profile now points at the live ERP so client builds stay on production data.
+ * Prefer PRODUCTION_API_BASE_URL / EXPO_PUBLIC_API_URL for new code.
+ */
+export const DEMO_API_BASE_URL = PRODUCTION_API_BASE_URL;
+
+/**
+ * Preset for "Use production server" in Server settings.
+ * Override with EXPO_PUBLIC_DEV_LOCAL_API_URL only when intentionally targeting another host.
  */
 export const LOCAL_API_BASE_URL =
-  process.env.EXPO_PUBLIC_DEV_LOCAL_API_URL?.trim() || 'http://192.168.0.100:8000/api';
+  process.env.EXPO_PUBLIC_DEV_LOCAL_API_URL?.trim() || PRODUCTION_API_BASE_URL;
 
 export type AppVariant = 'development' | 'demo' | 'production';
 
@@ -26,25 +33,24 @@ export const APP_VARIANT: AppVariant =
       ? 'production'
       : 'development';
 
-import { isPlaceholderApiUrl } from './apiUrlValidation';
+import { isLiveProductionApiUrl, isPlaceholderApiUrl, isTryCloudflareTunnelUrl } from './apiUrlValidation';
 
-/** Baked into release builds via EXPO_PUBLIC_API_URL. Falls back to demo when URL is missing or placeholder. */
+/** Baked into release builds via EXPO_PUBLIC_API_URL. Falls back to live ERP when missing or invalid. */
 export function resolveBuildApiBaseUrl(): string {
   const fromEnv = process.env.EXPO_PUBLIC_API_URL?.trim();
 
-  if (fromEnv && !isPlaceholderApiUrl(fromEnv)) {
-    return fromEnv;
-  }
-
-  if (APP_VARIANT === 'demo') {
-    return DEMO_API_BASE_URL;
-  }
-
-  if (isPlaceholderApiUrl(PRODUCTION_API_BASE_URL)) {
-    return DEMO_API_BASE_URL;
+  if (
+    fromEnv &&
+    !isPlaceholderApiUrl(fromEnv) &&
+    !isTryCloudflareTunnelUrl(fromEnv) &&
+    isLiveProductionApiUrl(fromEnv)
+  ) {
+    return fromEnv.replace(/\/+$/, '').endsWith('/api')
+      ? fromEnv.replace(/\/+$/, '')
+      : `${fromEnv.replace(/\/+$/, '')}/api`;
   }
 
   return PRODUCTION_API_BASE_URL;
 }
 
-export const IS_DEMO_BUILD = APP_VARIANT === 'demo' || APP_VARIANT === 'production';
+export const IS_DEMO_BUILD = APP_VARIANT === 'demo';

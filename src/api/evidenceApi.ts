@@ -192,12 +192,12 @@ export async function uploadEvidence(
 ): Promise<ApiRecord> {
   try {
     if (role === 'farmer') {
-      const response = await apiClient.post('/farmer/evidence', formData);
+      const response = await apiClient.post('/farmer/evidence', formData, { timeout: 60000 });
       return (response.data.data ?? response.data) as ApiRecord;
     }
 
     if (role === 'company_user') {
-      const response = await apiClient.post('/company/evidence', formData);
+      const response = await apiClient.post('/company/evidence', formData, { timeout: 60000 });
       return (response.data.data ?? response.data) as ApiRecord;
     }
 
@@ -205,7 +205,9 @@ export async function uploadEvidence(
       throw new Error('Visit ID is required for field officer evidence upload.');
     }
 
-    const response = await apiClient.post(`/field-officer/assignments/${visitId}/evidence`, formData);
+    const response = await apiClient.post(`/field-officer/assignments/${visitId}/evidence`, formData, {
+      timeout: 60000,
+    });
     return (response.data.data ?? response.data) as ApiRecord;
   } catch (error) {
     const status = (error as AxiosError)?.response?.status;

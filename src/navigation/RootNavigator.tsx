@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, type ComponentType } from 'react';
+import { Platform, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -8,6 +9,9 @@ import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+/** Android Fabric can crash on animated stack replace/reset (IllegalViewOperationException). */
+const androidSafeAnimation = Platform.OS === 'android' ? ('none' as const) : undefined;
+
 export function RootNavigator() {
   useEffect(() => {
     console.log('[Bhuguard] RootNavigator mounted');
@@ -15,7 +19,13 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator initialRouteName="Preloader" screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        initialRouteName="Preloader"
+        screenOptions={{
+          headerShown: false,
+          ...(androidSafeAnimation ? { animation: androidSafeAnimation } : null),
+        }}
+      >
         <Stack.Screen name="Preloader" component={PreloaderScreen} />
         <Stack.Screen
           name="LanguageSelection"
@@ -66,6 +76,10 @@ export function RootNavigator() {
           getComponent={() => require('../screens/auth/CreateMpinScreen').CreateMpinScreen}
         />
         <Stack.Screen
+          name="BiometricSetup"
+          getComponent={() => require('../screens/auth/BiometricSetupScreen').BiometricSetupScreen}
+        />
+        <Stack.Screen
           name="OtpVerification"
           getComponent={() => require('../screens/auth/OtpVerificationScreen').OtpVerificationScreen}
         />
@@ -79,11 +93,61 @@ export function RootNavigator() {
         />
         <Stack.Screen
           name="FieldOfficerApp"
-          getComponent={() => require('./OfficerNavigator').OfficerNavigator}
+          getComponent={() => {
+            try {
+              const mod = require('./OfficerNavigator') as {
+                OfficerNavigator?: ComponentType;
+              };
+              if (typeof mod?.OfficerNavigator !== 'function') {
+                throw new Error('OfficerNavigator failed to load.');
+              }
+              return mod.OfficerNavigator;
+            } catch (error) {
+              console.error('[Bhuguard] OfficerNavigator load failed', error);
+              return function OfficerNavigatorFallback() {
+                return (
+                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+                    <Text style={{ fontWeight: '700', fontSize: 18, marginBottom: 8 }}>
+                      Field Officer app could not load
+                    </Text>
+                    <Text style={{ textAlign: 'center', color: '#555' }}>
+                      Restart Metro with a cleared cache, then reopen the app. If the map screen still
+                      fails, rebuild the Android dev client so MapLibre native modules are included.
+                    </Text>
+                  </View>
+                );
+              };
+            }
+          }}
         />
         <Stack.Screen
           name="ArtisanApp"
-          getComponent={() => require('./ArtisanNavigator').ArtisanNavigator}
+          getComponent={() => {
+            try {
+              const mod = require('./ArtisanNavigator') as {
+                ArtisanNavigator?: ComponentType;
+              };
+              if (typeof mod?.ArtisanNavigator !== 'function') {
+                throw new Error('ArtisanNavigator failed to load.');
+              }
+              return mod.ArtisanNavigator;
+            } catch (error) {
+              console.error('[Bhuguard] ArtisanNavigator load failed', error);
+              return function ArtisanNavigatorFallback() {
+                return (
+                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+                    <Text style={{ fontWeight: '700', fontSize: 18, marginBottom: 8 }}>
+                      Artisan Pro app could not load
+                    </Text>
+                    <Text style={{ textAlign: 'center', color: '#555' }}>
+                      Restart the app. If this continues, rebuild the development client so NetInfo and
+                      SQLite native modules are included.
+                    </Text>
+                  </View>
+                );
+              };
+            }
+          }}
         />
         {__DEV__ ? (
           <Stack.Screen

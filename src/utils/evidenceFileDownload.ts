@@ -119,6 +119,16 @@ export function evidenceDownloadUrl(role: EvidenceDownloadRole, evidenceId: numb
   return `${base}/${role === 'farmer' ? 'farmer' : 'company'}/evidence/${evidenceId}/download`;
 }
 
+export function evidenceViewUrl(role: EvidenceDownloadRole, evidenceId: number | string): string {
+  const base = getCachedApiBaseUrl().replace(/\/$/, '');
+
+  if (role === 'farmer') {
+    return `${base}/farmer/evidence/${evidenceId}/view`;
+  }
+
+  return evidenceDownloadUrl(role, evidenceId);
+}
+
 export function evidencePdfExportUrl(role: EvidenceDownloadRole, evidenceId: number | string): string {
   const base = getCachedApiBaseUrl().replace(/\/$/, '');
 
@@ -268,19 +278,25 @@ export async function fetchEvidenceFileBuffer(
   role: EvidenceDownloadRole,
   evidenceId: number | string,
 ): Promise<EvidenceFileResult> {
-  return fetchAuthenticatedFile(evidenceDownloadUrl(role, evidenceId));
+  return fetchAuthenticatedFile(evidenceViewUrl(role, evidenceId));
 }
 
 export async function fetchActivityEvidenceFileBuffer(
   activityId: number | string,
 ): Promise<EvidenceFileResult> {
-  return fetchAuthenticatedFile(activityEvidenceDownloadUrl(activityId));
+  return fetchAuthenticatedFile(activityEvidenceViewUrl(activityId));
 }
 
 export function activityEvidenceDownloadUrl(activityId: number | string): string {
   const base = getCachedApiBaseUrl().replace(/\/$/, '');
 
   return `${base}/farmer/activity-logs/${activityId}/evidence-photo/download`;
+}
+
+export function activityEvidenceViewUrl(activityId: number | string): string {
+  const base = getCachedApiBaseUrl().replace(/\/$/, '');
+
+  return `${base}/farmer/activity-logs/${activityId}/evidence-photo/view`;
 }
 
 export async function fetchEvidencePdfBuffer(
@@ -408,32 +424,10 @@ export async function cacheActivityEvidenceFileUri(activityId: number | string):
 }
 
 export async function downloadActivityEvidenceFile(activityId: number | string): Promise<EvidenceFileResult> {
-  const fileResult = await fetchActivityEvidenceFileBuffer(activityId);
-
-  if (!fileResult.success || !fileResult.buffer) {
-    return fileResult;
-  }
-
-  const extension = extensionForBuffer(fileResult.buffer, fileResult.fileName ?? '');
-  const fileName = `activity-evidence-${activityId}.${extension}`;
-
-  try {
-    const fileUri = await saveFileBuffer(fileResult.buffer, fileName);
-    await openOrShareFile(fileUri, fileName);
-
-    return {
-      success: true,
-      fileUri,
-      fileName,
-      buffer: fileResult.buffer,
-      message: `${fileName} downloaded successfully.`,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      message: getApiErrorMessage(error, 'Unable to save activity evidence file.'),
-    };
-  }
+  return {
+    success: false,
+    message: 'Farmers cannot download evidence photos.',
+  };
 }
 
 export async function downloadEvidenceFile(
@@ -442,7 +436,14 @@ export async function downloadEvidenceFile(
   fileNameBase?: string,
   mimeType?: string,
 ): Promise<EvidenceFileResult> {
-  const fileResult = await fetchEvidenceFileBuffer(role, evidenceId);
+  if (role === 'farmer') {
+    return {
+      success: false,
+      message: 'Farmers cannot download evidence files.',
+    };
+  }
+
+  const fileResult = await fetchAuthenticatedFile(evidenceDownloadUrl(role, evidenceId));
 
   if (!fileResult.success || !fileResult.buffer) {
     return fileResult;

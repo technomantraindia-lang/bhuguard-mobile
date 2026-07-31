@@ -10,6 +10,7 @@ const FARMER_AVATAR_URI =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuCE1Yu-QwiAEZE-RCBWlMqPXqooGk9VcgQqDajZZTq3CkzwESpIHmzcbXuLt2RrEGXG71QOWME9NaSkb1UdyV3sy7OkPrqGIkfQdSUID4TLhaiMrfAyOvFZB439TdTTczxzb_iCVR6nkCDfXq6biXaQF-narwV9t7HQGDZyq0Y2XoNcES2KFv-QmvizXYpb3VBzmpoLSAqAh8ULizJ53BUr2dOsGF0Y-Sj5sGYRJBwKdRSD_LC9lF-9gw';
 
 interface FarmerActivitiesHeaderProps {
+  unreadCount?: number;
   onNotificationsPress: () => void;
   onProfilePress: () => void;
 }
@@ -28,7 +29,11 @@ function getInitials(name: string): string {
   return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
 }
 
-export function FarmerActivitiesHeader({ onNotificationsPress, onProfilePress }: FarmerActivitiesHeaderProps) {
+export function FarmerActivitiesHeader({
+  unreadCount = 0,
+  onNotificationsPress,
+  onProfilePress,
+}: FarmerActivitiesHeaderProps) {
   const [displayName, setDisplayName] = useState('Farmer');
   const [imageError, setImageError] = useState(false);
 
@@ -55,7 +60,7 @@ export function FarmerActivitiesHeader({ onNotificationsPress, onProfilePress }:
       <View style={styles.actions}>
         <Pressable style={[styles.iconButton, dashboardShadow]} onPress={onNotificationsPress}>
           <BhuguardMaterialIcon name="notifications" size={22} color={dashboardTheme.primary} />
-          <View style={styles.notificationDot} />
+          {unreadCount > 0 ? <View style={styles.notificationDot} /> : null}
         </Pressable>
 
         <Pressable style={styles.avatarButton} onPress={onProfilePress}>

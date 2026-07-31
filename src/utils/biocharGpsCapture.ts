@@ -9,7 +9,7 @@ import { resolveValidatedCaptureLocation } from './livePhotoLocation';
 import { captureHighAccuracyGps } from './officerGpsCapture';
 
 export const BIOCHAR_POOR_ACCURACY_MESSAGE =
-  'GPS accuracy is low. Please wait for better location accuracy.';
+  'GPS accuracy is too low (over 100 m). Move outdoors, wait a few seconds, then try again.';
 
 export interface BiocharGpsCaptureResult {
   latitude: number;

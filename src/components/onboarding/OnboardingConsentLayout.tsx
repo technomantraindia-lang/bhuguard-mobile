@@ -17,6 +17,7 @@ interface OnboardingConsentLayoutProps {
   nextLabel: string;
   footerError?: string | null;
   nextLoading?: boolean;
+  nextDisabled?: boolean;
 }
 
 export function OnboardingConsentLayout({
@@ -28,6 +29,7 @@ export function OnboardingConsentLayout({
   nextLabel,
   footerError = null,
   nextLoading = false,
+  nextDisabled = false,
 }: OnboardingConsentLayoutProps) {
   const navigation = useNavigation();
   const progressPercent = Math.round((stepCurrent / stepTotal) * 100);
@@ -62,7 +64,7 @@ export function OnboardingConsentLayout({
           </Text>
         </View>
 
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <ScrollView
             contentContainerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
@@ -91,9 +93,13 @@ export function OnboardingConsentLayout({
           <View style={[styles.footer, dashboardShadow]}>
             {footerError ? <Text style={styles.footerError}>{footerError}</Text> : null}
             <Pressable
-              style={({ pressed }) => [styles.nextButton, pressed && styles.nextPressed, nextLoading && styles.nextDisabled]}
+              style={({ pressed }) => [
+                styles.nextButton,
+                pressed && !nextLoading && !nextDisabled && styles.nextPressed,
+                (nextLoading || nextDisabled) && styles.nextDisabled,
+              ]}
               onPress={onNext}
-              disabled={nextLoading}
+              disabled={nextLoading || nextDisabled}
             >
               <Text style={styles.nextLabel}>{nextLoading ? 'Please wait…' : nextLabel}</Text>
               {!nextLoading ? (

@@ -2,5 +2,9 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true
-  }
+  },
+  "exclude": [
+    "_migration_backup_eas_apk_20260724_180617",
+    "_migration_backup_maplibre_20260724_152519"
+  ]
 }

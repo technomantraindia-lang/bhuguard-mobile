@@ -1,7 +1,10 @@
 import { Alert } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { applyLanguageForCurrentUser } from '../i18n/languageSyncBridge';
+import { safeNavigationReset } from '../navigation/safeNavigationReset';
 import type { RootStackParamList } from '../navigation/types';
+import { getAuthUser } from '../storage/authStorage';
 
 import {
   completeMobileLogin,
@@ -9,13 +12,18 @@ import {
   type LoginCompletionErrorCode,
 } from './completeMobileLogin';
 
-type AuthNavigation = Pick<NativeStackNavigationProp<RootStackParamList>, 'reset'>;
+type AuthNavigation = Pick<NativeStackNavigationProp<RootStackParamList>, 'reset' | 'navigate'>;
 
 interface FinishLoginMessages {
   roleMismatch: string;
   unsupportedAccount: string;
   farmerProfileMissingTitle: string;
   farmerProfileMissingMessage: string;
+}
+
+export interface FinishMobileLoginOptions extends CompleteMobileLoginOptions {
+  /** After OTP, require MPIN setup / biometric offer before dashboard. */
+  continueSetupChain?: boolean;
 }
 
 function showLoginError(
@@ -38,7 +46,7 @@ function showLoginError(
 
 export async function finishMobileLogin(
   navigation: AuthNavigation,
-  options: CompleteMobileLoginOptions,
+  options: FinishMobileLoginOptions,
   messages: FinishLoginMessages,
   setInlineError?: (message: string) => void,
 ): Promise<boolean> {
@@ -58,6 +66,28 @@ export async function finishMobileLogin(
     return false;
   }
 
-  navigation.reset({ index: 0, routes: [{ name: result.dashboardRoute }] });
+  await applyLanguageForCurrentUser();
+
+  if (options.continueSetupChain) {
+    const user = options.user ?? (await getAuthUser());
+    const hasMpin = Boolean(user?.has_mpin);
+    const mobile = user?.mobile ?? options.user.mobile;
+    const name = user?.name ?? options.user.name;
+
+    if (!hasMpin) {
+      // Keep Mobile → OTP under CreateMpin so back does not crash on an empty stack.
+      navigation.navigate('CreateMpin', {
+        mobile,
+        mode: 'setup',
+        flowOrigin: 'auth',
+      });
+      return true;
+    }
+
+    navigation.navigate('BiometricSetup', { mobile, name });
+    return true;
+  }
+
+  safeNavigationReset(navigation, { index: 0, routes: [{ name: result.dashboardRoute }] });
   return true;
 }

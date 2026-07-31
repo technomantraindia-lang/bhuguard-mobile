@@ -1,38 +1,20 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { LandBoundaryVerificationSection } from '../../../components/shared/LandBoundaryVerificationSection';
+import { ONBOARDING_NEXT_LABELS } from '../../../constants/onboardingSteps';
 import { useOnboarding } from '../../../context/OnboardingContext';
+import { continueFarmerOnboardingAfterLandMapping } from '../../../navigation/continueFarmerOnboarding';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
 import type { AreaUnit } from '../../../utils/boundaryGeometry';
 import { mappedAreaLabelForDraft } from '../../../utils/onboardingBoundary';
-import { validateLandDetails } from '../../../utils/onboardingValidation';
+import { validateBoundaryMapping, validateLandDetails } from '../../../utils/onboardingValidation';
 import { FormField, OnboardingFormScreen } from './OnboardingFormScreen';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
-
-const SERVICE_OPTIONS = [
-  'Biochar Production',
-  'Biochar Mixing',
-  'Farm Mapping',
-  'Carbon Monitoring',
-  'Soil Testing',
-  'Advisory',
-  'GPS Verification',
-  'Carbon Registration',
-] as const;
-
-const PROJECT_OPTIONS = [
-  'Biochar',
-  'Agroforestry',
-  'Regenerative Agriculture',
-  'Carbon Credit',
-  'Soil Health',
-  'Water Conservation',
-] as const;
 
 const OWNERSHIP_OPTIONS = [
   { value: 'owned', label: 'Owned' },
@@ -72,19 +54,98 @@ const IRRIGATION_OPTIONS = [
 
 export function FarmerLandDetailsScreen() {
   const navigation = useNavigation<Nav>();
-  const { draft, updateDraft } = useOnboarding();
+  const { draft, result, updateDraft } = useOnboarding();
   const [error, setError] = useState<string | null>(null);
+  const continuingRef = useRef(false);
 
-  const next = () => {
-    const validationError = validateLandDetails(draft);
+  const applyBiocharServiceInterest = () => ({
+    service_interests: ['Biochar'] as string[],
+    service_interest: 'Biochar',
+    project_interest: ['Biochar'] as string[],
+  });
 
-    if (validationError) {
-      setError(validationError);
+  const skipMapping = () => {
+    if (continuingRef.current) {
       return;
     }
 
+    const skipPatch = {
+      boundary_mapping_status: 'pending' as const,
+      boundary_points: [] as typeof draft.boundary_points,
+      gps_latitude: '',
+      gps_longitude: '',
+      gps_accuracy: '',
+      gps_captured_at: '',
+      boundary_pending_reason: 'Skipped during onboarding',
+      ...applyBiocharServiceInterest(),
+    };
+
+    const draftAfterSkip = { ...draft, ...skipPatch };
+    const landError = validateLandDetails(draftAfterSkip);
+    if (landError) {
+      updateDraft(skipPatch);
+      setError(landError);
+      return;
+    }
+
+    continuingRef.current = true;
+    updateDraft(skipPatch);
     setError(null);
-    navigation.navigate('FarmerProofUpload');
+    continueFarmerOnboardingAfterLandMapping(navigation, draftAfterSkip, result, {
+      farmerId: draft.farmer_id ?? undefined,
+      farmId: draft.farm_id ?? undefined,
+      farmerName: draft.farmer_name || undefined,
+      farmName: draft.farm_name || undefined,
+      farmCode: draft.farm_code || undefined,
+      farmerCode: draft.farmer_code || undefined,
+      village: draft.village_name || undefined,
+      mappingStatus: 'pending',
+    });
+  };
+
+  const next = () => {
+    if (continuingRef.current) {
+      return;
+    }
+
+    const servicePatch = applyBiocharServiceInterest();
+    updateDraft(servicePatch);
+
+    const draftWithService = {
+      ...draft,
+      ...servicePatch,
+    };
+
+    const landError = validateLandDetails(draftWithService);
+    if (landError) {
+      setError(landError);
+      return;
+    }
+
+    const status = draft.boundary_mapping_status;
+    if (status !== 'mapped' && status !== 'pending_review' && status !== 'pending') {
+      setError('Start Mobile Mapping or tap Skip for Now to continue.');
+      return;
+    }
+
+    const mappingError = validateBoundaryMapping(draftWithService);
+    if (mappingError) {
+      setError(mappingError);
+      return;
+    }
+
+    continuingRef.current = true;
+    setError(null);
+    continueFarmerOnboardingAfterLandMapping(navigation, draftWithService, result, {
+      farmerId: draft.farmer_id ?? undefined,
+      farmId: draft.farm_id ?? undefined,
+      farmerName: draft.farmer_name || undefined,
+      farmName: draft.farm_name || undefined,
+      farmCode: draft.farm_code || undefined,
+      farmerCode: draft.farmer_code || undefined,
+      village: draft.village_name || undefined,
+      mappingStatus: status === 'pending' ? 'pending' : 'completed',
+    });
   };
 
   return (
@@ -93,6 +154,7 @@ export function FarmerLandDetailsScreen() {
       title="Land Registration"
       subtitle="Farm, crop, and boundary mapping details."
       onNext={next}
+      nextLabel={ONBOARDING_NEXT_LABELS[4]}
     >
       <FormField
         label="Land survey number *"
@@ -125,7 +187,7 @@ export function FarmerLandDetailsScreen() {
         label="Ownership *"
         value={draft.ownership_type}
         options={OWNERSHIP_OPTIONS}
-        onChange={(ownership_type) => updateDraft({ ownership_type })}
+        onChange={(ownership_type) => updateDraft({ ownership_type, documents_step_completed: false })}
       />
       <FormField
         label="Crop type"
@@ -152,35 +214,9 @@ export function FarmerLandDetailsScreen() {
         placeholder="Current practices on the farm"
       />
       <View style={styles.chipGroup}>
-        <Text style={styles.chipLabel}>Project Interest *</Text>
-        <View style={styles.chipColumn}>
-          {PROJECT_OPTIONS.map((option) => (
-            <Pressable
-              key={option}
-              style={[styles.serviceChip, draft.project_interest.includes(option) && styles.unitChipActive]}
-              onPress={() => updateDraft({ project_interest: toggleValue(draft.project_interest, option) })}
-            >
-              <Text style={[styles.unitText, draft.project_interest.includes(option) && styles.unitTextActive]}>
-                {option}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-      <View style={styles.chipGroup}>
         <Text style={styles.chipLabel}>Service Interest *</Text>
-        <View style={styles.chipColumn}>
-          {SERVICE_OPTIONS.map((option) => (
-            <Pressable
-              key={option}
-              style={[styles.serviceChip, draft.service_interests.includes(option) && styles.unitChipActive]}
-              onPress={() => updateDraft({ service_interests: toggleValue(draft.service_interests, option) })}
-            >
-              <Text style={[styles.unitText, draft.service_interests.includes(option) && styles.unitTextActive]}>
-                {option}
-              </Text>
-            </Pressable>
-          ))}
+        <View style={[styles.serviceChip, styles.unitChipActive]}>
+          <Text style={[styles.unitText, styles.unitTextActive]}>Biochar</Text>
         </View>
       </View>
       <FormField
@@ -201,18 +237,15 @@ export function FarmerLandDetailsScreen() {
         mappingStatus={draft.boundary_mapping_status}
         mappedAreaLabel={mappedAreaLabelForDraft(draft) ?? undefined}
         onStartMapping={() => navigation.navigate('OnboardingBoundaryStart')}
-        error={error && error.includes('mapping') ? error : null}
+        onSkipMapping={skipMapping}
+        error={error && (error.includes('mapping') || error.includes('Mapping') || error.includes('Skip')) ? error : null}
       />
 
-      {error && !error.includes('mapping') ? <Text style={styles.error}>{error}</Text> : null}
+      {error && !error.includes('mapping') && !error.includes('Mapping') && !error.includes('Skip') ? (
+        <Text style={styles.error}>{error}</Text>
+      ) : null}
     </OnboardingFormScreen>
   );
-}
-
-function toggleValue(values: string[], value: string): string[] {
-  return values.includes(value)
-    ? values.filter((item) => item !== value)
-    : [...values, value];
 }
 
 function SelectField({
@@ -276,7 +309,6 @@ const styles = StyleSheet.create({
   unitTextActive: { color: colors.eco, fontWeight: '700' },
   chipGroup: { gap: 8 },
   chipLabel: { fontSize: 14, fontWeight: '600', color: colors.text },
-  chipColumn: { gap: 8 },
   serviceChip: {
     borderWidth: 1,
     borderColor: colors.border,

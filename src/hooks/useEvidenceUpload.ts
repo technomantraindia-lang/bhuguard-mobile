@@ -13,6 +13,7 @@ import { categoryRequiresGps } from '../constants/evidenceCategories';
 import type { LiveCapturedEvidence } from '../utils/liveEvidenceCapture';
 import { getApiErrorMessage } from '../api/authApi';
 import { extractList, type ApiRecord } from '../utils/apiHelpers';
+import { isNetworkError, isTimeoutError } from '../utils/apiError';
 
 interface UseEvidenceUploadOptions {
   role: EvidenceRole;
@@ -72,13 +73,25 @@ export function useEvidenceUpload({ role, visitId, listParams, onSuccess }: UseE
 
       try {
         const formData = buildEvidenceFormData(file, payload, role);
-        await uploadEvidence(role, formData, visitId);
-        setSuccessMessage('Evidence uploaded successfully.');
-        await refreshList();
-        onSuccess?.();
-        return true;
-      } catch (err) {
-        setError(getApiErrorMessage(err, 'Evidence upload failed.'));
+        let lastError: unknown;
+
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            await uploadEvidence(role, formData, visitId);
+            setSuccessMessage('Evidence uploaded successfully.');
+            await refreshList();
+            onSuccess?.();
+            return true;
+          } catch (err) {
+            lastError = err;
+            if (attempt === 0 && (isTimeoutError(err) || isNetworkError(err))) {
+              continue;
+            }
+            break;
+          }
+        }
+
+        setError(getApiErrorMessage(lastError, 'Evidence upload failed. Tap Retry Upload without recapturing.'));
         return false;
       } finally {
         setUploading(false);

@@ -2,48 +2,22 @@ import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as SplashScreenNative from 'expo-splash-screen';
-import { Easing, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { getCurrentUser } from '../../api/authApi';
 import { syncApiClientBaseUrl } from '../../api/client';
-import {
-  EXIT_CROSS_FADE_MS,
-  MIN_SPLASH_MS,
-  SplashScreen,
-  runCrossFadeOut,
-  waitForMinimumSplash,
-} from '../../components/auth/splash';
+import { routeAfterPreloader } from '../../auth/startup/AuthStartupController';
+import { ANIMATED_SPLASH_BG } from '../../components/AnimatedLogoSplash';
+import { safeNavigationReset } from '../../navigation/safeNavigationReset';
 import type { RootStackParamList } from '../../navigation/types';
 import { bootstrapApiBaseUrl } from '../../storage/apiConfigStorage';
-import { getStoredLanguage } from '../../storage/languageStorage';
-import { clearAuthStorage, getAuthToken, saveAuthUser } from '../../utils/authStorage';
-import { isAdminRole, isCompanyRole, resolveUserRole } from '../../utils/authRole';
-import { getDashboardRoute, isMobileSupportedRole } from '../../utils/authRouting';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Preloader'>;
 
-const MAX_BOOTSTRAP_MS = 8000;
-const AUTH_CHECK_MS = 5000;
-
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
-
-    promise
-      .then((value) => {
-        clearTimeout(timer);
-        resolve(value);
-      })
-      .catch((error) => {
-        clearTimeout(timer);
-        reject(error);
-      });
-  });
-}
+const MAX_BOOTSTRAP_MS = 4500;
+/** Animated logo splash already ran in App; keep Preloader brief. */
+const POST_LOGO_HOLD_MS = 120;
 
 export function PreloaderScreen({ navigation }: Props) {
   const finishedRef = useRef(false);
-  const exitOpacity = useSharedValue(1);
 
   useEffect(() => {
     void SplashScreenNative.hideAsync().catch(() => undefined);
@@ -53,83 +27,49 @@ export function PreloaderScreen({ navigation }: Props) {
     let active = true;
     const startedAt = Date.now();
 
-    const navigateAfterSplash = async (route: keyof RootStackParamList) => {
+    const navigateOnce = async (route: keyof RootStackParamList) => {
       if (finishedRef.current || !active) {
         return;
       }
 
       finishedRef.current = true;
-      await waitForMinimumSplash(startedAt, MIN_SPLASH_MS);
+
+      const elapsed = Date.now() - startedAt;
+      const remaining = POST_LOGO_HOLD_MS - elapsed;
+      if (remaining > 0) {
+        await new Promise<void>((resolve) => setTimeout(resolve, remaining));
+      }
 
       if (!active) {
         return;
       }
 
-      exitOpacity.value = withTiming(0, {
-        duration: EXIT_CROSS_FADE_MS,
-        easing: Easing.out(Easing.cubic),
-      });
-      await runCrossFadeOut(EXIT_CROSS_FADE_MS);
-
-      if (!active) {
-        return;
-      }
-
-      navigation.reset({ index: 0, routes: [{ name: route }] });
-    };
-
-    const goToLogin = async () => {
-      await navigateAfterSplash('MobileLogin');
-    };
-
-    const goToLanguage = async () => {
-      await navigateAfterSplash('LanguageSelection');
-    };
-
-    const goToDashboard = async (route: keyof RootStackParamList) => {
-      await navigateAfterSplash(route);
+      // Skip opacity animation + native-driver teardown before the first stack
+      // reset — that combination races Fabric PreAllocateMountItem on Android.
+      safeNavigationReset(navigation, { index: 0, routes: [{ name: route }] });
     };
 
     const bootstrap = async () => {
       try {
-        await withTimeout(bootstrapApiBaseUrl(), 4000, 'API bootstrap');
-        await syncApiClientBaseUrl();
-
-        const [token, language] = await Promise.all([getAuthToken(), getStoredLanguage()]);
-
-        if (token) {
-          try {
-            const user = await withTimeout(getCurrentUser(), AUTH_CHECK_MS, 'Session check');
-            const resolvedRole = resolveUserRole(user) ?? user.user_type;
-
-            if (isAdminRole(resolvedRole) || isCompanyRole(resolvedRole) || !isMobileSupportedRole(resolvedRole)) {
-              await clearAuthStorage();
-              await goToLogin();
-              return;
-            }
-
-            await saveAuthUser(user);
-            const route = getDashboardRoute(resolvedRole);
-            await goToDashboard(route ?? 'MobileLogin');
-            return;
-          } catch {
-            await clearAuthStorage();
-          }
+        await Promise.race([
+          (async () => {
+            await bootstrapApiBaseUrl();
+            await syncApiClientBaseUrl();
+          })(),
+          new Promise<void>((resolve) => setTimeout(resolve, 4000)),
+        ]);
+      } catch (error) {
+        if (__DEV__) {
+          console.warn('[Bhuguard] API bootstrap failed during preloader:', error);
         }
-
-        if (!language) {
-          await goToLanguage();
-          return;
-        }
-
-        await goToLogin();
-      } catch {
-        await goToLogin();
       }
+
+      const next = await routeAfterPreloader();
+      await navigateOnce(next.name);
     };
 
     const maxTimer = setTimeout(() => {
-      void goToLogin();
+      void navigateOnce('LanguageSelection');
     }, MAX_BOOTSTRAP_MS);
 
     void bootstrap().finally(() => clearTimeout(maxTimer));
@@ -138,18 +78,14 @@ export function PreloaderScreen({ navigation }: Props) {
       active = false;
       clearTimeout(maxTimer);
     };
-  }, [exitOpacity, navigation]);
+  }, [navigation]);
 
-  return (
-    <View style={styles.root}>
-      <SplashScreen exitOpacity={exitOpacity} />
-    </View>
-  );
+  return <View style={styles.root} />;
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#F7FAF6',
+    backgroundColor: ANIMATED_SPLASH_BG,
   },
 });

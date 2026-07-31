@@ -9,6 +9,7 @@ import { OnboardingReviewPhoto } from '../../../components/onboarding/Onboarding
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useOnboarding } from '../../../context/OnboardingContext';
+import { resetToOnboardingHome } from '../../../navigation/continueFarmerOnboarding';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
 import { formatFarmerCode } from '../../../utils/onboardingNotes';
@@ -35,21 +36,12 @@ export function FarmerOnboardingSuccessScreen() {
   const mobile = result?.mobile ?? '-';
   const farmerCode = result?.farmer_id ? formatFarmerCode(result.farmer_id) : '-';
   const createdAt = formatDate(result?.onboarded_at);
+  const routeNames = (navigation.getState()?.routeNames ?? []) as string[];
+  const isArtisanStack = routeNames.includes('ArtisanDashboard');
 
   const goDashboard = () => {
     resetDraft();
-    navigation.reset({
-      index: 0,
-      routes: [
-        {
-          name: 'FieldOfficerTabs',
-          state: {
-            index: 0,
-            routes: [{ name: 'Home' }],
-          },
-        },
-      ],
-    });
+    resetToOnboardingHome(navigation);
   };
 
   const onboardAnother = () => {
@@ -64,7 +56,7 @@ export function FarmerOnboardingSuccessScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.container}>
-        <ScreenHeader title="Farmer onboarded" subtitle="Registration completed by field officer" showBack={false} />
+        <ScreenHeader title="Farmer onboarded" subtitle="Registration completed successfully" showBack={false} />
         <View style={styles.successBanner}>
           <StatusBadge label="Success" tone="success" />
           <Text style={styles.successTitle}>Farmer onboarded successfully</Text>
@@ -90,7 +82,11 @@ export function FarmerOnboardingSuccessScreen() {
         </AppCard>
         <AppButton label="View farmer" onPress={viewFarmer} />
         <AppButton label="Onboard another farmer" onPress={onboardAnother} variant="secondary" />
-        <AppButton label="Back to field officer dashboard" onPress={goDashboard} variant="secondary" />
+        <AppButton
+          label={isArtisanStack ? 'Back to Artisan Pro dashboard' : 'Back to field officer dashboard'}
+          onPress={goDashboard}
+          variant="secondary"
+        />
       </ScrollView>
     </SafeAreaView>
   );

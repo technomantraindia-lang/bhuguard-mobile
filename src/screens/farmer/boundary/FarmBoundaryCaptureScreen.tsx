@@ -1,27 +1,32 @@
-import { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 
-import { AddManualCoordinateModal } from '../../../components/farmer/boundary/AddManualCoordinateModal';
 import { BoundaryFlowHeader } from '../../../components/farmer/boundary/BoundaryFlowHeader';
 import { BoundaryLiveMap } from '../../../components/farmer/boundary/BoundaryLiveMap';
-import { CapturedPointsBottomSheet } from '../../../components/farmer/boundary/CapturedPointsBottomSheet';
 import { useBoundaryCapture } from '../../../context/BoundaryCaptureContext';
+import { useBoundaryMapType } from '../../../hooks/useBoundaryMapType';
 import type { FarmerStackParamList } from '../../../navigation/types';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
 import {
-  AUTO_CAPTURE_DISTANCE_METERS,
-  AUTO_CAPTURE_INTERVAL_MS,
-  MAX_ACCEPTABLE_GPS_ACCURACY_METERS,
+  AUTO_CAPTURE_REJECT_ACCURACY_METERS,
   MIN_BOUNDARY_POINTS,
-  MIN_POINT_DISTANCE_METERS,
+  POOR_GPS_WARNING_METERS,
   boundaryPointsToLatLng,
   findNearestEdgeInsertion,
   haversineMeters,
   hasSelfIntersection,
+  simplifyBoundaryPointsForEdit,
 } from '../../../utils/boundaryGeometry';
+import {
+  type AutoCaptureState,
+  collectBestGpsSample,
+  getClosingDistanceThreshold,
+  shouldAutoCaptureGpsPoint,
+} from '../../../utils/boundaryGpsTracking';
 import { getBoundaryFlowRoutes } from '../../../utils/boundaryFlowRoutes';
 import { boundaryRouteParams } from '../../../utils/boundaryNavigation';
 
@@ -29,15 +34,55 @@ type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmBoundaryCapture'>
 
 export function FarmBoundaryCaptureScreen({ navigation }: Props) {
   const boundary = useBoundaryCapture();
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [manualOpen, setManualOpen] = useState(false);
-  const lastAutoCaptureAt = useRef(0);
-  const lastAutoCoord = useRef<{ latitude: number; longitude: number } | null>(null);
+  const { isSatellite, toggleMapType, restoreMapType } = useBoundaryMapType();
+  const [startingGps, setStartingGps] = useState(false);
+  const autoCaptureState = useRef<AutoCaptureState>({ lastCaptureAt: 0, lastCaptureCoord: null });
+
+  useFocusEffect(
+    useCallback(() => {
+      void restoreMapType();
+    }, [restoreMapType]),
+  );
 
   const isRecording = boundary.mappingStatus === 'recording';
   const isPaused = boundary.mappingStatus === 'paused';
-  const isEditing = boundary.mappingStatus === 'editing' || boundary.mappingStatus === 'completed';
-  const canCapture = isRecording;
+  const isCompleted =
+    boundary.mappingStatus === 'completed' || boundary.mappingStatus === 'editing';
+  const isMappingActive = isRecording || isPaused;
+  const showFilledPolygon = isCompleted && boundary.points.length >= MIN_BOUNDARY_POINTS;
+
+  const confirmLeave = useCallback(() => {
+    if (!isMappingActive) {
+      navigation.goBack();
+      return;
+    }
+
+    Alert.alert(
+      'Leave boundary mapping?',
+      'Boundary mapping is still in progress. Leaving now may discard the current path.',
+      [
+        { text: 'Stay', style: 'cancel' },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: () => navigation.goBack(),
+        },
+      ],
+    );
+  }, [isMappingActive, navigation]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (event) => {
+      if (!isMappingActive) {
+        return;
+      }
+
+      event.preventDefault();
+      confirmLeave();
+    });
+
+    return unsubscribe;
+  }, [confirmLeave, isMappingActive, navigation]);
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
@@ -55,44 +100,53 @@ export function FarmBoundaryCaptureScreen({ navigation }: Props) {
         return;
       }
 
-      if (mappingStatus === 'paused') {
+      if (mappingStatus === 'paused' || mappingStatus === 'not_started' || mappingStatus === 'completed') {
+        if (mappingStatus === 'not_started' || mappingStatus === 'completed') {
+          try {
+            const position = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.BestForNavigation,
+            });
+            setCurrentLocation(
+              position.coords.latitude,
+              position.coords.longitude,
+              position.coords.accuracy ?? 20,
+              position.coords.altitude ?? null,
+            );
+          } catch {
+            // Ignore preview GPS failures.
+          }
+        }
+
         return;
       }
 
       subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.BestForNavigation,
-          distanceInterval: 2,
-          timeInterval: 2000,
+          distanceInterval: 1,
+          timeInterval: 1500,
         },
         (position) => {
-          const { latitude, longitude, accuracy, altitude } = position.coords;
+          const { latitude, longitude, accuracy, altitude, heading, speed } = position.coords;
           const acc = accuracy ?? 20;
+          const sample = {
+            latitude,
+            longitude,
+            accuracy: acc,
+            altitude: altitude ?? null,
+            heading: heading ?? null,
+            speed: speed ?? null,
+            timestamp: new Date().toISOString(),
+          };
+
           setCurrentLocation(latitude, longitude, acc, altitude ?? null);
+          setPoorAccuracyWarning(acc > POOR_GPS_WARNING_METERS);
 
           if (mappingStatus !== 'recording') {
             return;
           }
 
-          if (acc > MAX_ACCEPTABLE_GPS_ACCURACY_METERS) {
-            setPoorAccuracyWarning(true);
-            return;
-          }
-
-          const now = Date.now();
-          const last = lastAutoCoord.current ?? points[points.length - 1];
-          const moved = last
-            ? haversineMeters(last.latitude, last.longitude, latitude, longitude)
-            : Number.POSITIVE_INFINITY;
-          const elapsed = now - lastAutoCaptureAt.current;
-          const shouldCaptureByDistance = moved >= AUTO_CAPTURE_DISTANCE_METERS;
-          const shouldCaptureByTime = moved >= 1 && elapsed >= AUTO_CAPTURE_INTERVAL_MS;
-
-          if (!shouldCaptureByDistance && !shouldCaptureByTime && points.length > 0) {
-            return;
-          }
-
-          if (last && moved < MIN_POINT_DISTANCE_METERS && points.length > 0) {
+          if (!shouldAutoCaptureGpsPoint(sample, points, autoCaptureState.current)) {
             return;
           }
 
@@ -101,10 +155,12 @@ export function FarmBoundaryCaptureScreen({ navigation }: Props) {
             longitude,
             accuracy: acc,
             altitude: altitude ?? null,
-            timestamp: new Date().toISOString(),
+            timestamp: sample.timestamp,
           });
-          lastAutoCaptureAt.current = now;
-          lastAutoCoord.current = { latitude, longitude };
+          autoCaptureState.current = {
+            lastCaptureAt: Date.now(),
+            lastCaptureCoord: { latitude, longitude },
+          };
         },
       );
     }
@@ -122,80 +178,142 @@ export function FarmBoundaryCaptureScreen({ navigation }: Props) {
     boundary.points.length,
   ]);
 
-  const addManualOrCurrentPoint = async (forcePoorAccuracy = false) => {
-    if (!canCapture) {
-      Alert.alert('Start mapping', 'Tap Start Walking Mapping before capturing points.');
-      return;
+  const handleStartPoint = async () => {
+    setStartingGps(true);
+
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Location required', 'Allow location access to start boundary mapping.');
+        return;
+      }
+
+      const best = await collectBestGpsSample(async () => {
+        const position = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.BestForNavigation,
+        });
+
+        return {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy ?? 20,
+          altitude: position.coords.altitude ?? null,
+          heading: position.coords.heading ?? null,
+          speed: position.coords.speed ?? null,
+          timestamp: new Date().toISOString(),
+        };
+      });
+
+      if (!best) {
+        Alert.alert('GPS unavailable', 'Could not get a GPS fix. Move to an open area and try again.');
+        return;
+      }
+
+      if (best.accuracy > POOR_GPS_WARNING_METERS) {
+        Alert.alert(
+          'Low GPS accuracy',
+          'GPS accuracy is currently low. Move to an open area and wait for a better signal.',
+          [
+            { text: 'Retry', onPress: () => void handleStartPoint() },
+            {
+              text: 'Start anyway',
+              onPress: () => {
+                boundary.startBoundaryWithPoint({
+                  latitude: best.latitude,
+                  longitude: best.longitude,
+                  accuracy: best.accuracy,
+                  altitude: best.altitude ?? null,
+                  timestamp: best.timestamp,
+                });
+                autoCaptureState.current = {
+                  lastCaptureAt: Date.now(),
+                  lastCaptureCoord: { latitude: best.latitude, longitude: best.longitude },
+                };
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      boundary.startBoundaryWithPoint({
+        latitude: best.latitude,
+        longitude: best.longitude,
+        accuracy: best.accuracy,
+        altitude: best.altitude ?? null,
+        timestamp: best.timestamp,
+      });
+      autoCaptureState.current = {
+        lastCaptureAt: Date.now(),
+        lastCaptureCoord: { latitude: best.latitude, longitude: best.longitude },
+      };
+      boundary.setCurrentLocation(best.latitude, best.longitude, best.accuracy, best.altitude ?? null);
+    } finally {
+      setStartingGps(false);
     }
-
-    const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
-    const { latitude, longitude, accuracy, altitude } = position.coords;
-    const acc = accuracy ?? 20;
-
-    if (acc > MAX_ACCEPTABLE_GPS_ACCURACY_METERS && !forcePoorAccuracy) {
-      Alert.alert(
-        'Poor GPS accuracy',
-        'GPS accuracy is over 30m. Wait for a better signal, or capture this point manually anyway?',
-        [
-          { text: 'Wait', style: 'cancel' },
-          { text: 'Capture anyway', onPress: () => void addManualOrCurrentPoint(true) },
-        ],
-      );
-      return;
-    }
-
-    const last = boundary.points[boundary.points.length - 1];
-    if (last && haversineMeters(last.latitude, last.longitude, latitude, longitude) < MIN_POINT_DISTANCE_METERS) {
-      Alert.alert('Points too close', 'Walk a little further before capturing the next boundary point.');
-      return;
-    }
-
-    boundary.addPoint({
-      latitude,
-      longitude,
-      accuracy: acc,
-      altitude: altitude ?? null,
-      timestamp: new Date().toISOString(),
-      manual: true,
-    });
-    lastAutoCaptureAt.current = Date.now();
-    lastAutoCoord.current = { latitude, longitude };
-    boundary.setCurrentLocation(latitude, longitude, acc, altitude ?? null);
   };
 
-  const finishBoundary = () => {
+  const handleEndPoint = async () => {
     if (boundary.points.length < MIN_BOUNDARY_POINTS) {
-      Alert.alert('More points required', `Capture at least ${MIN_BOUNDARY_POINTS} boundary points.`);
+      Alert.alert('Keep walking', 'Walk further around the farm boundary before ending.');
       return;
     }
 
     const polygon = boundaryPointsToLatLng(boundary.points);
-
     if (hasSelfIntersection(polygon)) {
-      Alert.alert('Invalid boundary', 'Boundary lines intersect. Adjust points before finishing.');
+      Alert.alert('Boundary validation failed', 'Boundary validation failed. Please review the mapped path.');
       return;
     }
 
     const first = boundary.points[0];
     const last = boundary.points[boundary.points.length - 1];
     const closingDistance = haversineMeters(first.latitude, first.longitude, last.latitude, last.longitude);
+    const threshold = getClosingDistanceThreshold(boundary.currentAccuracy ?? last.accuracy);
 
-    if (closingDistance > 25) {
+    if (closingDistance > threshold) {
       Alert.alert(
-        'Boundary not closed',
-        'Your last point is far from the start. Continue walking to close the farm boundary.',
+        'Return to start point',
+        'You are not close to the starting point. Please walk near the Start Point before completing the boundary.',
       );
       return;
+    }
+
+    try {
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.BestForNavigation,
+      });
+      const { latitude, longitude, accuracy, altitude } = position.coords;
+      const acc = accuracy ?? 20;
+
+      if (
+        haversineMeters(last.latitude, last.longitude, latitude, longitude) >= 1.5 &&
+        acc <= AUTO_CAPTURE_REJECT_ACCURACY_METERS
+      ) {
+        boundary.addPoint({
+          latitude,
+          longitude,
+          accuracy: acc,
+          altitude: altitude ?? null,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } catch {
+      // Final point is optional if we already have a valid close.
     }
 
     boundary.finishBoundaryMapping();
   };
 
   const continueToPreview = () => {
+    if (hasSelfIntersection(boundaryPointsToLatLng(boundary.points))) {
+      Alert.alert('Boundary validation failed', 'Boundary validation failed. Please review the mapped path.');
+      return;
+    }
+
     if (boundary.isOutsideTolerance) {
       Alert.alert(
-        'Boundary outside farm area',
-        'Boundary moved outside expected farm area. Please adjust within field boundary.',
+        'Edited boundary outside path',
+        'Edited boundary moved outside the recorded walking path.',
         [
           { text: 'Keep editing', style: 'cancel' },
           {
@@ -226,49 +344,60 @@ export function FarmBoundaryCaptureScreen({ navigation }: Props) {
       ? { latitude: boundary.currentLatitude, longitude: boundary.currentLongitude }
       : null;
 
+  const editVertices = isCompleted ? simplifyBoundaryPointsForEdit(boundary.points) : boundary.points;
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <BoundaryFlowHeader title="Capture Boundary" onBack={() => navigation.goBack()} />
+      <BoundaryFlowHeader title="Capture Boundary" onBack={confirmLeave} />
 
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.topCard}>
           <Text style={styles.topTitle}>Farm: {boundary.farmName}</Text>
+          <Text style={styles.topMeta}>Farmer ID: {boundary.farmCode}</Text>
           <Text style={styles.topMeta}>Status: {boundary.mappingStatusLabel}</Text>
-          <Text style={styles.topMeta}>GPS Accuracy: {boundary.gpsAccuracyLabel}
-            {boundary.currentAccuracy != null ? ` (${Math.round(boundary.currentAccuracy)}m)` : ''}
+          <Text style={styles.topMeta}>
+            GPS Accuracy: {boundary.gpsAccuracyLabel}
+            {boundary.currentAccuracy != null ? ` (${boundary.currentAccuracy.toFixed(1)}m)` : ''}
           </Text>
-          <Text style={styles.topMeta}>Captured Points: {boundary.points.length}</Text>
           <Text style={styles.topArea}>
-            Area: {boundary.points.length >= 3 ? `${boundary.areaLabel} · ${boundary.metrics.areaHectare.toFixed(2)} ha` : '—'}
+            Area:{' '}
+            {showFilledPolygon
+              ? `${boundary.areaLabel} · ${boundary.metrics.areaHectare.toFixed(2)} ha`
+              : '—'}
           </Text>
-          {boundary.points.length >= 3 ? (
-            <Text style={styles.topMeta}>
-              Sq ft: {Math.round(boundary.metrics.areaAcre * 43560).toLocaleString()}
-            </Text>
+          {showFilledPolygon ? (
+            <Text style={styles.topMeta}>Sq ft: {boundary.metrics.areaSquareFeet.toLocaleString()}</Text>
           ) : null}
           {boundary.poorAccuracyWarning ? (
-            <Text style={styles.warning}>GPS accuracy is poor (&gt;30m). Auto-capture paused until signal improves.</Text>
+            <Text style={styles.warning}>
+              GPS accuracy is currently low. Move to an open area and wait for a better signal.
+            </Text>
           ) : null}
           {boundary.isOutsideTolerance ? (
             <Text style={styles.warning}>
-              Boundary moved outside expected farm area. Please adjust within field boundary.
+              Edited boundary moved outside the recorded walking path.
             </Text>
           ) : null}
         </View>
 
         <View style={styles.mapWrap}>
           <BoundaryLiveMap
-            points={boundary.points}
-            walkingPoints={boundary.walkingPoints}
+            points={isCompleted ? boundary.points : boundary.points}
+            walkingPoints={isCompleted ? boundary.walkingPoints : boundary.points}
             currentLocation={currentLocation}
             areaLabel={boundary.areaLabel}
-            showPolygon={isEditing && boundary.points.length >= 3}
+            showPolygon={showFilledPolygon}
+            showOpenPath={isMappingActive}
+            showEditVertices={isCompleted}
+            editVertices={editVertices}
             height={430}
-            editable={isEditing}
+            editable={isCompleted}
             followsUser={isRecording}
             isOutsideTolerance={boundary.isOutsideTolerance}
-            satelliteMode={boundary.satelliteMode}
-            onToggleSatellite={boundary.toggleSatelliteMode}
+            satelliteMode={isSatellite}
+            onToggleSatellite={() => {
+              void toggleMapType();
+            }}
             onCenterGps={async () => {
               const position = await Location.getCurrentPositionAsync({
                 accuracy: Location.Accuracy.BestForNavigation,
@@ -287,13 +416,13 @@ export function FarmBoundaryCaptureScreen({ navigation }: Props) {
                 return;
               }
 
-              Alert.alert('Delete point?', 'Remove this boundary vertex?', [
+              Alert.alert('Delete vertex?', 'Remove this boundary correction point?', [
                 { text: 'Cancel', style: 'cancel' },
                 { text: 'Delete', style: 'destructive', onPress: () => boundary.removePoint(id) },
               ]);
             }}
             onMapPress={(coordinate) => {
-              if (!isEditing) {
+              if (!isCompleted) {
                 return;
               }
 
@@ -316,99 +445,99 @@ export function FarmBoundaryCaptureScreen({ navigation }: Props) {
 
         <View style={styles.actions}>
           {boundary.mappingStatus === 'not_started' ? (
-            <Pressable style={styles.primaryButton} onPress={boundary.startWalkingMapping}>
-              <Text style={styles.primaryButtonText}>Start Walking Mapping</Text>
+            <Pressable
+              style={[styles.primaryButton, startingGps && styles.primaryButtonDisabled]}
+              disabled={startingGps}
+              onPress={() => void handleStartPoint()}
+            >
+              {startingGps ? (
+                <ActivityIndicator color={dashboardTheme.onPrimary} />
+              ) : (
+                <Text style={styles.primaryButtonText}>Start Point</Text>
+              )}
             </Pressable>
           ) : null}
 
-          {isRecording || isPaused ? (
+          {isMappingActive ? (
             <>
-              <Pressable style={styles.primaryButton} onPress={() => void addManualOrCurrentPoint()}>
-                <Text style={styles.primaryButtonText}>Capture Point</Text>
+              <Pressable style={styles.primaryButton} onPress={() => void handleEndPoint()}>
+                <Text style={styles.primaryButtonText}>End Point</Text>
               </Pressable>
               <View style={styles.row}>
                 <SecondaryButton
                   label={isPaused ? 'Resume Mapping' : 'Pause Mapping'}
                   onPress={isPaused ? boundary.resumeMapping : boundary.pauseMapping}
                 />
-                <SecondaryButton label="Finish Boundary" onPress={finishBoundary} />
-              </View>
-              <View style={styles.row}>
-                <SecondaryButton label="Undo Last Point" onPress={boundary.undoLastPoint} />
                 <SecondaryButton
-                  label="Reset Boundary"
-                  onPress={() =>
-                    Alert.alert('Reset boundary?', 'Remove all captured points?', [
-                      { text: 'Cancel' },
-                      { text: 'Reset', style: 'destructive', onPress: boundary.resetBoundary },
-                    ])
-                  }
+                  label="Center GPS"
+                  onPress={() => {
+                    void (async () => {
+                      const position = await Location.getCurrentPositionAsync({
+                        accuracy: Location.Accuracy.BestForNavigation,
+                      });
+                      boundary.setCurrentLocation(
+                        position.coords.latitude,
+                        position.coords.longitude,
+                        position.coords.accuracy ?? 8,
+                        position.coords.altitude ?? null,
+                      );
+                    })();
+                  }}
                 />
               </View>
+              <SecondaryButton
+                label="Reset Boundary"
+                onPress={() =>
+                  Alert.alert('Reset boundary?', 'Remove the current walking path?', [
+                    { text: 'Cancel' },
+                    {
+                      text: 'Reset',
+                      style: 'destructive',
+                      onPress: () => {
+                        boundary.resetBoundary();
+                        autoCaptureState.current = { lastCaptureAt: 0, lastCaptureCoord: null };
+                      },
+                    },
+                  ])
+                }
+              />
             </>
           ) : null}
 
-          {isEditing ? (
+          {isCompleted ? (
             <>
               <Pressable style={styles.primaryButton} onPress={continueToPreview}>
-                <Text style={styles.primaryButtonText}>Save & Review Boundary</Text>
+                <Text style={styles.primaryButtonText}>Save Boundary</Text>
               </Pressable>
               <View style={styles.row}>
                 <SecondaryButton
-                  label="Resume Walking"
-                  onPress={() => {
-                    boundary.startWalkingMapping();
-                  }}
+                  label="Resume Mapping"
+                  onPress={boundary.resumeWalkingMapping}
                 />
                 <SecondaryButton
                   label="Reset Boundary"
                   onPress={() =>
-                    Alert.alert('Reset boundary?', 'Remove all captured points?', [
+                    Alert.alert('Reset boundary?', 'Remove the completed boundary?', [
                       { text: 'Cancel' },
-                      { text: 'Reset', style: 'destructive', onPress: boundary.resetBoundary },
+                      {
+                        text: 'Reset',
+                        style: 'destructive',
+                        onPress: () => {
+                          boundary.resetBoundary();
+                          autoCaptureState.current = { lastCaptureAt: 0, lastCaptureCoord: null };
+                        },
+                      },
                     ])
                   }
                 />
               </View>
               <Text style={styles.hint}>
-                Drag vertices to edit. Tap near an edge to add a point. Tap a vertex to delete.
+                Drag the highlighted vertices to fine-tune the completed boundary before saving.
               </Text>
             </>
           ) : null}
-
-          <Pressable style={styles.linkButton} onPress={() => setSheetOpen(true)}>
-            <Text style={styles.linkButtonText}>View Captured Points ({boundary.points.length})</Text>
-          </Pressable>
         </View>
       </ScrollView>
-
-      <CapturedPointsBottomSheet
-        visible={sheetOpen}
-        points={boundary.points}
-        onClose={() => setSheetOpen(false)}
-        onDeletePoint={boundary.removePoint}
-        onAddManual={() => {
-          setSheetOpen(false);
-          setManualOpen(true);
-        }}
-      />
-
-      <AddManualCoordinateModal
-        visible={manualOpen}
-        onClose={() => setManualOpen(false)}
-        onAdd={(payload) =>
-          boundary.addPoint({
-            latitude: payload.latitude,
-            longitude: payload.longitude,
-            accuracy: 5,
-            altitude: null,
-            timestamp: new Date().toISOString(),
-            label: payload.label,
-            notes: payload.notes,
-            manual: true,
-          })
-        }
-      />
     </SafeAreaView>
   );
 }
@@ -446,7 +575,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
   },
+  primaryButtonDisabled: { opacity: 0.7 },
   primaryButtonText: { fontSize: 15, fontWeight: '700', color: dashboardTheme.onPrimary },
   secondaryButton: {
     flex: 1,
@@ -458,7 +590,5 @@ const styles = StyleSheet.create({
     backgroundColor: dashboardTheme.surfaceLowest,
   },
   secondaryButtonText: { fontSize: 13, fontWeight: '700', color: dashboardTheme.primaryContainer, textAlign: 'center' },
-  linkButton: { alignItems: 'center', paddingVertical: 8 },
-  linkButtonText: { fontSize: 14, fontWeight: '700', color: dashboardTheme.primaryContainer },
   hint: { fontSize: 12, color: dashboardTheme.onSurfaceVariant, textAlign: 'center', marginTop: 4 },
 });

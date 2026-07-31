@@ -16,7 +16,7 @@ export function FarmerEvidenceDetailScreen({ route, navigation }: Props) {
   return (
     <ApiDetailScreen
       title="Evidence Detail"
-      subtitle="View photo and download PDF report"
+      subtitle="View photo and evidence details"
       fetcher={() => getEvidenceDetail('farmer', evidenceId)}
       rootKeys={['evidence']}
       titleKeys={['category', 'original_file_name', 'evidence_code']}

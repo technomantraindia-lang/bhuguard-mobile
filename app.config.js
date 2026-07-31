@@ -1,14 +1,22 @@
 const appJson = require('./app.json');
 
-const PRODUCTION_API_URL = 'https://yourdomain.com/api';
-const DEMO_API_URL = 'https://demo.bhuguard.com/api';
+const PRODUCTION_API_URL = 'https://erp.bhuguard.com/api';
 const appVariant = process.env.EXPO_PUBLIC_APP_VARIANT ?? 'production';
 const isDevClient = appVariant === 'development';
-const appScheme = appJson.expo.scheme ?? 'bhuguard';
+const appScheme = appJson.expo?.scheme ?? 'bhuguard';
 const rawApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim() || PRODUCTION_API_URL;
-const apiUrl = rawApiUrl.includes('yourdomain.com') ? DEMO_API_URL : rawApiUrl;
-const usesHttpApi = apiUrl.startsWith('http://');
-const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() || '';
+const apiUrl = rawApiUrl.includes('yourdomain.com') ? PRODUCTION_API_URL : rawApiUrl;
+const appUrl = process.env.EXPO_PUBLIC_APP_URL?.trim() || 'https://erp.bhuguard.com';
+const mapTilerApiKey = process.env.EXPO_PUBLIC_MAPTILER_API_KEY?.trim() || '';
+const mapTilerKeyLooksReal =
+  mapTilerApiKey.length >= 16
+  && !/your_|paste_|placeholder|maptiler_key|undefined|null/i.test(mapTilerApiKey);
+
+if (!mapTilerKeyLooksReal) {
+  console.warn(
+    '[Bhuguard] MapTiler API key is missing or a placeholder. Set EXPO_PUBLIC_MAPTILER_API_KEY in .env for Field Officer Farm Boundary Hybrid maps.',
+  );
+}
 
 const IOS_CAMERA_PERMISSION =
   'Bhuguard uses camera to capture Biochar activity, farm, feedstock, moisture, production, and evidence images.';
@@ -19,34 +27,99 @@ const IOS_PHOTOS_PERMISSION =
 const IOS_MICROPHONE_PERMISSION =
   'Bhuguard uses microphone when recording Biochar process videos.';
 
-const basePlugins = appJson.expo.plugins ?? [];
-const plugins = basePlugins.filter((plugin) => {
-  if (plugin === 'expo-dev-client') {
-    return isDevClient;
+/** Solid native splash only — animated logo runs in JS (AnimatedLogoSplash). */
+const SPLASH_PLUGIN_CONFIG = {
+  backgroundColor: '#03150D',
+  image: './assets/splash-native-blank.png',
+  imageWidth: 1,
+  resizeMode: 'contain',
+};
+
+function getPluginName(plugin) {
+  return Array.isArray(plugin) ? plugin[0] : plugin;
+}
+
+function mergeRequiredPlugins(basePlugins) {
+  const plugins = [];
+  const seen = new Set();
+
+  for (const plugin of basePlugins) {
+    const name = getPluginName(plugin);
+
+    if (seen.has(name)) {
+      continue;
+    }
+
+    seen.add(name);
+
+    if (name === 'expo-dev-client' && !isDevClient) {
+      continue;
+    }
+
+    plugins.push(plugin);
   }
 
-  return true;
-});
+  const ensurePlugin = (name, pluginConfig) => {
+    const index = plugins.findIndex((plugin) => getPluginName(plugin) === name);
 
-/** @type {import('expo/config').ExpoConfig} */
-module.exports = {
-  expo: {
-    ...appJson.expo,
+    if (index === -1) {
+      plugins.push(pluginConfig ? [name, pluginConfig] : name);
+      return;
+    }
+
+    if (pluginConfig) {
+      plugins[index] = [name, pluginConfig];
+    }
+  };
+
+  ensurePlugin('expo-splash-screen', SPLASH_PLUGIN_CONFIG);
+  ensurePlugin('expo-sharing');
+  ensurePlugin('expo-system-ui');
+  ensurePlugin('expo-secure-store');
+  // expo-sqlite requires a native rebuild; offline queue uses AsyncStorage until then.
+  ensurePlugin('@maplibre/maplibre-react-native');
+
+  return plugins;
+}
+
+/**
+ * app.config.js is the single effective dynamic Expo config.
+ * Values from app.json are imported and merged with Expo's loaded `config`.
+ * HTTP cleartext for LAN Laravel APIs is handled in android/app/src/debug*
+ * AndroidManifest.xml (not in Expo schema).
+ *
+ * @param {{ config: import('expo/config').ExpoConfig }} param0
+ * @returns {import('expo/config').ExpoConfig}
+ */
+module.exports = ({ config }) => {
+  const fromAppJson = appJson.expo ?? {};
+  const base = {
+    ...fromAppJson,
+    ...config,
+  };
+
+  // SDK 56 schema rejects top-level splash / newArchEnabled / android.usesCleartextTraffic.
+  const {
+    splash: _ignoredSplash,
+    newArchEnabled: _ignoredNewArch,
+    ...baseWithoutInvalid
+  } = base;
+
+  const {
+    usesCleartextTraffic: _ignoredCleartext,
+    ...androidWithoutCleartext
+  } = baseWithoutInvalid.android ?? {};
+
+  const plugins = mergeRequiredPlugins(baseWithoutInvalid.plugins ?? []);
+
+  return {
+    ...baseWithoutInvalid,
     scheme: appScheme,
     plugins,
-    splash: {
-      image: './assets/splash-icon.png',
-      resizeMode: 'contain',
-      backgroundColor: '#F7FAF6',
-    },
     ios: {
-      ...appJson.expo.ios,
-      config: {
-        ...appJson.expo.ios?.config,
-        googleMapsApiKey: googleMapsApiKey || undefined,
-      },
+      ...baseWithoutInvalid.ios,
       infoPlist: {
-        ...appJson.expo.ios?.infoPlist,
+        ...baseWithoutInvalid.ios?.infoPlist,
         NSCameraUsageDescription: IOS_CAMERA_PERMISSION,
         NSLocationWhenInUseUsageDescription: IOS_LOCATION_PERMISSION,
         NSPhotoLibraryUsageDescription: IOS_PHOTOS_PERMISSION,
@@ -55,15 +128,9 @@ module.exports = {
       },
     },
     android: {
-      ...appJson.expo.android,
-      package: appJson.expo.android?.package ?? 'com.bhuguard.app',
-      config: {
-        ...appJson.expo.android?.config,
-        googleMaps: {
-          apiKey: googleMapsApiKey || undefined,
-        },
-      },
-      usesCleartextTraffic: usesHttpApi,
+      ...androidWithoutCleartext,
+      package: androidWithoutCleartext.package ?? 'com.bhuguard.app',
+      config: androidWithoutCleartext.config,
       intentFilters: [
         {
           action: 'VIEW',
@@ -71,21 +138,28 @@ module.exports = {
           category: ['BROWSABLE', 'DEFAULT'],
         },
       ],
-      permissions: [
-        ...(appJson.expo.android?.permissions ?? []),
-        'android.permission.INTERNET',
-        'android.permission.ACCESS_NETWORK_STATE',
-        'android.permission.READ_MEDIA_IMAGES',
-        'android.permission.READ_MEDIA_VIDEO',
-        'android.permission.READ_EXTERNAL_STORAGE',
-        'android.permission.USE_BIOMETRIC',
-        'android.permission.USE_FINGERPRINT',
-      ],
+      permissions: Array.from(
+        new Set([
+          ...(androidWithoutCleartext.permissions ?? []),
+          'android.permission.INTERNET',
+          'android.permission.ACCESS_NETWORK_STATE',
+          'android.permission.ACCESS_COARSE_LOCATION',
+          'android.permission.ACCESS_FINE_LOCATION',
+          'android.permission.READ_MEDIA_IMAGES',
+          'android.permission.READ_MEDIA_VIDEO',
+          'android.permission.READ_EXTERNAL_STORAGE',
+          'android.permission.USE_BIOMETRIC',
+          'android.permission.USE_FINGERPRINT',
+        ]),
+      ),
     },
     extra: {
-      ...appJson.expo.extra,
+      ...baseWithoutInvalid.extra,
       apiUrl,
+      appUrl,
       appVariant,
+      useNativeMaps: false,
+      googleMapsApiKeyConfigured: false,
     },
-  },
+  };
 };

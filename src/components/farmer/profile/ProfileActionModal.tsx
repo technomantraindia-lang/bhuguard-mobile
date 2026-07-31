@@ -22,11 +22,12 @@ export function ProfileActionModal({
   variant,
   title,
   message,
-  confirmLabel = 'Confirm',
+  confirmLabel,
   onConfirm,
   onClose,
 }: ProfileActionModalProps) {
   const isConfirm = variant !== 'success';
+  const primaryLabel = confirmLabel ?? (isConfirm ? 'Confirm' : 'Ok');
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -52,12 +53,12 @@ export function ProfileActionModal({
                 style={[styles.primaryButton, variant === 'confirm-delete' && styles.dangerButton]}
                 onPress={onConfirm}
               >
-                <Text style={styles.primaryButtonText}>{confirmLabel}</Text>
+                <Text style={styles.primaryButtonText}>{primaryLabel}</Text>
               </Pressable>
             </View>
           ) : (
-            <Pressable style={styles.primaryButton} onPress={onClose}>
-              <Text style={styles.primaryButtonText}>Done</Text>
+            <Pressable style={styles.successButton} onPress={onClose}>
+              <Text style={styles.primaryButtonText}>{primaryLabel}</Text>
             </Pressable>
           )}
         </View>
@@ -115,12 +116,26 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 8,
   },
-  primaryButton: {
-    flex: 1,
+  successButton: {
+    marginTop: 8,
+    width: '100%',
+    minHeight: 48,
     backgroundColor: dashboardTheme.primaryContainer,
     borderRadius: 8,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryButton: {
+    flex: 1,
+    minHeight: 48,
+    backgroundColor: dashboardTheme.primaryContainer,
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dangerButton: {
     backgroundColor: dashboardTheme.error,
@@ -128,15 +143,18 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: dashboardTheme.onPrimary,
+    color: '#FFFFFF',
   },
   secondaryButton: {
     flex: 1,
+    minHeight: 48,
     borderWidth: 1,
     borderColor: dashboardTheme.outlineVariant,
     borderRadius: 8,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: dashboardTheme.surfaceLowest,
   },
   secondaryButtonText: {

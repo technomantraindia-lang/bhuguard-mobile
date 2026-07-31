@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { BoundaryFlowHeader } from '../../../components/farmer/boundary/BoundaryFlowHeader';
 import { BoundaryLiveMap } from '../../../components/farmer/boundary/BoundaryLiveMap';
 import { useBoundaryCapture } from '../../../context/BoundaryCaptureContext';
+import { useBoundaryMapType } from '../../../hooks/useBoundaryMapType';
 import type { FarmerStackParamList } from '../../../navigation/types';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
 import { openGoogleMaps } from '../../../utils/farmMapHelpers';
@@ -15,6 +16,7 @@ type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmBoundaryPreview'>
 
 export function FarmBoundaryPreviewScreen({ navigation }: Props) {
   const boundary = useBoundaryCapture();
+  const { isSatellite, toggleMapType } = useBoundaryMapType();
   const routes = getBoundaryFlowRoutes(boundary.sessionMode);
   const center =
     boundary.points[0] != null
@@ -33,8 +35,10 @@ export function FarmBoundaryPreviewScreen({ navigation }: Props) {
           showPolygon
           height={360}
           isOutsideTolerance={boundary.isOutsideTolerance}
-          satelliteMode={boundary.satelliteMode}
-          onToggleSatellite={boundary.toggleSatelliteMode}
+          satelliteMode={isSatellite}
+          onToggleSatellite={() => {
+            void toggleMapType();
+          }}
         />
 
         {boundary.isOutsideTolerance ? (
@@ -49,7 +53,7 @@ export function FarmBoundaryPreviewScreen({ navigation }: Props) {
           <Text style={styles.meta}>{boundary.metrics.areaHectare.toFixed(2)} Hectare</Text>
           <Text style={styles.meta}>{boundary.metrics.areaBigha.toFixed(2)} Bigha</Text>
           <Text style={styles.meta}>
-            Sq ft: {Math.round(boundary.metrics.areaAcre * 43560).toLocaleString()}
+            Sq ft: {boundary.metrics.areaSquareFeet.toLocaleString()}
           </Text>
           <Text style={styles.meta}>Perimeter: {boundary.metrics.perimeterMeter} meters</Text>
           <Text style={styles.meta}>Total Points: {boundary.points.length}</Text>

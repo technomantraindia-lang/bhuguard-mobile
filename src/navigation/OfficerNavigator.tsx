@@ -17,10 +17,19 @@ import { FieldOfficerProfileScreen } from '../screens/officer/FieldOfficerProfil
 import { FieldOfficerProfileSectionScreen } from '../screens/officer/FieldOfficerProfileSectionScreen';
 import { FieldOfficerSettingsScreen } from '../screens/officer/FieldOfficerSettingsScreen';
 import { FieldOfficerSoilSamplesScreen } from '../screens/officer/FieldOfficerSoilSamplesScreen';
+import { ArtisanBiocharBatchesScreen } from '../screens/officer/ArtisanBiocharBatchesScreen';
+import { ArtisanDetailScreen } from '../screens/officer/ArtisanDetailScreen';
+import { MyArtisansScreen } from '../screens/officer/MyArtisansScreen';
+import { RegisterArtisanScreen } from '../screens/officer/RegisterArtisanScreen';
 import { FieldOfficerBiocharMixingScreen } from '../screens/officer/FieldOfficerBiocharMixingScreen';
-import { FieldOfficerBiocharProductionListScreen } from '../screens/officer/FieldOfficerBiocharProductionListScreen';
-import { FieldOfficerBiocharProductionScreen } from '../screens/officer/FieldOfficerBiocharProductionScreen';
+import { FieldOfficerBiocharApplicationScreen } from '../screens/officer/FieldOfficerBiocharApplicationScreen';
+import { FieldOfficerBiocharDueOverdueScreen } from '../screens/officer/FieldOfficerBiocharDueOverdueScreen';
+import { FieldOfficerFarmLookupScreen } from '../screens/officer/FieldOfficerFarmLookupScreen';
+import { FieldOfficerFarmActivityStartScreen } from '../screens/officer/FieldOfficerFarmActivityStartScreen';
+import { FieldOfficerCallFarmerScreen } from '../screens/officer/FieldOfficerCallFarmerScreen';
+import { FieldOfficerNavigateScreen } from '../screens/officer/FieldOfficerNavigateScreen';
 import { FieldOfficerCreateVisitScreen } from '../screens/officer/FieldOfficerCreateVisitScreen';
+import { FieldOfficerScheduleScreen } from '../screens/officer/FieldOfficerScheduleScreen';
 import { FieldOfficerInventoryMovementScreen } from '../screens/officer/FieldOfficerInventoryMovementScreen';
 import { FieldOfficerInventoryTasksScreen } from '../screens/officer/FieldOfficerInventoryTasksScreen';
 import { FieldOfficerInventoryTaskDetailScreen } from '../screens/officer/FieldOfficerInventoryTaskDetailScreen';
@@ -45,8 +54,9 @@ import { FarmerBasicDetailsScreen } from '../screens/officer/onboarding/FarmerBa
 import { BiocharAwarenessScreen } from '../screens/officer/onboarding/BiocharAwarenessScreen';
 import { OnboardedFarmerViewScreen } from '../screens/officer/onboarding/OnboardedFarmerViewScreen';
 import { FarmerLandDetailsScreen } from '../screens/officer/onboarding/FarmerLandDetailsScreen';
-import { OnboardingBoundaryPreviewScreen } from '../screens/officer/onboarding/OnboardingBoundaryPreviewScreen';
 import { OnboardingBoundaryStartScreen } from '../screens/officer/onboarding/OnboardingBoundaryStartScreen';
+import OnboardingBoundaryCaptureScreen from '../screens/officer/onboarding/OnboardingBoundaryCaptureScreen';
+import OnboardingBoundaryPreviewScreen from '../screens/officer/onboarding/OnboardingBoundaryPreviewScreen';
 import { FarmerOnboardingReviewScreen } from '../screens/officer/onboarding/FarmerOnboardingReviewScreen';
 import { FarmerOnboardingStartScreen } from '../screens/officer/onboarding/FarmerOnboardingStartScreen';
 import { FarmerOnboardingSuccessScreen } from '../screens/officer/onboarding/FarmerOnboardingSuccessScreen';
@@ -61,6 +71,21 @@ import { OfficerTabNavigator } from './OfficerTabNavigator';
 import type { FieldOfficerStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<FieldOfficerStackParamList>();
+
+function assertScreenComponent(name: string, component: unknown): void {
+  if (component == null) {
+    throw new Error(
+      `[OfficerNavigator] Screen "${name}" has an undefined component. Check that the screen file exports the expected named/default component.`,
+    );
+  }
+}
+
+assertScreenComponent('FieldOfficerProfile', FieldOfficerProfileScreen);
+assertScreenComponent('FieldOfficerProfileSection', FieldOfficerProfileSectionScreen);
+assertScreenComponent('FieldOfficerTabs', OfficerTabNavigator);
+assertScreenComponent('SupportThreads', OfficerSupportThreadsRoute);
+assertScreenComponent('ChatbotSupport', OfficerChatbotSupportRoute);
+assertScreenComponent('SupportChat', SupportChatScreenRoute);
 
 export function OfficerNavigator() {
   return (
@@ -84,14 +109,23 @@ export function OfficerNavigator() {
         <Stack.Screen name="FieldOfficerDownloadsCenter" component={FieldOfficerDownloadsCenterScreen} />
         <Stack.Screen name="FieldOfficerDraftReportEditor" component={VisitReportReviewScreen} />
         <Stack.Screen name="FieldOfficerFeedstockVerification" component={FieldOfficerFeedstockVerificationScreen} />
-        <Stack.Screen name="FieldOfficerBiocharProductionList" component={FieldOfficerBiocharProductionListScreen} />
-        <Stack.Screen name="FieldOfficerBiocharProduction" component={FieldOfficerBiocharProductionScreen} />
         <Stack.Screen name="FieldOfficerBiocharMixing" component={FieldOfficerBiocharMixingScreen} />
+        <Stack.Screen name="FieldOfficerBiocharApplication" component={FieldOfficerBiocharApplicationScreen} />
         <Stack.Screen name="FieldOfficerCreateVisit" component={FieldOfficerCreateVisitScreen} />
+        <Stack.Screen name="FieldOfficerSchedule" component={FieldOfficerScheduleScreen} />
+        <Stack.Screen name="FieldOfficerFarmLookup" component={FieldOfficerFarmLookupScreen} />
+        <Stack.Screen name="FieldOfficerFarmActivityStart" component={FieldOfficerFarmActivityStartScreen} />
+        <Stack.Screen name="FieldOfficerCallFarmer" component={FieldOfficerCallFarmerScreen} />
+        <Stack.Screen name="FieldOfficerNavigate" component={FieldOfficerNavigateScreen} />
         <Stack.Screen name="FieldOfficerInventoryMovement" component={FieldOfficerInventoryMovementScreen} />
         <Stack.Screen name="FieldOfficerInventoryTasks" component={FieldOfficerInventoryTasksScreen} />
         <Stack.Screen name="FieldOfficerInventoryTaskDetail" component={FieldOfficerInventoryTaskDetailScreen} />
         <Stack.Screen name="FieldOfficerCreateRecord" component={FieldOfficerCreateRecordScreen} />
+        <Stack.Screen name="MyArtisans" component={MyArtisansScreen} />
+        <Stack.Screen name="RegisterArtisan" component={RegisterArtisanScreen} />
+        <Stack.Screen name="ArtisanDetail" component={ArtisanDetailScreen} />
+        <Stack.Screen name="ArtisanBiocharBatches" component={ArtisanBiocharBatchesScreen} />
+        <Stack.Screen name="FieldOfficerBiocharDueOverdue" component={FieldOfficerBiocharDueOverdueScreen} />
         <Stack.Screen name="OfficerFullscreenImage" component={OfficerFullscreenImageScreen} />
         <Stack.Screen name="OfficerDocumentViewer" component={OfficerDocumentViewerScreen} />
         <Stack.Screen name="OfficerGpsVerificationMap" component={OfficerGpsVerificationMapScreen} />
@@ -103,6 +137,10 @@ export function OfficerNavigator() {
         <Stack.Screen name="FieldOfficerActivityLogs" component={FieldOfficerActivityLogsScreen} />
         <Stack.Screen name="FieldOfficerMonitoringReports" component={FieldOfficerMonitoringReportsScreen} />
         <Stack.Screen name="FieldOfficerNotifications" component={FieldOfficerNotificationsScreen} />
+        {/*
+          Legacy visit wizard routes — preserved for in-progress visits and deep links.
+          @deprecated Use FarmVerificationActivity from the dashboard Quick Actions instead.
+        */}
         <Stack.Screen
           name="FieldOfficerVisitVerification"
           getComponent={() =>
@@ -120,6 +158,10 @@ export function OfficerNavigator() {
         <Stack.Screen
           name="FarmVerificationChecklist"
           getComponent={() => require('../screens/officer/FarmVerificationChecklistScreen').FarmVerificationChecklistScreen}
+        />
+        <Stack.Screen
+          name="FarmVerificationActivity"
+          getComponent={() => require('../screens/officer/FarmVerificationActivityScreen').FarmVerificationActivityScreen}
         />
         <Stack.Screen
           name="BiocharApplicationVerification"
@@ -145,11 +187,15 @@ export function OfficerNavigator() {
         <Stack.Screen name="FarmerAddress" component={FarmerAddressScreen} />
         <Stack.Screen name="FarmerLandDetails" component={FarmerLandDetailsScreen} />
         <Stack.Screen name="OnboardingBoundaryStart" component={OnboardingBoundaryStartScreen} />
+        <Stack.Screen name="FarmBoundaryMap" component={OnboardingBoundaryCaptureScreen} />
         <Stack.Screen
           name="OnboardingBoundaryCapture"
-          getComponent={() => require('../screens/officer/onboarding/OnboardingBoundaryCaptureScreen').OnboardingBoundaryCaptureScreen}
+          component={OnboardingBoundaryCaptureScreen}
         />
-        <Stack.Screen name="OnboardingBoundaryPreview" component={OnboardingBoundaryPreviewScreen} />
+        <Stack.Screen
+          name="OnboardingBoundaryPreview"
+          component={OnboardingBoundaryPreviewScreen}
+        />
         <Stack.Screen
           name="OnboardingCameraBoundaryStart"
           getComponent={() => require('../screens/farmer/boundary/camera/CameraBoundaryStartScreen').CameraBoundaryStartScreen}
@@ -162,7 +208,10 @@ export function OfficerNavigator() {
           name="OnboardingCameraBoundaryPoints"
           getComponent={() => require('../screens/farmer/boundary/camera/CameraBoundaryPointsScreen').CameraBoundaryPointsScreen}
         />
-        <Stack.Screen name="OnboardingCameraBoundaryPreview" component={OnboardingBoundaryPreviewScreen} />
+        <Stack.Screen
+          name="OnboardingCameraBoundaryPreview"
+          component={OnboardingBoundaryPreviewScreen}
+        />
         <Stack.Screen
           name="FarmerGpsCapture"
           getComponent={() => require('../screens/officer/onboarding/FarmerGpsCaptureScreen').FarmerGpsCaptureScreen}

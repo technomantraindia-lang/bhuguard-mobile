@@ -12,7 +12,6 @@ import { OfficerVisitsHeader } from '../../components/officer/visits/OfficerVisi
 import {
   OfficerVisitCards,
   OfficerVisitsMapCard,
-  OfficerVisitsQuickActions,
   OfficerVisitsRecentActivity,
   OfficerVisitsSearchFilter,
   OfficerVisitsSubtitle,
@@ -109,19 +108,6 @@ export function FieldOfficerAssignedVisitsScreen() {
           onFilterChange={setFilter}
         />
 
-        <OfficerVisitCards visits={filteredVisits} onOpenVisit={openVisit} onNavigate={openNavigate} />
-
-        <OfficerVisitsQuickActions
-          onGpsCheckIn={() => requireAssignmentId((id) => navigation.navigate('VisitCheckIn', { assignmentId: id }))}
-          onFeedstockVerification={() => navigation.navigate('FieldOfficerFeedstockVerification')}
-          onBiocharProduction={() => navigation.navigate('FieldOfficerBiocharProductionList')}
-          onInventoryMovement={() => navigation.navigate('FieldOfficerInventoryMovement')}
-          onUploadEvidence={() =>
-            requireAssignmentId((id) => navigation.navigate('VisitEvidenceUpload', { assignmentId: id }))
-          }
-          onReportsQueue={() => navigation.navigate('FieldOfficerVerificationReports')}
-        />
-
         <OfficerVisitsRecentActivity
           activities={visitsData.recentActivities}
           onActivityPress={(activity) => {
@@ -140,13 +126,14 @@ export function FieldOfficerAssignedVisitsScreen() {
               return;
             }
 
-            navigation.navigate('FieldOfficerVerificationReports');
+            requireAssignmentId((id) => navigation.navigate('FieldOfficerAssignmentDetail', { assignmentId: id }));
           }}
         />
         <OfficerVisitsMapCard
           summary={visitsData.summary}
           onOpenFullMap={() => navigation.navigate('Map')}
         />
+        <OfficerVisitCards visits={filteredVisits} onOpenVisit={openVisit} onNavigate={openNavigate} />
       </ScrollView>
     </SafeAreaView>
   );

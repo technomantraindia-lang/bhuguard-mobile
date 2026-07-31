@@ -3,9 +3,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { getApiErrorMessage } from '../api/authApi';
 import { getFarmerBankDetails, getFarmerProfile, saveFarmerBankDetails, updateFarmerProfile } from '../api/farmerApi';
 import { genderLabel } from '../constants/farmerGenderOptions';
+import { useTranslation } from '../i18n/I18nContext';
 import { getAuthUser } from '../storage/authStorage';
 import { resolveMediaUrl } from '../utils/mediaUrl';
 import { pickString, type ApiRecord } from '../utils/apiHelpers';
+import { normalizeAppLanguage } from '../utils/preferredLanguage';
 
 export interface FarmerProfileViewModel {
   fullName: string;
@@ -110,6 +112,7 @@ function buildDefaultProfile(authName?: string, authMobile?: string): FarmerProf
 }
 
 export function useFarmerProfileForm() {
+  const { setLanguage } = useTranslation();
   const [profile, setProfile] = useState<FarmerProfileViewModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -138,6 +141,11 @@ export function useFarmerProfileForm() {
       const genderValue = pickString(farmerProfile, 'gender') !== '-' ? pickString(farmerProfile, 'gender') : '';
       const aadhaarRaw = pickString(farmerProfile, 'aadhaar_number', 'aadhaar_masked', 'aadhaar');
       const panRaw = pickString(farmerProfile, 'pan_number', 'pan_masked', 'pan');
+      const fromBackend = normalizeAppLanguage(pickString(farmerProfile, 'preferred_language'));
+
+      if (fromBackend) {
+        void setLanguage(fromBackend);
+      }
 
       setProfile({
         ...defaults,
@@ -152,10 +160,7 @@ export function useFarmerProfileForm() {
         state: pickString(farmerProfile, 'state') !== '-' ? pickString(farmerProfile, 'state') : defaults.state,
         pincode: pickString(farmerProfile, 'pincode') !== '-' ? pickString(farmerProfile, 'pincode') : defaults.pincode,
         fullAddress: pickString(farmerProfile, 'address') !== '-' ? pickString(farmerProfile, 'address') : defaults.fullAddress,
-        preferredLanguage:
-          pickString(farmerProfile, 'preferred_language') !== '-'
-            ? pickString(farmerProfile, 'preferred_language')
-            : defaults.preferredLanguage,
+        preferredLanguage: fromBackend ?? defaults.preferredLanguage,
         genderValue,
         gender: genderValue ? genderLabel(genderValue) : emptyField(),
         aadhaarMasked: aadhaarRaw !== '-' ? maskAadhaar(aadhaarRaw) : emptyField(),
@@ -184,7 +189,7 @@ export function useFarmerProfileForm() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setLanguage]);
 
   useEffect(() => {
     void load();

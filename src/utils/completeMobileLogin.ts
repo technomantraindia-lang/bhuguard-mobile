@@ -63,7 +63,7 @@ export async function completeMobileLogin({
   }
 
   if (resolvedRole === 'artisan' && !user.artisan_profile?.id) {
-    return { ok: false, code: 'unsupported_account', message: 'Artisan profile is not linked to this account.' };
+    return { ok: false, code: 'unsupported_account', message: 'Artisan Pro profile is not linked to this account.' };
   }
 
   const dashboardRoute = getDashboardRoute(resolvedRole);
@@ -73,6 +73,23 @@ export async function completeMobileLogin({
   }
 
   await saveAuthSession(token, user, resolvedRole);
+
+  // Never block or fail login if offline sync / native modules are unavailable.
+  if (resolvedRole === 'artisan' && user.artisan_profile?.id) {
+    const artisanId = user.artisan_profile.id;
+    void import('../services/biocharProductionSyncService')
+      .then((sync) => {
+        try {
+          sync.startBiocharProductionSyncListeners(artisanId);
+          void sync.syncPendingBiocharProductions(artisanId);
+        } catch {
+          // Ignore NetInfo/SQLite bootstrap failures on older native builds.
+        }
+      })
+      .catch(() => {
+        // Ignore dynamic import failures.
+      });
+  }
 
   return { ok: true, dashboardRoute, resolvedRole };
 }

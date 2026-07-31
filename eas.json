@@ -1,4 +1,4 @@
-{
+﻿{
   "cli": {
     "version": ">= 12.0.0",
     "appVersionSource": "remote"
@@ -9,12 +9,19 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_APP_VARIANT": "development",
-        "EXPO_PUBLIC_API_URL": "http://192.168.0.100:8000/api",
-        "EXPO_PUBLIC_DEV_LOCAL_API_URL": "http://192.168.0.100:8000/api"
+        "EXPO_PUBLIC_APP_URL": "https://erp.bhuguard.com",
+        "EXPO_PUBLIC_API_URL": "https://erp.bhuguard.com/api",
+        "EXPO_PUBLIC_DEV_LOCAL_API_URL": "https://erp.bhuguard.com/api",
+        "EXPO_PUBLIC_USE_NATIVE_MAPS": "true",
+        "EXPO_PUBLIC_MAPTILER_API_KEY": "GYRP4k1halqDjv0SUQev",
+        "EXPO_PUBLIC_MAPTILER_HYBRID_STYLE_ID": "hybrid-v4",
+        "EXPO_PUBLIC_MAPTILER_STREET_STYLE_ID": "streets-v4",
+        "EXPO_PUBLIC_MAPTILER_STYLE_ID": "hybrid-v4"
       }
     },
     "preview": {
       "distribution": "internal",
+      "environment": "preview",
       "ios": {
         "simulator": false
       },
@@ -23,7 +30,12 @@
       },
       "env": {
         "EXPO_PUBLIC_APP_VARIANT": "demo",
-        "EXPO_PUBLIC_API_URL": "https://demo.bhuguard.com/api"
+        "EXPO_PUBLIC_APP_URL": "https://erp.bhuguard.com",
+        "EXPO_PUBLIC_API_URL": "https://erp.bhuguard.com/api",
+        "EXPO_PUBLIC_MAPTILER_API_KEY": "GYRP4k1halqDjv0SUQev",
+        "EXPO_PUBLIC_MAPTILER_HYBRID_STYLE_ID": "hybrid-v4",
+        "EXPO_PUBLIC_MAPTILER_STREET_STYLE_ID": "streets-v4",
+        "EXPO_PUBLIC_MAPTILER_STYLE_ID": "hybrid-v4"
       }
     },
     "demo": {
@@ -36,7 +48,12 @@
       },
       "env": {
         "EXPO_PUBLIC_APP_VARIANT": "demo",
-        "EXPO_PUBLIC_API_URL": "https://demo.bhuguard.com/api"
+        "EXPO_PUBLIC_APP_URL": "https://erp.bhuguard.com",
+        "EXPO_PUBLIC_API_URL": "https://erp.bhuguard.com/api",
+        "EXPO_PUBLIC_MAPTILER_API_KEY": "GYRP4k1halqDjv0SUQev",
+        "EXPO_PUBLIC_MAPTILER_HYBRID_STYLE_ID": "hybrid-v4",
+        "EXPO_PUBLIC_MAPTILER_STREET_STYLE_ID": "streets-v4",
+        "EXPO_PUBLIC_MAPTILER_STYLE_ID": "hybrid-v4"
       }
     },
     "client-apk": {
@@ -52,7 +69,12 @@
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_APP_VARIANT": "production",
-        "EXPO_PUBLIC_API_URL": "https://demo.bhuguard.com/api"
+        "EXPO_PUBLIC_APP_URL": "https://erp.bhuguard.com",
+        "EXPO_PUBLIC_API_URL": "https://erp.bhuguard.com/api",
+        "EXPO_PUBLIC_MAPTILER_API_KEY": "GYRP4k1halqDjv0SUQev",
+        "EXPO_PUBLIC_MAPTILER_HYBRID_STYLE_ID": "hybrid-v4",
+        "EXPO_PUBLIC_MAPTILER_STREET_STYLE_ID": "streets-v4",
+        "EXPO_PUBLIC_MAPTILER_STYLE_ID": "hybrid-v4"
       },
       "ios": {
         "simulator": false

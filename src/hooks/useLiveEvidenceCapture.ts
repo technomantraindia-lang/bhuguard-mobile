@@ -80,6 +80,7 @@ export function useLiveEvidenceCapture(options?: UseLiveEvidenceCaptureOptions) 
     capturing,
     error,
     setError,
+    setEvidence,
     captureEvidence,
     retakeEvidence,
     pickGalleryEvidence,

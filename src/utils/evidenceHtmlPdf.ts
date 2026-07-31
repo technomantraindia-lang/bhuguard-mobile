@@ -281,6 +281,13 @@ export async function exportEvidenceHtmlPdf(
   role: EvidenceDownloadRole,
   evidence: ApiRecord,
 ): Promise<EvidenceHtmlPdfResult> {
+  if (role === 'farmer') {
+    return {
+      success: false,
+      message: 'Farmers cannot download evidence PDF exports.',
+    };
+  }
+
   const evidenceId = evidence.id as number | string;
   const fileName = evidencePdfFileName(evidence);
 

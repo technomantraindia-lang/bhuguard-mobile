@@ -1,3 +1,4 @@
+import type { AssignedFarmSearchRecord, AssignedLocationsPayload } from '../types/assignedLocations';
 import type { ApiSuccessResponse } from '../types/auth';
 import { fetchApiData, type ApiRecord } from '../utils/apiHelpers';
 
@@ -26,20 +27,116 @@ export async function updateFieldOfficerProfileMpin(payload: {
   return putApiData('/field-officer/profile/mpin', payload);
 }
 
-export async function getFieldOfficerDashboard() {
-  return fetchApiData<{ dashboard: Record<string, unknown> }>('/field-officer/dashboard');
+export async function getFieldOfficerDashboard(from?: string, to?: string) {
+  return fetchApiData<{ dashboard: Record<string, unknown> }>('/field-officer/dashboard', {
+    from,
+    to,
+  });
+}
+
+export async function getVisitCalendar(params?: {
+  from?: string;
+  to?: string;
+  status?: 'upcoming' | 'completed' | 'cancelled' | 'all';
+}) {
+  return fetchApiData<{ visits: ApiRecord[] }>('/field-officer/visits/calendar', params);
 }
 
 export async function getVisitAssignments() {
   return fetchApiData('/field-officer/assignments');
 }
 
+export async function getFieldOfficerAllocatedLocations() {
+  return fetchApiData<AssignedLocationsPayload>('/field-officer/allocated-locations');
+}
+
+export async function searchFieldOfficerFarms(params?: Record<string, string | number | undefined>) {
+  const response = await apiClient.get<{
+    success: boolean;
+    message: string;
+    data: AssignedFarmSearchRecord[];
+    pagination: { page: number; limit: number; total: number };
+  }>('/field-officer/farms/search', { params });
+
+  return response.data;
+}
+
+export async function lookupFieldOfficerFarm(farmId: string | number) {
+  return postApiData<{ farm: AssignedFarmSearchRecord }>('/field-officer/farm/lookup', {
+    farm_id: String(farmId),
+  });
+}
+
 export async function getFieldOfficerFarmers() {
   return fetchApiData('/field-officer/farmers');
 }
 
+export async function getFieldOfficerBiocharActivityDues(status: 'due' | 'overdue' | 'all' = 'all') {
+  return fetchApiData<{
+    counts: { due: number; overdue: number };
+    items: ApiRecord[];
+  }>('/field-officer/biochar-activity-dues', { status });
+}
+
+export async function getFieldOfficerFarmActivityDues(
+  status: 'due' | 'overdue' | 'due_today' | 'due_soon' | 'in_progress' | 'all' = 'all',
+) {
+  return fetchApiData<{
+    items: ApiRecord[];
+    counts: {
+      overdue: number;
+      due_today: number;
+      due_soon: number;
+      in_progress: number;
+      completed_today: number;
+      total_actionable: number;
+    };
+    cycle_days: number;
+    due_soon_days: number;
+  }>('/field-officer/farm-activities/dues', { status });
+}
+
+export async function getFieldOfficerFarmActivityHistory(farmId: number | string) {
+  return fetchApiData<{
+    summary: ApiRecord;
+    history: ApiRecord[];
+  }>(`/field-officer/farms/${farmId}/farm-activities`);
+}
+
 export async function createFieldOfficerVisit(payload: ApiRecord) {
   return postApiData('/field-officer/visits', payload);
+}
+
+export async function updateVisit(assignmentId: number | string, payload: ApiRecord) {
+  return putApiData(`/field-officer/visits/${assignmentId}`, payload);
+}
+
+export async function rescheduleVisit(assignmentId: number | string, payload: ApiRecord) {
+  return postApiData(`/field-officer/visits/${assignmentId}/reschedule`, payload);
+}
+
+export async function cancelVisit(assignmentId: number | string, payload?: ApiRecord) {
+  return postApiData(`/field-officer/visits/${assignmentId}/cancel`, payload ?? {});
+}
+
+export async function getBiocharReports(params?: Record<string, string | number | undefined>) {
+  return fetchApiData<{ reports: ApiRecord[] }>('/field-officer/biochar-reports', params);
+}
+
+export async function getBiocharReport(reportId: number | string) {
+  return fetchApiData<{ report: ApiRecord }>(`/field-officer/biochar-reports/${reportId}`);
+}
+
+export async function downloadBiocharReport(
+  reportId: number | string,
+  format: 'pdf' | 'csv' = 'pdf',
+): Promise<ArrayBuffer> {
+  const response = await apiClient.get<ArrayBuffer>(`/field-officer/biochar-reports/${reportId}/download`, {
+    params: { format },
+    responseType: 'arraybuffer',
+  });
+
+  return response.data;
 }
 
 export async function trackFieldOfficerActivity(payload: ApiRecord) {
@@ -181,6 +278,20 @@ export async function getFieldOfficerFarmerDetail(id: number | string) {
   return fetchApiData<{ farmer: ApiRecord }>(`/field-officer/farmers/${id}`);
 }
 
+export type FieldOfficerFarmerFarmOption = {
+  id: number;
+  farm_code?: string | null;
+  village?: string | null;
+  location_name?: string | null;
+  mapping_status?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
+export async function getFieldOfficerFarmerFarms(farmerId: number | string) {
+  return fetchApiData<FieldOfficerFarmerFarmOption[]>(`/field-officer/farmers/${farmerId}/farms`);
+}
+
 export async function getAssignmentChecklist(id: number | string) {
   return fetchApiData(`/field-officer/assignments/${id}/checklist`);
 }
@@ -300,8 +411,19 @@ export async function getOfficerFarmerBiocharMixingRecords(farmerId: number | st
   return fetchApiData(`/field-officer/farmers/${farmerId}/biochar-mixing`);
 }
 
+export async function getOfficerFarmerBiocharMixingEligibleBatches(
+  farmerId: number | string,
+  params: { farm_id?: number | string; farm_code?: string },
+) {
+  return fetchApiData(`/field-officer/farmers/${farmerId}/biochar-mixing/eligible-batches`, params);
+}
+
 export async function createOfficerFarmerBiocharMixing(farmerId: number | string, payload: FormData) {
   return postApiData(`/field-officer/farmers/${farmerId}/biochar-mixing`, payload);
+}
+
+export async function completeOfficerFarmerBiocharMixing(farmerId: number | string, payload: FormData) {
+  return postApiData(`/field-officer/farmers/${farmerId}/biochar-mixing/complete`, payload);
 }
 
 export async function getOfficerBiocharMixing(id: number | string) {
@@ -316,8 +438,11 @@ export async function submitOfficerBiocharMixing(id: number | string) {
   return postApiData(`/field-officer/biochar-mixing/${id}/submit`, {});
 }
 
-export async function getBiocharInventoryOptions() {
-  return fetchApiData('/field-officer/biochar/inventory-movements/options');
+export async function getBiocharInventoryOptions(params?: {
+  farm_id?: number | string;
+  farmer_id?: number | string;
+}) {
+  return fetchApiData('/field-officer/biochar/inventory-movements/options', params);
 }
 
 export async function getBiocharInventoryMovementPreviewCode() {
@@ -326,6 +451,10 @@ export async function getBiocharInventoryMovementPreviewCode() {
 
 export async function createOfficerInventoryMovement(payload: FormData) {
   return postApiData('/field-officer/biochar/inventory-movements', payload);
+}
+
+export async function createOfficerInventoryUtilization(payload: FormData) {
+  return postApiData('/field-officer/biochar/inventory-utilization', payload);
 }
 
 export async function getBiocharApplications(farmerId?: number) {
@@ -445,6 +574,24 @@ export async function createOfficerBiocharApplication(payload: ApiRecord | FormD
   return postApiData('/field-officer/biochar/applications', payload);
 }
 
+export async function searchOfficerBiocharApplicationFarms(query: string) {
+  return fetchApiData('/field-officer/biochar-applications/search', { q: query });
+}
+
+export async function getOfficerBiocharApplicationEligibleBatches(
+  farmId: number | string,
+  mixingId?: number | string,
+) {
+  return fetchApiData('/field-officer/biochar-applications/eligible-batches', {
+    farm_id: farmId,
+    mixing_id: mixingId,
+  });
+}
+
+export async function submitOfficerBiocharApplication(payload: FormData) {
+  return postApiData('/field-officer/biochar-applications', payload);
+}
+
 export async function createOfficerBiocharQualityTest(
   batchId: number | string,
   payload: ApiRecord | FormData,
@@ -452,8 +599,40 @@ export async function createOfficerBiocharQualityTest(
   return postApiData(`/field-officer/biochar/batches/${batchId}/quality-tests`, payload);
 }
 
-export async function createOfficerArtisan(payload: ApiRecord) {
-  return postApiData('/field-officer/artisans', payload);
+export async function getOfficerArtisans(params?: {
+  search?: string;
+  status?: 'pending_approval' | 'active' | 'rejected' | 'inactive';
+  per_page?: number;
+}) {
+  return fetchApiData<{ artisans: ApiRecord[]; meta?: ApiRecord }>('/field-officer/artisans', params);
+}
+
+export async function getOfficerArtisan(id: number | string) {
+  return fetchApiData<{ artisan: ApiRecord }>(`/field-officer/artisans/${id}`);
+}
+
+export async function createOfficerArtisan(payload: FormData | ApiRecord) {
+  return postApiData<{ artisan: ApiRecord }>('/field-officer/artisans', payload);
+}
+
+export async function updateOfficerArtisanWorkingVillages(
+  artisanId: number | string,
+  payload: { working_village_ids: number[]; working_taluka_id?: number },
+) {
+  return putApiData<{ artisan: ApiRecord }>(`/field-officer/artisans/${artisanId}/working-villages`, payload);
+}
+
+export async function getOfficerArtisanBiocharBatches(params?: {
+  from_date?: string;
+  to_date?: string;
+  from?: string;
+  to?: string;
+  search?: string;
+  /** @deprecated Status filter removed from FO Artisan Biochar Batches UI. Optional for older callers. */
+  status?: string;
+  statuses?: string[];
+}) {
+  return fetchApiData<{ batches: ApiRecord[]; meta?: ApiRecord }>('/field-officer/artisan-biochar-batches', params);
 }
 
 export async function createOfficerRegenerativePractice(payload: ApiRecord | FormData) {
@@ -534,6 +713,26 @@ export async function approveVisitVerification(assignmentId: number | string, pa
   return response.data.data?.visit ?? response.data.data;
 }
 
+export async function sendOnboardingAgreementOtp(mobile: string) {
+  return postApiData<{
+    mobile: string;
+    masked_mobile: string;
+    message: string;
+    resend_after_seconds: number;
+    dev_otp?: string | null;
+  }>('/field-officer/onboard-farmer/agreement-otp/send', { mobile });
+}
+
+export async function verifyOnboardingAgreementOtp(mobile: string, otp: string) {
+  return postApiData<{
+    verified: boolean;
+    agreement_verification_token: string;
+    verified_mobile: string;
+    masked_mobile: string;
+    verified_at: string;
+  }>('/field-officer/onboard-farmer/agreement-otp/verify', { mobile, otp });
+}
+
 export async function saveOnboardingBasicDetails(payload: ApiRecord) {
   return postApiData('/field-officer/onboard-farmer/basic-details', payload);
 }
@@ -576,6 +775,58 @@ export async function recordFarmerBiocharExplanation(farmerId: number | string, 
 
 export async function getFarmerBiocharActivitiesForOfficer(farmerId: number | string) {
   return fetchApiData(`/field-officer/farmers/${farmerId}/biochar-activities`);
+}
+
+export async function startFarmVerificationActivity(payload: ApiRecord) {
+  return postApiData('/field-officer/farm-verification-activities/start', payload);
+}
+
+export async function checkInFarmVerificationActivity(activityId: number | string, payload: ApiRecord) {
+  return postApiData(`/field-officer/farm-verification-activities/${activityId}/check-in`, payload);
+}
+
+export async function validateFarmVerificationFarmId(activityId: number | string, farmCode: string) {
+  return postApiData(`/field-officer/farm-verification-activities/${activityId}/validate-farm-id`, { farm_code: farmCode });
+}
+
+export async function verifyFarmVerificationActivity(activityId: number | string, formData: FormData) {
+  return postApiData(`/field-officer/farm-verification-activities/${activityId}/verify-farm`, formData);
+}
+
+export async function uploadFarmVerificationEvidence(activityId: number | string, formData: FormData) {
+  return postApiData(`/field-officer/farm-verification-activities/${activityId}/evidence`, formData);
+}
+
+export async function submitFarmVerificationActivity(activityId: number | string) {
+  return postApiData(`/field-officer/farm-verification-activities/${activityId}/submit`, {});
+}
+
+export async function getFarmVerificationActivity(activityId: number | string) {
+  return fetchApiData(`/field-officer/farm-verification-activities/${activityId}`);
+}
+
+export async function startBiocharFarmActivity(payload: ApiRecord) {
+  return postApiData('/field-officer/biochar-farm-activities/start', payload);
+}
+
+export async function checkInBiocharFarmActivity(activityId: number | string, payload: ApiRecord) {
+  return postApiData(`/field-officer/biochar-farm-activities/${activityId}/check-in`, payload);
+}
+
+export async function verifyBiocharFarmActivity(activityId: number | string, formData: FormData) {
+  return postApiData(`/field-officer/biochar-farm-activities/${activityId}/verify-farm`, formData);
+}
+
+export async function uploadBiocharFarmActivityEvidence(activityId: number | string, formData: FormData) {
+  return postApiData(`/field-officer/biochar-farm-activities/${activityId}/evidence`, formData);
+}
+
+export async function submitBiocharFarmActivity(activityId: number | string) {
+  return postApiData(`/field-officer/biochar-farm-activities/${activityId}/submit`, {});
+}
+
+export async function getBiocharFarmActivity(activityId: number | string) {
+  return fetchApiData(`/field-officer/biochar-farm-activities/${activityId}`);
 }
 
 /** Task-spec aliases */

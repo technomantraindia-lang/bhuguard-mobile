@@ -1,7 +1,9 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
 import { PROFILE_LANGUAGE_OPTIONS } from '../../../constants/farmerProfileDocuments';
+import { useTranslation } from '../../../i18n/I18nContext';
+import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
+import { normalizeAppLanguage } from '../../../utils/preferredLanguage';
 
 interface ProfileLanguageSheetProps {
   visible: boolean;
@@ -11,16 +13,19 @@ interface ProfileLanguageSheetProps {
 }
 
 export function ProfileLanguageSheet({ visible, selectedLanguage, onSelect, onClose }: ProfileLanguageSheetProps) {
+  const { t } = useTranslation();
+  const selected = normalizeAppLanguage(selectedLanguage) ?? selectedLanguage;
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.sheet}>
-          <Text style={styles.title}>Select Language</Text>
+          <Text style={styles.title}>{t('farmer.profile.selectLanguage')}</Text>
 
           {PROFILE_LANGUAGE_OPTIONS.map((option) => (
             <Pressable
               key={option.value}
-              style={[styles.option, selectedLanguage === option.value && styles.optionSelected]}
+              style={[styles.option, selected === option.value && styles.optionSelected]}
               onPress={() => {
                 onSelect(option.value);
                 onClose();
@@ -31,7 +36,7 @@ export function ProfileLanguageSheet({ visible, selectedLanguage, onSelect, onCl
           ))}
 
           <Pressable style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeText}>Close</Text>
+            <Text style={styles.closeText}>{t('common.close')}</Text>
           </Pressable>
         </View>
       </View>

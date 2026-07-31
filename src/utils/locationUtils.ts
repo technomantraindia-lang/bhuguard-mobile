@@ -241,18 +241,19 @@ export async function getCurrentLocation(): Promise<GpsLocationCapture> {
   };
 }
 
-export async function getCurrentLocationDetailed(): Promise<CurrentLocationResult> {
-  const permission = await requestLocationPermissionDetailed();
+export interface CurrentLocationOptions {
+  timeoutMs?: number;
+  maxAttempts?: number;
+  targetAccuracyM?: number;
+}
 
-  if (!permission.granted) {
-    throw new Error('Location permission is required for GPS check-in.');
-  }
+const GPS_TIMEOUT_MESSAGE = 'Unable to capture location. Please move to an open area and try again.';
 
-  const servicesEnabled = await isLocationServiceEnabled();
-
-  if (!servicesEnabled) {
-    throw new Error('Please enable location services to continue.');
-  }
+async function captureCurrentLocationDetailed(
+  options: CurrentLocationOptions = {},
+): Promise<CurrentLocationResult> {
+  const maxAttempts = options.maxAttempts ?? 4;
+  const targetAccuracyM = options.targetAccuracyM ?? 25;
 
   let best: CurrentLocationResult | null = null;
 
@@ -266,9 +267,9 @@ export async function getCurrentLocationDetailed(): Promise<CurrentLocationResul
     // Ignore last-known failures.
   }
 
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const position = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Highest,
+      accuracy: Location.Accuracy.High,
       mayShowUserSettingsDialog: true,
     });
 
@@ -282,16 +283,51 @@ export async function getCurrentLocationDetailed(): Promise<CurrentLocationResul
       best = mapped;
     }
 
-    if (mapped.accuracyM <= 25) {
+    if (mapped.accuracyM <= targetAccuracyM) {
       return mapped;
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await new Promise((resolve) => setTimeout(resolve, 800));
   }
 
   if (!best) {
-    throw new Error('Unable to capture GPS location. Move to open sky and try again.');
+    throw new Error(GPS_TIMEOUT_MESSAGE);
   }
 
   return best;
+}
+
+export async function getCurrentLocationDetailed(
+  options: CurrentLocationOptions = {},
+): Promise<CurrentLocationResult> {
+  const permission = await requestLocationPermissionDetailed();
+
+  if (!permission.granted) {
+    throw new Error('Location permission is required for GPS check-in.');
+  }
+
+  const servicesEnabled = await isLocationServiceEnabled();
+
+  if (!servicesEnabled) {
+    throw new Error('Please enable location services to continue.');
+  }
+
+  const timeoutMs = options.timeoutMs ?? 25000;
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      captureCurrentLocationDetailed(options),
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(GPS_TIMEOUT_MESSAGE));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
 }

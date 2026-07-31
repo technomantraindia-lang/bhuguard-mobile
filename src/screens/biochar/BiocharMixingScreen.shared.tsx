@@ -1,4 +1,5 @@
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useContext, useMemo, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,11 +13,13 @@ import {
   BiocharMixingLocationSection,
   BiocharMixingNotesSection,
 } from '../../components/biochar/BiocharMixingSections';
+import { LiveWorkCheckinCard } from '../../components/artisan/LiveWorkCheckinCard';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { AppButton } from '../../components/AppButton';
-import { BIOCHAR_MIXING_EVIDENCE_SLOTS, type BiocharMixingEvidenceKey } from '../../constants/biocharMixing';
+import { BIOCHAR_MIXING_EVIDENCE_SLOTS } from '../../constants/biocharMixing';
+import { ArtisanWorkSessionContext } from '../../context/ArtisanWorkSessionContext';
 import { useBiocharMixingForm } from '../../hooks/useBiocharMixingForm';
 import { colors } from '../../theme/colors';
 
@@ -48,25 +51,57 @@ export function createBiocharMixingScreen<T extends MixingRouteParams>({
     const navigation = useNavigation<NativeStackNavigationProp<Record<string, object | undefined>>>();
     const route = useRoute<RouteProp<Record<string, T | undefined>, string>>();
     const params = route.params ?? ({} as T);
+    const farmId = Number(params.farmId ?? 0) > 0 ? Number(params.farmId) : undefined;
+
+    const selectionPrefill = useMemo(
+      () => ({
+        farmerName: params.farmerName,
+        farmerCode: params.farmerCode,
+        farmCode: params.farmCode,
+        farmLabel: params.farmLabel,
+        village: params.village,
+        taluka: params.taluka,
+        district: params.district,
+        state: params.state,
+      }),
+      [
+        params.district,
+        params.farmCode,
+        params.farmLabel,
+        params.farmerCode,
+        params.farmerName,
+        params.state,
+        params.taluka,
+        params.village,
+      ],
+    );
 
     const form = useBiocharMixingForm({
       apiMode,
       recordId: params.recordId,
       farmerId: params.farmerId,
-      farmId: params.farmId,
-      selectionPrefill:
-        apiMode === 'artisan'
-          ? {
-              farmerName: params.farmerName,
-              village: params.village,
-              taluka: params.taluka,
-              district: params.district,
-              state: params.state,
-            }
-          : undefined,
+      farmId,
+      selectionPrefill,
     });
 
+    const workSession = useContext(ArtisanWorkSessionContext);
+    const [submitSuccess, setSubmitSuccess] = useState<{ mixingCode: string } | null>(null);
+
     const readOnly = !form.canEdit;
+    const isSubmitted = Boolean(form.recordId && !form.canEdit);
+    const isArtisanMode = apiMode === 'artisan';
+    const showOfficerContinue =
+      !isArtisanMode &&
+      (!isSubmitted || (apiMode === 'officer' && form.biocharApplicationRouteReady));
+
+    if (!farmId && !params.recordId) {
+      return (
+        <SafeAreaView style={styles.safe}>
+          <ScreenHeader title={title} onBackPress={() => navigation.goBack()} />
+          <ErrorState message="Farm context is missing. Please select a farm before starting Biochar Mixing." />
+        </SafeAreaView>
+      );
+    }
 
     if (form.loading) {
       return (
@@ -76,7 +111,7 @@ export function createBiocharMixingScreen<T extends MixingRouteParams>({
       );
     }
 
-    if (form.error && params.recordId) {
+    if (form.error && params.recordId && !form.recordId) {
       return (
         <SafeAreaView style={styles.safe}>
           <ErrorState message={form.error} onRetry={form.reload} />
@@ -93,41 +128,143 @@ export function createBiocharMixingScreen<T extends MixingRouteParams>({
       navigation.navigate('FullscreenImage', { uri, title: 'Biochar Mixing Evidence' });
     };
 
-    const handleSaveDraft = async () => {
-      const ok = await form.saveDraft();
-      if (ok) {
-        Alert.alert('Draft saved', 'Biochar Mixing saved as draft.');
+    const navigateToApplication = (result: {
+      mixingId: number;
+      farmId: number | null;
+      farmerId: number | null;
+      farmCode: string;
+      farmerCode: string;
+      farmerName: string;
+      selectedBatchIds: number[];
+      village?: string;
+      taluka?: string;
+      district?: string;
+      state?: string;
+    }) => {
+      if (!result.farmId || !result.farmerId) {
+        Alert.alert('Submitted', 'Biochar Mixing completed, but Farm/Farmer context is incomplete for Application.');
+        navigation.goBack();
+        return;
       }
+
+      const payload = {
+        mixingId: result.mixingId,
+        farmId: result.farmId,
+        farmerId: result.farmerId,
+        farmCode: result.farmCode,
+        farmerCode: result.farmerCode,
+        farmerName: result.farmerName,
+        selectedBatchIds: result.selectedBatchIds,
+        village: result.village,
+        taluka: result.taluka,
+        district: result.district,
+        state: result.state,
+      };
+
+      navigation.replace('FieldOfficerBiocharApplication', payload);
     };
 
-    const handleSubmit = async () => {
-      const code = await form.submit();
-      if (code) {
-        Alert.alert('Submitted', `Biochar Mixing ${code} submitted successfully.`, [
+    const handleArtisanSubmit = async () => {
+      if (workSession && !workSession.ensureCheckedInOrPrompt()) {
+        return;
+      }
+
+      const result = await form.submit();
+      if (!result) {
+        return;
+      }
+
+      setSubmitSuccess({ mixingCode: result.mixingCode });
+    };
+
+    const handleContinue = async () => {
+      if (isSubmitted && form.biocharApplicationRouteReady && form.recordId) {
+        navigateToApplication({
+          mixingId: form.recordId,
+          farmId: form.resolvedFarmId,
+          farmerId: form.resolvedFarmerId ?? params.farmerId ?? null,
+          farmCode: form.farmCode,
+          farmerCode: form.farmerCode,
+          farmerName: form.farmerName,
+          selectedBatchIds: form.selectedBatchIds,
+          village: form.villageName,
+          taluka: form.talukaName,
+          district: form.districtName,
+          state: form.stateName,
+        });
+        return;
+      }
+
+      if (isSubmitted && form.hasBiocharApplication) {
+        Alert.alert(
+          'Application exists',
+          'Biochar Application already exists for this Mixing record.',
+          [{ text: 'OK' }],
+        );
+        return;
+      }
+
+      const result = await form.submit();
+      if (!result) {
+        return;
+      }
+
+      if (apiMode === 'farmer') {
+        Alert.alert('Submitted', `Biochar Mixing ${result.mixingCode} completed successfully.`, [
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
+        return;
       }
+
+      navigateToApplication(result);
     };
+
+    const goToDashboard = () => {
+      if (isArtisanMode) {
+        navigation.navigate('ArtisanDashboard');
+        return;
+      }
+
+      navigation.goBack();
+    };
+
+    if (submitSuccess || (isArtisanMode && isSubmitted && !form.canEdit)) {
+      const mixingCode = submitSuccess?.mixingCode ?? form.mixingRecordId ?? form.heroMeta;
+
+      return (
+        <SafeAreaView style={styles.safe} edges={['top']}>
+          <ScreenHeader title={title} />
+          <View style={styles.successContent}>
+            <Text style={styles.successTitle}>Biochar Mixing Submitted Successfully</Text>
+            <Text style={styles.successMeta}>Mixing record: {mixingCode}</Text>
+            <AppButton label="Go to Dashboard" onPress={goToDashboard} />
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    const primaryLabel =
+      apiMode === 'farmer'
+        ? 'Submit Biochar Mixing'
+        : isArtisanMode
+          ? 'Submit Biochar Mixing'
+          : 'Continue to Biochar Application';
 
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <ScreenHeader title={title} />
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {isArtisanMode ? <LiveWorkCheckinCard /> : null}
           <View style={styles.heroCard}>
             <Text style={styles.heroTitle}>Biochar Mixing</Text>
-            <Text style={styles.heroMeta}>
-              {form.mixingRecordId ? `Record ${form.mixingRecordId}` : 'New record'} · {form.statusLabel}
-            </Text>
+            <Text style={styles.heroMeta}>{form.heroMeta}</Text>
           </View>
 
           <BiocharMixingBasicSection
-            state={form.state}
             site={form.site}
             dateOfMixing={form.dateOfMixing}
             readOnly={readOnly}
-            onStateChange={form.setState}
             onSiteChange={form.setSite}
-            onDateChange={form.setDateOfMixing}
           />
 
           <BiocharMixingLocationSection
@@ -137,6 +274,11 @@ export function createBiocharMixingScreen<T extends MixingRouteParams>({
             accuracyM={form.accuracyM}
             accuracyTier={form.gpsAccuracyTier}
             gpsCapturedAt={form.gpsCapturedAt}
+            villageName={form.villageName}
+            talukaName={form.talukaName}
+            districtName={form.districtName}
+            stateName={form.stateName}
+            locationStatus={form.locationStatus}
             capturing={form.capturingGps}
             readOnly={readOnly}
             onCaptureGps={() => void form.recaptureGps()}
@@ -144,18 +286,24 @@ export function createBiocharMixingScreen<T extends MixingRouteParams>({
 
           <BiocharMixingFarmerSection
             farmerName={form.farmerName}
-            phoneNumber={form.phoneNumber}
-            acresOfCotton={form.acresOfCotton}
-            readOnly={readOnly}
-            onFarmerNameChange={form.setFarmerName}
-            onPhoneChange={form.setPhoneNumber}
-            onAcresChange={form.setAcresOfCotton}
+            farmerCode={form.farmerCode}
+            farmCode={params.farmLabel ?? form.farmCode}
           />
 
           <BiocharMixingBatchSection
-            batchNumbers={form.batchNumbers}
+            batches={form.batches}
+            selectedBatchIds={form.selectedBatchIds}
+            selectedBatchCount={form.selectedBatchCount}
+            combinedSelectedQuantity={form.combinedSelectedQuantity}
+            loadingBatches={form.loadingBatches}
+            batchesError={form.batchesError}
+            emptyMessage={form.batchesEmptyMessage}
             readOnly={readOnly}
-            onBatchNumbersChange={form.setBatchNumbers}
+            onToggleBatch={form.toggleBatchSelection}
+            onSelectAll={form.selectAllBatches}
+            onDeselectAll={form.deselectAllBatches}
+            onRefresh={form.refreshBatches}
+            onGoBack={() => navigation.goBack()}
           />
 
           <Text style={styles.sectionHeading}>Mixing Evidence</Text>
@@ -173,10 +321,37 @@ export function createBiocharMixingScreen<T extends MixingRouteParams>({
 
           <BiocharMixingNotesSection notes={form.notes} readOnly={readOnly} onNotesChange={form.setNotes} />
 
-          {!readOnly ? (
+          {isArtisanMode && !readOnly ? (
             <View style={styles.actions}>
-              <AppButton label="Save Draft" variant="secondary" onPress={() => void handleSaveDraft()} loading={form.submitting} />
-              <AppButton label="Submit" onPress={() => void handleSubmit()} loading={form.submitting} />
+              <AppButton
+                label="Submit Biochar Mixing"
+                onPress={() => void handleArtisanSubmit()}
+                loading={form.submitting}
+                disabled={form.submitting}
+              />
+              <AppButton label="Go to Dashboard" variant="secondary" onPress={goToDashboard} />
+            </View>
+          ) : null}
+
+          {showOfficerContinue && !isArtisanMode ? (
+            <View style={styles.actions}>
+              <AppButton
+                label={primaryLabel}
+                onPress={() => void handleContinue()}
+                loading={form.submitting}
+                disabled={form.submitting}
+              />
+            </View>
+          ) : null}
+
+          {apiMode === 'farmer' && !readOnly ? (
+            <View style={styles.actions}>
+              <AppButton
+                label={primaryLabel}
+                onPress={() => void handleContinue()}
+                loading={form.submitting}
+                disabled={form.submitting}
+              />
             </View>
           ) : null}
         </ScrollView>
@@ -188,6 +363,9 @@ export function createBiocharMixingScreen<T extends MixingRouteParams>({
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, gap: 14, paddingBottom: 32 },
+  successContent: { flex: 1, padding: 16, gap: 14, justifyContent: 'center' },
+  successTitle: { color: colors.text, fontSize: 20, fontWeight: '700', textAlign: 'center' },
+  successMeta: { color: colors.textMuted, fontSize: 14, textAlign: 'center', marginBottom: 8 },
   heroCard: {
     backgroundColor: '#FFFFFF',
     borderColor: '#D7E0D8',
@@ -195,8 +373,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 16,
   },
-  heroTitle: { color: colors.primaryDark, fontSize: 22, fontWeight: '800' },
+  heroTitle: { color: colors.text, fontSize: 20, fontWeight: '700' },
   heroMeta: { color: colors.textMuted, fontSize: 13, marginTop: 4 },
   sectionHeading: { color: colors.text, fontSize: 16, fontWeight: '700', marginTop: 4 },
-  actions: { gap: 10, marginTop: 8 },
+  actions: { gap: 10, marginTop: 4 },
 });

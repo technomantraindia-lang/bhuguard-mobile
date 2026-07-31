@@ -6,14 +6,16 @@ import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { FARMER_UPCOMING_SERVICE_MESSAGE } from '../../constants/farmerActivityServices';
-import { FarmerActivitiesFab } from '../../components/farmer/activities/FarmerActivitiesFab';
 import { FarmerActivitiesHeader } from '../../components/farmer/activities/FarmerActivitiesHeader';
 import { FarmerActivityServiceCard } from '../../components/farmer/activities/FarmerActivityServiceCard';
-import { useFarmerStackNavigation } from '../../hooks/useBrandedNavigation';
 import { useFarmerActivitiesHubData } from '../../hooks/useFarmerActivitiesHubData';
+import { useUnreadNotificationCount } from '../../hooks/useUnreadNotificationCount';
 import type { FarmerStackParamList, FarmerTabParamList } from '../../navigation/types';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 import { pickString, type ApiRecord } from '../../utils/apiHelpers';
+import { formatLocalizedDate } from '../../utils/localizedDate';
+import { translateStatus } from '../../utils/translateStatus';
+import { useTranslation } from '../../i18n/I18nContext';
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<FarmerTabParamList, 'Activities'>,
@@ -21,10 +23,6 @@ type Nav = CompositeNavigationProp<
 >;
 
 function statusTone(status: string): string {
-  if (status === 'draft') {
-    return '#CA8A04';
-  }
-
   if (status === 'submitted') {
     return dashboardTheme.primaryContainer;
   }
@@ -33,12 +31,16 @@ function statusTone(status: string): string {
 }
 
 export function FarmerMyActivitiesScreen() {
+  const { t, language } = useTranslation();
   const navigation = useNavigation<Nav>();
-  const navigateStack = useFarmerStackNavigation();
   const { services, farmActivities, loading, error, reload } = useFarmerActivitiesHubData();
+  const { unreadCount } = useUnreadNotificationCount();
 
-  const openAddFarmActivity = () => {
-    navigateStack('FarmerFarmSelection');
+  const openFarmActivityStatus = () => {
+    Alert.alert(
+      'Farm Activity',
+      'Your Field Officer completes Farm Activity visits. You can review status and history here.',
+    );
   };
 
   const handleServicePress = (serviceCode: string) => {
@@ -46,34 +48,49 @@ export function FarmerMyActivitiesScreen() {
       return;
     }
 
-    Alert.alert('Coming soon', FARMER_UPCOMING_SERVICE_MESSAGE);
+    Alert.alert(t('farmer.activities.comingSoonTitle'), FARMER_UPCOMING_SERVICE_MESSAGE);
   };
 
   const renderFarmActivityRecord = (record: ApiRecord) => {
     const id = Number(record.id);
     const status = pickString(record, 'status');
-    const statusLabel = status === 'draft' ? 'Draft' : 'Submitted';
+    const statusLabel = translateStatus(status, t);
+    const activityDate = pickString(record, 'activity_date', 'activityDate');
+    const photoUploadDate = pickString(
+      record,
+      'submitted_at',
+      'photo_uploaded_at',
+      'farm_photo_upload_date',
+      'created_at',
+    );
+    const nextFarmPhotoUploadDate = pickString(record, 'next_farm_update_date', 'nextFarmUpdateDate');
 
     return (
-      <Pressable
-        key={String(id)}
-        style={[styles.recordCard, status === 'draft' && styles.recordCardDraft]}
-        onPress={() => navigateStack('FarmerFarmActivity', { activityId: id, farmId: Number(record.farm_id) })}
-      >
+      <View key={String(id)} style={styles.recordCard} accessibilityRole="text">
         <View style={styles.recordHeader}>
-          <Text style={styles.recordTitle}>{pickString(record, 'activity_code', 'activityCode')}</Text>
+          <Text style={styles.recordTitle}>
+            Activity ID: {pickString(record, 'activity_code', 'activityCode', 'id')}
+          </Text>
           <Text style={[styles.statusBadge, { color: statusTone(status) }]}>{statusLabel}</Text>
         </View>
-        <Text style={styles.recordMeta}>Farm: {pickString(record, 'farm_code', 'farmCode')}</Text>
-        <Text style={styles.recordMeta}>Activity Date: {pickString(record, 'activity_date', 'activityDate')}</Text>
-        <Text style={styles.recordMeta}>Next Farm Update: {pickString(record, 'next_farm_update_date', 'nextFarmUpdateDate')}</Text>
-      </Pressable>
+        <Text style={styles.recordMeta}>
+          Farm ID: {pickString(record, 'farm_code', 'farmCode', 'farm_id')}
+        </Text>
+        <Text style={styles.recordMeta}>
+          Activity Date: {formatLocalizedDate(activityDate, language)}
+        </Text>
+        <Text style={styles.recordMeta}>
+          Farm Photo Upload Date:{' '}
+          {formatLocalizedDate(photoUploadDate || nextFarmPhotoUploadDate, language)}
+        </Text>
+      </View>
     );
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <FarmerActivitiesHeader
+        unreadCount={unreadCount}
         onNotificationsPress={() => navigation.navigate('FarmerNotifications')}
         onProfilePress={() => navigation.navigate('FarmerProfile')}
       />
@@ -85,7 +102,30 @@ export function FarmerMyActivitiesScreen() {
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Services</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>{t('farmer.activities.title')}</Text>
+            <Pressable onPress={openFarmActivityStatus}>
+              <Text style={styles.linkText}>View status</Text>
+            </Pressable>
+          </View>
+
+          {farmActivities.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>{t('farmer.activities.emptyTitle')}</Text>
+              <Text style={styles.emptyText}>{t('farmer.activities.emptyMessage')}</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.sectionSubtitle}>
+                {t('farmer.activities.submittedCount', { count: String(farmActivities.length) })}
+              </Text>
+              {farmActivities.map(renderFarmActivityRecord)}
+            </>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('farmer.activities.servicesTitle')}</Text>
           {services.map((service) => (
             <FarmerActivityServiceCard
               key={service.code}
@@ -95,27 +135,7 @@ export function FarmerMyActivitiesScreen() {
             />
           ))}
         </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Recent Farm Activity</Text>
-            <Pressable onPress={openAddFarmActivity}>
-              <Text style={styles.linkText}>Add Farm Activity</Text>
-            </Pressable>
-          </View>
-
-          {farmActivities.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>No Farm Activity yet</Text>
-              <Text style={styles.emptyText}>Submit your first farm activity photo to start the 20-day update cycle.</Text>
-            </View>
-          ) : (
-            farmActivities.map(renderFarmActivityRecord)
-          )}
-        </View>
       </ScrollView>
-
-      <FarmerActivitiesFab onPress={openAddFarmActivity} label="Add Farm Activity" />
     </SafeAreaView>
   );
 }
@@ -126,6 +146,7 @@ const styles = StyleSheet.create({
   section: { gap: 12 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: dashboardTheme.onSurface },
+  sectionSubtitle: { fontSize: 14, fontWeight: '700', color: dashboardTheme.onSurfaceVariant, marginTop: 4 },
   linkText: { fontSize: 13, fontWeight: '700', color: dashboardTheme.primaryContainer },
   recordCard: {
     backgroundColor: dashboardTheme.surfaceLowest,
@@ -135,7 +156,6 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 6,
   },
-  recordCardDraft: { borderColor: '#FDE68A' },
   recordHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   recordTitle: { fontSize: 15, fontWeight: '700', color: dashboardTheme.onSurface },
   statusBadge: { fontSize: 12, fontWeight: '700' },

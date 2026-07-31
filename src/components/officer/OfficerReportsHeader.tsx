@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
-import { BrandedHeaderLogo } from '../shared/BrandedHeaderLogo';
+import { getFieldOfficerProfile } from '../../api/fieldOfficerApi';
+import { useProfilePhotoDisplay } from '../../hooks/useProfilePhotoDisplay';
 import { getAuthUser } from '../../storage/authStorage';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
+import { pickString, type ApiRecord } from '../../utils/apiHelpers';
+import { resolveMediaUrl } from '../../utils/mediaUrl';
+import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
+import { BrandedHeaderLogo } from '../shared/BrandedHeaderLogo';
 
 interface OfficerReportsHeaderProps {
-  onBack: () => void;
   onNotificationsPress: () => void;
   onProfilePress?: () => void;
 }
@@ -27,38 +29,40 @@ function getInitials(name: string): string {
   return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
 }
 
-export function OfficerReportsHeader({
-  onBack,
-  onNotificationsPress,
-  onProfilePress,
-}: OfficerReportsHeaderProps) {
+export function OfficerReportsHeader({ onNotificationsPress, onProfilePress }: OfficerReportsHeaderProps) {
   const [displayName, setDisplayName] = useState('Officer');
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const displayUri = useProfilePhotoDisplay(photoUrl, 'officer-reports-avatar.jpg');
 
   useEffect(() => {
-    void getAuthUser().then((user) => {
+    void (async () => {
+      const user = await getAuthUser();
       if (user?.name) {
         setDisplayName(user.name);
       }
-    });
+
+      try {
+        const profileData = await getFieldOfficerProfile();
+        const profileUser = (profileData.user ?? profileData) as ApiRecord;
+        const fieldOfficer = (profileUser.field_officer_profile ??
+          profileUser.field_officer ??
+          profileUser.fieldOfficer ??
+          {}) as ApiRecord;
+        const url = resolveMediaUrl(
+          pickString(fieldOfficer, 'photo_url') !== '-' ? pickString(fieldOfficer, 'photo_url') : null,
+        );
+        setPhotoUrl(url);
+      } catch {
+        // Keep initials fallback.
+      }
+    })();
   }, []);
 
   return (
     <View style={styles.wrap}>
-      <Pressable style={styles.backButton} onPress={onBack} accessibilityLabel="Go back">
-        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-          <Path
-            d="M15 18l-6-6 6-6"
-            stroke={officerTheme.primary}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </Svg>
-      </Pressable>
-
       <View style={styles.titleWrap}>
         <BrandedHeaderLogo />
-        <View>
+        <View style={styles.copy}>
           <Text style={styles.title}>Reports</Text>
           <Text style={styles.subtitle}>View, submit and download verification reports</Text>
         </View>
@@ -70,9 +74,13 @@ export function OfficerReportsHeader({
         </Pressable>
 
         <Pressable style={styles.avatarButton} onPress={onProfilePress}>
-          <View style={styles.avatarFallback}>
-            <Text style={styles.avatarText}>{getInitials(displayName)}</Text>
-          </View>
+          {displayUri ? (
+            <Image source={{ uri: displayUri }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarText}>{getInitials(displayName)}</Text>
+            </View>
+          )}
         </Pressable>
       </View>
     </View>
@@ -90,19 +98,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: officerTheme.outlineVariant,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   titleWrap: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 4,
+    gap: 8,
+    paddingRight: 8,
+    minWidth: 0,
+  },
+  copy: {
+    flex: 1,
+    minWidth: 0,
   },
   title: {
     fontSize: 18,
@@ -130,12 +136,16 @@ const styles = StyleSheet.create({
     backgroundColor: officerTheme.surfaceLowest,
   },
   avatarButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: officerTheme.surfaceVariant,
+    borderWidth: 1.5,
+    borderColor: officerTheme.primary,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarFallback: {
     flex: 1,

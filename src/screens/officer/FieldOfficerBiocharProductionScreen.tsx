@@ -77,7 +77,7 @@ export function FieldOfficerBiocharProductionScreen() {
     if (route.params?.gpsRecaptured && route.params.latitude != null && route.params.longitude != null) {
       void form.recaptureGps();
     }
-  }, [form, route.params?.gpsRecaptured, route.params?.latitude, route.params?.longitude]);
+  }, [form.recaptureGps, route.params?.gpsRecaptured, route.params?.latitude, route.params?.longitude]);
 
   if (form.loading) {
     return (
@@ -96,11 +96,12 @@ export function FieldOfficerBiocharProductionScreen() {
   }
 
   const handleSubmit = async () => {
-    const batchCode = await form.submit();
-    if (batchCode) {
-      setSubmittedBatchCode(batchCode);
-      setSuccessVisible(true);
+    const result = await form.submit();
+    if (!result) {
+      return;
     }
+    setSubmittedBatchCode(typeof result === 'string' ? result : result.batchCode);
+    setSuccessVisible(true);
   };
 
   const handleSaveDraft = async () => {
@@ -163,7 +164,7 @@ export function FieldOfficerBiocharProductionScreen() {
                 farmerCode={farmerCode}
                 onTimestampDateChange={form.setTimestampDate}
                 onTimestampTimeChange={form.setTimestampTime}
-                onAltitudeChange={(value) => form.setAltitude(value === '' ? null : Number(value))}
+                onAltitudeChange={form.setAltitudeInput}
                 onVillageNameChange={form.setVillageName}
                 onTalukaNameChange={form.setTalukaName}
                 onDistrictNameChange={form.setDistrictName}

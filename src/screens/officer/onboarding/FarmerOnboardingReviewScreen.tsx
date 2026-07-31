@@ -1,15 +1,24 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { createFarmerOnboarding } from '../../../api/fieldOfficerApi';
+import { createFarmerOnboarding, updateFieldOfficerFarmMapping } from '../../../api/fieldOfficerApi';
 import { getApiErrorMessage } from '../../../api/authApi';
 import { AppCard } from '../../../components/AppCard';
 import { OnboardingReviewPhoto } from '../../../components/onboarding/OnboardingReviewPhoto';
+import { ONBOARDING_NEXT_LABELS } from '../../../constants/onboardingSteps';
 import { useOnboarding, type OnboardingResult } from '../../../context/OnboardingContext';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
+import { boundaryPointsToLatLng, type AreaUnit } from '../../../utils/boundaryGeometry';
+import { draftAlreadyHasFarmerFarm } from '../../../utils/ensureOnboardingFarmerFarm';
+import { isValidEntityId, toPositiveEntityId } from '../../../utils/entityId';
+import {
+  compareDeclaredAndMapped,
+  declaredAreaInAcres,
+} from '../../../utils/landMappingHelpers';
+import { calculateTurfBoundaryMetrics, polygonCentroid } from '../../../utils/manualBoundaryGeometry';
 import { validateSubmit } from '../../../utils/onboardingValidation';
 import { OnboardingFormScreen } from './OnboardingFormScreen';
 
@@ -20,7 +29,8 @@ type EditScreen =
   | 'FarmerConsent'
   | 'FarmerLandDetails'
   | 'FarmerGpsCapture'
-  | 'FarmerProofUpload';
+  | 'FarmerProofUpload'
+  | 'OnboardingBoundaryStart';
 
 const OPTION_LABELS: Record<string, string> = {
   owned: 'Owned',
@@ -50,11 +60,96 @@ const OPTION_LABELS: Record<string, string> = {
   lift_irrigation: 'Lift Irrigation',
 };
 
+function reviewMappingStatusLabel(status: string, hasBoundary: boolean): string {
+  if (hasBoundary && (status === 'mapped' || status === 'pending_review')) {
+    return 'Completed';
+  }
+  if (status === 'pending') {
+    return 'Pending';
+  }
+  if (status === 'draft') {
+    return 'Draft';
+  }
+  return 'Not Available';
+}
+
 export function FarmerOnboardingReviewScreen() {
   const navigation = useNavigation<Nav>();
-  const { draft, toFormData, setResult } = useOnboarding();
+  const { draft, toFormData, setResult, updateDraft } = useOnboarding();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const mappingCompleted =
+    draft.boundary_points.length >= 3
+    && (draft.boundary_mapping_status === 'mapped' || draft.boundary_mapping_status === 'pending_review');
+
+  const landMappingSummary = useMemo(() => {
+    const declaredValue = Number(String(draft.land_area).replace(/,/g, '').trim());
+    const declaredUnit = (draft.land_area_unit as AreaUnit) || 'acre';
+    const latLngPoints = boundaryPointsToLatLng(draft.boundary_points);
+    const metrics =
+      latLngPoints.length >= 3
+        ? calculateTurfBoundaryMetrics(latLngPoints)
+        : null;
+    const declaredAcres =
+      Number.isFinite(declaredValue) && declaredValue > 0
+        ? declaredAreaInAcres(declaredValue, declaredUnit)
+        : null;
+    const comparison =
+      metrics && declaredAcres != null && Number.isFinite(declaredValue)
+        ? compareDeclaredAndMapped(declaredValue, declaredUnit, metrics)
+        : null;
+    const center =
+      polygonCentroid(latLngPoints)
+      ?? (latLngPoints[0] ?? null);
+
+    return {
+      declaredLabel:
+        declaredAcres != null
+          ? `${declaredAcres.toFixed(4)} acres`
+          : draft.land_area.trim()
+            ? `${draft.land_area} ${draft.land_area_unit || ''}`.trim()
+            : '—',
+      declaredOriginal:
+        draft.land_area.trim() && declaredUnit !== 'acre'
+          ? `${draft.land_area} ${declaredUnit}`
+          : null,
+      mappedLabel: metrics ? `${metrics.areaAcre.toFixed(4)} acres` : 'Not mapped yet',
+      differenceLabel:
+        comparison != null
+          ? `${comparison.differenceAcre.toFixed(4)} acres (${comparison.differencePercent.toFixed(1)}%)`
+          : null,
+      statusLabel: reviewMappingStatusLabel(draft.boundary_mapping_status, draft.boundary_points.length >= 3),
+      pointCount: draft.boundary_points.length,
+      center,
+      metrics,
+    };
+  }, [draft.boundary_mapping_status, draft.boundary_points, draft.land_area, draft.land_area_unit]);
+
+  const openSavedMapping = () => {
+    const farmerId = toPositiveEntityId(draft.farmer_id);
+    const farmId = toPositiveEntityId(draft.farm_id);
+
+    if (!isValidEntityId(farmerId) || !isValidEntityId(farmId)) {
+      setError('Farmer and farm must be created before viewing saved mapping.');
+      navigation.navigate('OnboardingBoundaryStart');
+      return;
+    }
+
+    navigation.navigate('FarmBoundaryMap', {
+      farmerId: farmerId!,
+      farmId: farmId!,
+      farmerName: draft.farmer_name || 'Farmer',
+      farmerCode: draft.farmer_code || undefined,
+      farmName: draft.farm_name || undefined,
+      farmCode: draft.farm_code || undefined,
+      village: draft.village_name || undefined,
+      mappingStatus: mappingCompleted ? 'completed' : 'pending',
+      declaredArea: draft.land_area || undefined,
+      declaredAreaUnit: (draft.land_area_unit as 'acre' | 'hectare' | 'bigha') || undefined,
+      returnScreen: 'OnboardingBoundaryStart',
+    });
+  };
 
   const submit = async () => {
     const validationError = validateSubmit(draft);
@@ -68,21 +163,86 @@ export function FarmerOnboardingReviewScreen() {
     setError(null);
 
     try {
-      const farmer = await createFarmerOnboarding(toFormData());
+      let farmerId = toPositiveEntityId(draft.farmer_id);
+      let farmId = toPositiveEntityId(draft.farm_id);
+      let farmerName = draft.farmer_name;
+      let mobile = draft.mobile;
+      let village = draft.village_name;
+      let taluka = draft.taluka_name;
+      let district = draft.district_name;
+      let state = draft.state;
+      let photoUrl: string | undefined;
+      let onboardedAt: string | undefined;
+      let landSurvey = draft.land_survey_number;
+      let landArea: string | number = draft.land_area;
+      let landAreaUnit = draft.land_area_unit;
+
+      if (draftAlreadyHasFarmerFarm(draft) && farmerId != null && farmId != null) {
+        // Farmer/farm already created during mapping gate. Mapping-only refresh here;
+        // whole onboarding is not re-marked complete by the mapping API.
+        if (mappingCompleted) {
+          const center =
+            landMappingSummary.center
+            ?? {
+              latitude: Number(draft.gps_latitude),
+              longitude: Number(draft.gps_longitude),
+            };
+          await updateFieldOfficerFarmMapping(farmerId, farmId, {
+            farm_id: farmId,
+            declared_area: draft.land_area,
+            declared_unit: draft.land_area_unit,
+            unit: draft.boundary_unit,
+            capture_method: draft.boundary_capture_method,
+            mapping_status: 'mapped',
+            verification_status: draft.boundary_verification_status || 'pending_review',
+            boundary_points: draft.boundary_points,
+            center_latitude: Number.isFinite(center.latitude) ? center.latitude : draft.boundary_points[0]?.latitude,
+            center_longitude: Number.isFinite(center.longitude) ? center.longitude : draft.boundary_points[0]?.longitude,
+            gps_accuracy_average: draft.gps_accuracy ? Number(draft.gps_accuracy) : undefined,
+          });
+        }
+      } else {
+        const farmer = await createFarmerOnboarding(toFormData());
+        farmerId = toPositiveEntityId(farmer.farmer_id);
+        farmId = toPositiveEntityId(farmer.farm_id);
+        farmerName = String(farmer.farmer_name ?? draft.farmer_name);
+        mobile = String(farmer.mobile ?? draft.mobile);
+        village = farmer.village ? String(farmer.village) : draft.village_name;
+        taluka = farmer.taluka ? String(farmer.taluka) : draft.taluka_name;
+        district = farmer.district ? String(farmer.district) : draft.district_name;
+        state = farmer.state ? String(farmer.state) : draft.state;
+        onboardedAt = farmer.onboarded_at ? String(farmer.onboarded_at) : undefined;
+        photoUrl = farmer.photo_url ? String(farmer.photo_url) : undefined;
+        landSurvey = farmer.land_survey_number ? String(farmer.land_survey_number) : draft.land_survey_number;
+        landArea = farmer.land_area != null ? String(farmer.land_area) : draft.land_area;
+        landAreaUnit = farmer.land_area_unit ? String(farmer.land_area_unit) : draft.land_area_unit;
+
+        if (!isValidEntityId(farmerId)) {
+          throw new Error('Onboarding succeeded but farmer ID was missing.');
+        }
+
+        updateDraft({
+          farmer_id: farmerId,
+          farm_id: farmId,
+          farmer_code: farmer.farmer_code ? String(farmer.farmer_code) : '',
+          farm_code: farmer.farm_code ? String(farmer.farm_code) : '',
+        });
+      }
+
       const result: OnboardingResult = {
-        farmer_id: Number(farmer.farmer_id),
-        farmer_name: String(farmer.farmer_name ?? draft.farmer_name),
-        mobile: String(farmer.mobile ?? draft.mobile),
-        village: farmer.village ? String(farmer.village) : draft.village_name,
-        taluka: farmer.taluka ? String(farmer.taluka) : draft.taluka_name,
-        district: farmer.district ? String(farmer.district) : draft.district_name,
-        state: farmer.state ? String(farmer.state) : draft.state,
-        onboarded_at: farmer.onboarded_at ? String(farmer.onboarded_at) : undefined,
-        photo_url: farmer.photo_url ? String(farmer.photo_url) : undefined,
-        farm_id: farmer.farm_id ? Number(farmer.farm_id) : undefined,
-        land_survey_number: farmer.land_survey_number ? String(farmer.land_survey_number) : draft.land_survey_number,
-        land_area: farmer.land_area != null ? String(farmer.land_area) : draft.land_area,
-        land_area_unit: farmer.land_area_unit ? String(farmer.land_area_unit) : draft.land_area_unit,
+        farmer_id: farmerId!,
+        farmer_name: farmerName,
+        mobile,
+        village,
+        taluka,
+        district,
+        state,
+        onboarded_at: onboardedAt,
+        photo_url: photoUrl,
+        farm_id: farmId ?? undefined,
+        land_survey_number: landSurvey,
+        land_area: landArea,
+        land_area_unit: landAreaUnit,
       };
       setResult(result);
       navigation.navigate('FarmerOnboardingSuccess');
@@ -100,10 +260,10 @@ export function FarmerOnboardingReviewScreen() {
   return (
     <OnboardingFormScreen
       stepCurrent={6}
-      title="Final Review"
+      title="Final Review & Submit"
       subtitle="Confirm all farmer details before submitting the registration."
       onNext={submit}
-      nextLabel="Submit Registration"
+      nextLabel={ONBOARDING_NEXT_LABELS[6] ?? 'Submit Registration'}
       nextLoading={loading}
       footerError={error}
     >
@@ -111,13 +271,18 @@ export function FarmerOnboardingReviewScreen() {
         <OnboardingReviewPhoto file={draft.farmer_photo} />
         <Line label="Name" value={draft.farmer_name} />
         <Line label="Mobile" value={draft.mobile} />
-        <Line label="Username" value={draft.username} />
         <Line label="Language" value={draft.preferred_language} />
         <Line label="State" value={draft.state} />
         <Line label="District" value={draft.district_name} />
         <Line label="Taluka" value={draft.taluka_name} />
         <Line label="Village" value={draft.village_name} />
         <Line label="Pincode" value={draft.pincode} />
+        {draftAlreadyHasFarmerFarm(draft) ? (
+          <>
+            <Line label="Farmer ID" value={String(draft.farmer_id)} />
+            <Line label="Farm ID" value={draft.farm_code || String(draft.farm_id)} />
+          </>
+        ) : null}
       </ReviewSection>
       <ReviewSection title="Consent" onEdit={() => edit('FarmerConsent')}>
         <Line label="Data usage" value={draft.data_usage_consent ? 'Accepted' : 'Pending'} />
@@ -138,8 +303,54 @@ export function FarmerOnboardingReviewScreen() {
         <Line label="Service interest" value={draft.service_interests.join(', ')} />
         <Line label="Remarks" value={draft.remarks} />
       </ReviewSection>
+
+      <View style={styles.mappingCard}>
+        <Text style={styles.mappingTitle}>Land & Mapping Summary</Text>
+        <Line label="Declared Area" value={landMappingSummary.declaredLabel} />
+        {landMappingSummary.declaredOriginal ? (
+          <Line label="Declared (entered)" value={landMappingSummary.declaredOriginal} />
+        ) : null}
+        <Line label="Mapped Area" value={landMappingSummary.mappedLabel} />
+        {landMappingSummary.differenceLabel ? (
+          <Line label="Difference" value={landMappingSummary.differenceLabel} />
+        ) : null}
+        <Line label="Mapping Status" value={landMappingSummary.statusLabel} />
+        <Line
+          label="Boundary Points"
+          value={
+            landMappingSummary.pointCount > 0
+              ? `${landMappingSummary.pointCount} point${landMappingSummary.pointCount === 1 ? '' : 's'}`
+              : 'None'
+          }
+        />
+        {!mappingCompleted ? (
+          <Text style={styles.mappingNote}>
+            {draft.boundary_mapping_status === 'pending'
+              ? 'Mapping Pending — can be completed later from Farm Mapping.'
+              : 'Not mapped yet. Start Map Land Boundary if required.'}
+          </Text>
+        ) : null}
+        {mappingCompleted ? (
+          <Pressable style={styles.viewMapButton} onPress={openSavedMapping}>
+            <Text style={styles.viewMapButtonText}>View Saved Mapping</Text>
+          </Pressable>
+        ) : null}
+        <Pressable onPress={() => edit('OnboardingBoundaryStart')}>
+          <Text style={styles.edit}>{mappingCompleted ? 'Edit land mapping' : 'Start / continue land mapping'}</Text>
+        </Pressable>
+      </View>
+
       <ReviewSection title="GPS" onEdit={() => edit('FarmerGpsCapture')}>
-        <Line label="Coordinates" value={`${draft.gps_latitude}, ${draft.gps_longitude}`} />
+        <Line
+          label="Coordinates"
+          value={
+            draft.gps_latitude && draft.gps_longitude
+              ? `${draft.gps_latitude}, ${draft.gps_longitude}`
+              : landMappingSummary.center
+                ? `${landMappingSummary.center.latitude.toFixed(7)}, ${landMappingSummary.center.longitude.toFixed(7)}`
+                : undefined
+          }
+        />
         <Line label="Accuracy" value={draft.gps_accuracy ? `${draft.gps_accuracy} m` : undefined} />
         <Line label="Captured at" value={draft.gps_captured_at} />
       </ReviewSection>
@@ -158,7 +369,7 @@ function ReviewSection({
 }: {
   title: string;
   onEdit: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <AppCard
@@ -184,6 +395,42 @@ function Line({ label, value }: { label: string; value?: string }) {
 
 const styles = StyleSheet.create({
   line: { fontSize: 14, color: colors.text, marginTop: 4 },
-  edit: { color: colors.primary, fontWeight: '700', marginTop: 4 },
-  error: { color: colors.error, fontSize: 14 },
+  edit: { color: colors.primary, fontWeight: '700', marginTop: 8 },
+  mappingCard: {
+    backgroundColor: '#F0F9F3',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(11, 107, 58, 0.18)',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginTop: 4,
+    gap: 2,
+  },
+  mappingTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0B6B3A',
+    marginBottom: 6,
+  },
+  mappingNote: {
+    marginTop: 8,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#5F6B63',
+    lineHeight: 18,
+  },
+  viewMapButton: {
+    marginTop: 12,
+    minHeight: 44,
+    borderRadius: 12,
+    backgroundColor: '#0B6B3A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  viewMapButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
 });

@@ -112,6 +112,48 @@ export function buildEsriSatelliteUrl(bounds: MapBounds, width: number, height: 
   return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${encodeURIComponent(bbox)}&bboxSR=4326&imageSR=4326&size=${width},${height}&format=jpg&f=image`;
 }
 
+export function buildEsriStreetMapUrl(bounds: MapBounds, width: number, height: number): string {
+  const bbox = `${bounds.minLng},${bounds.minLat},${bounds.maxLng},${bounds.maxLat}`;
+
+  return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/export?bbox=${encodeURIComponent(bbox)}&bboxSR=4326&imageSR=4326&size=${width},${height}&format=jpg&f=image`;
+}
+
+export function getMapBoundsForLivePoints(
+  points: LatLng[],
+  extraPoints: LatLng[] = [],
+  paddingFactor = 0.28,
+): MapBounds {
+  const combined = [...points, ...extraPoints];
+
+  if (combined.length === 0) {
+    return getPolygonBounds([DEMO_CENTER], paddingFactor);
+  }
+
+  if (combined.length === 1) {
+    const point = combined[0];
+    const pad = 0.0018;
+
+    return {
+      minLat: point.latitude - pad,
+      maxLat: point.latitude + pad,
+      minLng: point.longitude - pad,
+      maxLng: point.longitude + pad,
+    };
+  }
+
+  return getPolygonBounds(combined, paddingFactor);
+}
+
+export function toSvgPolyline(points: PixelPoint[]): string {
+  if (points.length === 0) {
+    return '';
+  }
+
+  const [first, ...rest] = points;
+
+  return `M ${first.x.toFixed(1)} ${first.y.toFixed(1)} ${rest.map((point) => `L ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ')}`;
+}
+
 export function projectToPixels(
   point: LatLng,
   bounds: MapBounds,
@@ -124,6 +166,21 @@ export function projectToPixels(
   return {
     x: ((point.longitude - bounds.minLng) / lngSpan) * width,
     y: ((bounds.maxLat - point.latitude) / latSpan) * height,
+  };
+}
+
+export function pixelsToLatLng(
+  pixel: PixelPoint,
+  bounds: MapBounds,
+  width: number,
+  height: number,
+): LatLng {
+  const lngSpan = bounds.maxLng - bounds.minLng || 0.0001;
+  const latSpan = bounds.maxLat - bounds.minLat || 0.0001;
+
+  return {
+    longitude: bounds.minLng + (pixel.x / width) * lngSpan,
+    latitude: bounds.maxLat - (pixel.y / height) * latSpan,
   };
 }
 

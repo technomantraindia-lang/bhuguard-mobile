@@ -1,10 +1,3 @@
-export const BIOCHAR_MIXING_STATES = [
-  { value: 'Maharashtra', label: 'Maharashtra' },
-  { value: 'Gujarat', label: 'Gujarat' },
-  { value: 'Madhya Pradesh', label: 'Madhya Pradesh' },
-  { value: 'Telangana', label: 'Telangana' },
-] as const;
-
 export type BiocharMixingEvidenceKey =
   | 'farmer_photo'
   | 'biochar_picture'

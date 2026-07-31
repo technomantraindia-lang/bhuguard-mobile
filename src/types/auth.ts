@@ -12,11 +12,12 @@ export interface AuthUser {
   mobile: string;
   user_type: UserType;
   status: string;
+  has_mpin?: boolean;
   role?: string;
   role_name?: string;
   type?: string;
   roles?: Array<string | { name?: string; role?: string }>;
-  farmer_profile?: FarmerProfile;
+  farmer_profile?: FarmerProfile & { preferred_language?: string };
   company_profile?: { id: number; company_code?: string };
   company?: { id: number; company_code?: string };
   company_id?: number;

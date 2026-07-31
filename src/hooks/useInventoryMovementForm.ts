@@ -13,7 +13,7 @@ import type {
   InventoryMovementStatus,
   InventoryMovementType,
 } from '../constants/inventoryMovement';
-import { buildFormDataFilePart } from '../utils/liveEvidenceCapture';
+import { buildFormDataFilePart, liveEvidenceCameraOptions } from '../utils/liveEvidenceCapture';
 import { extractList, pickString, type ApiRecord } from '../utils/apiHelpers';
 import {
   calculateDistanceInMeters,
@@ -229,11 +229,13 @@ export function useInventoryMovementForm({ farmerId }: UseInventoryMovementFormO
       return;
     }
 
-    const result = await ImagePicker.launchCameraAsync({
-      quality: 0.85,
-      allowsEditing: true,
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    });
+    const result = await ImagePicker.launchCameraAsync(
+      liveEvidenceCameraOptions({
+        quality: 0.85,
+        allowsEditing: true,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      }),
+    );
 
     if (result.canceled || !result.assets[0]) {
       return;

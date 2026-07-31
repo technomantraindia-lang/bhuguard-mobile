@@ -85,6 +85,7 @@ export function BiocharProcessFormContent({
 
       <BatchDetailsSection
         batchCode={form.batchCode}
+        kilnId={form.kilnId}
         farmerId={form.selectedFarmerId}
         farmerCode={farmerCode}
         batchCodeError={form.batchCodeError}
@@ -109,7 +110,7 @@ export function BiocharProcessFormContent({
       <MoistureReadingsSection
         readings={form.moistureReadings}
         readOnly={readOnly}
-        showNotes
+        showNotes={false}
         fixedCount={BIOCHAR_PROCESS_MOISTURE_READING_COUNT}
         onAddReading={form.addMoistureReading}
         onRemoveReading={form.removeMoistureReading}

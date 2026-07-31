@@ -672,7 +672,9 @@ export function useFieldOfficerVisitsData() {
 
       const assignments = extractList(assignmentsData, ['assignments', 'data']);
 
-      const visits = assignments.map(mapAssignmentToVisit);
+      const visits = assignments
+        .map(mapAssignmentToVisit)
+        .filter((visit) => !visit.isCompleted);
 
       const officerName = user?.name ?? pickString(profileUser, 'name') ?? 'Field Officer';
 

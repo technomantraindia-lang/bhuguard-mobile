@@ -7,8 +7,10 @@ import { LoadingState } from '../../components/LoadingState';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { AppButton } from '../../components/AppButton';
 import { useFarmerFarmActivityForm } from '../../hooks/useFarmerFarmActivityForm';
+import { useTranslation } from '../../i18n/I18nContext';
 import type { FarmerStackParamList } from '../../navigation/types';
 import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTheme';
+import { formatLocalizedDate } from '../../utils/localizedDate';
 
 type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmerFarmSelection'>;
 
@@ -29,12 +31,13 @@ function statusColor(color: string) {
 }
 
 export function FarmerFarmSelectionScreen({ navigation }: Props) {
+  const { t, language } = useTranslation();
   const form = useFarmerFarmActivityForm();
 
   if (form.loading) {
     return (
       <SafeAreaView style={styles.safe}>
-        <LoadingState message="Loading your linked farms..." />
+        <LoadingState message={t('farmer.farmSelection.loading')} />
       </SafeAreaView>
     );
   }
@@ -42,11 +45,16 @@ export function FarmerFarmSelectionScreen({ navigation }: Props) {
   if (form.farms.length === 0) {
     return (
       <SafeAreaView style={styles.safe}>
-        <ScreenHeader title="Select Farm" subtitle="Choose a farm for Farm Activity" showBack onBackPress={() => navigation.goBack()} />
+        <ScreenHeader
+          title={t('farmer.farmSelection.title')}
+          subtitle={t('farmer.farmSelection.subtitle')}
+          showBack
+          onBackPress={() => navigation.goBack()}
+        />
         <View style={styles.emptyWrap}>
           <EmptyState
-            title="No farm linked"
-            message="No farm is linked with your account. Please contact your Field Officer."
+            title={t('farmer.farmSelection.emptyTitle')}
+            message={t('farmer.farmSelection.emptyMessage')}
           />
         </View>
       </SafeAreaView>
@@ -55,7 +63,12 @@ export function FarmerFarmSelectionScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Select Farm" subtitle="Choose a farm for Farm Activity" showBack onBackPress={() => navigation.goBack()} />
+      <ScreenHeader
+        title={t('farmer.farmSelection.title')}
+        subtitle={t('farmer.farmSelection.subtitle')}
+        showBack
+        onBackPress={() => navigation.goBack()}
+      />
 
       <FlatList
         data={form.farms}
@@ -69,16 +82,31 @@ export function FarmerFarmSelectionScreen({ navigation }: Props) {
             <Text style={styles.farmCode}>{item.farmCode !== '-' ? item.farmCode : `Farm #${item.farmId}`}</Text>
             <Text style={styles.farmerName}>{item.farmerName !== '-' ? item.farmerName : 'Farmer'}</Text>
             <Text style={styles.meta}>{[item.village, item.taluka, item.district, item.state].filter((v) => v && v !== '-').join(', ')}</Text>
-            <Text style={styles.meta}>Area: {item.areaLabel}</Text>
-            {item.ownershipType !== '-' ? <Text style={styles.meta}>Ownership: {item.ownershipType}</Text> : null}
+            <Text style={styles.meta}>
+              {t('farmer.farmSelection.area')}: {item.areaLabel}
+            </Text>
+            {item.ownershipType !== '-' ? (
+              <Text style={styles.meta}>
+                {t('farmer.farmSelection.ownership')}: {item.ownershipType}
+              </Text>
+            ) : null}
             <View style={styles.statusRow}>
-              <Text style={styles.meta}>Last Farm Update: {item.lastFarmUpdateDate ?? '—'}</Text>
-              <Text style={styles.meta}>Next Farm Update: {item.nextFarmUpdateDate ?? '—'}</Text>
+              <Text style={styles.meta}>
+                {t('farmer.farmSelection.lastFarmPhotoUploadDate')}:{' '}
+                {formatLocalizedDate(item.lastFarmUpdateDate, language)}
+              </Text>
+              <Text style={styles.meta}>
+                {t('farmer.farmSelection.nextFarmPhotoUploadDate')}:{' '}
+                {formatLocalizedDate(item.nextFarmUpdateDate, language)}
+              </Text>
             </View>
             <Text style={[styles.statusBadge, { color: statusColor(item.statusColor) }]}>
-              {item.farmUpdateStatusLabel !== '-' ? item.farmUpdateStatusLabel : 'Not Started'}
+              {item.farmUpdateStatusLabel !== '-' ? item.farmUpdateStatusLabel : t('farmer.farmSelection.notStarted')}
             </Text>
-            <AppButton label="Select Farm" onPress={() => navigation.navigate('FarmerFarmActivity', { farmId: item.farmId })} />
+            <AppButton
+              label={t('farmer.farmSelection.selectFarm')}
+              onPress={() => navigation.navigate('FarmerFarmActivity', { farmId: item.farmId })}
+            />
           </Pressable>
         )}
       />

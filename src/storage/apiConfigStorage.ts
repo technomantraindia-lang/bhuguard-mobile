@@ -2,8 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
 import { BUILD_API_BASE_URL } from '../config/apiDefaults';
-import { DEMO_API_BASE_URL, LOCAL_API_BASE_URL, PRODUCTION_API_BASE_URL } from '../config/env';
-import { isPlaceholderApiUrl, isTryCloudflareTunnelUrl } from '../config/apiUrlValidation';
+import { PRODUCTION_API_BASE_URL } from '../config/env';
+import {
+  isDemoApiUrl,
+  isLiveProductionApiUrl,
+  isPlaceholderApiUrl,
+  isTryCloudflareTunnelUrl,
+} from '../config/apiUrlValidation';
 import { formatApiUnreachableMessage } from '../utils/apiError';
 
 const API_BASE_URL_KEY = 'bhuguard_api_base_url';
@@ -13,8 +18,8 @@ let cachedApiBaseUrl: string | null = null;
 export function getDefaultApiBaseUrl(): string {
   const built = BUILD_API_BASE_URL || PRODUCTION_API_BASE_URL;
 
-  if (isPlaceholderApiUrl(built)) {
-    return DEMO_API_BASE_URL;
+  if (isPlaceholderApiUrl(built) || !isLiveProductionApiUrl(built)) {
+    return PRODUCTION_API_BASE_URL;
   }
 
   return built;
@@ -73,9 +78,13 @@ function shouldMigrateStoredApiUrl(stored: string): boolean {
     return false;
   }
 
-  // Drop help-text placeholders, expired tunnels, and unreplaced yourdomain.com URLs.
+  // Drop placeholders, tunnels, LAN, demo, and any non-live ERP override.
   return (
-    isPlaceholderApiUrl(stored) || isTryCloudflareTunnelUrl(stored)
+    isPlaceholderApiUrl(stored) ||
+    isTryCloudflareTunnelUrl(stored) ||
+    isLocalNetworkApiUrl(stored) ||
+    isDemoApiUrl(stored) ||
+    !isLiveProductionApiUrl(stored)
   );
 }
 
@@ -143,7 +152,7 @@ export async function testApiConnection(apiBaseUrl: string): Promise<{ ok: boole
     return {
       ok: false,
       message:
-        'That is an example URL, not a real server. Use https://demo.bhuguard.com for client demo.',
+        'That is an example URL, not a real server. Use https://erp.bhuguard.com for the live Bhuguard API.',
     };
   }
 
@@ -162,20 +171,10 @@ export async function testApiConnection(apiBaseUrl: string): Promise<{ ok: boole
 
     return { ok: false, message: `Server responded with status ${response.status}` };
   } catch {
-    const isTunnel = isTryCloudflareTunnelUrl(normalized);
-    const isDemo = normalized.includes('demo.bhuguard.com');
-
-    if (isTunnel) {
+    if (isTryCloudflareTunnelUrl(normalized) || isLocalNetworkApiUrl(normalized) || isDemoApiUrl(normalized)) {
       return {
         ok: false,
-        message: `${formatApiUnreachableMessage(normalized)} Expired tunnel — use ${getApiOrigin(LOCAL_API_BASE_URL)} on same Wi-Fi or tap "Use local PC".`,
-      };
-    }
-
-    if (isDemo) {
-      return {
-        ok: false,
-        message: `${formatApiUnreachableMessage(normalized)} Demo server may be offline — try ${getApiOrigin(LOCAL_API_BASE_URL)} on same Wi-Fi.`,
+        message: `${formatApiUnreachableMessage(normalized)} Use the live server at ${getApiOrigin(PRODUCTION_API_BASE_URL)}.`,
       };
     }
 

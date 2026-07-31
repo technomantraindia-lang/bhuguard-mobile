@@ -9,7 +9,9 @@ import {
   getFarmerServices,
 } from '../api/farmerApi';
 import { getApiErrorMessage } from '../api/authApi';
+import { useTranslation } from '../i18n/I18nContext';
 import { getAuthUser } from '../storage/authStorage';
+import { formatLocalizedDate } from '../utils/localizedDate';
 import {
   buildActivitiesSummary,
   buildFarmNameMap,
@@ -65,9 +67,12 @@ export interface FarmerDashboardViewModel {
   evidenceUploadedCount: number;
   reportsAvailableCount: number;
   biocharServiceStatusLabel: string;
+  biocharNextUpdateLabel: string;
   biocharDaysRemainingLabel: string;
   biocharCycleStatusLabel: string;
-  biocharCycleTone: 'default' | 'warning' | 'danger';
+  biocharCycleStatusKey: string;
+  biocharCycleTone: 'default' | 'warning' | 'danger' | 'success' | 'draft';
+  biocharCycleLoading: boolean;
   walletAmountLabel: string;
 }
 
@@ -153,27 +158,8 @@ async function loadDashboardSection<T>(loader: () => Promise<T>, fallback: T): P
   }
 }
 
-function formatVerificationDate(value: unknown): string | null {
-  const raw = String(value ?? '').trim();
-
-  if (!raw) {
-    return null;
-  }
-
-  const date = new Date(raw);
-
-  if (Number.isNaN(date.getTime())) {
-    return raw;
-  }
-
-  return date.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
 export function useFarmerDashboardData() {
+  const { language } = useTranslation();
   const [data, setData] = useState<FarmerDashboardViewModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -202,7 +188,7 @@ export function useFarmerDashboardData() {
         loadDashboardSection(() => getFarmerDashboard(), { dashboard: {} }),
         loadDashboardSection(() => getFarmerProfile(), { profile: {} }),
         loadDashboardSection(() => getFarmerFarms(), { farms: [] }),
-        loadDashboardSection(() => getFarmerFarmActivities(), { farm_activities: [] }),
+        loadDashboardSection(() => getFarmerFarmActivities('submitted'), { farm_activities: [] }),
         loadDashboardSection(() => getFarmerServices(), { services: [] }),
         loadDashboardSection(() => getFarmerEvidence(), { evidence: [] }),
       ]);
@@ -213,17 +199,53 @@ export function useFarmerDashboardData() {
       const farms = extractList(farmsData as ApiRecord, ['farms']);
       const farmNameById = buildFarmNameMap(farms);
       const evidenceItems = extractList(evidenceData as ApiRecord, ['evidence', 'evidence_uploads']);
-      const updateCycle = (dashboard.farm_update_cycle ?? {}) as ApiRecord;
+      const updateCycle = (dashboard.biochar_update_cycle ?? dashboard.farm_update_cycle ?? {}) as ApiRecord;
       const biocharBlock = (dashboard.biochar ?? {}) as ApiRecord;
       const walletBlock = (dashboard.wallet ?? biocharBlock.wallet ?? {}) as ApiRecord;
-      const cycleStatus = String(updateCycle.farm_update_status ?? 'not_started');
+      const cycleStatus = String(
+        updateCycle.status ?? updateCycle.farm_update_status ?? 'not_scheduled',
+      ).toLowerCase();
       const daysRemaining = updateCycle.days_remaining;
-      const cycleTone: 'default' | 'warning' | 'danger' =
+      const nextDueDate = pickString(updateCycle, 'next_due_date', 'next_farm_update_date');
+      const cycleTone: FarmerDashboardViewModel['biocharCycleTone'] =
         cycleStatus === 'overdue'
           ? 'danger'
-          : cycleStatus === 'due_soon' || updateCycle.status_color === 'yellow'
+          : cycleStatus === 'due_soon'
             ? 'warning'
-            : 'default';
+            : cycleStatus === 'draft'
+              ? 'draft'
+              : cycleStatus === 'submitted' || cycleStatus === 'updated'
+                ? 'success'
+                : 'default';
+
+      const normalizedStatusKey =
+        cycleStatus === 'updated' || cycleStatus === 'due_today'
+          ? cycleStatus === 'due_today'
+            ? 'due_soon'
+            : 'submitted'
+          : cycleStatus;
+
+      const statusLabelMap: Record<string, string> = {
+        not_scheduled: 'Not Scheduled',
+        not_started: 'Not Started',
+        draft: 'Draft',
+        submitted: 'Submitted',
+        due_soon: 'Due Soon',
+        overdue: 'Overdue',
+      };
+
+      const cycleStatusLabel =
+        statusLabelMap[normalizedStatusKey] ??
+        String(updateCycle.status_label ?? updateCycle.farm_update_status_label ?? 'Not Scheduled');
+
+      let nextUpdateLabel = 'Not Scheduled';
+      if (normalizedStatusKey === 'not_scheduled') {
+        nextUpdateLabel = 'Not Scheduled';
+      } else if (nextDueDate && nextDueDate !== '-') {
+        nextUpdateLabel = formatLocalizedDate(nextDueDate, language);
+      } else if (daysRemaining != null && daysRemaining !== undefined && daysRemaining !== '') {
+        nextUpdateLabel = `${daysRemaining} days`;
+      }
 
       const farmActivityRecords = extractList(farmActivityData as ApiRecord, ['farm_activities', 'farmActivities']);
       const mappedActivities = farmActivityRecords
@@ -232,7 +254,7 @@ export function useFarmerDashboardData() {
           title: 'Farm Activity',
           activityId: String(record.activity_code ?? record.id ?? ''),
           farmName: String(record.farm_code ?? record.farm_id ?? ''),
-          dateLabel: String(record.activity_date ?? record.submitted_at ?? ''),
+          dateLabel: formatLocalizedDate(String(record.activity_date ?? record.submitted_at ?? ''), language),
           statusLabel: String(record.status ?? 'submitted'),
           emoji: '🌾',
           sortKey: new Date(String(record.submitted_at ?? record.activity_date ?? 0)).getTime() || 0,
@@ -308,11 +330,16 @@ export function useFarmerDashboardData() {
         weeklyUpdatesPendingCount: 0,
         evidenceUploadedCount: evidenceCount,
         reportsAvailableCount: 0,
-        biocharServiceStatusLabel: String(biocharBlock.service_status_label ?? 'Active'),
+        biocharServiceStatusLabel: String(biocharBlock.service_status_label ?? 'Biochar'),
+        biocharNextUpdateLabel: nextUpdateLabel,
         biocharDaysRemainingLabel:
-          daysRemaining === null || daysRemaining === undefined ? '—' : `${daysRemaining} days`,
-        biocharCycleStatusLabel: String(updateCycle.farm_update_status_label ?? 'Not Started'),
+          daysRemaining === null || daysRemaining === undefined || daysRemaining === ''
+            ? nextUpdateLabel
+            : `${daysRemaining} days`,
+        biocharCycleStatusLabel: cycleStatusLabel,
+        biocharCycleStatusKey: normalizedStatusKey,
         biocharCycleTone: cycleTone,
+        biocharCycleLoading: false,
         walletAmountLabel: `₹${walletPending.toLocaleString('en-IN')}`,
       });
     } catch (err) {
@@ -321,7 +348,7 @@ export function useFarmerDashboardData() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     void load(false);

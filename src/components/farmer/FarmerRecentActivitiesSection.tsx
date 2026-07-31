@@ -1,20 +1,21 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useTranslation } from '../../i18n/I18nContext';
 import type { FarmerActivityViewModel } from '../../utils/farmerActivityHelpers';
 import { DashboardPressable } from '../shared/DashboardPressable';
 import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 
 interface FarmerRecentActivitiesSectionProps {
   activities: FarmerActivityViewModel[];
-  onActivityPress: (activityId: number) => void;
   onViewAllPress: () => void;
 }
 
 export function FarmerRecentActivitiesSection({
   activities,
-  onActivityPress,
   onViewAllPress,
 }: FarmerRecentActivitiesSectionProps) {
+  const { t } = useTranslation();
+
   if (activities.length === 0) {
     return null;
   }
@@ -22,19 +23,15 @@ export function FarmerRecentActivitiesSection({
   return (
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>Recent Farm Activity</Text>
+        <Text style={styles.sectionTitle}>{t('farmer.dashboard.recentActivities')}</Text>
         <DashboardPressable variant="button" onPress={onViewAllPress}>
-          <Text style={styles.viewAll}>View all</Text>
+          <Text style={styles.viewAll}>{t('farmer.dashboard.viewAll')}</Text>
         </DashboardPressable>
       </View>
 
       <View style={styles.list}>
         {activities.map((activity) => (
-          <DashboardPressable
-            key={activity.id}
-            onPress={() => onActivityPress(activity.id)}
-            style={[styles.card, dashboardShadow]}
-          >
+          <View key={activity.id} style={[styles.card, dashboardShadow]} accessibilityRole="text">
             <View style={styles.cardTop}>
               <Text style={styles.emoji}>{activity.emoji}</Text>
               <View style={styles.copy}>
@@ -45,7 +42,7 @@ export function FarmerRecentActivitiesSection({
               <Text style={styles.date}>{activity.dateLabel}</Text>
             </View>
             <Text style={styles.status}>{activity.statusLabel}</Text>
-          </DashboardPressable>
+          </View>
         ))}
       </View>
     </View>

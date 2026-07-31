@@ -290,7 +290,7 @@ export function EvidenceVerificationScreen({ route, navigation }: Props) {
         />
       </ScrollView>
 
-      <OfficerScreenBottomNav activeTab="Visits" />
+      <OfficerScreenBottomNav activeTab="Home" />
 
       <EvidenceVerificationModals
         draftSavedVisible={draftSavedVisible}

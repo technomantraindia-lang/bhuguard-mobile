@@ -8,10 +8,16 @@ import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 interface FarmerFarmsHeaderProps {
   showBack?: boolean;
   onBack?: () => void;
+  unreadCount?: number;
   onNotificationsPress: () => void;
 }
 
-export function FarmerFarmsHeader({ showBack = false, onBack, onNotificationsPress }: FarmerFarmsHeaderProps) {
+export function FarmerFarmsHeader({
+  showBack = false,
+  onBack,
+  unreadCount = 0,
+  onNotificationsPress,
+}: FarmerFarmsHeaderProps) {
   return (
     <View style={styles.wrap}>
       <View style={styles.left}>
@@ -38,7 +44,7 @@ export function FarmerFarmsHeader({ showBack = false, onBack, onNotificationsPre
 
       <Pressable style={styles.notificationButton} onPress={onNotificationsPress}>
         <BhuguardMaterialIcon name="notifications" size={24} color={dashboardTheme.primary} />
-        <View style={styles.notificationDot} />
+        {unreadCount > 0 ? <View style={styles.notificationDot} /> : null}
       </Pressable>
     </View>
   );

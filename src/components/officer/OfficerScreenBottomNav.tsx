@@ -7,19 +7,18 @@ import { BhuguardMaterialIcon, type BhuguardIconName } from '../shared/BhuguardM
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerShadow, officerTheme } from '../../theme/officerDashboardTheme';
 
-const TABS: Array<{ label: string; icon: BhuguardIconName; tab: 'Home' | 'Visits' | 'Farmers' | 'Reports' | 'Profile' }> = [
+const TABS: Array<{ label: string; icon: BhuguardIconName; tab: 'Home' | 'Farmers' | 'MyArtisans' | 'Profile' }> = [
   { label: 'Dashboard', icon: 'assignment_turned_in', tab: 'Home' },
-  { label: 'Visits', icon: 'event_note', tab: 'Visits' },
   { label: 'Farmers', icon: 'group', tab: 'Farmers' },
-  { label: 'Reports', icon: 'pending_actions', tab: 'Reports' },
+  { label: 'My Artisan Pros', icon: 'badge', tab: 'MyArtisans' },
   { label: 'Profile', icon: 'account_circle', tab: 'Profile' },
 ];
 
 interface OfficerScreenBottomNavProps {
-  activeTab?: 'Home' | 'Visits' | 'Farmers' | 'Reports' | 'Profile';
+  activeTab?: 'Home' | 'Farmers' | 'MyArtisans' | 'Profile';
 }
 
-export function OfficerScreenBottomNav({ activeTab = 'Visits' }: OfficerScreenBottomNavProps) {
+export function OfficerScreenBottomNav({ activeTab = 'Home' }: OfficerScreenBottomNavProps) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<FieldOfficerStackParamList>>();
 

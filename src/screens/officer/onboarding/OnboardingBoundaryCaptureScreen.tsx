@@ -1,1 +1,7 @@
-export { FarmBoundaryCaptureScreen as OnboardingBoundaryCaptureScreen } from '../../farmer/boundary/FarmBoundaryCaptureScreen';
+import { FarmBoundaryManualDrawScreen } from '../boundary/FarmBoundaryManualDrawScreen';
+
+export function OnboardingBoundaryCaptureScreen() {
+  return <FarmBoundaryManualDrawScreen />;
+}
+
+export default OnboardingBoundaryCaptureScreen;

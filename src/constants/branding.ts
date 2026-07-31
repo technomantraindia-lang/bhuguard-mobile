@@ -6,7 +6,7 @@ export const BRAND_TAGLINE = 'Digital MRV for Climate Action';
 
 export const LOGO_SIZES = {
   splash: 110,
-  login: 90,
+  login: 120,
   roleSelection: 72,
   dashboardHeader: 48,
   moduleHeader: 32,

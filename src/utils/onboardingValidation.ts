@@ -1,24 +1,35 @@
 import type { OnboardingDraft } from '../context/OnboardingContext';
+import { isWeakMpin } from './securityFlow';
 
 export function validateBasicDetails(draft: OnboardingDraft): string | null {
-  if (!draft.farmer_name.trim()) {
-    return 'Farmer name is required.';
+  const name = draft.farmer_name.trim();
+
+  if (!name) {
+    return 'Name as per Government ID is required.';
+  }
+
+  if (name.length > 100) {
+    return 'Name as per Government ID must be 100 characters or fewer.';
+  }
+
+  if (!/^(?=.*[\p{L}])[\p{L}\p{M}\s.'-]{2,100}$/u.test(name)) {
+    return 'Enter a valid Name as per Government ID. Numbers or symbols alone are not allowed.';
   }
 
   if (!/^[6-9]\d{9}$/.test(draft.mobile.trim())) {
     return 'Mobile number must be 10 digits and start with 6-9.';
   }
 
-  if (!/^[a-zA-Z0-9_]{4,30}$/.test(draft.username.trim())) {
-    return 'Username must be 4-30 characters using letters, numbers, or underscore only.';
+  if (draft.mpin.length !== 6 || !/^\d{6}$/.test(draft.mpin)) {
+    return 'Create MPIN must be exactly 6 digits.';
   }
 
-  if (draft.password.length < 8) {
-    return 'Password must be at least 8 characters.';
+  if (isWeakMpin(draft.mpin) || draft.mobile.trim().endsWith(draft.mpin) || draft.mobile.trim().startsWith(draft.mpin)) {
+    return 'Choose a stronger MPIN. Avoid simple, repeating, sequential, or mobile-based patterns.';
   }
 
-  if (draft.confirm_password !== draft.password) {
-    return 'Confirm password must match password.';
+  if (draft.confirm_mpin !== draft.mpin) {
+    return 'Confirm MPIN must match Create MPIN.';
   }
 
   if (draft.alternate_mobile.trim() && !/^[6-9]\d{9}$/.test(draft.alternate_mobile.trim())) {
@@ -64,7 +75,11 @@ export function validateConsent(draft: OnboardingDraft): string | null {
   }
 
   if (!draft.farmer_signature_confirmed) {
-    return 'Confirm that the farmer has read and signed the legal agreements.';
+    return 'Confirm that the farmer has read the legal agreements.';
+  }
+
+  if (!draft.agreement_otp_verified || !draft.agreement_verification_token.trim()) {
+    return 'Verify the Farmer Agreement using the OTP sent to the registered mobile number.';
   }
 
   return null;
@@ -115,12 +130,8 @@ export function validateLandDetails(draft: OnboardingDraft): string | null {
     return 'Irrigation type is required.';
   }
 
-  if (draft.project_interest.length < 1) {
-    return 'Select at least one project interest.';
-  }
-
-  if (draft.service_interests.length < 1) {
-    return 'Select at least one service interest.';
+  if (!draft.service_interests.includes('Biochar')) {
+    return 'Service Interest must be Biochar.';
   }
 
   return null;
@@ -131,35 +142,65 @@ export function validateGps(draft: OnboardingDraft): string | null {
 }
 
 export function validateBoundaryMapping(draft: OnboardingDraft): string | null {
-  if (draft.boundary_mapping_status === 'draft' && draft.boundary_pending_reason.trim()) {
+  if (draft.boundary_mapping_status === 'pending') {
+    return null;
+  }
+
+  if (draft.boundary_mapping_status === 'not_mapped' || draft.boundary_mapping_status === 'draft') {
     return null;
   }
 
   if (draft.boundary_mapping_status !== 'mapped' && draft.boundary_mapping_status !== 'pending_review') {
-    return 'Land boundary mapping is required. Start Mobile Mapping and confirm the mapped land area.';
+    return null;
   }
 
   if (draft.boundary_points.length < 3) {
     return 'At least 3 GPS boundary points are required to complete land mapping.';
   }
 
-  if (!draft.gps_latitude.trim() || !draft.gps_longitude.trim()) {
+  const hasExplicitCenter = Boolean(draft.gps_latitude.trim() && draft.gps_longitude.trim());
+  const hasBoundaryCenter = draft.boundary_points.some(
+    (point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude),
+  );
+
+  // Saved boundary points are the source of truth for mapped land center GPS.
+  if (!hasExplicitCenter && !hasBoundaryCenter) {
     return 'Mapped land center GPS is required. Confirm land area after boundary mapping.';
   }
 
   return null;
 }
 
-export function validateDocuments(_draft: OnboardingDraft): string | null {
+/** Land Registration requires map or Skip for Now before continuing / submit. */
+export function validateLandMappingChoice(draft: OnboardingDraft): string | null {
+  const status = draft.boundary_mapping_status;
+
+  if (status === 'mapped' || status === 'pending_review' || status === 'pending') {
+    return validateBoundaryMapping(draft);
+  }
+
+  return 'Start Mobile Mapping or tap Skip for Now to continue.';
+}
+
+export function validateDocuments(draft: OnboardingDraft): string | null {
+  if (!String(draft.ownership_type ?? '').trim()) {
+    return 'Complete Land Registration (ownership type) before Documents.';
+  }
+
+  if (draft.ownership_type === 'owned' && !draft.proof_of_land_ownership && draft.farmer_documents.length < 1) {
+    return 'Add at least one land ownership or supporting document.';
+  }
+
   return null;
 }
 
 export function validateSubmit(draft: OnboardingDraft): string | null {
   return (
-    validateFarmerProfileStep1(draft)
+    validateBasicDetails(draft)
+    ?? validateAddress(draft)
     ?? validateConsent(draft)
     ?? validateLandDetails(draft)
-    ?? validateBoundaryMapping(draft)
+    ?? validateLandMappingChoice(draft)
     ?? validateDocuments(draft)
   );
 }

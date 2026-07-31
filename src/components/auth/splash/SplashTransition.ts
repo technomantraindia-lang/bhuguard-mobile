@@ -1,11 +1,11 @@
-export const SPLASH_BACKGROUND = '#F7FAF6';
-export const SPLASH_TAGLINE_COLOR = '#285B2A';
-export const SPLASH_GLOW_COLOR = '#F6D365';
-export const SPLASH_RIPPLE_COLOR = 'rgba(96,170,80,0.08)';
-export const SPLASH_LEAF_COLORS = ['#6CBF5A', '#89C95F'] as const;
-export const SPLASH_DOT_COLOR = '#2E7D32';
+export const SPLASH_BACKGROUND = '#03150D';
+export const SPLASH_TAGLINE_COLOR = '#0B2E1F';
+export const SPLASH_GLOW_COLOR = '#E7DF7C';
+export const SPLASH_RIPPLE_COLOR = 'rgba(133,201,92,0.12)';
+export const SPLASH_LEAF_COLORS = ['#85C95C', '#0B2E1F'] as const;
+export const SPLASH_DOT_COLOR = '#85C95C';
 
-export const SPLASH_TAGLINE = 'Climate Intelligence for a Sustainable Future';
+export const SPLASH_TAGLINE = 'CLIMATE. NATURE. FUTURE.';
 
 /** Entrance fade from white into premium background */
 export const SCREEN_FADE_MS = 300;
@@ -32,9 +32,12 @@ export const TAGLINE_START_DELAY_MS = 1400;
  * Minimum time the premium splash remains visible so boot finishing early
  * never cuts the animation short.
  */
-export const MIN_SPLASH_MS = 3000;
+/** Matches brand preloader hold time before Language Selection. */
+export const MIN_SPLASH_MS = 700;
 
-export const MAX_SPLASH_MS = 3500;
+export const MAX_SPLASH_MS = 3200;
+
+export const PRELOADER_DURATION = MIN_SPLASH_MS;
 
 export async function waitForMinimumSplash(startedAt: number, minimumMs: number = MIN_SPLASH_MS): Promise<void> {
   const elapsed = Date.now() - startedAt;

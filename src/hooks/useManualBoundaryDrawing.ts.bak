@@ -1,0 +1,258 @@
+import { useCallback, useMemo, useRef, useState } from 'react';
+
+import {
+  type BoundaryPoint,
+  MIN_BOUNDARY_POINTS,
+} from '../utils/boundaryGeometry';
+import type { LatLng } from '../utils/farmSatelliteMap';
+import {
+  cloneBoundaryPoints,
+  type ManualDrawingPhase,
+} from '../utils/manualBoundaryVisuals';
+import {
+  createManualBoundaryPoint,
+  formatManualAreaDisplay,
+  formatManualAreaBlocks,
+  isFiniteLatLng,
+  pointsTooClose,
+  tryInsertVertexOnEdge,
+  validateManualPolygon,
+} from '../utils/manualBoundaryGeometry';
+
+interface UseManualBoundaryDrawingOptions {
+  initialPoints?: BoundaryPoint[];
+  currentAccuracy?: number | null;
+  currentAltitude?: number | null;
+  initialPersistedToBhuguard?: boolean;
+}
+
+export function useManualBoundaryDrawing({
+  initialPoints = [],
+  currentAccuracy = null,
+  currentAltitude = null,
+  initialPersistedToBhuguard = false,
+}: UseManualBoundaryDrawingOptions = {}) {
+  const [phase, setPhase] = useState<ManualDrawingPhase>(
+    initialPoints.length >= MIN_BOUNDARY_POINTS ? 'completed' : 'idle',
+  );
+  const [points, setPoints] = useState<BoundaryPoint[]>(initialPoints);
+  const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
+  const [drawingStartedAt, setDrawingStartedAt] = useState<string | null>(null);
+  const [drawingCompletedAt, setDrawingCompletedAt] = useState<string | null>(null);
+  const [persistedToBhuguard, setPersistedToBhuguard] = useState(initialPersistedToBhuguard);
+  const [farmLocked, setFarmLocked] = useState(initialPoints.length > 0);
+  const editSnapshotRef = useRef<BoundaryPoint[] | null>(null);
+
+  const validation = useMemo(() => validateManualPolygon(points), [points]);
+  const areaLabel = validation.metrics ? formatManualAreaDisplay(validation.metrics) : null;
+  const areaBlocks = validation.metrics ? formatManualAreaBlocks(validation.metrics) : [];
+  const isDrawing = phase === 'drawing';
+  const isEditing = phase === 'editing';
+  const isCompleted = phase === 'completed';
+  const canComplete = points.length >= MIN_BOUNDARY_POINTS;
+
+  const startDrawing = useCallback(() => {
+    setPhase('drawing');
+    setDrawingStartedAt(new Date().toISOString());
+    setDrawingCompletedAt(null);
+    setPersistedToBhuguard(false);
+    setSelectedPointId(null);
+    setFarmLocked(true);
+    editSnapshotRef.current = null;
+  }, []);
+
+  const addVertex = useCallback(
+    (coordinate: LatLng) => {
+      if (phase !== 'drawing' || !isFiniteLatLng(coordinate)) {
+        return;
+      }
+
+      setPoints((current) => {
+        const last = current[current.length - 1];
+        if (last && pointsTooClose(last, coordinate)) {
+          return current;
+        }
+
+        return [
+          ...current,
+          createManualBoundaryPoint(coordinate, currentAccuracy ?? 8, current.length + 1, currentAltitude),
+        ];
+      });
+    },
+    [currentAccuracy, currentAltitude, phase],
+  );
+
+  const undoLastVertex = useCallback(() => {
+    if (phase !== 'drawing') {
+      return;
+    }
+
+    setPoints((current) => current.slice(0, -1).map((point, index) => ({ ...point, pointNo: index + 1 })));
+    setDrawingCompletedAt(null);
+    setPersistedToBhuguard(false);
+  }, [phase]);
+
+  const resetBoundary = useCallback(() => {
+    setPoints([]);
+    setPhase('idle');
+    setDrawingStartedAt(null);
+    setDrawingCompletedAt(null);
+    setPersistedToBhuguard(false);
+    setSelectedPointId(null);
+    editSnapshotRef.current = null;
+  }, []);
+
+  const completeBoundary = useCallback((): string | null => {
+    const result = validateManualPolygon(points);
+
+    if (!result.valid) {
+      return result.message;
+    }
+
+    setPhase('completed');
+    setDrawingCompletedAt(new Date().toISOString());
+    setPersistedToBhuguard(false);
+    setSelectedPointId(null);
+    editSnapshotRef.current = null;
+
+    return null;
+  }, [points]);
+
+  const enterEditMode = useCallback(() => {
+    if (points.length < MIN_BOUNDARY_POINTS) {
+      return;
+    }
+
+    editSnapshotRef.current = cloneBoundaryPoints(points);
+    setPhase('editing');
+    setDrawingCompletedAt(null);
+    setSelectedPointId(points[0]?.id ?? null);
+  }, [points]);
+
+  const cancelEditMode = useCallback(() => {
+    if (editSnapshotRef.current) {
+      setPoints(cloneBoundaryPoints(editSnapshotRef.current));
+    }
+
+    editSnapshotRef.current = null;
+    setSelectedPointId(null);
+    setPhase('completed');
+    setDrawingCompletedAt(new Date().toISOString());
+  }, []);
+
+  const finishEditMode = useCallback((): string | null => {
+    const result = validateManualPolygon(points);
+    if (!result.valid) {
+      return result.message;
+    }
+
+    editSnapshotRef.current = null;
+    setSelectedPointId(null);
+    setPhase('completed');
+    setDrawingCompletedAt(new Date().toISOString());
+    setPersistedToBhuguard(false);
+    return null;
+  }, [points]);
+
+  const markPersistedToBhuguard = useCallback(() => {
+    setPersistedToBhuguard(true);
+    setPhase('completed');
+    setSelectedPointId(null);
+    editSnapshotRef.current = null;
+  }, []);
+
+  const updateVertex = useCallback((pointId: string, coordinate: LatLng) => {
+    if (!isFiniteLatLng(coordinate)) {
+      return;
+    }
+
+    setPersistedToBhuguard(false);
+    setPoints((current) =>
+      current.map((point) =>
+        point.id === pointId
+          ? {
+              ...point,
+              latitude: coordinate.latitude,
+              longitude: coordinate.longitude,
+            }
+          : point,
+      ),
+    );
+  }, []);
+
+  const setSelectedVertexHere = useCallback(
+    (coordinate: LatLng) => {
+      if (phase !== 'editing' || !selectedPointId || !isFiniteLatLng(coordinate)) {
+        return;
+      }
+
+      updateVertex(selectedPointId, coordinate);
+    },
+    [phase, selectedPointId, updateVertex],
+  );
+
+  const removeVertex = useCallback((pointId: string) => {
+    setPersistedToBhuguard(false);
+    setPoints((current) =>
+      current
+        .filter((point) => point.id !== pointId)
+        .map((point, index) => ({ ...point, pointNo: index + 1 })),
+    );
+    setSelectedPointId((current) => (current === pointId ? null : current));
+    setPhase((current) => (current === 'completed' ? 'editing' : current));
+    setDrawingCompletedAt(null);
+  }, []);
+
+  const handleMapPress = useCallback(
+    (coordinate: LatLng) => {
+      if (phase === 'drawing') {
+        addVertex(coordinate);
+      }
+    },
+    [addVertex, phase],
+  );
+
+  const loadPoints = useCallback((nextPoints: BoundaryPoint[], persisted = false) => {
+    setPoints(nextPoints);
+    setPhase(nextPoints.length >= MIN_BOUNDARY_POINTS ? 'completed' : 'idle');
+    setPersistedToBhuguard(persisted);
+    setSelectedPointId(null);
+    setFarmLocked(nextPoints.length > 0);
+    editSnapshotRef.current = null;
+  }, []);
+
+  return {
+    phase,
+    points,
+    vertexCount: points.length,
+    selectedPointId,
+    areaLabel,
+    areaBlocks,
+    validation,
+    isDrawing,
+    isEditing,
+    isCompleted,
+    canComplete,
+    farmLocked,
+    persistedToBhuguard,
+    drawingStartedAt,
+    drawingCompletedAt,
+    startDrawing,
+    addVertex,
+    undoLastVertex,
+    resetBoundary,
+    completeBoundary,
+    enterEditMode,
+    cancelEditMode,
+    finishEditMode,
+    markPersistedToBhuguard,
+    updateVertex,
+    setSelectedVertexHere,
+    setSelectedPointId,
+    removeVertex,
+    handleMapPress,
+    loadPoints,
+    setPhase,
+    setFarmLocked,
+  };
+}

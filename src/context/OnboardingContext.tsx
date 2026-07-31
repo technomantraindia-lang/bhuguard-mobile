@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import { buildOnboardingNotes } from '../utils/onboardingNotes';
+import { DEFAULT_FIELD_OFFICER_SERVICE_INTERESTS } from '../constants/fieldOfficerOnboarding';
 import type { AreaUnit, BoundaryPoint } from '../utils/boundaryGeometry';
 import { buildOnboardingBoundaryPayload } from '../utils/onboardingBoundary';
 import type { MappingStatus } from '../utils/landMappingHelpers';
@@ -29,11 +30,15 @@ export interface OnboardingResult {
 }
 
 export interface OnboardingDraft {
+  farmer_id: number | null;
+  farm_id: number | null;
+  farmer_code: string;
+  farm_code: string;
+  farm_name: string;
   farmer_name: string;
   mobile: string;
-  username: string;
-  password: string;
-  confirm_password: string;
+  mpin: string;
+  confirm_mpin: string;
   alternate_mobile: string;
   email: string;
   gender: string;
@@ -70,24 +75,37 @@ export interface OnboardingDraft {
   carbon_rights_consent: boolean;
   project_participation_consent: boolean;
   farmer_signature_confirmed: boolean;
+  agreement_otp_verified: boolean;
+  agreement_verification_token: string;
+  agreement_verified_at: string;
+  agreement_verified_mobile: string;
   notes: string;
   farmer_photo: FileAsset | null;
   consent_form: FileAsset | null;
+  consent_documents: FileAsset[];
+  onboarding_evidences: FileAsset[];
+  farmer_documents: FileAsset[];
   proof_of_land_ownership: FileAsset | null;
+  /** Set when the user continues past the Documents step (prevents false green on overview). */
+  documents_step_completed: boolean;
   boundary_mapping_status: MappingStatus;
   boundary_unit: AreaUnit;
-  boundary_capture_method: 'gps' | 'camera';
+  boundary_capture_method: 'gps' | 'camera' | 'manual';
   boundary_points: BoundaryPoint[];
   boundary_pending_reason: string;
   boundary_verification_status: string;
 }
 
 const defaultDraft: OnboardingDraft = {
+  farmer_id: null,
+  farm_id: null,
+  farmer_code: '',
+  farm_code: '',
+  farm_name: '',
   farmer_name: '',
   mobile: '',
-  username: '',
-  password: '',
-  confirm_password: '',
+  mpin: '',
+  confirm_mpin: '',
   alternate_mobile: '',
   email: '',
   gender: '',
@@ -112,9 +130,9 @@ const defaultDraft: OnboardingDraft = {
   irrigation_type: '',
   soil_type: '',
   existing_farming_practice: '',
-  service_interest: '',
-  project_interest: [],
-  service_interests: [],
+  service_interest: 'Biochar',
+  project_interest: ['Biochar'],
+  service_interests: [...DEFAULT_FIELD_OFFICER_SERVICE_INTERESTS],
   remarks: '',
   gps_latitude: '',
   gps_longitude: '',
@@ -124,10 +142,18 @@ const defaultDraft: OnboardingDraft = {
   carbon_rights_consent: true,
   project_participation_consent: false,
   farmer_signature_confirmed: false,
+  agreement_otp_verified: false,
+  agreement_verification_token: '',
+  agreement_verified_at: '',
+  agreement_verified_mobile: '',
   notes: '',
   farmer_photo: null,
   consent_form: null,
+  consent_documents: [],
+  onboarding_evidences: [],
+  farmer_documents: [],
   proof_of_land_ownership: null,
+  documents_step_completed: false,
   boundary_mapping_status: 'not_mapped',
   boundary_unit: 'acre',
   boundary_capture_method: 'gps',
@@ -184,9 +210,9 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
         appendScalar(formData, 'farmer_name', draft.farmer_name);
         appendScalar(formData, 'mobile', draft.mobile);
-        appendScalar(formData, 'username', draft.username);
-        appendScalar(formData, 'password', draft.password);
-        appendScalar(formData, 'confirm_password', draft.confirm_password);
+        appendScalar(formData, 'mpin', draft.mpin);
+        appendScalar(formData, 'mpin_confirmation', draft.confirm_mpin);
+        appendScalar(formData, 'agreement_verification_token', draft.agreement_verification_token);
         appendScalar(formData, 'email', draft.email);
         appendScalar(formData, 'preferred_language', draft.preferred_language);
         appendScalar(formData, 'address_line', draft.address_line);
@@ -207,7 +233,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         appendScalar(formData, 'soil_type', draft.soil_type);
 
         draft.project_interest.forEach((interest) => formData.append('project_interest[]', interest));
-        draft.service_interests.forEach((interest) => formData.append('service_interests[]', interest));
+        formData.append('service_interests[]', 'Biochar');
 
         const notes = buildOnboardingNotes(draft);
 
@@ -218,15 +244,20 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         formData.append('data_usage_consent', draft.data_usage_consent ? '1' : '0');
         formData.append('carbon_rights_consent', draft.carbon_rights_consent ? '1' : '0');
         formData.append('project_participation_consent', draft.project_participation_consent ? '1' : '0');
+        formData.append('farmer_signature_confirmed', draft.farmer_signature_confirmed ? '1' : '0');
 
         appendFile(formData, 'farmer_photo', draft.farmer_photo);
         appendFile(formData, 'consent_form', draft.consent_form);
+        draft.consent_documents.forEach((file) => appendFile(formData, 'consent_documents[]', file));
+        draft.onboarding_evidences.forEach((file) => appendFile(formData, 'legal_agreement_photos[]', file));
+        draft.farmer_documents.forEach((file) => appendFile(formData, 'documents[]', file));
         appendFile(formData, 'proof_of_land_ownership', draft.proof_of_land_ownership);
 
-        const hasStampedImage =
-          [draft.farmer_photo, draft.proof_of_land_ownership].some(
-            (file) => file?.mimeType?.startsWith('image/'),
-          );
+        const hasStampedImage = [
+          draft.farmer_photo,
+          draft.proof_of_land_ownership,
+          ...draft.onboarding_evidences,
+        ].some((file) => file?.mimeType?.startsWith('image/'));
 
         if (hasStampedImage) {
           formData.append('client_pre_stamped', '1');
@@ -236,7 +267,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
           formData.append('captured_at', draft.gps_captured_at.trim());
         }
 
-        if (draft.boundary_points.length >= 3) {
+        if (
+          draft.boundary_points.length >= 3
+          && (draft.boundary_mapping_status === 'mapped' || draft.boundary_mapping_status === 'pending_review')
+        ) {
           const mappingPayload = buildOnboardingBoundaryPayload(draft);
           formData.append('boundary_mapping', JSON.stringify(mappingPayload));
         }

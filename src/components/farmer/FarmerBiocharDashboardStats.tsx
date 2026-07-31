@@ -1,37 +1,40 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useTranslation } from '../../i18n/I18nContext';
+import { farmerCycleToneColor, farmerTheme, type FarmerCycleTone } from '../../theme/farmerTheme';
 import { BhuguardMaterialIcon, type BhuguardIconName } from '../shared/BhuguardMaterialIcon';
 import { DashboardPressable } from '../shared/DashboardPressable';
-import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 
 interface StatCardProps {
   icon: BhuguardIconName;
   value: string;
   label: string;
-  tone?: 'default' | 'warning' | 'danger';
+  tone?: FarmerCycleTone;
   onPress?: () => void;
+  loading?: boolean;
 }
 
-function StatCard({ icon, value, label, tone = 'default', onPress }: StatCardProps) {
-  const toneColor =
-    tone === 'danger' ? dashboardTheme.error : tone === 'warning' ? '#CA8A04' : dashboardTheme.primaryContainer;
+function StatCard({ icon, value, label, tone = 'default', onPress, loading = false }: StatCardProps) {
+  const toneColor = farmerCycleToneColor(tone);
 
   const body = (
     <>
-      <View style={[styles.iconCircle, tone === 'danger' && styles.iconDanger]}>
+      <View style={[styles.iconCircle, { backgroundColor: `${toneColor}22` }]}>
         <BhuguardMaterialIcon name={icon} size={20} color={toneColor} />
       </View>
-      <Text style={[styles.value, tone === 'danger' && styles.valueDanger]}>{value}</Text>
+      <Text style={[styles.value, { color: tone === 'default' ? farmerTheme.deepText : toneColor }]} numberOfLines={2}>
+        {loading ? '…' : value}
+      </Text>
       <Text style={styles.label}>{label}</Text>
     </>
   );
 
   if (!onPress) {
-    return <View style={[styles.card, dashboardShadow]}>{body}</View>;
+    return <View style={styles.card}>{body}</View>;
   }
 
   return (
-    <DashboardPressable onPress={onPress} style={[styles.card, dashboardShadow]}>
+    <DashboardPressable onPress={onPress} style={styles.card}>
       {body}
     </DashboardPressable>
   );
@@ -39,46 +42,64 @@ function StatCard({ icon, value, label, tone = 'default', onPress }: StatCardPro
 
 export interface FarmerBiocharDashboardStatsProps {
   serviceStatusLabel: string;
-  daysRemainingLabel: string;
+  nextUpdateLabel: string;
   cycleStatusLabel: string;
-  cycleTone: 'default' | 'warning' | 'danger';
+  cycleTone: FarmerCycleTone;
   walletAmountLabel: string;
-  evidenceCount: number;
+  cycleLoading?: boolean;
   onServicePress?: () => void;
   onUpdatesPress?: () => void;
   onWalletPress?: () => void;
-  onEvidencePress?: () => void;
 }
 
 export function FarmerBiocharDashboardStats({
   serviceStatusLabel,
-  daysRemainingLabel,
+  nextUpdateLabel,
   cycleStatusLabel,
   cycleTone,
   walletAmountLabel,
-  evidenceCount,
+  cycleLoading = false,
   onServicePress,
   onUpdatesPress,
   onWalletPress,
-  onEvidencePress,
 }: FarmerBiocharDashboardStatsProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.wrap}>
       <View style={styles.grid}>
-        <StatCard icon="eco" value={serviceStatusLabel} label="Biochar" />
+        <StatCard
+          icon="eco"
+          value={serviceStatusLabel || 'Biochar'}
+          label={t('farmer.dashboard.activeService')}
+          tone="success"
+          onPress={onServicePress}
+        />
         <StatCard
           icon="event_note"
-          value={daysRemainingLabel}
-          label="Next Farm Update"
+          value={nextUpdateLabel}
+          label={t('farmer.dashboard.nextFarmPhotoUploadDate')}
           tone={cycleTone}
+          loading={cycleLoading}
           onPress={onUpdatesPress}
         />
       </View>
       <View style={styles.grid}>
-        <StatCard icon="schedule" value={cycleStatusLabel} label="Farm Update Status" tone={cycleTone} onPress={onUpdatesPress} />
-        <StatCard icon="payments" value={walletAmountLabel} label="Wallet Amount" onPress={onWalletPress} />
+        <StatCard
+          icon="schedule"
+          value={cycleStatusLabel}
+          label={t('farmer.dashboard.currentUpdateStatus')}
+          tone={cycleTone}
+          loading={cycleLoading}
+          onPress={onUpdatesPress}
+        />
+        <StatCard
+          icon="payments"
+          value={walletAmountLabel}
+          label={t('farmer.dashboard.wallet')}
+          onPress={onWalletPress}
+        />
       </View>
-      <StatCard icon="photo_camera" value={String(evidenceCount)} label="Evidence Uploaded" onPress={onEvidencePress} />
     </View>
   );
 }
@@ -88,25 +109,23 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', gap: 12 },
   card: {
     flex: 1,
-    backgroundColor: dashboardTheme.surfaceLowest,
-    borderRadius: 20,
+    backgroundColor: farmerTheme.white,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: dashboardTheme.outlineVariant,
+    borderColor: farmerTheme.softBorder,
     padding: 12,
-    gap: 8,
     minHeight: 108,
     justifyContent: 'space-between',
+    ...farmerTheme.cardShadow,
   },
   iconCircle: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: dashboardTheme.surfaceLow,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 8,
   },
-  iconDanger: { backgroundColor: dashboardTheme.errorContainer },
-  value: { fontSize: 18, fontWeight: '700', color: dashboardTheme.onSurface },
-  valueDanger: { color: dashboardTheme.error },
-  label: { fontSize: 12, fontWeight: '600', color: dashboardTheme.textMuted },
+  value: { fontSize: 16, fontWeight: '800', color: farmerTheme.deepText },
+  label: { fontSize: 12, fontWeight: '600', color: farmerTheme.secondaryText, marginTop: 4 },
 });

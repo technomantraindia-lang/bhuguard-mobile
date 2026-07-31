@@ -2,11 +2,22 @@ import axios from 'axios';
 
 import type { ApiErrorResponse, ApiSuccessResponse, AuthUser, LoginPasswordResult } from '../types/auth';
 import { resolveUserRole } from '../utils/authRole';
+import { Platform } from 'react-native';
+
 import { clearAuthStorage, saveAuthToken, saveAuthUser } from '../utils/authStorage';
+import { getOrCreateDeviceUuid } from '../utils/biometricLogin';
 
 import { apiClient } from './client';
 
 const DEVICE_NAME = 'expo-mobile';
+
+async function devicePayload() {
+  return {
+    device_name: DEVICE_NAME,
+    device_uuid: await getOrCreateDeviceUuid(),
+    platform: Platform.OS,
+  };
+}
 
 export interface LoginPayload {
   mobile?: string;
@@ -103,10 +114,11 @@ export async function login(payload: LoginPayload): Promise<NormalizedAuthRespon
     throw new Error('Mobile/email and password are required.');
   }
 
+  const device = await devicePayload();
   const response = await apiClient.post('/auth/login/password', {
     login: loginId,
     password: payload.password,
-    device_name: DEVICE_NAME,
+    ...device,
   });
 
   return normalizeAuthResponse(response.data);
@@ -137,7 +149,11 @@ export async function logout(): Promise<void> {
   } catch {
     // Local session is always cleared even if server logout fails.
   } finally {
-    await clearAuthStorage();
+    try {
+      await clearAuthStorage();
+    } catch {
+      // Never block logout navigation on storage cleanup failures.
+    }
   }
 }
 
@@ -158,10 +174,11 @@ export async function loginPassword(loginId: string, password: string): Promise<
 }
 
 export async function loginMpin(mobile: string, mpin: string): Promise<LoginPasswordResult> {
+  const device = await devicePayload();
   const response = await apiClient.post<ApiSuccessResponse<{ token: string; user: AuthUser }>>('/auth/login/mpin', {
     mobile: mobile.trim(),
     mpin,
-    device_name: DEVICE_NAME,
+    ...device,
   });
 
   const { token, user } = normalizeAuthResponse(response.data);
@@ -197,15 +214,37 @@ export async function requestLoginOtp(mobile: string) {
 }
 
 export async function verifyLoginOtp(mobile: string, otp: string): Promise<LoginPasswordResult> {
+  const device = await devicePayload();
   const response = await apiClient.post('/auth/login/verify-otp', {
     mobile: mobile.trim(),
     otp: otp.trim(),
-    device_name: DEVICE_NAME,
+    ...device,
   });
 
   const { token, user } = normalizeAuthResponse(response.data);
 
   return { token, user, user_type: resolveUserRole(user) ?? user.user_type };
+}
+
+export async function setupMpin(mpin: string): Promise<AuthUser> {
+  const response = await apiClient.post('/auth/mpin/setup', {
+    mpin,
+    mpin_confirmation: mpin,
+  });
+  const user = extractUser(response.data);
+
+  if (!user) {
+    throw new Error('Invalid MPIN setup response.');
+  }
+
+  await saveAuthUser(user);
+
+  return user;
+}
+
+export async function enableDeviceBiometric(): Promise<void> {
+  const device = await devicePayload();
+  await apiClient.post('/auth/devices/biometric', device);
 }
 
 /** @deprecated Use getCurrentUser */

@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type {
   FieldOfficerDashboardViewModel,
@@ -6,29 +6,25 @@ import type {
   OfficerDashboardVisit,
 } from '../../hooks/useFieldOfficerDashboardData';
 import {
-  OfficerPremiumQuickActionCard,
   OfficerQuickActionsSectionHeader,
 } from './OfficerPremiumQuickActionCard';
-import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
+import { BhuguardMaterialIcon, type BhuguardIconName } from '../shared/BhuguardMaterialIcon';
 import { officerCardShadow, officerShadow, officerTheme } from '../../theme/officerDashboardTheme';
-import type { BhuguardIconName } from '../shared/BhuguardMaterialIcon';
 
 interface OfficerDashboardSectionsProps {
   dashboard: FieldOfficerDashboardViewModel;
   onVisitPress?: (visit: OfficerDashboardVisit) => void;
-  onStartVerification?: () => void;
-  onUploadEvidence?: () => void;
-  onOnboardFarmer?: () => void;
-  onFeedstockVerification?: () => void;
-  onBiocharProduction?: () => void;
-  onInventoryMovement?: () => void;
-  onVerificationChecklist?: () => void;
+  onOpenMyFarmers?: () => void;
+  onOpenFarmActivity?: () => void;
+  onOpenInventory?: () => void;
+  onOpenMyArtisans?: () => void;
+  onOpenArtisanBiocharBatches?: () => void;
+  onOpenFarmerOnboarding?: () => void;
+  onOpenScheduleVisit?: () => void;
   onSeeSchedule?: () => void;
   onViewFullMap?: () => void;
   onCallFarmer?: () => void;
   onNavigate?: () => void;
-  onNextVisit?: () => void;
-  onReportIssue?: () => void;
 }
 
 export function OfficerGreetingSection({ greeting, officerName }: { greeting: string; officerName: string }) {
@@ -73,10 +69,30 @@ export function OfficerSummaryCard({ dashboard }: { dashboard: FieldOfficerDashb
 
 export function OfficerStatsGrid({ dashboard }: { dashboard: FieldOfficerDashboardViewModel }) {
   const stats = [
-    { label: 'Visited Field', value: String(dashboard.completedVisitsCount), unit: 'Visits', color: officerTheme.primary },
-    { label: 'Pending Visited', value: String(dashboard.pendingVisitsCount), unit: 'Visits', color: officerTheme.secondary },
-    { label: 'Checked In', value: String(dashboard.checkedInVisitsCount), unit: 'Visits', color: officerTheme.tertiary },
-    { label: 'Total Visits', value: String(dashboard.assignedVisitsCount), unit: 'Visits', color: officerTheme.primary },
+    {
+      label: 'Visited Fields',
+      value: String(dashboard.visitedFieldsCount ?? dashboard.completedVisitsCount),
+      unit: 'Farms',
+      color: officerTheme.primary,
+    },
+    {
+      label: 'Pending Visits',
+      value: String(dashboard.pendingVisitsCount),
+      unit: 'Visits',
+      color: officerTheme.secondary,
+    },
+    {
+      label: 'Active Check-ins',
+      value: String(dashboard.activeCheckinsCount ?? dashboard.checkedInVisitsCount),
+      unit: 'Visits',
+      color: officerTheme.tertiary,
+    },
+    {
+      label: 'Total Visits',
+      value: String(dashboard.totalVisitsCount ?? dashboard.assignedVisitsCount),
+      unit: 'Visits',
+      color: officerTheme.primary,
+    },
   ];
 
   return (
@@ -94,89 +110,71 @@ export function OfficerStatsGrid({ dashboard }: { dashboard: FieldOfficerDashboa
   );
 }
 
+type QuickActionKey =
+  | 'myFarmers'
+  | 'farmActivity'
+  | 'inventory'
+  | 'myArtisans'
+  | 'artisanBiocharBatches'
+  | 'farmerOnboarding'
+  | 'scheduleVisit';
+
 export function OfficerQuickActionCards({
-  onStartVerification,
-  onOnboardFarmer,
-  onFeedstockVerification,
-  onBiocharProduction,
-  onInventoryMovement,
-  onVerificationChecklist,
-}: Required<
-  Pick<
-    OfficerDashboardSectionsProps,
-    | 'onStartVerification'
-    | 'onOnboardFarmer'
-    | 'onFeedstockVerification'
-    | 'onBiocharProduction'
-    | 'onInventoryMovement'
-    | 'onVerificationChecklist'
-  >
->) {
+  onOpenMyFarmers,
+  onOpenFarmActivity,
+  onOpenInventory,
+  onOpenMyArtisans,
+  onOpenArtisanBiocharBatches,
+  onOpenFarmerOnboarding,
+  onOpenScheduleVisit,
+}: {
+  onOpenMyFarmers?: () => void;
+  onOpenFarmActivity?: () => void;
+  onOpenInventory?: () => void;
+  onOpenMyArtisans?: () => void;
+  onOpenArtisanBiocharBatches?: () => void;
+  onOpenFarmerOnboarding?: () => void;
+  onOpenScheduleVisit?: () => void;
+}) {
   const actions: Array<{
-    id: string;
-    icon: BhuguardIconName;
+    key: QuickActionKey;
     title: string;
-    description: string;
-    ctaLabel: string;
-    onPress: () => void;
+    icon: BhuguardIconName;
+    onPress?: () => void;
   }> = [
-    {
-      id: 'start-verification',
-      icon: 'assignment',
-      title: 'Start Verification',
-      description: 'Begin Biochar field verification at farmer location',
-      ctaLabel: 'Launch Verifier',
-      onPress: onStartVerification,
-    },
-    {
-      id: 'onboard-new-farmer',
-      icon: 'person_add',
-      title: 'Onboard New Farmer',
-      description: 'Register farmer details, map land and upload documents',
-      ctaLabel: 'Start Onboarding',
-      onPress: onOnboardFarmer,
-    },
-    {
-      id: 'feedstock-verification',
-      icon: 'science',
-      title: 'Feedstock Verify',
-      description: 'Review farmer feedstock collection records',
-      ctaLabel: 'Open Verification',
-      onPress: onFeedstockVerification,
-    },
-    {
-      id: 'biochar-production',
-      icon: 'eco',
-      title: 'Biochar Production',
-      description: 'Record kiln batch, process data and evidence',
-      ctaLabel: 'Open Production',
-      onPress: onBiocharProduction,
-    },
-    {
-      id: 'inventory-movement',
-      icon: 'sync',
-      title: 'Inventory Movement',
-      description: 'Move biochar stock between storage and farm',
-      ctaLabel: 'Open Movement',
-      onPress: onInventoryMovement,
-    },
+    { key: 'myFarmers', title: 'My Farmers', icon: 'group', onPress: onOpenMyFarmers },
+    { key: 'farmActivity', title: 'Farm Activity', icon: 'agriculture', onPress: onOpenFarmActivity },
+    { key: 'inventory', title: 'Inventory', icon: 'assignment', onPress: onOpenInventory },
+    { key: 'myArtisans', title: 'My Artisan Pros', icon: 'badge', onPress: onOpenMyArtisans },
+    { key: 'artisanBiocharBatches', title: 'Artisan Pro Biochar Batches', icon: 'assignment', onPress: onOpenArtisanBiocharBatches },
+    { key: 'farmerOnboarding', title: 'Farmer Onboarding', icon: 'person_add', onPress: onOpenFarmerOnboarding },
+    { key: 'scheduleVisit', title: 'Schedule Visit', icon: 'event_note', onPress: onOpenScheduleVisit },
   ];
 
   return (
     <View style={styles.section}>
-      <OfficerQuickActionsSectionHeader />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickActionsRow}>
+      <OfficerQuickActionsSectionHeader
+        title="Quick Actions"
+        subtitle="Farmers, artisan work, activities, and visits."
+      />
+      <View style={styles.quickActionsWrap}>
         {actions.map((action) => (
-          <OfficerPremiumQuickActionCard
-            key={action.id}
-            icon={action.icon}
-            title={action.title}
-            description={action.description}
-            ctaLabel={action.ctaLabel}
+          <Pressable
+            key={action.key}
+            style={({ pressed }) => [styles.quickActionCard, officerCardShadow, pressed && styles.quickActionPressed]}
             onPress={action.onPress}
-          />
+            accessibilityRole="button"
+            accessibilityLabel={action.title}
+          >
+            <View style={styles.quickActionIcon}>
+              <BhuguardMaterialIcon name={action.icon} size={22} color={officerTheme.primary} filled />
+            </View>
+            <Text style={styles.quickActionTitle} numberOfLines={2}>
+              {action.title}
+            </Text>
+          </Pressable>
         ))}
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -261,31 +259,36 @@ export function OfficerTodaysVisits({
   );
 }
 
-export function OfficerVerificationPipeline({ dashboard }: { dashboard: FieldOfficerDashboardViewModel }) {
+export function OfficerArtisanApprovalPipeline({
+  dashboard,
+  onPress,
+}: {
+  dashboard: FieldOfficerDashboardViewModel;
+  onPress?: () => void;
+}) {
   const { pipeline } = dashboard;
-  const total = Math.max(pipeline.pending + pipeline.review + pipeline.correction + pipeline.approved, 1);
+  const total = Math.max(pipeline.total, 1);
 
   return (
-    <View style={[styles.pipelineCard, officerCardShadow]}>
+    <Pressable style={[styles.pipelineCard, officerCardShadow]} onPress={onPress} disabled={!onPress}>
       <View style={styles.pipelineTitleRow}>
         <BhuguardMaterialIcon name="analytics" size={20} color={officerTheme.primary} />
-        <Text style={styles.pipelineTitle}>Verification Pipeline</Text>
+        <Text style={styles.pipelineTitle}>Artisan Pro Approval Pipeline</Text>
       </View>
 
       <View style={styles.pipelineGrid}>
         <PipelineStat label="Pending" value={pipeline.pending} />
-        <PipelineStat label="Review" value={pipeline.review} bordered />
-        <PipelineStat label="Correct" value={pipeline.correction} bordered error />
         <PipelineStat label="Approved" value={pipeline.approved} bordered success />
+        <PipelineStat label="Rejected" value={pipeline.rejected} bordered error />
+        <PipelineStat label="Total" value={pipeline.total} bordered />
       </View>
 
       <View style={styles.pipelineBar}>
         <View style={[styles.pipelineBarSegment, { flex: pipeline.approved }]} />
-        <View style={[styles.pipelineBarSegment, { flex: pipeline.review, backgroundColor: officerTheme.tertiary }]} />
-        <View style={[styles.pipelineBarSegment, { flex: pipeline.correction, backgroundColor: officerTheme.error }]} />
-        <View style={[styles.pipelineBarSegment, { flex: Math.max(total - pipeline.approved - pipeline.review - pipeline.correction, 0), backgroundColor: 'transparent' }]} />
+        <View style={[styles.pipelineBarSegment, { flex: pipeline.rejected, backgroundColor: officerTheme.error }]} />
+        <View style={[styles.pipelineBarSegment, { flex: Math.max(total - pipeline.approved - pipeline.rejected, 0), backgroundColor: officerTheme.tertiary }]} />
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -456,14 +459,10 @@ export function OfficerRecentActivity({ activities = [] }: { activities?: Office
 export function OfficerEmergencyActions({
   onCallFarmer,
   onNavigate,
-  onNextVisit,
-  onReportIssue,
-}: Pick<OfficerDashboardSectionsProps, 'onCallFarmer' | 'onNavigate' | 'onNextVisit' | 'onReportIssue'>) {
+}: Pick<OfficerDashboardSectionsProps, 'onCallFarmer' | 'onNavigate'>) {
   const actions = [
     { key: 'call', label: 'Call Farmer', icon: 'support_agent' as const, onPress: onCallFarmer, danger: true },
     { key: 'nav', label: 'Navigate', icon: 'share_location' as const, onPress: onNavigate },
-    { key: 'next', label: 'Next Visit', icon: 'location_on' as const, onPress: onNextVisit },
-    { key: 'issue', label: 'Report Issue', icon: 'pending_actions' as const, onPress: onReportIssue },
   ];
 
   return (
@@ -597,6 +596,37 @@ const styles = StyleSheet.create({
   newFarmerButtonPressed: { opacity: 0.75, backgroundColor: 'rgba(173, 238, 195, 0.35)' },
   newFarmerButtonText: { fontSize: 11, fontWeight: '700', color: officerTheme.primary },
   quickActionsRow: { gap: 14, paddingRight: 8, paddingBottom: 4 },
+  largeActionsColumn: { gap: 14 },
+  quickActionsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  quickActionCard: {
+    width: '47%',
+    minHeight: 88,
+    backgroundColor: officerTheme.surfaceLowest,
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(191, 201, 190, 0.15)',
+    gap: 8,
+  },
+  quickActionPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  quickActionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(133, 201, 92, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickActionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: officerTheme.onSurface,
+    lineHeight: 18,
+  },
   visitList: { gap: 12 },
   visitCard: {
     backgroundColor: officerTheme.surfaceLowest,

@@ -46,13 +46,13 @@ export function mapBatchInventoryOption(record: ApiRecord): BatchInventoryOption
     productionDateLabel: pickString(record, 'production_date_label', 'productionDateLabel', 'production_date'),
     feedstockType: pickString(record, 'feedstock_type', 'feedstockType'),
     productionQty: `${pickString(record, 'biochar_output', 'biocharOutput')} ${pickString(record, 'biochar_output_unit', 'biocharOutputUnit', 'kg')}`,
-    currentStockKg: Number(inventory.available_kg ?? record.current_stock_kg ?? 0),
-    storageStatus: pickString(record, 'storage_status', 'storageStatus') || 'stored',
+    currentStockKg: Number(inventory.available_kg ?? record.current_stock_kg ?? record.available_stock_kg ?? 0),
+    storageStatus: pickString(record, 'storage_status', 'storageStatus', 'inventory_status_label', 'inventory_status') || 'stored',
     inventory: {
-      availableKg: Number(inventory.available_kg ?? 0),
+      availableKg: Number(inventory.available_kg ?? record.available_stock_kg ?? 0),
       reservedKg: Number(inventory.reserved_kg ?? 0),
       movedKg: Number(inventory.moved_kg ?? 0),
-      balanceKg: Number(inventory.balance_kg ?? 0),
+      balanceKg: Number(inventory.balance_kg ?? inventory.available_kg ?? 0),
     },
   };
 }
@@ -72,7 +72,7 @@ export function mapDestinationOptions(farmers: ApiRecord[]): DestinationFarmOpti
   for (const farmerRecord of farmers) {
     const farmerName = pickString(farmerRecord, 'name');
     const farmerCode = pickString(farmerRecord, 'farmer_code', 'farmerCode');
-    const farmerId = Number(farmerRecord.id ?? 0);
+    const farmerId = Number(farmerRecord.farmer_id ?? farmerRecord.farmerId ?? farmerRecord.id ?? 0);
     const farms = Array.isArray(farmerRecord.farms) ? (farmerRecord.farms as ApiRecord[]) : [];
 
     for (const farmRecord of farms) {

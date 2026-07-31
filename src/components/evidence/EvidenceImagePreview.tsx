@@ -102,7 +102,7 @@ export function EvidenceImagePreview({
 
       <View style={styles.placeholder}>
 
-        <Text style={styles.placeholderText}>This evidence file is not an image. Use Download File to open it.</Text>
+        <Text style={styles.placeholderText}>This evidence file is not an image. View metadata for details.</Text>
 
       </View>
 

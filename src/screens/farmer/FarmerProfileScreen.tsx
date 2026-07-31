@@ -176,10 +176,16 @@ function buildPhotoFormData(uri: string, mimeType = 'image/jpeg'): FormData {
 export function FarmerProfileScreen() {
   const navigation = useNavigation<Nav>();
   const logout = useLogout();
-  const { setLanguage } = useTranslation();
+  const { t, setLanguage } = useTranslation();
   const { isDarkMode, setDarkMode } = useAppTheme();
   const { profile, loading, saving, error, reload, saveProfileFields, saveBankDetails, updateField } = useFarmerProfileForm();
-  const { documents: profileDocuments } = useFarmerProfileDocuments();
+  const {
+    documents: profileDocuments,
+    uploading: documentsUploading,
+    upload: uploadDocument,
+    replace: replaceDocument,
+    remove: removeDocument,
+  } = useFarmerProfileDocuments();
 
   const [expanded, setExpanded] = useState<SectionId | null>('personal');
   const [modal, setModal] = useState<ModalState>({ visible: false });
@@ -537,17 +543,47 @@ export function FarmerProfileScreen() {
         </ProfileAccordionSection>
 
         <ProfileAccordionSection
-          title="Documents"
+          title="My Documents"
           icon="assignment"
           expanded={expanded === 'documents'}
           onToggle={() => toggleSection('documents')}
         >
+          <SectionButton
+            label={documentsUploading ? 'Uploading…' : 'Upload Document'}
+            onPress={() => void uploadDocument('identity')}
+            loading={documentsUploading}
+            variant="outline"
+          />
+          {profileDocuments.length === 0 ? (
+            <Text style={styles.helperText}>No documents uploaded yet. Add your identity or land documents here.</Text>
+          ) : null}
           {profileDocuments.map((document) => (
             <ProfileDocumentCard
               key={document.id}
               title={document.title}
               status={document.status}
-              actionsEnabled={false}
+              rejectionReason={document.rejectionReason}
+              actionsEnabled
+              onView={
+                document.previewUrl
+                  ? () =>
+                      navigation.navigate('FullscreenImage', {
+                        uri: document.previewUrl!,
+                        title: document.title,
+                      })
+                  : undefined
+              }
+              onReplace={document.canReplace ? () => void replaceDocument(document.id) : undefined}
+              onDelete={
+                document.canDelete
+                  ? () => {
+                      Alert.alert('Delete document', 'Remove this pending document?', [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Delete', style: 'destructive', onPress: () => void removeDocument(document.id) },
+                      ]);
+                    }
+                  : undefined
+              }
             />
           ))}
         </ProfileAccordionSection>
@@ -643,7 +679,7 @@ export function FarmerProfileScreen() {
           expanded={expanded === 'preferences'}
           onToggle={() => toggleSection('preferences')}
         >
-          <ProfileLinkRow label="Language" onPress={() => setLanguageSheetOpen(true)} />
+          <ProfileLinkRow label={t('farmer.profile.language')} onPress={() => setLanguageSheetOpen(true)} />
           <ProfileToggleRow
             label="Notification Settings"
             value={notificationsEnabled}
@@ -754,7 +790,13 @@ export function FarmerProfileScreen() {
               ? 'Are you sure you want to logout from your Bhuguard farmer account?'
               : 'This will submit a request to delete your account. Our team will review it within 7 working days.'
         }
-        confirmLabel={modal.visible && modal.variant === 'confirm-delete' ? 'Submit Request' : 'Logout'}
+        confirmLabel={
+          !modal.visible || modal.variant === 'success'
+            ? 'Ok'
+            : modal.variant === 'confirm-delete'
+              ? 'Submit Request'
+              : 'Logout'
+        }
         onConfirm={() => {
           if (modal.visible && modal.variant === 'confirm-logout') {
             setModal({ visible: false });
@@ -782,6 +824,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: dashboardTheme.marginMobile,
     paddingBottom: 120,
     gap: 14,
+  },
+  helperText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: dashboardTheme.onSurfaceVariant,
   },
   subtitle: {
     fontSize: 15,

@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { StatusBadge } from '../StatusBadge';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
@@ -16,6 +16,7 @@ interface LandBoundaryVerificationSectionProps {
   mappingStatus: MappingStatus;
   mappedAreaLabel?: string;
   onStartMapping: () => void;
+  onSkipMapping?: () => void;
   error?: string | null;
 }
 
@@ -30,15 +31,33 @@ export function LandBoundaryVerificationSection({
   mappingStatus,
   mappedAreaLabel,
   onStartMapping,
+  onSkipMapping,
   error,
 }: LandBoundaryVerificationSectionProps) {
   const unit = (declaredUnit as AreaUnit) || 'acre';
   const tone = mappingStatus === 'mapped' ? 'success' : mappingStatus === 'draft' ? 'warning' : 'neutral';
 
+  const confirmSkip = () => {
+    if (!onSkipMapping) {
+      return;
+    }
+
+    Alert.alert(
+      'Skip Farm Mapping?',
+      'You can continue Farmer onboarding now and complete Farm Mapping later from Farmer Details.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Skip and Continue', onPress: onSkipMapping },
+      ],
+    );
+  };
+
   return (
     <View style={styles.card}>
       <Text style={styles.title}>Land Boundary Verification</Text>
-      <Text style={styles.subtitle}>Mobile GPS mapping is required to verify actual land size.</Text>
+      <Text style={styles.subtitle}>
+        Start mobile mapping now, or skip and complete Farm Mapping later from Farmer Details.
+      </Text>
 
       <View style={styles.statusRow}>
         <Text style={styles.label}>Mapping status</Text>
@@ -58,6 +77,12 @@ export function LandBoundaryVerificationSection({
           {mappingStatus === 'mapped' ? 'Review / Re-map Land' : 'Start Mobile Mapping'}
         </Text>
       </Pressable>
+
+      {onSkipMapping && mappingStatus !== 'mapped' ? (
+        <Pressable style={({ pressed }) => [styles.skipButton, pressed && styles.buttonPressed]} onPress={confirmSkip}>
+          <Text style={styles.skipButtonText}>Skip for Now</Text>
+        </Pressable>
+      ) : null}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
@@ -134,6 +159,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: dashboardTheme.onPrimary,
+  },
+  skipButton: {
+    marginTop: 2,
+    backgroundColor: dashboardTheme.surfaceLowest,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: dashboardTheme.outlineVariant,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+  skipButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: dashboardTheme.onSurface,
   },
   error: {
     fontSize: 12,
