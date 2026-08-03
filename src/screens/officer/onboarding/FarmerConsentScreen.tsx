@@ -395,27 +395,6 @@ export function FarmerConsentScreen() {
     draft.farmer_display_id || draft.farmer_code,
   );
   const farmIdLabel = formatFarmDisplayCode(draft.farm_id, draft.farm_code);
-  const idsPresent = isValidEntityId(draft.farmer_id) && isValidEntityId(draft.farm_id);
-
-  const devSummary =
-    typeof __DEV__ !== 'undefined' && __DEV__ ? (
-      <View style={styles.devSummary} accessibilityLabel="Consent eligibility checklist">
-        <Text style={styles.devSummaryTitle}>Eligibility (dev)</Text>
-        {eligibility.map((item) => (
-          <Text key={item.key} style={item.ok ? styles.devOk : styles.devMissing}>
-            {item.ok ? '✅' : '❌'} {item.label}
-          </Text>
-        ))}
-        <Text style={idsPresent ? styles.devOk : styles.devHint}>
-          {idsPresent ? '✅' : 'ℹ️'} Farmer/Farm IDs {idsPresent ? 'present' : 'optional until land/farm create'}
-          {` (${farmerIdLabel} / ${farmIdLabel})`}
-        </Text>
-        <Text style={evidenceCapture.gpsCaptured ? styles.devOk : styles.devHint}>
-          {evidenceCapture.gpsCaptured ? '✅' : 'ℹ️'} Live evidence GPS
-          {evidenceCapture.gpsCaptured ? ' on capture card' : ' (not required for Continue; draft land GPS separate)'}
-        </Text>
-      </View>
-    ) : null;
 
   return (
     <OnboardingConsentLayout
@@ -424,7 +403,6 @@ export function FarmerConsentScreen() {
       onNext={next}
       nextLabel={ONBOARDING_NEXT_LABELS[5]}
       footerError={displayError}
-      aboveNext={devSummary}
       nextDisabled={!canContinue || verifying || sending}
     >
       <View style={styles.identityCard}>
@@ -644,35 +622,4 @@ const styles = StyleSheet.create({
   verifyButtonText: { color: dashboardTheme.onPrimary, fontWeight: '700' },
   verified: { color: '#047857', fontWeight: '700' },
   disabled: { opacity: 0.6 },
-  devSummary: {
-    borderWidth: 1,
-    borderColor: dashboardTheme.outlineVariant,
-    borderRadius: 10,
-    backgroundColor: dashboardTheme.surfaceLow,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 2,
-  },
-  devSummaryTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: dashboardTheme.onSurface,
-    marginBottom: 4,
-  },
-  devOk: {
-    fontSize: 12,
-    color: '#047857',
-    fontWeight: '600',
-  },
-  devMissing: {
-    fontSize: 12,
-    color: '#B91C1C',
-    fontWeight: '700',
-  },
-  devHint: {
-    fontSize: 12,
-    color: dashboardTheme.onSurfaceVariant,
-    fontWeight: '600',
-    marginTop: 2,
-  },
 });
