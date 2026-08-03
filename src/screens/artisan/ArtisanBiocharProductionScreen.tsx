@@ -186,6 +186,12 @@ export function ArtisanBiocharProductionScreen() {
 
   const [farmOptions, setFarmOptions] = useState<ArtisanFarmOption[]>([]);
 
+  const [isFormComplete, setIsFormComplete] = useState(false);
+
+  const handleValidationChange = useCallback((complete: boolean) => {
+    setIsFormComplete(complete);
+  }, []);
+
   const readOnly =
 
     !form.canEdit ||
@@ -552,6 +558,22 @@ export function ArtisanBiocharProductionScreen() {
 
   const handleSubmit = async () => {
 
+    if (!isFormComplete) {
+
+      Alert.alert(
+
+        'Incomplete process',
+
+        'Complete every required step (see the checklist in Final Review) before submitting.',
+
+      );
+
+      return;
+
+    }
+
+
+
     const submitGps = await gps.captureGps('submit', {
 
       farmId: routeFarmId,
@@ -788,6 +810,8 @@ export function ArtisanBiocharProductionScreen() {
 
           processCompletedAt={form.processCompletedAt}
 
+          onValidationChange={handleValidationChange}
+
           headerSlot={
 
             <ProductionRecordCard
@@ -822,11 +846,19 @@ export function ArtisanBiocharProductionScreen() {
 
           <View style={styles.actions}>
 
-            <Pressable style={styles.primaryButton} onPress={() => void handleSubmit()} disabled={form.submitting}>
+            <Pressable
+              style={[styles.primaryButton, !isFormComplete && styles.primaryButtonDisabled]}
+              onPress={() => void handleSubmit()}
+              disabled={form.submitting || !isFormComplete}
+            >
 
               <Text style={styles.primaryButtonText}>
 
-                {form.submitting ? 'Submitting…' : 'Submit Biochar Production'}
+                {form.submitting
+                  ? 'Submitting…'
+                  : isFormComplete
+                    ? 'Submit Biochar Production'
+                    : 'Complete all steps to submit'}
 
               </Text>
 
@@ -895,6 +927,8 @@ const styles = StyleSheet.create({
   },
 
   primaryButtonText: { color: artisanTheme.white, fontWeight: '800', fontSize: 16 },
+
+  primaryButtonDisabled: { opacity: 0.5 },
 
   secondaryButton: {
 

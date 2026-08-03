@@ -104,6 +104,8 @@ import { createImmutableOfflineSubmission } from '../services/offlineBiocharProd
 import { syncPendingBiocharProductions } from '../services/biocharProductionSyncService';
 import { createSubmissionUuid } from '../utils/offlineBiocharEvidenceStorage';
 import { isTransportUnreachableError } from '../utils/networkTransport';
+import { safeNetInfoIsConnected } from '../utils/safeNetInfo';
+import { shouldBlockOfflineTimestampSubmit } from '../services/serverTimeSync';
 
 export type BiocharSubmitResult =
   | string
@@ -3101,6 +3103,17 @@ export function useBiocharProductionForm({
         const artisanId = authUser?.artisan_profile?.id;
         if (!artisanId) {
           throw new Error('Artisan Pro profile is required for submission.');
+        }
+
+        // Batch submit is timestamp-sensitive (start/completion/GPS times). If we're
+        // offline and have no recent server-time confirmation, the device clock
+        // can't be trusted — block the final submit rather than lock in a
+        // possibly-fraudulent offline timestamp.
+        const isOnlineForSubmit = await safeNetInfoIsConnected();
+        if (shouldBlockOfflineTimestampSubmit(isOnlineForSubmit)) {
+          throw new Error(
+            'Cannot submit offline right now. This step records a timestamp and needs a recent server time sync. Reconnect to the internet, retry sync, and try again.',
+          );
         }
 
         const formSnapshot: OfflineSubmitFormSnapshot = {

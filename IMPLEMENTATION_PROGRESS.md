@@ -191,6 +191,8 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
 | Sequential steps; single start time; assigned kilns; GPS address; photo OK/Retry; resume; completion time; new batch; validation | useBiocharProductionForm forceNewBatch + locked batchStartedAt; draft storage resume scan; BiocharProductionSections sequentialUnlock | kiln alloc / draft APIs | Start-time lock + forceNewBatch + draft resume helper | ⚠️ PARTIAL | Device E2E + live kiln allocation |
+| Final validation blocks incomplete submit | `ArtisanBiocharProcessFormContent.tsx` gained `onValidationChange(isComplete, missingItems)` (fires from the existing `missingItems` memo); `ArtisanBiocharProductionScreen.tsx` tracks `isFormComplete`, disables/greys the Submit button and shows "Complete all steps to submit" until every required step item is done, and re-blocks with an explanatory alert if `handleSubmit` is somehow invoked early | — | `tsc --noEmit` shows no new errors from these two files (verified by diffing against the pre-existing error baseline) | ✅ PASS (mobile) | Device E2E verify |
+| Offline timestamp-sensitive submit block wired into Artisan Production submit | `useBiocharProductionForm.ts` submit path now calls `safeNetInfoIsConnected()` + `shouldBlockOfflineTimestampSubmit()` (from Phase 19 `serverTimeSync.ts`) and throws a clear EN message before building the offline submission snapshot when offline without a recent server-time sync | — | Reviewed guard placement (fires before any local/offline submission is queued) | ✅ PASS (mobile) | Device offline/online transition verify |
 
 ---
 
@@ -199,6 +201,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
 | Farmer→Farm→Mixing hierarchy; no initial Search; Add New → Farmer list | FieldOfficerBiocharApplicationScreen (rewritten hierarchy); ArtisanFarmLookup mixing hierarchy | application APIs | FO free-text search removed; Add New returns to farmer list | ⚠️ PARTIAL | Device E2E verify |
+| Artisan Biochar Application: remove initial Search, Farmer list → Farms → (Mixing) selection → submit, Add New → Farmer list | `ArtisanFarmLookupScreen.tsx` extends the existing mixing farmer→farm drilldown to `purpose === 'application'` (new `handleApplicationFarmerSelect`/`handleApplicationFarmSelect`, generalized `renderMixingResult` → `renderFarmerDrilldownResult(kind)`), hides the search box/taluka-village filters/Search button for `application`; `ArtisanBiocharApplicationScreen.tsx` rewritten to derive the selected farmer/farm entirely from route params (no in-screen search), and "Add New" now calls `navigation.replace('ArtisanFarmLookup', { purpose: 'application' })` instead of resetting local form state in place | application APIs (unchanged) | `tsc --noEmit` shows no new errors introduced by these two files vs. the pre-existing baseline; manually traced the farmer→farm→mixing-selection→submit param chain | ✅ PASS (mobile) | Device E2E verify (farmer list → farm → mixing pick → submit → Add New loop) |
 
 ---
 
@@ -222,7 +225,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Cross-cutting premium UX / a11y / i18n / keyboard | various | — | — | ⏳ PENDING | — |
+| Cross-cutting premium UX / a11y / i18n / keyboard | login, marquee, gates, dashboard cards | — | Incremental polish across earlier phases | ⚠️ PARTIAL | Full device matrix + reduced-motion |
 
 ---
 
@@ -230,7 +233,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Memoization, cancel stale, pagination, no duplicate submits | contexts/lists | — | — | ⏳ PENDING | — |
+| Memoization, cancel stale, pagination, no duplicate submits | check-in gates, dashboard loaders, biochar draft resume | — | Duplicate-submit locks + silent resume helpers | ⚠️ PARTIAL | Broader list/map memoization pass |
 
 ---
 
@@ -238,9 +241,9 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Status | Remaining blocker |
 |-------------|--------|-------------------|
-| Standalone APK in BHUGUARD_OFFLINE_DELIVERY/mobile-release/ | ⏳ PENDING | — |
-| Source/Backend/Docs ZIPs | ⏳ PENDING | — |
-| FINAL reports | ⏳ PENDING | — |
+| Standalone APK in BHUGUARD_OFFLINE_DELIVERY/mobile-release/ | ⚠️ PARTIAL | Gradle assembleRelease running; SHA-256 pending; no adb device |
+| Source/Backend/Docs ZIPs | ⚠️ PARTIAL | Lean ZIPs in `BHUGUARD_OFFLINE_DELIVERY/zips/` (src+config / additive backend / docs) |
+| FINAL reports | ⚠️ PARTIAL | `BHUGUARD_OFFLINE_DELIVERY/reports/FINAL_DELIVERY_REPORT.md` |
 
 ---
 

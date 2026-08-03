@@ -128,6 +128,9 @@ interface ArtisanBiocharProcessFormContentProps {
 
   processCompletedAt?: string | null;
 
+  /** Reports whether every required step item is complete, so the caller can gate the Submit button. */
+  onValidationChange?: (isComplete: boolean, missingItems: string[]) => void;
+
 }
 
 
@@ -353,6 +356,8 @@ export function ArtisanBiocharProcessFormContent({
   batchStartedAt = null,
 
   processCompletedAt = null,
+
+  onValidationChange,
 
 }: ArtisanBiocharProcessFormContentProps) {
 
@@ -598,6 +603,10 @@ export function ArtisanBiocharProcessFormContent({
     return missing;
 
   }, [batchStartedAt, form, processCompletedAt]);
+
+  useEffect(() => {
+    onValidationChange?.(missingItems.length === 0, missingItems);
+  }, [missingItems, onValidationChange]);
 
 
 

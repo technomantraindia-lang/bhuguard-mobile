@@ -298,6 +298,22 @@ export function ArtisanFarmLookupScreen() {
     });
   };
 
+  const handleApplicationFarmerSelect = (farmerId: number) => {
+    const farms = groupedByFarmer.get(farmerId) ?? [];
+
+    if (farms.length === 1) {
+      const [farm] = labelFarmsForFarmer(farms);
+      openApplication(toSelection(farm, farm.displayLabel));
+      return;
+    }
+
+    setSelectedFarmerId(farmerId);
+  };
+
+  const handleApplicationFarmSelect = (farm: ArtisanFarmSearchRecord & { displayLabel: string }) => {
+    openApplication(toSelection(farm, farm.displayLabel));
+  };
+
   const navigateToFarm = async (selection: ArtisanFarmSelectionParams) => {
     if (!ensureCheckedInOrPrompt()) {
       return;
@@ -326,7 +342,12 @@ export function ArtisanFarmLookupScreen() {
     }
   };
 
-  const renderMixingResult = () => {
+  const renderFarmerDrilldownResult = (kind: 'mixing' | 'application') => {
+    const onFarmerSelect = kind === 'mixing' ? handleMixingFarmerSelect : handleApplicationFarmerSelect;
+    const onFarmSelect = kind === 'mixing' ? handleMixingFarmSelect : handleApplicationFarmSelect;
+    const actionLabel = kind === 'mixing' ? 'Start Biochar Mixing' : 'Start Biochar Application';
+    const multiFarmLabel = kind === 'mixing' ? 'Select Farm for Mixing' : 'Select Farm for Application';
+
     if (selectedFarmerId != null) {
       const farmer = farmerSummaries.find((item) => item.farmerId === selectedFarmerId);
 
@@ -342,7 +363,7 @@ export function ArtisanFarmLookupScreen() {
             Farmer ID: {farmer?.farmerCode ?? selectedFarmerId}
           </Text>
           {selectedFarmerFarms.map((farm) => (
-            <Pressable key={farm.farm_id} style={styles.card} onPress={() => handleMixingFarmSelect(farm)}>
+            <Pressable key={farm.farm_id} style={styles.card} onPress={() => onFarmSelect(farm)}>
               <Text style={styles.cardTitle}>{farm.displayLabel}</Text>
               <Text style={styles.cardMeta}>
                 {farm.farm_name ?? farm.farm_code ?? `Farm ${farm.farm_id}`}
@@ -351,8 +372,8 @@ export function ArtisanFarmLookupScreen() {
                 {[farm.village, farm.taluka, farm.district].filter(Boolean).join(' · ')}
               </Text>
               <View style={styles.cardActions}>
-                <Pressable style={styles.selectButton} onPress={() => handleMixingFarmSelect(farm)}>
-                  <Text style={styles.selectButtonText}>Start Biochar Mixing</Text>
+                <Pressable style={styles.selectButton} onPress={() => onFarmSelect(farm)}>
+                  <Text style={styles.selectButtonText}>{actionLabel}</Text>
                 </Pressable>
               </View>
             </Pressable>
@@ -362,7 +383,7 @@ export function ArtisanFarmLookupScreen() {
     }
 
     return farmerSummaries.map((farmer) => (
-      <Pressable key={farmer.farmerId} style={styles.card} onPress={() => handleMixingFarmerSelect(farmer.farmerId)}>
+      <Pressable key={farmer.farmerId} style={styles.card} onPress={() => onFarmerSelect(farmer.farmerId)}>
         <Text style={styles.cardTitle}>{farmer.farmerName}</Text>
         <Text style={styles.cardMeta}>Farmer ID: {farmer.farmerCode}</Text>
         <Text style={styles.cardMeta}>
@@ -370,9 +391,9 @@ export function ArtisanFarmLookupScreen() {
           {farmer.village ? ` · ${farmer.village}` : ''}
         </Text>
         <View style={styles.cardActions}>
-          <Pressable style={styles.selectButton} onPress={() => handleMixingFarmerSelect(farmer.farmerId)}>
+          <Pressable style={styles.selectButton} onPress={() => onFarmerSelect(farmer.farmerId)}>
             <Text style={styles.selectButtonText}>
-              {farmer.farmCount === 1 ? 'Start Biochar Mixing' : 'Select Farm for Mixing'}
+              {farmer.farmCount === 1 ? actionLabel : multiFarmLabel}
             </Text>
           </Pressable>
         </View>
@@ -454,7 +475,7 @@ export function ArtisanFarmLookupScreen() {
       <ScreenHeader title={copy.title} showBrandLogo={false} />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <FlatList
-          data={purpose === 'mixing' ? [] : results}
+          data={purpose === 'mixing' || purpose === 'application' ? [] : results}
           keyExtractor={(item) => `${item.farm_id}-${item.farmer_id}`}
           renderItem={renderResult}
           contentContainerStyle={styles.listContent}
@@ -463,24 +484,28 @@ export function ArtisanFarmLookupScreen() {
             <View style={styles.headerBlock}>
               <Text style={styles.helper}>{copy.helper}</Text>
 
-              <Text style={styles.label}>
-                {purpose === 'mixing' || purpose === 'application'
-                  ? 'Search by Farmer Name, Farmer ID, or Farm ID'
-                  : 'Search by Farm ID or Farmer Name'}
-              </Text>
-              <TextInput
-                style={styles.input}
-                placeholder={
-                  purpose === 'mixing' || purpose === 'application'
-                    ? 'Farmer Name, Farmer ID, or Farm ID'
-                    : 'Search by Farm ID or Farmer Name'
-                }
-                value={query}
-                onChangeText={setQuery}
-                autoCapitalize="none"
-                returnKeyType="search"
-                onSubmitEditing={() => void runSearch()}
-              />
+              {purpose === 'application' ? null : (
+                <>
+                  <Text style={styles.label}>
+                    {purpose === 'mixing'
+                      ? 'Search by Farmer Name, Farmer ID, or Farm ID'
+                      : 'Search by Farm ID or Farmer Name'}
+                  </Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder={
+                      purpose === 'mixing'
+                        ? 'Farmer Name, Farmer ID, or Farm ID'
+                        : 'Search by Farm ID or Farmer Name'
+                    }
+                    value={query}
+                    onChangeText={setQuery}
+                    autoCapitalize="none"
+                    returnKeyType="search"
+                    onSubmitEditing={() => void runSearch()}
+                  />
+                </>
+              )}
 
               {loadingLocations ? (
                 <View style={styles.inlineLoading}>
@@ -491,7 +516,7 @@ export function ArtisanFarmLookupScreen() {
                 <NoAssignmentState message={error} onRefresh={() => void loadLocations()} refreshing={loadingLocations} />
               ) : talukas.length === 0 && villages.length === 0 ? (
                 <NoAssignmentState onRefresh={() => void loadLocations()} refreshing={loadingLocations} />
-              ) : (
+              ) : purpose === 'application' ? null : (
                 <>
                   <FormSelect
                     label="Taluka"
@@ -516,26 +541,30 @@ export function ArtisanFarmLookupScreen() {
                 </>
               )}
 
-              <Pressable style={[styles.searchButton, searching && styles.buttonDisabled]} disabled={searching} onPress={() => void runSearch()}>
-                <Text style={styles.searchButtonText}>{searching ? 'Searching…' : 'Search'}</Text>
-              </Pressable>
+              {purpose === 'application' ? null : (
+                <Pressable style={[styles.searchButton, searching && styles.buttonDisabled]} disabled={searching} onPress={() => void runSearch()}>
+                  <Text style={styles.searchButtonText}>{searching ? 'Searching…' : 'Search'}</Text>
+                </Pressable>
+              )}
 
               {error ? <Text style={styles.error}>{error}</Text> : null}
               {!error && emptyMessage ? <Text style={styles.empty}>{emptyMessage}</Text> : null}
-              {purpose === 'mixing' && results.length > 0 ? (
+              {(purpose === 'mixing' || purpose === 'application') && results.length > 0 ? (
                 <Text style={styles.sectionTitle}>
                   {selectedFarmerId != null ? 'Select a farm' : `${copy.sectionTitle} (${farmerSummaries.length})`}
                 </Text>
               ) : null}
-              {purpose === 'mixing' && results.length > 0 ? renderMixingResult() : null}
-              {purpose !== 'mixing' && results.length > 0 ? (
+              {purpose === 'mixing' || purpose === 'application'
+                ? renderFarmerDrilldownResult(purpose)
+                : null}
+              {purpose !== 'mixing' && purpose !== 'application' && results.length > 0 ? (
                 <Text style={styles.sectionTitle}>
                   {copy.sectionTitle} ({results.length})
                 </Text>
               ) : null}
             </View>
           }
-          ListEmptyComponent={purpose === 'mixing' ? null : undefined}
+          ListEmptyComponent={purpose === 'mixing' || purpose === 'application' ? null : undefined}
         />
       </KeyboardAvoidingView>
     </SafeAreaView>

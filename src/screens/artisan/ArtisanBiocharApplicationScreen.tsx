@@ -10,12 +10,10 @@ import * as ImagePicker from 'expo-image-picker';
 import {
   getArtisanBiocharApplicationEligibleBatches,
   getArtisanBiocharMixingRecords,
-  searchArtisanFarms,
   submitArtisanBiocharApplication,
 } from '../../api/artisanApi';
 import { getApiErrorMessage } from '../../api/authApi';
 import { AppButton } from '../../components/AppButton';
-import { FormSelect, type SelectOption } from '../../components/FormSelect';
 import { EvidenceStampedImageFrame } from '../../components/evidence/EvidenceStampedImageFrame';
 import { LiveWorkCheckinCard } from '../../components/artisan/LiveWorkCheckinCard';
 import { ScreenHeader } from '../../components/ScreenHeader';
@@ -25,9 +23,8 @@ import { artisanTheme } from '../../theme/artisanTheme';
 import { spacing } from '../../theme';
 import { extractList, pickString, type ApiRecord } from '../../utils/apiHelpers';
 import { captureBiocharGps, showBiocharPoorAccuracyWarning } from '../../utils/biocharGpsCapture';
-import { formatFarmDisplayLabel, labelFarmsForFarmer } from '../../utils/farmDisplayLabel';
+import { formatFarmDisplayLabel } from '../../utils/farmDisplayLabel';
 import { captureLivePhotoEvidence } from '../../utils/liveEvidenceCapture';
-import type { ArtisanFarmSearchRecord } from '../../types/artisanFarmSearch';
 
 type Nav = NativeStackNavigationProp<ArtisanStackParamList, 'ArtisanBiocharApplication'>;
 type ScreenRoute = RouteProp<ArtisanStackParamList, 'ArtisanBiocharApplication'>;
@@ -54,7 +51,18 @@ type GpsState = {
   state?: string;
 };
 
-type LabeledFarm = ArtisanFarmSearchRecord & { displayLabel: string };
+interface SelectedFarmInfo {
+  farmId: number;
+  farmerId: number;
+  farmerCode: string | null;
+  farmerName: string | null;
+  farmCode: string | null;
+  farmLabel: string;
+  village: string | null;
+  taluka: string | null;
+  district: string | null;
+  state: string | null;
+}
 
 type MixingRecord = {
   id: number;
@@ -124,31 +132,50 @@ export function ArtisanBiocharApplicationScreen() {
   const now = useMemo(indiaDateTime, []);
   const selectionSeededForFarmRef = useRef<number | null>(null);
   const mountedRef = useRef(true);
-  const searchInProgressRef = useRef(false);
   const loadingMixingRecordsRef = useRef(false);
   const submitInProgressRef = useRef(false);
 
-  const [query, setQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<ArtisanFarmSearchRecord[]>([]);
-  const [selectedFarmer, setSelectedFarmer] = useState<ApiRecord | null>(
-    route.params?.farmerId
-      ? {
-          farmer_id: route.params.farmerId,
-          farmer_code: route.params.farmerCode,
-          farmer_name: route.params.farmerName,
-        }
-      : null,
-  );
-  const [labeledFarms, setLabeledFarms] = useState<LabeledFarm[]>([]);
-  const [selectedFarmId, setSelectedFarmId] = useState<string>(
-    route.params?.farmId ? String(route.params.farmId) : '',
-  );
+  // Farmer + farm are always chosen upstream in the Farmer list → Farms flow
+  // (ArtisanFarmLookupScreen, purpose="application") before we get here.
+  const selectedFarm: SelectedFarmInfo | null = useMemo(() => {
+    if (!route.params?.farmId || !route.params?.farmerId) {
+      return null;
+    }
+
+    return {
+      farmId: route.params.farmId,
+      farmerId: route.params.farmerId,
+      farmerCode: route.params.farmerCode ?? null,
+      farmerName: route.params.farmerName ?? null,
+      farmCode: route.params.farmCode ?? null,
+      farmLabel:
+        route.params.farmLabel ??
+        route.params.farmName ??
+        formatFarmDisplayLabel({ village: route.params.village }, 0),
+      village: route.params.village ?? null,
+      taluka: route.params.taluka ?? null,
+      district: route.params.district ?? null,
+      state: route.params.state ?? null,
+    };
+  }, [
+    route.params?.farmCode,
+    route.params?.farmId,
+    route.params?.farmLabel,
+    route.params?.farmName,
+    route.params?.farmerCode,
+    route.params?.farmerId,
+    route.params?.farmerName,
+    route.params?.district,
+    route.params?.state,
+    route.params?.taluka,
+    route.params?.village,
+  ]);
+
   const [mixingRecords, setMixingRecords] = useState<MixingRecord[]>([]);
   const [selectedMixingIds, setSelectedMixingIds] = useState<number[]>([]);
   const [notes, setNotes] = useState('');
   const [gps, setGps] = useState<GpsState | null>(null);
   const [evidences, setEvidences] = useState<EvidenceAsset[]>([]);
-  const [searching, setSearching] = useState(false);
   const [loadingMixingRecords, setLoadingMixingRecords] = useState(false);
   const [submitted, setSubmitted] = useState<ApiRecord | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -158,15 +185,8 @@ export function ArtisanBiocharApplicationScreen() {
     mountedRef.current = false;
   }, []);
 
-  const selectedFarm = useMemo(
-    () => labeledFarms.find((farm) => String(farm.farm_id) === selectedFarmId) ?? null,
-    [labeledFarms, selectedFarmId],
-  );
-
-  const farmId = selectedFarm?.farm_id ?? Number(route.params?.farmId ?? 0);
-  const farmerId = selectedFarmer?.farmer_id != null
-    ? Number(selectedFarmer.farmer_id)
-    : selectedFarm?.farmer_id ?? Number(route.params?.farmerId ?? 0);
+  const farmId = selectedFarm?.farmId ?? 0;
+  const farmerId = selectedFarm?.farmerId ?? 0;
 
   const selectedMixings = useMemo(
     () => mixingRecords.filter((record) => selectedMixingIds.includes(record.id)),
@@ -179,39 +199,6 @@ export function ArtisanBiocharApplicationScreen() {
   );
 
   const selectedUnit = selectedMixings[0]?.unit ?? 'kg';
-
-  const farmOptions: SelectOption[] = labeledFarms.map((farm) => ({
-    id: farm.farm_id,
-    name: farm.displayLabel,
-  }));
-
-  const applyFarmerSelection = useCallback((records: ArtisanFarmSearchRecord[], farmerIdToSelect: number) => {
-    const farmerRecords = records.filter((record) => record.farmer_id === farmerIdToSelect);
-    const labeled = labelFarmsForFarmer(farmerRecords);
-    const farmer = farmerRecords[0];
-
-    if (!farmer) {
-      return;
-    }
-
-    setSelectedFarmer({
-      farmer_id: farmer.farmer_id,
-      farmer_code: farmer.farmer_code,
-      farmer_name: farmer.farmer_name,
-    });
-    setLabeledFarms(labeled);
-    setSearchResults([]);
-    selectionSeededForFarmRef.current = null;
-    setMixingRecords([]);
-    setSelectedMixingIds([]);
-
-    if (labeled.length === 1) {
-      setSelectedFarmId(String(labeled[0].farm_id));
-      return;
-    }
-
-    setSelectedFarmId('');
-  }, []);
 
   const loadMixingRecords = useCallback(async (farmIdForMixing: number) => {
     if (loadingMixingRecordsRef.current) {
@@ -283,100 +270,6 @@ export function ArtisanBiocharApplicationScreen() {
 
     void loadMixingRecords(farmId);
   }, [farmId, loadMixingRecords]);
-
-  useEffect(() => {
-    const seedFarmId = route.params?.farmId;
-    const seedFarmerId = route.params?.farmerId;
-
-    if (seedFarmId && seedFarmerId && labeledFarms.length === 0) {
-      setLabeledFarms([
-        {
-          farm_id: seedFarmId,
-          farmer_id: seedFarmerId,
-          farm_code: route.params?.farmCode ?? null,
-          farm_name: route.params?.farmName ?? route.params?.farmLabel ?? null,
-          farmer_code: route.params?.farmerCode ?? null,
-          farmer_name: route.params?.farmerName ?? null,
-          village: route.params?.village ?? null,
-          taluka: route.params?.taluka ?? null,
-          district: route.params?.district ?? null,
-          state: route.params?.state ?? null,
-          displayLabel:
-            route.params?.farmLabel ??
-            formatFarmDisplayLabel({ village: route.params?.village }, 0),
-        },
-      ]);
-      setSelectedFarmId(String(seedFarmId));
-    }
-  }, [
-    labeledFarms.length,
-    route.params?.district,
-    route.params?.farmCode,
-    route.params?.farmId,
-    route.params?.farmLabel,
-    route.params?.farmName,
-    route.params?.farmerCode,
-    route.params?.farmerId,
-    route.params?.farmerName,
-    route.params?.state,
-    route.params?.taluka,
-    route.params?.village,
-  ]);
-
-  const search = async () => {
-    if (searchInProgressRef.current) {
-      return;
-    }
-
-    if (!ensureCheckedInOrPrompt()) {
-      return;
-    }
-
-    searchInProgressRef.current = true;
-    setSearching(true);
-    setError(null);
-
-    try {
-      const response = await searchArtisanFarms({ q: query.trim() || undefined, limit: 30 });
-      const records = response.data ?? [];
-      setSearchResults(records);
-
-      if (records.length === 0) {
-        setError(response.message || 'No farmers or farms found.');
-        return;
-      }
-
-      const uniqueFarmers = new Map<number, ArtisanFarmSearchRecord>();
-      for (const record of records) {
-        if (!uniqueFarmers.has(record.farmer_id)) {
-          uniqueFarmers.set(record.farmer_id, record);
-        }
-      }
-
-      if (uniqueFarmers.size === 1) {
-        applyFarmerSelection(records, [...uniqueFarmers.keys()][0]);
-      }
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to search farms.'));
-      setSearchResults([]);
-    } finally {
-      if (mountedRef.current) {
-        setSearching(false);
-      }
-      searchInProgressRef.current = false;
-    }
-  };
-
-  const selectFarmerFromResults = (farmerIdToSelect: number) => {
-    applyFarmerSelection(searchResults, farmerIdToSelect);
-  };
-
-  const selectFarm = (option: SelectOption) => {
-    setSelectedFarmId(String(option.id));
-    selectionSeededForFarmRef.current = null;
-    setMixingRecords([]);
-    setSelectedMixingIds([]);
-  };
 
   const toggleMixing = (mixingId: number) => {
     setSelectedMixingIds((current) =>
@@ -505,19 +398,9 @@ export function ArtisanBiocharApplicationScreen() {
     navigation.navigate('FullscreenImage', { uri, title: 'Application Evidence' });
   };
 
-  const resetForm = () => {
-    setSubmitted(null);
-    setSelectedFarmer(null);
-    setLabeledFarms([]);
-    setSelectedFarmId('');
-    setSearchResults([]);
-    setMixingRecords([]);
-    setSelectedMixingIds([]);
-    selectionSeededForFarmRef.current = null;
-    setNotes('');
-    setGps(null);
-    setEvidences([]);
-    setError(null);
+  /** "Add New" always returns to the Farmer list — never reopens this farm's form in place. */
+  const goToFarmerList = () => {
+    navigation.replace('ArtisanFarmLookup', { purpose: 'application' });
   };
 
   const submit = async () => {
@@ -620,11 +503,24 @@ export function ArtisanBiocharApplicationScreen() {
         <View style={styles.content}>
           <Text style={styles.title}>Biochar Application Submitted Successfully</Text>
           <Text style={styles.text}>Application: {pickString(submitted, 'application_code', 'id')}</Text>
-          <Text style={styles.text}>
-            Farm: {selectedFarm?.displayLabel ?? pickString(selectedFarm as ApiRecord | null, 'farm_code', 'farm_name')}
-          </Text>
-          <AppButton label="Start New Application" variant="secondary" onPress={resetForm} />
+          <Text style={styles.text}>Farm: {selectedFarm?.farmLabel ?? '—'}</Text>
+          <AppButton label="Add New (Back to Farmer List)" variant="secondary" onPress={goToFarmerList} />
           <AppButton label="Go to Dashboard" variant="secondary" onPress={() => navigation.navigate('ArtisanDashboard')} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!selectedFarm) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScreenHeader title="Biochar Application" showBrandLogo={false} />
+        <View style={styles.content}>
+          <Text style={styles.title}>No farm selected</Text>
+          <Text style={styles.text}>
+            Select a farmer and farm from the Farmer list before starting a Biochar Application.
+          </Text>
+          <AppButton label="Go to Farmer List" onPress={goToFarmerList} />
         </View>
       </SafeAreaView>
     );
@@ -638,69 +534,19 @@ export function ArtisanBiocharApplicationScreen() {
         <Text style={styles.sectionTitle}>Current date & time</Text>
         <Text style={styles.text}>{now.label}</Text>
 
-        <Text style={styles.sectionTitle}>Search farmer / farm</Text>
-        <View style={styles.row}>
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Farmer Name, Farmer ID, or Farm ID"
-            style={styles.input}
-            autoCapitalize="none"
-            returnKeyType="search"
-            onSubmitEditing={() => void search()}
-          />
-          <Pressable
-            style={[styles.searchButton, searching && styles.buttonDisabled]}
-            disabled={searching}
-            onPress={() => void search()}
-          >
-            <Text style={styles.buttonText}>{searching ? 'Searching...' : 'Search'}</Text>
-          </Pressable>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Farmer</Text>
+          <Text style={styles.text}>{selectedFarm.farmerName ?? 'Farmer'}</Text>
+          <Text style={styles.text}>Farmer ID: {selectedFarm.farmerCode ?? selectedFarm.farmerId}</Text>
         </View>
 
-        {searchResults.length > 0 ? (
-          <>
-            <Text style={styles.text}>Select a farmer from search results</Text>
-            {Array.from(new Map(searchResults.map((record) => [record.farmer_id, record])).values()).map((record) => (
-              <Pressable key={record.farmer_id} style={styles.card} onPress={() => selectFarmerFromResults(record.farmer_id)}>
-                <Text style={styles.cardTitle}>{record.farmer_name ?? 'Farmer'}</Text>
-                <Text style={styles.text}>Farmer ID: {record.farmer_code ?? record.farmer_id}</Text>
-                <Text style={styles.text}>
-                  {searchResults.filter((item) => item.farmer_id === record.farmer_id).length} farm(s)
-                </Text>
-              </Pressable>
-            ))}
-          </>
-        ) : null}
-
-        {selectedFarmer ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Selected farmer</Text>
-            <Text style={styles.text}>{pickString(selectedFarmer, 'farmer_name')}</Text>
-            <Text style={styles.text}>Farmer ID: {pickString(selectedFarmer, 'farmer_code', 'farmer_id')}</Text>
-          </View>
-        ) : null}
-
-        {labeledFarms.length > 0 ? (
-          <FormSelect
-            label="Farm"
-            placeholder="Select farm"
-            value={selectedFarmId}
-            displayValue={selectedFarm?.displayLabel}
-            options={farmOptions}
-            onSelect={selectFarm}
-          />
-        ) : null}
-
-        {selectedFarm ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Selected farm</Text>
-            <Text style={styles.text}>{selectedFarm.displayLabel}</Text>
-            <Text style={styles.text}>
-              {[selectedFarm.village, selectedFarm.taluka, selectedFarm.district].filter(Boolean).join(' · ')}
-            </Text>
-          </View>
-        ) : null}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Farm</Text>
+          <Text style={styles.text}>{selectedFarm.farmLabel}</Text>
+          <Text style={styles.text}>
+            {[selectedFarm.village, selectedFarm.taluka, selectedFarm.district].filter(Boolean).join(' · ')}
+          </Text>
+        </View>
 
         {farmId ? (
           <>
@@ -804,7 +650,6 @@ const styles = StyleSheet.create({
   sectionTitle: { color: artisanTheme.deepText, fontSize: 16, fontWeight: '800', marginTop: 4 },
   text: { color: artisanTheme.secondaryText, fontSize: 13, lineHeight: 18 },
   line: { color: artisanTheme.deepText, fontSize: 14, fontWeight: '600' },
-  row: { alignItems: 'center', flexDirection: 'row', gap: 8 },
   rowWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   input: {
     backgroundColor: artisanTheme.white,
@@ -818,9 +663,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   notes: { minHeight: 96, textAlignVertical: 'top' },
-  searchButton: { backgroundColor: artisanTheme.actionGreen, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12 },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: artisanTheme.white, fontWeight: '700' },
   card: {
     backgroundColor: artisanTheme.white,
     borderColor: artisanTheme.softBorder,
