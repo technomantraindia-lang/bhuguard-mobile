@@ -87,7 +87,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Farmer ID BHG-KISHAN-*; Artisan ID BHG-ART-* | displayIds.ts helpers (formatFarmerDisplayId/formatArtisanDisplayId); all local fabrication call sites removed (entityId.ts, onboardingNotes.ts, farmerActivityHelpers.ts, useFarmerProfileForm.ts) and rewired through the shared helper; ArtisanProfileScreen/ArtisanDashboardScreen/OnboardedFarmerView/FarmerOnboardingSuccess use it | additive display_id fields (mobile-latest local backend, see below) | `tsc --noEmit` clean for all touched files; grep confirms no remaining `BHG-FRM-`/`BG-F-`/`BG-BHG-FRM-` local fabrication; client prefers farmer_display_id/artisan_display_id/farmer_id_display, falls back to legacy code, else safe placeholder | ✅ PASS (mobile) | Backend live deploy + backfill for real BHG-KISHAN-*/BHG-ART-* values |
+| Farmer ID BHG-KISHAN-*; Artisan ID BHG-ART-* | displayIds.ts helpers (formatFarmerDisplayId/formatArtisanDisplayId); all local fabrication call sites removed and rewired through the shared helper — entityId.ts, onboardingNotes.ts, farmerActivityHelpers.ts, useFarmerProfileForm.ts, ArtisanProfileScreen, ArtisanDashboardScreen, OnboardedFarmerView, FarmerOnboardingSuccess/Review, BiocharProductionSections, FarmerBiocharProductionScreen, FieldOfficerBiocharProductionScreen, ArtisanBiocharProductionScreen, inventoryMovementHelpers.ts, visitDetailModel.ts | additive display_id fields (mobile-latest local backend, see below) | `tsc --noEmit` clean for all touched files; repo-wide grep confirms no remaining `BHG-FRM-`/`BG-F-`/`BG-BHG-FRM-` local fabrication (only one illustrative TextInput placeholder string remains, never rendered as real data); client prefers farmer_display_id/artisan_display_id/farmer_id_display, falls back to legacy code, else safe placeholder | ✅ PASS (mobile) | Backend live deploy + backfill for real BHG-KISHAN-*/BHG-ART-* values |
 | Farm labels: Farm ID / Farmer ID only | OnboardedFarmerView, FarmerOnboardingSuccess, FarmerOnboardingReview, FarmerLandDetails; i18n locales already use "Farm ID"/"Farmer ID" | — | Repo-wide search confirms no remaining "Farmer Code"/"Farm Code"/"Artisan Code" UI text | ✅ PASS | — |
 
 ---
@@ -163,14 +163,6 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 ---
 
-## Phase 19 — Server-authoritative time
-
-| Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
-|-------------|--------------|---------------|----------------|--------|-------------------|
-| Sync server UTC; ±2min warning; audit metadata; offline submit block | serverTimeSync.ts, DeviceTimeWarningBanner, App.tsx | GET /api/server-time (local) | Sync on launch; suspicious banner; live endpoint may 404 | ⚠️ PARTIAL | Live deploy + full activity wiring |
-
----
-
 ## Phase 14 — Artisan dashboard
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
@@ -215,7 +207,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Sync server UTC; ±2min warning; audit metadata; offline submit block | timeSync service | server-time + audit | — | ⏳ PENDING | Live deploy |
+| Sync server UTC; ±2min warning; audit metadata; offline submit block | serverTimeSync.ts, useServerTimeSync, DeviceTimeWarningBanner, App.tsx | GET /api/server-time (local backend commit d7d72f9) | Sync on launch; suspicious banner; offline submit helper | ⚠️ PARTIAL | Live deploy + wire into every submit path |
 
 ---
 

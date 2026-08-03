@@ -21,6 +21,7 @@ import { type BiocharEvidenceKey } from '../../constants/biocharProduction';
 import { useBiocharProductionForm } from '../../hooks/useBiocharProductionForm';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerTheme } from '../../theme/officerDashboardTheme';
+import { formatFarmerDisplayId } from '../../utils/displayIds';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'FieldOfficerBiocharProduction'>;
 type ScreenRoute = RouteProp<FieldOfficerStackParamList, 'FieldOfficerBiocharProduction'>;
@@ -66,11 +67,7 @@ export function FieldOfficerBiocharProductionScreen() {
 
   const farmerCode = useMemo(() => {
     const selected = form.farmers.find((item) => item.id === form.selectedFarmerId);
-    return (
-      form.farmerCode ??
-      selected?.farmerCode ??
-      (form.selectedFarmerId ? `BHG-FRM-${String(form.selectedFarmerId).padStart(6, '0')}` : null)
-    );
+    return formatFarmerDisplayId({ farmer_code: form.farmerCode ?? selected?.farmerCode });
   }, [form.farmerCode, form.farmers, form.selectedFarmerId]);
 
   useEffect(() => {

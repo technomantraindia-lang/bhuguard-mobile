@@ -54,6 +54,8 @@ import { startBiocharProductionSyncListeners } from '../../services/biocharProdu
 
 import { getAuthUser } from '../../utils/authStorage';
 
+import { formatFarmerDisplayId } from '../../utils/displayIds';
+
 import { formatFarmDisplayLabel } from '../../utils/farmDisplayLabel';
 
 import type { ArtisanFarmSearchRecord } from '../../types/artisanFarmSearch';
@@ -308,13 +310,7 @@ export function ArtisanBiocharProductionScreen() {
 
 
 
-  const farmerCode =
-
-    params?.farmerCode ??
-
-    form.farmerCode ??
-
-    (form.selectedFarmerId ? `BHG-FRM-${String(form.selectedFarmerId).padStart(6, '0')}` : null);
+  const farmerCode = formatFarmerDisplayId({ farmer_code: params?.farmerCode ?? form.farmerCode });
 
 
 

@@ -88,6 +88,8 @@ export interface OnboardingDraft {
   onboarding_evidences: FileAsset[];
   farmer_documents: FileAsset[];
   proof_of_land_ownership: FileAsset | null;
+  /** "Farmer with Farm Photo" evidence — Phase 10.4 step 3, distinct from `farmer_photo` (profile pic). */
+  farmer_with_farm_photo: FileAsset | null;
   /** Set when the user continues past the Documents step (prevents false green on overview). */
   documents_step_completed: boolean;
   boundary_mapping_status: MappingStatus;
@@ -157,6 +159,7 @@ const defaultDraft: OnboardingDraft = {
   onboarding_evidences: [],
   farmer_documents: [],
   proof_of_land_ownership: null,
+  farmer_with_farm_photo: null,
   documents_step_completed: false,
   boundary_mapping_status: 'not_mapped',
   boundary_unit: 'acre',
@@ -255,12 +258,14 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         appendFile(formData, 'consent_form', draft.consent_form);
         draft.consent_documents.forEach((file) => appendFile(formData, 'consent_documents[]', file));
         draft.onboarding_evidences.forEach((file) => appendFile(formData, 'legal_agreement_photos[]', file));
+        appendFile(formData, 'legal_agreement_photos[]', draft.farmer_with_farm_photo);
         draft.farmer_documents.forEach((file) => appendFile(formData, 'documents[]', file));
         appendFile(formData, 'proof_of_land_ownership', draft.proof_of_land_ownership);
 
         const hasStampedImage = [
           draft.farmer_photo,
           draft.proof_of_land_ownership,
+          draft.farmer_with_farm_photo,
           ...draft.onboarding_evidences,
         ].some((file) => file?.mimeType?.startsWith('image/'));
 

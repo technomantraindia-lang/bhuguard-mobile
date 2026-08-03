@@ -13,6 +13,7 @@ import {
   type BiocharOutputUnit,
   type BiocharVerificationResult,
 } from '../../../constants/biocharProduction';
+import { formatFarmerDisplayId } from '../../../utils/displayIds';
 import { officerCardShadow, officerTheme } from '../../../theme/officerDashboardTheme';
 import {
   calculateYieldPercent,
@@ -568,9 +569,7 @@ export function BatchDetailsSection({
       ? kilnId.slice(ARTISAN_KILN_PREFIX.length)
       : kilnId.replace(/^BHG-?/i, '')
     : '';
-  const farmerLabel =
-    farmerCode?.trim() ||
-    (farmerId != null ? `BHG-FRM-${String(farmerId).padStart(6, '0')}` : '—');
+  const farmerLabel = formatFarmerDisplayId({ farmer_code: farmerCode });
   const selectedUnit = units.find((unit) => unit.id === selectedUnitId);
   const kilnLabel = selectedUnit
     ? [

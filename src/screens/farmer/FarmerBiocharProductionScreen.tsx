@@ -21,6 +21,7 @@ import { type BiocharEvidenceKey } from '../../constants/biocharProduction';
 import { useBiocharProductionForm } from '../../hooks/useBiocharProductionForm';
 import type { FarmerStackParamList } from '../../navigation/types';
 import { colors } from '../../theme/colors';
+import { formatFarmerDisplayId } from '../../utils/displayIds';
 
 type Nav = NativeStackNavigationProp<FarmerStackParamList, 'FarmerBiocharProduction'>;
 type ScreenRoute = RouteProp<FarmerStackParamList, 'FarmerBiocharProduction'>;
@@ -39,10 +40,8 @@ export function FarmerBiocharProductionScreen() {
   const showBlockingError = Boolean(form.error) && !isAddFlow;
 
   const farmerCode = useMemo(
-    () =>
-      form.farmerCode ??
-      (form.selectedFarmerId ? `BHG-FRM-${String(form.selectedFarmerId).padStart(6, '0')}` : null),
-    [form.farmerCode, form.selectedFarmerId],
+    () => formatFarmerDisplayId({ farmer_code: form.farmerCode }),
+    [form.farmerCode],
   );
 
   useEffect(() => {

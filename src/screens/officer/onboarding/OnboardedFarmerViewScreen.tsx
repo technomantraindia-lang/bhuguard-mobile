@@ -221,9 +221,9 @@ export function OnboardedFarmerViewScreen() {
                 label="Biochar Application"
                 onPress={() => navigation.navigate('FieldOfficerBiocharApplication', farmContext)}
               />
-              {farmContext.farmId ? (
+              {farmContext.farmId && mappingPending ? (
                 <AppButton
-                  label={mappingPending ? 'Mapping Pending – Complete Now' : 'Complete Farm Mapping'}
+                  label="Complete Farm Mapping"
                   variant="secondary"
                   onPress={() =>
                     navigation.navigate('OnboardingBoundaryStart', {

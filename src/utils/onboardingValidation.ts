@@ -184,8 +184,8 @@ export function validateDocuments(draft: OnboardingDraft): string | null {
     return 'Complete Land Registration (ownership type) before Documents.';
   }
 
-  if (draft.ownership_type === 'owned' && !draft.proof_of_land_ownership && draft.farmer_documents.length < 1) {
-    return 'Add at least one land ownership or supporting document.';
+  if (draft.ownership_type === 'owned' && !draft.proof_of_land_ownership) {
+    return 'Add the Ownership Document before continuing.';
   }
 
   return null;

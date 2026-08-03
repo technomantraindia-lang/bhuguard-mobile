@@ -1,6 +1,5 @@
 import type { ApiRecord } from './apiHelpers';
 import { pickNestedString, pickString } from './apiHelpers';
-import { formatFarmerDisplayId } from './displayIds';
 import {
   parseVisitChecklistRecord,
   resolveVisitChecklistTarget,
@@ -80,18 +79,21 @@ function formatArea(assignment: ApiRecord): string {
 }
 
 function formatFarmerId(assignment: ApiRecord): string {
+  const displayId = pickNestedString(assignment, 'farmer.farmer_display_id') !== '-'
+    ? pickNestedString(assignment, 'farmer.farmer_display_id')
+    : pickNestedString(assignment, 'farmer.farmer_id_display');
+
+  if (displayId !== '-') {
+    return displayId;
+  }
+
   const code =
     pickNestedString(assignment, 'farmer.farmer_code') !== '-'
       ? pickNestedString(assignment, 'farmer.farmer_code')
       : pickNestedString(assignment, 'farmer.code');
 
-  if (code !== '-') {
-    return code;
-  }
-
-  const id = pickString(assignment, 'farmer_id');
-
-  return id !== '-' ? `BHG-FRM-${String(id).padStart(6, '0')}` : '—';
+  // Never fabricate a farmer display ID locally — see src/utils/displayIds.ts.
+  return code !== '-' ? code : '—';
 }
 
 function formatFarmId(assignment: ApiRecord): string {
@@ -104,9 +106,10 @@ function formatFarmId(assignment: ApiRecord): string {
     return code;
   }
 
+  // Farm ID is the existing numeric farm id — never invent a new local Farm ID scheme.
   const id = pickNestedString(assignment, 'farm.id');
 
-  return id !== '-' ? `BHG-FRM-LND-${id.padStart(5, '0')}` : '—';
+  return id !== '-' ? id : '—';
 }
 
 function mapStatusBadge(status: string): string {

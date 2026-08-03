@@ -13,7 +13,7 @@ import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
 import { boundaryPointsToLatLng, type AreaUnit } from '../../../utils/boundaryGeometry';
 import { draftAlreadyHasFarmerFarm } from '../../../utils/ensureOnboardingFarmerFarm';
-import { isValidEntityId, toPositiveEntityId } from '../../../utils/entityId';
+import { formatFarmDisplayCode, formatFarmerDisplayCode, isValidEntityId, toPositiveEntityId } from '../../../utils/entityId';
 import {
   compareDeclaredAndMapped,
   declaredAreaInAcres,
@@ -270,6 +270,14 @@ export function FarmerOnboardingReviewScreen() {
       nextLoading={loading}
       footerError={error}
     >
+      <View style={styles.identityCard}>
+        <Text style={styles.identityTitle}>Registration Summary</Text>
+        <Line label="Farmer ID" value={formatFarmerDisplayCode(draft.farmer_id, draft.farmer_display_id || draft.farmer_code)} />
+        <Line label="Farmer Name" value={draft.farmer_name} />
+        <Line label="Farm ID" value={formatFarmDisplayCode(draft.farm_id, draft.farm_code)} />
+        <Line label="Farm Name" value={draft.farm_name} />
+      </View>
+
       <ReviewSection title="Farmer profile" onEdit={() => edit('FarmerBasicDetails')}>
         <OnboardingReviewPhoto file={draft.farmer_photo} />
         <Line label="Name" value={draft.farmer_name} />
@@ -301,11 +309,18 @@ export function FarmerOnboardingReviewScreen() {
         <Line label="Survey no." value={draft.land_survey_number} />
         <Line label="Farm Name" value={draft.farm_name} />
         <Line label="Area" value={`${draft.land_area} ${draft.land_area_unit}`} />
-        <Line label="Ownership" value={OPTION_LABELS[draft.ownership_type] ?? draft.ownership_type} />
+        <Line
+          label="Ownership"
+          value={
+            draft.ownership_type === 'other' && draft.ownership_other_detail.trim()
+              ? `Other (${draft.ownership_other_detail.trim()})`
+              : OPTION_LABELS[draft.ownership_type] ?? draft.ownership_type
+          }
+        />
         <Line label="Crop" value={draft.crop_type} />
         <Line label="Irrigation" value={OPTION_LABELS[draft.irrigation_type] ?? draft.irrigation_type} />
         <Line label="Soil" value={OPTION_LABELS[draft.soil_type] ?? draft.soil_type} />
-        <Line label="Farming practice" value={draft.existing_farming_practice} />
+        <Line label="Existing Agri Bio-Waste" value={draft.existing_farming_practice} />
         <Line label="Project interest" value={draft.project_interest.join(', ')} />
         <Line label="Service interest" value={draft.service_interests.join(', ')} />
         <Line label="Remarks" value={draft.remarks} />
@@ -362,8 +377,9 @@ export function FarmerOnboardingReviewScreen() {
         <Line label="Captured at" value={draft.gps_captured_at} />
       </ReviewSection>
       <ReviewSection title="Documents" onEdit={() => edit('FarmerProofUpload')}>
-        <Line label="Land proof" value={draft.proof_of_land_ownership?.name} />
-        <Line label="Consent" value={draft.consent_form?.name} />
+        <Line label="Ownership Document" value={draft.proof_of_land_ownership?.name} />
+        <Line label="Farm Photos" value={draft.farmer_documents.length ? `${draft.farmer_documents.length} photo(s)` : undefined} />
+        <Line label="Farmer with Farm Photo" value={draft.farmer_with_farm_photo?.name} />
       </ReviewSection>
     </OnboardingFormScreen>
   );
@@ -403,6 +419,21 @@ function Line({ label, value }: { label: string; value?: string }) {
 const styles = StyleSheet.create({
   line: { fontSize: 14, color: colors.text, marginTop: 4 },
   edit: { color: colors.primary, fontWeight: '700', marginTop: 8 },
+  identityCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 2,
+  },
+  identityTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 6,
+  },
   mappingCard: {
     backgroundColor: '#F0F9F3',
     borderRadius: 16,

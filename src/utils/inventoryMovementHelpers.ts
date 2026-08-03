@@ -1,5 +1,6 @@
 import type { ApiRecord } from './apiHelpers';
 import { pickNestedString, pickString } from './apiHelpers';
+import { formatFarmerDisplayId } from './displayIds';
 
 export interface BatchInventoryOption {
   id: number;
@@ -71,7 +72,6 @@ export function mapDestinationOptions(farmers: ApiRecord[]): DestinationFarmOpti
 
   for (const farmerRecord of farmers) {
     const farmerName = pickString(farmerRecord, 'name');
-    const farmerCode = pickString(farmerRecord, 'farmer_code', 'farmerCode');
     const farmerId = Number(farmerRecord.farmer_id ?? farmerRecord.farmerId ?? farmerRecord.id ?? 0);
     const farms = Array.isArray(farmerRecord.farms) ? (farmerRecord.farms as ApiRecord[]) : [];
 
@@ -82,7 +82,7 @@ export function mapDestinationOptions(farmers: ApiRecord[]): DestinationFarmOpti
       options.push({
         farmerId,
         farmerName: farmerName !== '-' ? farmerName : 'Farmer',
-        farmerCode: farmerCode !== '-' ? farmerCode : `BHG-FRM-${String(farmerId).padStart(6, '0')}`,
+        farmerCode: formatFarmerDisplayId(farmerRecord),
         farmId: Number(farmRecord.id ?? 0),
         farmName: pickString(farmRecord, 'farm_name', 'farmName'),
         farmCode: pickString(farmRecord, 'farm_code', 'farmCode'),
