@@ -255,29 +255,46 @@ export function FarmerConsentScreen() {
       return;
     }
 
-    navigation.navigate('FarmerLandDetails');
+    navigation.navigate('FarmerOnboardingReview');
   };
 
   const displayError = error ?? evidenceCapture.error;
   const otpReady = /^\d{6}$/.test(otp);
 
+  const farmerName = draft.farmer_name?.trim() || '—';
+  const farmName = draft.farm_name?.trim() || '—';
+  const farmerIdLabel = formatFarmerDisplayCode(
+    draft.farmer_id,
+    draft.farmer_display_id || draft.farmer_code,
+  );
+  const farmIdLabel = formatFarmDisplayCode(draft.farm_id, draft.farm_code);
+  const identityReady =
+    Boolean(draft.farmer_name?.trim())
+    && Boolean(draft.farm_name?.trim())
+    && Boolean(draft.farm_id)
+    && farmIdLabel !== '—'
+    && farmIdLabel !== 'Loading…';
+
   return (
     <OnboardingConsentLayout
-      stepCurrent={3}
-      progressLabel="Step 3: Consent & Legal"
+      stepCurrent={5}
+      progressLabel="Step 5: Consent & Legal"
       onNext={next}
-      nextLabel={ONBOARDING_NEXT_LABELS[3]}
+      nextLabel={ONBOARDING_NEXT_LABELS[5]}
       footerError={displayError}
-      nextDisabled={!draft.agreement_otp_verified}
+      nextDisabled={!draft.agreement_otp_verified || !identityReady}
     >
       <View style={styles.identityCard}>
         <Text style={styles.identityTitle}>Registration Summary</Text>
-        <Text style={styles.identityLine}>
-          Farmer ID: {formatFarmerDisplayCode(draft.farmer_id, draft.farmer_display_id || draft.farmer_code)}
-        </Text>
-        <Text style={styles.identityLine}>Farmer Name: {draft.farmer_name?.trim() || '-'}</Text>
-        <Text style={styles.identityLine}>Farm ID: {formatFarmDisplayCode(draft.farm_id, draft.farm_code)}</Text>
-        <Text style={styles.identityLine}>Farm Name: {draft.farm_name?.trim() || '-'}</Text>
+        <Text style={styles.identityLine}>Farmer ID: {farmerIdLabel}</Text>
+        <Text style={styles.identityLine}>Farmer Name: {farmerName}</Text>
+        <Text style={styles.identityLine}>Farm ID: {farmIdLabel}</Text>
+        <Text style={styles.identityLine}>Farm Name: {farmName}</Text>
+        {!identityReady ? (
+          <Text style={styles.identityWarning}>
+            Farmer and Farm details must be created on Land Registration before consent.
+          </Text>
+        ) : null}
       </View>
 
       <View style={styles.toggles}>
@@ -409,6 +426,12 @@ const styles = StyleSheet.create({
   identityLine: {
     fontSize: 13,
     color: dashboardTheme.onSurfaceVariant,
+  },
+  identityWarning: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#B91C1C',
+    marginTop: 4,
   },
   toggles: { gap: 16 },
   divider: { height: 1, backgroundColor: `${dashboardTheme.outlineVariant}80` },

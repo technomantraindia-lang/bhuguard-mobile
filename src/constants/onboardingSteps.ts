@@ -45,9 +45,9 @@ export type OnboardingStepDisplayTone = 'completed' | 'current' | 'pending';
 export const ONBOARDING_STEPS: FarmerOnboardingStep[] = [
   { id: 1, key: 'basic_details', label: 'Basic Details', title: 'Basic Details', icon: 'person', route: 'FarmerBasicDetails' },
   { id: 2, key: 'location_data', label: 'Location Data', title: 'Location Data', icon: 'share_location', route: 'FarmerGpsCapture' },
-  { id: 3, key: 'consent_legal', label: 'Consent & Legal', title: 'Consent & Legal', icon: 'consent', route: 'FarmerConsent' },
-  { id: 4, key: 'land_registration', label: 'Land Registration', title: 'Land Registration', icon: 'landscape', route: 'FarmerLandDetails' },
-  { id: 5, key: 'documents', label: 'Documents', title: 'Documents', icon: 'folder', route: 'FarmerProofUpload' },
+  { id: 3, key: 'land_registration', label: 'Land Registration', title: 'Land Registration', icon: 'landscape', route: 'FarmerLandDetails' },
+  { id: 4, key: 'documents', label: 'Documents', title: 'Documents', icon: 'folder', route: 'FarmerProofUpload' },
+  { id: 5, key: 'consent_legal', label: 'Consent & Legal', title: 'Consent & Legal', icon: 'consent', route: 'FarmerConsent' },
   {
     id: 6,
     key: 'final_review_submit',
@@ -60,9 +60,9 @@ export const ONBOARDING_STEPS: FarmerOnboardingStep[] = [
 
 export const ONBOARDING_NEXT_LABELS: Record<number, string> = {
   1: 'Continue to Location Data',
-  2: 'Continue to Consent & Legal',
-  3: 'Continue to Land Registration',
-  4: 'Continue to Documents',
+  2: 'Continue to Land Registration',
+  3: 'Continue to Documents',
+  4: 'Continue to Consent & Legal',
   5: 'Continue to Final Review & Submit',
   6: 'Submit Registration',
 };

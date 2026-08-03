@@ -61,7 +61,7 @@ export function FarmerGpsCaptureScreen() {
     }
 
     setError(null);
-    navigation.navigate('FarmerConsent');
+    navigation.navigate('FarmerLandDetails');
   };
 
   return (

@@ -13,6 +13,7 @@ import type { AreaUnit } from '../../../utils/boundaryGeometry';
 import { mappedAreaLabelForDraft } from '../../../utils/onboardingBoundary';
 import { validateBoundaryMapping, validateLandDetails } from '../../../utils/onboardingValidation';
 import { defaultFarmName } from '../../../utils/displayIds';
+import { ensureOnboardingFarmerFarm } from '../../../utils/ensureOnboardingFarmerFarm';
 import { FormField, OnboardingFormScreen } from './OnboardingFormScreen';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
@@ -95,7 +96,7 @@ const IRRIGATION_OPTIONS = [
 
 export function FarmerLandDetailsScreen() {
   const navigation = useNavigation<Nav>();
-  const { draft, result, updateDraft } = useOnboarding();
+  const { draft, result, updateDraft, toFormData } = useOnboarding();
   const [error, setError] = useState<string | null>(null);
   const continuingRef = useRef(false);
   const bioWasteParsed = useMemo(
@@ -119,6 +120,46 @@ export function FarmerLandDetailsScreen() {
     service_interest: 'Biochar',
     project_interest: ['Biochar'] as string[],
   });
+
+  const ensureFarmThenContinue = async (
+    draftAfter: typeof draft,
+    mappingStatus: 'pending' | 'completed',
+  ) => {
+    const ensured = await ensureOnboardingFarmerFarm(draftAfter, toFormData);
+    if (ensured.status !== 'ready') {
+      continuingRef.current = false;
+      setError(ensured.message);
+      return;
+    }
+
+    updateDraft({
+      farmer_id: ensured.ids.farmerId,
+      farm_id: ensured.ids.farmId,
+      farmer_code: ensured.ids.farmerCode ?? '',
+      farm_code: ensured.ids.farmCode ?? '',
+      farm_name: ensured.ids.farmName ?? draftAfter.farm_name,
+    });
+
+    const withIds = {
+      ...draftAfter,
+      farmer_id: ensured.ids.farmerId,
+      farm_id: ensured.ids.farmId,
+      farmer_code: ensured.ids.farmerCode ?? '',
+      farm_code: ensured.ids.farmCode ?? '',
+      farm_name: ensured.ids.farmName ?? draftAfter.farm_name,
+    };
+
+    continueFarmerOnboardingAfterLandMapping(navigation, withIds, result, {
+      farmerId: ensured.ids.farmerId,
+      farmId: ensured.ids.farmId,
+      farmerName: ensured.ids.farmerName,
+      farmName: ensured.ids.farmName ?? undefined,
+      farmCode: ensured.ids.farmCode ?? undefined,
+      farmerCode: ensured.ids.farmerCode ?? undefined,
+      village: draftAfter.village_name || undefined,
+      mappingStatus,
+    });
+  };
 
   const skipMapping = () => {
     if (continuingRef.current) {
@@ -147,15 +188,8 @@ export function FarmerLandDetailsScreen() {
     continuingRef.current = true;
     updateDraft(skipPatch);
     setError(null);
-    continueFarmerOnboardingAfterLandMapping(navigation, draftAfterSkip, result, {
-      farmerId: draft.farmer_id ?? undefined,
-      farmId: draft.farm_id ?? undefined,
-      farmerName: draft.farmer_name || undefined,
-      farmName: draft.farm_name || undefined,
-      farmCode: draft.farm_code || undefined,
-      farmerCode: draft.farmer_code || undefined,
-      village: draft.village_name || undefined,
-      mappingStatus: 'pending',
+    void ensureFarmThenContinue(draftAfterSkip, 'pending').finally(() => {
+      continuingRef.current = false;
     });
   };
 
@@ -192,15 +226,11 @@ export function FarmerLandDetailsScreen() {
 
     continuingRef.current = true;
     setError(null);
-    continueFarmerOnboardingAfterLandMapping(navigation, draftWithService, result, {
-      farmerId: draft.farmer_id ?? undefined,
-      farmId: draft.farm_id ?? undefined,
-      farmerName: draft.farmer_name || undefined,
-      farmName: draft.farm_name || undefined,
-      farmCode: draft.farm_code || undefined,
-      farmerCode: draft.farmer_code || undefined,
-      village: draft.village_name || undefined,
-      mappingStatus: status === 'pending' ? 'pending' : 'completed',
+    void ensureFarmThenContinue(
+      draftWithService,
+      status === 'pending' ? 'pending' : 'completed',
+    ).finally(() => {
+      continuingRef.current = false;
     });
   };
 
@@ -229,7 +259,7 @@ export function FarmerLandDetailsScreen() {
 
   return (
     <OnboardingFormScreen
-      stepCurrent={4}
+      stepCurrent={3}
       title="Land Registration"
       subtitle="Farm, crop, and boundary mapping details."
       onNext={next}

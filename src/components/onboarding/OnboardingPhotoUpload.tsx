@@ -78,7 +78,7 @@ export function OnboardingPhotoUpload({ file, onChange }: OnboardingPhotoUploadP
     try {
       const result = await capturePlainPhoto({
         defaultName: 'farmer-photo.jpg',
-        allowsEditing: true,
+        allowsEditing: false,
       });
 
       if (!result.ok) {

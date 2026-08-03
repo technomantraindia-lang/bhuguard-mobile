@@ -107,12 +107,12 @@ export function FarmerProofUploadScreen() {
     }
     setError(null);
     updateDraft({ documents_step_completed: true });
-    navigation.navigate('FarmerOnboardingReview');
+    navigation.navigate('FarmerConsent');
   };
 
   return (
     <OnboardingFormScreen
-      stepCurrent={5}
+      stepCurrent={4}
       title="Documents"
       subtitle="Capture or upload supporting evidence in order."
       onNext={next}
