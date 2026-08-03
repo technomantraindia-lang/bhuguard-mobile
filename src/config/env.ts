@@ -4,6 +4,8 @@
  * Do not hardcode URLs in screens — import from apiDefaults or apiConfigStorage.
  */
 
+import { isPlaceholderApiUrl, isTryCloudflareTunnelUrl } from './apiUrlValidation';
+
 /** Live app origin (media, storage, /up health checks). */
 export const APP_URL =
   process.env.EXPO_PUBLIC_APP_URL?.trim() || 'https://erp.bhuguard.com';
@@ -12,17 +14,13 @@ export const APP_URL =
 export const PRODUCTION_API_BASE_URL = 'https://erp.bhuguard.com/api';
 
 /**
- * Demo profile now points at the live ERP so client builds stay on production data.
+ * Demo profile points at the live ERP so client builds stay on production data.
  * Prefer PRODUCTION_API_BASE_URL / EXPO_PUBLIC_API_URL for new code.
  */
 export const DEMO_API_BASE_URL = PRODUCTION_API_BASE_URL;
 
-/**
- * Preset for "Use production server" in Server settings.
- * Override with EXPO_PUBLIC_DEV_LOCAL_API_URL only when intentionally targeting another host.
- */
-export const LOCAL_API_BASE_URL =
-  process.env.EXPO_PUBLIC_DEV_LOCAL_API_URL?.trim() || PRODUCTION_API_BASE_URL;
+/** Default LAN Laravel API used during local Expo development. */
+export const DEFAULT_DEV_LOCAL_API_BASE_URL = 'http://192.168.1.11:8000/api';
 
 export type AppVariant = 'development' | 'demo' | 'production';
 
@@ -33,21 +31,52 @@ export const APP_VARIANT: AppVariant =
       ? 'production'
       : 'development';
 
-import { isLiveProductionApiUrl, isPlaceholderApiUrl, isTryCloudflareTunnelUrl } from './apiUrlValidation';
+export function isDevelopmentApiVariant(): boolean {
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    return true;
+  }
 
-/** Baked into release builds via EXPO_PUBLIC_API_URL. Falls back to live ERP when missing or invalid. */
+  return APP_VARIANT === 'development';
+}
+
+function normalizeApiUrl(raw: string): string {
+  const clean = raw.replace(/\/+$/, '');
+
+  return clean.endsWith('/api') ? clean : `${clean}/api`;
+}
+
+/**
+ * Preset for "Use local server" in Server settings.
+ * Development never falls back to production.
+ */
+export const LOCAL_API_BASE_URL = normalizeApiUrl(
+  process.env.EXPO_PUBLIC_DEV_LOCAL_API_URL?.trim() ||
+    (isDevelopmentApiVariant()
+      ? process.env.EXPO_PUBLIC_API_URL?.trim() || DEFAULT_DEV_LOCAL_API_BASE_URL
+      : PRODUCTION_API_BASE_URL),
+);
+
+/**
+ * Resolve API URL from .env / EAS.
+ * Development uses EXPO_PUBLIC_API_URL (or LAN default) — never silent production fallback.
+ * Production builds fall back to live ERP when EXPO_PUBLIC_API_URL is missing/invalid.
+ */
 export function resolveBuildApiBaseUrl(): string {
   const fromEnv = process.env.EXPO_PUBLIC_API_URL?.trim();
 
   if (
     fromEnv &&
     !isPlaceholderApiUrl(fromEnv) &&
-    !isTryCloudflareTunnelUrl(fromEnv) &&
-    isLiveProductionApiUrl(fromEnv)
+    !isTryCloudflareTunnelUrl(fromEnv)
   ) {
-    return fromEnv.replace(/\/+$/, '').endsWith('/api')
-      ? fromEnv.replace(/\/+$/, '')
-      : `${fromEnv.replace(/\/+$/, '')}/api`;
+    return normalizeApiUrl(fromEnv);
+  }
+
+  if (isDevelopmentApiVariant()) {
+    const local =
+      process.env.EXPO_PUBLIC_DEV_LOCAL_API_URL?.trim() || DEFAULT_DEV_LOCAL_API_BASE_URL;
+
+    return normalizeApiUrl(local);
   }
 
   return PRODUCTION_API_BASE_URL;

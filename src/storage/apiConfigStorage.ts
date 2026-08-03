@@ -2,7 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
 import { BUILD_API_BASE_URL } from '../config/apiDefaults';
-import { PRODUCTION_API_BASE_URL } from '../config/env';
+import {
+  isDevelopmentApiVariant,
+  LOCAL_API_BASE_URL,
+  PRODUCTION_API_BASE_URL,
+} from '../config/env';
 import {
   isDemoApiUrl,
   isLiveProductionApiUrl,
@@ -15,10 +19,32 @@ const API_BASE_URL_KEY = 'bhuguard_api_base_url';
 
 let cachedApiBaseUrl: string | null = null;
 
-export function getDefaultApiBaseUrl(): string {
-  const built = BUILD_API_BASE_URL || PRODUCTION_API_BASE_URL;
+function withApiSuffix(input: string): string {
+  const trimmed = input.trim().replace(/\/+$/, '');
 
-  if (isPlaceholderApiUrl(built) || !isLiveProductionApiUrl(built)) {
+  if (!trimmed) {
+    return '';
+  }
+
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+}
+
+export function getDefaultApiBaseUrl(): string {
+  const built = withApiSuffix(BUILD_API_BASE_URL || LOCAL_API_BASE_URL);
+
+  if (isDevelopmentApiVariant()) {
+    if (
+      built &&
+      !isPlaceholderApiUrl(built) &&
+      !isTryCloudflareTunnelUrl(built)
+    ) {
+      return built;
+    }
+
+    return withApiSuffix(LOCAL_API_BASE_URL) || 'http://192.168.1.11:8000/api';
+  }
+
+  if (!built || isPlaceholderApiUrl(built) || !isLiveProductionApiUrl(built)) {
     return PRODUCTION_API_BASE_URL;
   }
 
@@ -26,17 +52,13 @@ export function getDefaultApiBaseUrl(): string {
 }
 
 export function normalizeApiBaseUrl(input: string): string {
-  const trimmed = input.trim().replace(/\/+$/, '');
+  const normalized = withApiSuffix(input);
 
-  if (!trimmed) {
+  if (!normalized) {
     return getDefaultApiBaseUrl();
   }
 
-  if (trimmed.endsWith('/api')) {
-    return trimmed;
-  }
-
-  return `${trimmed}/api`;
+  return normalized;
 }
 
 /** Example URLs from help text — not real servers. */
@@ -76,6 +98,18 @@ export function isLocalNetworkApiUrl(url: string): boolean {
 function shouldMigrateStoredApiUrl(stored: string): boolean {
   if (!stored) {
     return false;
+  }
+
+  if (isDevelopmentApiVariant()) {
+    // Keep intentional LAN overrides. Drop placeholders/tunnels and stale production
+    // values left over from when development incorrectly forced live ERP.
+    if (isPlaceholderApiUrl(stored) || isTryCloudflareTunnelUrl(stored)) {
+      return true;
+    }
+
+    const built = getDefaultApiBaseUrl();
+
+    return isLiveProductionApiUrl(stored) && isLocalNetworkApiUrl(built);
   }
 
   // Drop placeholders, tunnels, LAN, demo, and any non-live ERP override.
