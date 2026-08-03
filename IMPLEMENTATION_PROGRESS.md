@@ -196,7 +196,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Farmer→Farm→Mixing hierarchy; no initial Search; Add New → Farmer list | ArtisanFarmLookup mixing hierarchy; FO FieldOfficerBiocharApplication still search-based | application APIs | Mixing hierarchy present; FO application search not fully removed | ⚠️ PARTIAL | FO application hierarchy rewrite |
+| Farmer→Farm→Mixing hierarchy; no initial Search; Add New → Farmer list | FieldOfficerBiocharApplicationScreen (rewritten hierarchy); ArtisanFarmLookup mixing hierarchy | application APIs | FO free-text search removed; Add New returns to farmer list | ⚠️ PARTIAL | Device E2E verify |
 
 ---
 
