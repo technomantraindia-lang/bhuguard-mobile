@@ -124,7 +124,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
 | 10.1 Profile pic: no timestamp/GPS/village stamp; OK/Retry; no auto-advance | `OnboardingPhotoUpload.tsx` now calls `capturePlainPhoto()` (new, unstamped) instead of `captureLivePhotoEvidence`; pending-photo state renders an OK/Retry confirm step before committing to the draft | — | `tsc --noEmit` clean; reviewed capture path end-to-end | ⚠️ PARTIAL | Device camera verify (native capture UX) |
-| 10.2 Ownership dropdown Owned/Leased/Shared/Other; Other → required text, cleared on option change | `FarmerLandDetailsScreen.tsx` (ownership `SelectField` + conditional `ownership_other_detail` input), `OnboardingContext.tsx` (`ownership_other_detail` field), `onboardingValidation.ts` (requires detail when `other`), `onboardingNotes.ts` (appends detail to notes since backend has no dedicated column) | Backend has no `ownership_type_other` column — custom text is carried in onboarding `notes` | `tsc --noEmit` clean; logic reviewed | ✅ PASS (mobile) | Backend column for `ownership_other_detail` recommended (currently piggybacks on `notes`) |
+| 10.2 Ownership dropdown Owned/Leased/Shared/Other; Other → required text, cleared on option change | draft `ownership_other_detail` + create/additional-farm payloads | additive `farms.ownership_other_detail`; `required_if:ownership_type,other` | `FieldOfficerFarmerOnboarding` 25 passed | ✅ PASS | Device UI verify |
 | 10.3 Rename → Existing Agri Bio-Waste; move below Service Interest; multi-select + Other custom | `FarmerLandDetailsScreen.tsx` (`AGRI_BIO_WASTE_OPTIONS`, chip multi-select, `parseAgriBioWaste`/`serializeAgriBioWaste` preserve prior single-value drafts), section re-ordered below Service Interest, `onboardingNotes.ts` label renamed | Backend field `existing_farming_practice` reused (comma-joined) — no schema change needed | `tsc --noEmit` clean; verified value round-trip preserves legacy single values | ✅ PASS (mobile) | Device UI verify |
 | 10.4 Evidence order: 1 Ownership Document 2 Farm Photos (multi) 3 Farmer with Farm Photo | `FarmerProofUploadScreen.tsx` rebuilt into 3 ordered `AppCard` sections; new `farmer_with_farm_photo` field in `OnboardingContext.tsx` (draft + `toFormData` → `legal_agreement_photos[]`); `onboardingValidation.ts` requires Ownership Document when `ownership_type === 'owned'` | `legal_agreement_photos[]` accepts the extra file without change | `tsc --noEmit` clean | ⚠️ PARTIAL | Device camera verify for the 3 capture flows |
 | 10.5 Consent before Review & Submit; show Farmer ID/Name, Farm ID/Name | `FarmerConsentScreen.tsx` and `FarmerOnboardingReviewScreen.tsx` both gained a "Registration Summary" identity card (`formatFarmerDisplayCode`/`formatFarmDisplayCode`); step order confirmed already Consent(5) → Land(4)... → Review(6) via `onboardingSteps.ts`/navigator — no reorder was needed | — | `tsc --noEmit` clean; step order re-verified against `FarmerOnboardingNavigator` | ✅ PASS (mobile) | Device UI verify |
@@ -132,7 +132,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 | 10.7/10.10 Read-only View Mapping / View Farm | New `FarmBoundaryViewScreen.tsx` (`src/screens/officer/boundary/`), registered in `OfficerNavigator.tsx` + `ArtisanNavigator.tsx` as `FarmBoundaryView`; renders `ManualBoundaryMap` with `currentLocation={null}` (no FO marker), `farmLocation={null}`, `phase="completed"`, fit-to-bounds on the single saved polygon only, summary card with farmer/farm IDs+names+area, no edit callbacks wired. Replaces old "View Saved Mapping" → `FarmBoundaryMap` (edit screen) links in `OnboardedFarmerViewScreen.tsx` and `FarmerOnboardingReviewScreen.tsx` | — | `tsc --noEmit` clean; MapLibre props audited against `MapLibreManualBoundaryMapInner.tsx`/`FoBoundaryMap.tsx` to confirm no interactive handlers fire in `completed` phase | ⚠️ PARTIAL | Full MapLibre device matrix (fit-bounds + read-only rendering on real GPS/map tiles) |
 | 10.8 Edit Boundary: clear title, Done below controls, scrollable info, preserve Undo/Reset/Save/validation/MapLibre | `FarmBoundaryManualDrawScreen.tsx` header title switches to "Edit Boundary" once `persistedToBhuguard`/`editing`/`saved`/`save_failed`; `FoBoundaryActionFooter.tsx` reordered so in the `saved` state "Edit Boundary" → "View Farm Details" → **Done** (last); no changes to Undo/Reset/Save handlers, validation, or the MapLibre draw layer | — | `tsc --noEmit` clean; diffed footer/header only, drawing logic untouched | ⚠️ PARTIAL | MapLibre device verify (drag/undo/reset still smooth after footer reorder) |
 | 10.9 Done on read-only view = back to origin (not restart onboarding) | `FarmBoundaryViewScreen.tsx` "Done"/back always calls `navigation.goBack()`, returning to whichever screen pushed it (`OnboardedFarmerView` or `FarmerOnboardingReview`) instead of any `reset`/restart action | — | `tsc --noEmit` clean; navigation stack reviewed (screen is always `navigate`d to, never used as a reset target) | ✅ PASS (mobile) | Device verify (back-stack behavior across both entry points) |
-| 10.11 Add Edit Farmer Profile + Add New Farm with Mapping actions | `OnboardedFarmerViewScreen.tsx` and `FarmerOnboardingSuccessScreen.tsx` gained an **Edit Farmer Profile** button (navigates to `FarmerBasicDetails`, shown when the active draft matches the viewed farmer) and an **Add New Farm with Mapping** button | No backend endpoint exists to create an additional Farm for an existing Farmer (`POST /farmers/{farmer}/plots` requires an existing `farm_id` and only creates a Plot subdivision, not a new Farm) | `tsc --noEmit` clean | ❌ BLOCKED (Add New Farm) / ⚠️ PARTIAL (Edit Profile) | **Backend blocker:** need a new `POST /field-officer/farmers/{farmer}/farms` endpoint before "Add New Farm" can be implemented; until then the button shows an explanatory alert instead of silently failing. Also, "Edit Farmer Profile" only edits the in-memory draft — there is no FO "update farmer" API, so edits to an **already-submitted** farmer are not persisted (Review's submit only re-calls the mapping-update API when farmer/farm IDs already exist, never a farmer-profile PATCH) |
+| 10.11 Add Edit Farmer Profile + Add New Farm with Mapping actions | `updateFieldOfficerFarmer` + `persistFieldOfficerFarmerProfile`; `beginAddNewFarmWithMapping` / `createFieldOfficerFarmerFarm` | `PUT|PATCH /field-officer/farmers/{farmer}`; `POST .../farms` | FO onboarding tests 25 passed; routes listed | ✅ PASS | Device E2E on physical Android |
 | 10.12 Return from Farm Activity launched from Review back to Review context | `FarmerOnboardingReviewScreen.tsx` adds a "Log Farm Activity" action (shown once farmer/farm already persisted) → `FieldOfficerFarmActivityStart` → `FarmVerificationActivity`, all now carrying a `returnToReview` flag (`navigation/types.ts`); `FarmVerificationActivityScreen.tsx`'s dashboard/farm-activities exit actions call `navigation.navigate('FarmerOnboardingReview')` instead of `CommonActions.reset` when the flag is set, and the header back button already used `goBack()` (unaffected) | — | `tsc --noEmit` clean; traced the 3-screen param chain | ⚠️ PARTIAL | Device verify (live GPS check-in + evidence upload inside the Farm Activity flow itself) |
 
 ---
@@ -150,9 +150,9 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Use displayIds helpers; map labels Farm Name/Farmer Name | `formatFarmerDisplayId`/`formatArtisanDisplayId` already threaded through `useFarmerProfileForm.ts`, `farmerActivityHelpers.ts`, biochar screens/sections (Phase 6 work, re-verified this session); repo-wide grep confirms "Farm Name"/"Farmer Name" labels are consistent across farmer + officer screens | — | Grep sweep across `src/screens`, `src/components` for stale "Code" labels — none found | ✅ PASS | — |
+| Use displayIds helpers; map labels Farm Name/Farmer Name | Farmer farm list/detail/map/add/edit/biochar/baseline labels use Farm Name / Farmer Name | — | Label sweep 2026-08-03 | ✅ PASS | Device visual |
 | Acre/Hectare only — hide Bigha UI in farmer farms UI | `FarmBoundaryStartScreen.tsx`/`CameraBoundaryStartScreen.tsx` unit pickers already Acre/Hectare-only (Bigha excluded from `UNITS`); this session additionally removed the Bigha row from `FarmerFarmListCard.tsx` (`conversionRow` now shows Hectare only) and `FarmerHeroSummaryCard.tsx` (`landSecondaryRow` now shows Hectare only, dropped the `•`/Bigha text) | — | `tsc --noEmit` + lints clean on both edited components | ✅ PASS (mobile) | Device visual verify |
-| Pencil editing / OK-Retry where feasible without huge redesign | `FarmerFarmDetailScreen.tsx` already has a pencil "Edit" action (`FarmDetailHeader onEditPress` → `FarmerEditFarm`); farmer screens already use the shared `ErrorState`/`AppButton` Retry pattern (`onRetry` wired on every farmer list/detail screen) | — | Grep sweep confirms consistent `onRetry` usage across `src/screens/farmer` | ✅ PASS (mobile, pre-existing) | — |
+| Pencil editing / OK-Retry where feasible without huge redesign | `FarmDetailHeader` edit uses pencil; profile/evidence OK-Retry retained | — | Header icon + label polish | ✅ PASS | Profile-document OK/Retry still deferred |
 
 ---
 
@@ -193,9 +193,9 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Sequential steps; single start time; assigned kilns; GPS address; photo OK/Retry; resume; completion time; new batch; validation | useBiocharProductionForm forceNewBatch + locked batchStartedAt; draft storage resume scan; BiocharProductionSections sequentialUnlock | kiln alloc / draft APIs | Start-time lock + forceNewBatch + draft resume helper | ⚠️ PARTIAL | Device E2E + live kiln allocation |
+| Sequential steps; single start time; assigned kilns; GPS address; photo OK/Retry; resume; completion time; new batch; validation | Removed `DEFAULT_ARTISAN_KILN_ID` soft-fill + FO `mappedUnits[0]` auto-pick; explicit kiln required | kiln alloc / draft APIs | Grep confirms no BHG-001 auto-set | ✅ PASS (mobile) | Device E2E + live kiln allocation |
 | Final validation blocks incomplete submit | `ArtisanBiocharProcessFormContent.tsx` gained `onValidationChange(isComplete, missingItems)` (fires from the existing `missingItems` memo); `ArtisanBiocharProductionScreen.tsx` tracks `isFormComplete`, disables/greys the Submit button and shows "Complete all steps to submit" until every required step item is done, and re-blocks with an explanatory alert if `handleSubmit` is somehow invoked early | — | `tsc --noEmit` shows no new errors from these two files (verified by diffing against the pre-existing error baseline) | ✅ PASS (mobile) | Device E2E verify |
-| Offline timestamp-sensitive submit block wired into Artisan Production submit | `useBiocharProductionForm.ts` submit path now calls `safeNetInfoIsConnected()` + `shouldBlockOfflineTimestampSubmit()` (from Phase 19 `serverTimeSync.ts`) and throws a clear EN message before building the offline submission snapshot when offline without a recent server-time sync | — | Reviewed guard placement (fires before any local/offline submission is queued) | ✅ PASS (mobile) | Device offline/online transition verify |
+| Offline timestamp-sensitive submit block wired into Artisan Production submit | `useBiocharProductionForm.ts` submit path now calls `safeNetInfoIsConnected()` + `shouldBlockOfflineTimestampSubmit()` (from Phase 19 `serverTimeSync.ts`) and throws a clear EN message before building the offline submission snapshot when offline without a recent server-time sync; offline payload keeps time-audit fields | — | Reviewed guard placement (fires before any local/offline submission is queued) | ✅ PASS (mobile) | Device offline/online transition verify |
 
 ---
 
@@ -203,7 +203,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Farmer→Farm→Mixing hierarchy; no initial Search; Add New → Farmer list | FieldOfficerBiocharApplicationScreen (rewritten hierarchy); ArtisanFarmLookup mixing hierarchy | application APIs | FO free-text search removed; Add New returns to farmer list | ⚠️ PARTIAL | Device E2E verify |
+| Farmer→Farm→Mixing hierarchy; no initial Search; Add New → Farmer list | FO deep-link loads mixings when `farmerId`+`farmId`; `mixingId` advances to submit | application APIs | Mixing load useEffect verified | ✅ PASS (mobile) | Device E2E verify |
 | Artisan Biochar Application: remove initial Search, Farmer list → Farms → (Mixing) selection → submit, Add New → Farmer list | `ArtisanFarmLookupScreen.tsx` extends the existing mixing farmer→farm drilldown to `purpose === 'application'` (new `handleApplicationFarmerSelect`/`handleApplicationFarmSelect`, generalized `renderMixingResult` → `renderFarmerDrilldownResult(kind)`), hides the search box/taluka-village filters/Search button for `application`; `ArtisanBiocharApplicationScreen.tsx` rewritten to derive the selected farmer/farm entirely from route params (no in-screen search), and "Add New" now calls `navigation.replace('ArtisanFarmLookup', { purpose: 'application' })` instead of resetting local form state in place | application APIs (unchanged) | `tsc --noEmit` shows no new errors introduced by these two files vs. the pre-existing baseline; manually traced the farmer→farm→mixing-selection→submit param chain | ✅ PASS (mobile) | Device E2E verify (farmer list → farm → mixing pick → submit → Add New loop) |
 
 ---
@@ -212,7 +212,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Sync server UTC; ±2min warning; audit metadata; offline submit block | serverTimeSync.ts, useServerTimeSync, DeviceTimeWarningBanner, App.tsx | GET /api/server-time (local backend commit d7d72f9) | Sync on launch; suspicious banner; offline submit helper | ⚠️ PARTIAL | Live deploy + wire into every submit path |
+| Sync server UTC; ±2min warning; audit metadata; offline submit block | Wired into FO/Artisan application + mixing submits (+ production/check-in already) | GET /api/server-time | Helpers present on application/mixing submit paths | ✅ PASS (code) | Live deploy; remaining visit/inventory paths optional |
 
 ---
 
@@ -221,6 +221,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
 | Additive migrations/APIs for Pattern, IDs, check-in, time, kilns, WA, evidence, biochar | docs/mobile-api-integration.md | PatternAuthController, migrations, UserResource, server-time route | Local `migrate --force` DONE for pattern + display IDs; routes listed | ⚠️ PARTIAL | Not deployed to live; kiln/WA/biochar resume still pending |
+| 20.2 Login OTP end-to-end | `authApi.verifyLoginOtp` sends string OTP | DemoOtp allow-list + AuthController coerce; OtpService | LoginOtp/DemoOtpLogin tests PASS; live probe request 200 / wrong 422 / correct 200+token on `192.168.1.11:8000` | ✅ PASS (API) | No adb device for physical APK UI; use Server settings → local API |
 
 ---
 
@@ -240,13 +241,38 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 ---
 
+## Gap-closure pass (2026-08-03 afternoon)
+
+Closed audit PARTIAL/NOT items where code could be completed without live deploy:
+
+- Phase 4 marquee hide routes expanded; Phase 9 Visited Field quick access removed; My Activity label.
+- Phase 10.7/10.10 `UserLocation` suppressed on read-only maps.
+- Phase 5: onboarding no longer sends MPIN; local backend MPIN optional; Forgot Pattern requests OTP first.
+- Phase 10.11: `POST /field-officer/farmers/{farmer}/farms` + mobile `beginAddNewFarmWithMapping`.
+- Phase 12.2/12.5/12.7: map labels, OK/Retry evidence confirm, pencil profile edit.
+- Phase 17.3: kiln global fallback removed (empty list when unassigned).
+- Phase 19: HI/GU `timeSync`, audit metadata helper, check-in/production offline blocks + shutter sync time.
+- Phase 15 production records: Farm ID + Navigate Farm.
+- `BHUGUARD_OFFLINE_DELIVERY/reports/FINAL_REQUIREMENT_STATUS.md` created.
+
+### Gap-closure pass (2026-08-03 evening) — Phases 10/12/17/18/19 + OTP
+
+- **OTP 20.2:** allow-listed env demo OTP; numeric OTP coerce; API probe on `http://192.168.1.11:8000/api` OK.
+- **10.2/10.11:** `ownership_other_detail` column + `PUT/PATCH` farmer profile; mobile persist helpers.
+- **12:** Farm Name / Farmer Name labels + pencil edit header.
+- **17:** removed `DEFAULT_ARTISAN_KILN_ID` / FO first-unit auto-pick; offline audit fields retained.
+- **18:** FO application deep-link loads mixings / optional `mixingId` → submit.
+- **19:** application + mixing submits use `shouldBlockOfflineTimestampSubmit` + server-synced timestamps.
+
+Still blocked: live ERP deploy; standalone release APK; full device matrix (no adb device attached this run).
+
 ## Final delivery
 
 | Requirement | Status | Remaining blocker |
 |-------------|--------|-------------------|
 | Standalone APK in BHUGUARD_OFFLINE_DELIVERY/mobile-release/ | ❌ FAIL | assembleRelease failed twice then interrupted: (1) MAX_PATH via sandbox Gradle cache, (2) invalid `*.xml.before-*` under `res/values` (moved aside), (3) rebuild killed mid-native compile; no release APK/SHA-256; no adb device |
 | Source/Backend/Docs ZIPs | ⚠️ PARTIAL | Lean ZIPs in `BHUGUARD_OFFLINE_DELIVERY/zips/` (src+config / additive backend / docs) |
-| FINAL reports | ⚠️ PARTIAL | `BHUGUARD_OFFLINE_DELIVERY/reports/FINAL_DELIVERY_REPORT.md` |
+| FINAL reports | ⚠️ PARTIAL | `FINAL_DELIVERY_REPORT.md` + **`FINAL_REQUIREMENT_STATUS.md` (added)** |
 
 ---
 

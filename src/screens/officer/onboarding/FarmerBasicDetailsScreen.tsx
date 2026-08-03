@@ -3,6 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Svg, { Path } from 'react-native-svg';
 
+import { getApiErrorMessage } from '../../../api/authApi';
 import { OnboardingMobileField, OnboardingTextField } from '../../../components/onboarding/OnboardingFormFields';
 import { OnboardingLanguageChips, OnboardingPhotoUpload } from '../../../components/onboarding/OnboardingPhotoUpload';
 import { OnboardingSectionCard, OnboardingStepShell } from '../../../components/onboarding/OnboardingStepShell';
@@ -10,7 +11,9 @@ import { ONBOARDING_NEXT_LABELS } from '../../../constants/onboardingSteps';
 import { useOnboarding } from '../../../context/OnboardingContext';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
+import { isValidEntityId } from '../../../utils/entityId';
 import { validateBasicDetails } from '../../../utils/onboardingValidation';
+import { persistFieldOfficerFarmerProfile } from '../../../utils/persistFieldOfficerFarmerProfile';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
 
@@ -31,8 +34,9 @@ export function FarmerBasicDetailsScreen() {
   const navigation = useNavigation<Nav>();
   const { draft, updateDraft } = useOnboarding();
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const next = () => {
+  const next = async () => {
     const validationError = validateBasicDetails(draft);
 
     if (validationError) {
@@ -41,6 +45,31 @@ export function FarmerBasicDetailsScreen() {
     }
 
     setError(null);
+
+    if (isValidEntityId(draft.farmer_id)) {
+      setLoading(true);
+      try {
+        const updated = await persistFieldOfficerFarmerProfile(draft);
+        if (!updated) {
+          throw new Error('Unable to update farmer profile.');
+        }
+        if (updated.farmer_name) {
+          updateDraft({ farmer_name: String(updated.farmer_name) });
+        }
+        if (updated.mobile) {
+          updateDraft({ mobile: String(updated.mobile) });
+        }
+        if (updated.preferred_language != null) {
+          updateDraft({ preferred_language: String(updated.preferred_language ?? '') });
+        }
+      } catch (err) {
+        setError(getApiErrorMessage(err, 'Unable to save farmer profile. Please try again.'));
+        return;
+      } finally {
+        setLoading(false);
+      }
+    }
+
     navigation.navigate('FarmerGpsCapture');
   };
 
@@ -49,8 +78,11 @@ export function FarmerBasicDetailsScreen() {
       stepCurrent={1}
       title="Basic Details"
       subtitle="Farmer profile details for onboarding."
-      onNext={next}
+      onNext={() => {
+        void next();
+      }}
       nextLabel={ONBOARDING_NEXT_LABELS[1]}
+      nextLoading={loading}
       footerError={error}
     >
       <OnboardingSectionCard>

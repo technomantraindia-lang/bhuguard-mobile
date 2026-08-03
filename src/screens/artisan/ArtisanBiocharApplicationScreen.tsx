@@ -19,12 +19,18 @@ import { LiveWorkCheckinCard } from '../../components/artisan/LiveWorkCheckinCar
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { useArtisanWorkSession } from '../../context/ArtisanWorkSessionContext';
 import type { ArtisanStackParamList } from '../../navigation/types';
+import {
+  buildTimeAuditMetadata,
+  getServerSyncedNow,
+  shouldBlockOfflineTimestampSubmit,
+} from '../../services/serverTimeSync';
 import { artisanTheme } from '../../theme/artisanTheme';
 import { spacing } from '../../theme';
 import { extractList, pickString, type ApiRecord } from '../../utils/apiHelpers';
 import { captureBiocharGps, showBiocharPoorAccuracyWarning } from '../../utils/biocharGpsCapture';
 import { formatFarmDisplayLabel } from '../../utils/farmDisplayLabel';
 import { captureLivePhotoEvidence } from '../../utils/liveEvidenceCapture';
+import { safeNetInfoIsConnected } from '../../utils/safeNetInfo';
 
 type Nav = NativeStackNavigationProp<ArtisanStackParamList, 'ArtisanBiocharApplication'>;
 type ScreenRoute = RouteProp<ArtisanStackParamList, 'ArtisanBiocharApplication'>;
@@ -73,7 +79,7 @@ type MixingRecord = {
   status: string;
 };
 
-function indiaDateTime(): { date: string; time: string; label: string } {
+function indiaDateTime(from: Date = getServerSyncedNow()): { date: string; time: string; label: string } {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Kolkata',
     year: 'numeric',
@@ -82,7 +88,7 @@ function indiaDateTime(): { date: string; time: string; label: string } {
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
-  }).formatToParts(new Date());
+  }).formatToParts(from);
   const value = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
 
   return {
@@ -129,7 +135,7 @@ export function ArtisanBiocharApplicationScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<ScreenRoute>();
   const { ensureCheckedInOrPrompt } = useArtisanWorkSession();
-  const now = useMemo(indiaDateTime, []);
+  const now = useMemo(() => indiaDateTime(), []);
   const selectionSeededForFarmRef = useRef<number | null>(null);
   const mountedRef = useRef(true);
   const loadingMixingRecordsRef = useRef(false);
@@ -432,58 +438,74 @@ export function ArtisanBiocharApplicationScreen() {
       return;
     }
 
-    const formData = new FormData();
-    formData.append('farmer_id', String(farmerId));
-    formData.append('farm_id', String(farmId));
-    formData.append('application_date', now.date);
-    formData.append('application_time', now.time);
-    formData.append('notes', notes.trim());
-    formData.append('latitude', String(gps.latitude));
-    formData.append('longitude', String(gps.longitude));
-    formData.append('application_quantity', String(selectedTotalQuantity));
-    if (gps.accuracy != null) {
-      formData.append('accuracy', String(gps.accuracy));
-    }
-    if (gps.altitude != null) {
-      formData.append('altitude', String(gps.altitude));
-    }
-    formData.append('village', gps.village ?? selectedFarm?.village ?? '');
-    formData.append('taluka', gps.taluka ?? selectedFarm?.taluka ?? '');
-    formData.append('district', gps.district ?? selectedFarm?.district ?? '');
-    formData.append('state', gps.state ?? selectedFarm?.state ?? '');
-
-    selectedMixingIds.forEach((mixingId, index) => {
-      formData.append(`mixing_record_ids[${index}]`, String(mixingId));
-    });
-
-    evidences.forEach((evidence, index) => {
-      formData.append(`evidences[${index}][file]`, {
-        uri: evidence.uri,
-        name: evidence.name,
-        type: evidence.type,
-      } as unknown as Blob);
-      formData.append(`evidences[${index}][evidence_type]`, evidence.evidenceType);
-      if (evidence.capturedAt) {
-        formData.append(`evidences[${index}][captured_at]`, evidence.capturedAt);
-      }
-      formData.append(
-        `evidences[${index}][latitude]`,
-        String(evidence.latitude ?? gps.latitude),
-      );
-      formData.append(
-        `evidences[${index}][longitude]`,
-        String(evidence.longitude ?? gps.longitude),
-      );
-      if (gps.accuracy != null) {
-        formData.append(`evidences[${index}][accuracy]`, String(gps.accuracy));
-      }
-    });
-
     submitInProgressRef.current = true;
     setSubmitting(true);
     setError(null);
 
     try {
+      const isOnline = await safeNetInfoIsConnected();
+      if (shouldBlockOfflineTimestampSubmit(isOnline)) {
+        throw new Error(
+          'Cannot submit offline right now. This step records a timestamp and needs a recent server time sync. Reconnect to the internet, retry sync, and try again.',
+        );
+      }
+
+      // Prefer server-synced IST for application_date/time; audit is local-only
+      // (validated FormData contract does not accept device_utc / server_utc).
+      const submitNow = indiaDateTime(getServerSyncedNow());
+      buildTimeAuditMetadata('artisan_biochar_application_submit', {
+        latitude: gps.latitude,
+        longitude: gps.longitude,
+        accuracyM: gps.accuracy,
+      });
+
+      const formData = new FormData();
+      formData.append('farmer_id', String(farmerId));
+      formData.append('farm_id', String(farmId));
+      formData.append('application_date', submitNow.date);
+      formData.append('application_time', submitNow.time);
+      formData.append('notes', notes.trim());
+      formData.append('latitude', String(gps.latitude));
+      formData.append('longitude', String(gps.longitude));
+      formData.append('application_quantity', String(selectedTotalQuantity));
+      if (gps.accuracy != null) {
+        formData.append('accuracy', String(gps.accuracy));
+      }
+      if (gps.altitude != null) {
+        formData.append('altitude', String(gps.altitude));
+      }
+      formData.append('village', gps.village ?? selectedFarm?.village ?? '');
+      formData.append('taluka', gps.taluka ?? selectedFarm?.taluka ?? '');
+      formData.append('district', gps.district ?? selectedFarm?.district ?? '');
+      formData.append('state', gps.state ?? selectedFarm?.state ?? '');
+
+      selectedMixingIds.forEach((mixingId, index) => {
+        formData.append(`mixing_record_ids[${index}]`, String(mixingId));
+      });
+
+      evidences.forEach((evidence, index) => {
+        formData.append(`evidences[${index}][file]`, {
+          uri: evidence.uri,
+          name: evidence.name,
+          type: evidence.type,
+        } as unknown as Blob);
+        formData.append(`evidences[${index}][evidence_type]`, evidence.evidenceType);
+        if (evidence.capturedAt) {
+          formData.append(`evidences[${index}][captured_at]`, evidence.capturedAt);
+        }
+        formData.append(
+          `evidences[${index}][latitude]`,
+          String(evidence.latitude ?? gps.latitude),
+        );
+        formData.append(
+          `evidences[${index}][longitude]`,
+          String(evidence.longitude ?? gps.longitude),
+        );
+        if (gps.accuracy != null) {
+          formData.append(`evidences[${index}][accuracy]`, String(gps.accuracy));
+        }
+      });
+
       const response = await submitArtisanBiocharApplication(formData);
       setSubmitted((response.record ?? response) as ApiRecord);
     } catch (err) {

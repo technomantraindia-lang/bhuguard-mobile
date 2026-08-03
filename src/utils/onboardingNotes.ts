@@ -39,11 +39,8 @@ export function buildOnboardingNotes(draft: OnboardingDraft): string {
   }
 
   if (draft.ownership_type.trim()) {
-    const ownershipLabel =
-      draft.ownership_type.trim() === 'other' && draft.ownership_other_detail.trim()
-        ? `Other (${draft.ownership_other_detail.trim()})`
-        : draft.ownership_type.trim();
-    extras.push(`Ownership type: ${ownershipLabel}`);
+    // ownership_other_detail is sent as its own API field; do not stuff into notes.
+    extras.push(`Ownership type: ${draft.ownership_type.trim()}`);
   }
 
   if (draft.existing_farming_practice.trim()) {

@@ -61,7 +61,7 @@ export function FarmerBaselineAssessmentDetailScreen({ route }: Props) {
             <Text style={styles.badge}>Regenerative Agriculture • Before Project</Text>
           </View>
 
-          <DetailRow label="Farm" value={item.farmName} />
+          <DetailRow label="Farm Name" value={item.farmName} />
           <DetailRow label="Assessment Date" value={item.assessmentDateLabel} />
           <DetailRow label="Status" value={item.statusLabel} />
           <DetailRow label="Soil Organic Carbon" value={item.soilOrganicCarbonLabel} />

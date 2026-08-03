@@ -3,6 +3,7 @@ import { Text, View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { getApiErrorMessage } from '../../../api/authApi';
 import { AssignedOnboardingAddressFields } from '../../../components/onboarding/AssignedOnboardingAddressFields';
 import { NoAssignmentState } from '../../../components/location/NoAssignmentState';
 import { OnboardingSectionCard, OnboardingStepShell } from '../../../components/onboarding/OnboardingStepShell';
@@ -12,6 +13,8 @@ import { useOnboarding } from '../../../context/OnboardingContext';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { validateAddress } from '../../../utils/onboardingValidation';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
+import { isValidEntityId } from '../../../utils/entityId';
+import { persistFieldOfficerFarmerProfile } from '../../../utils/persistFieldOfficerFarmerProfile';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
 
@@ -19,6 +22,7 @@ export function FarmerGpsCaptureScreen() {
   const navigation = useNavigation<Nav>();
   const { draft, updateDraft } = useOnboarding();
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   // `auto` uses Artisan Pro Admin allocations when logged in as artisan,
   // so FO-link is not required just to load Location Data.
   const assigned = useAssignedLocations('auto');
@@ -47,7 +51,7 @@ export function FarmerGpsCaptureScreen() {
     return null;
   }, [assigned.locations]);
 
-  const next = () => {
+  const next = async () => {
     if (!assigned.hasAssignment) {
       setError('No assigned working area found. Please ask Admin to assign villages.');
       return;
@@ -61,6 +65,29 @@ export function FarmerGpsCaptureScreen() {
     }
 
     setError(null);
+
+    if (isValidEntityId(draft.farmer_id)) {
+      setLoading(true);
+      try {
+        const updated = await persistFieldOfficerFarmerProfile(draft);
+        if (!updated) {
+          throw new Error('Unable to update farmer address.');
+        }
+        updateDraft({
+          village_name: updated.village ? String(updated.village) : draft.village_name,
+          taluka_name: updated.taluka ? String(updated.taluka) : draft.taluka_name,
+          district_name: updated.district ? String(updated.district) : draft.district_name,
+          state: updated.state ? String(updated.state) : draft.state,
+          pincode: updated.pincode != null ? String(updated.pincode) : draft.pincode,
+        });
+      } catch (err) {
+        setError(getApiErrorMessage(err, 'Unable to save farmer address. Please try again.'));
+        return;
+      } finally {
+        setLoading(false);
+      }
+    }
+
     navigation.navigate('FarmerLandDetails');
   };
 
@@ -69,8 +96,11 @@ export function FarmerGpsCaptureScreen() {
       stepCurrent={2}
       title="Location Data"
       subtitle="Select the farmer working area and address details."
-      onNext={next}
+      onNext={() => {
+        void next();
+      }}
       nextLabel={ONBOARDING_NEXT_LABELS[2]}
+      nextLoading={loading}
       footerError={error}
     >
       <OnboardingSectionCard title="Address">

@@ -100,7 +100,7 @@ export function FarmerAddFarmScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <SubmitActivityCard title="Farm Details">
           <FarmFormField
-            label="Farm / Plot Name"
+            label="Farm Name"
             value={form.name}
             onChangeText={(value) => updateField('name', value)}
             placeholder="Green Valley Farm"

@@ -20,6 +20,7 @@ import {
 } from '../../../utils/landMappingHelpers';
 import { calculateTurfBoundaryMetrics, polygonCentroid } from '../../../utils/manualBoundaryGeometry';
 import { validateSubmit } from '../../../utils/onboardingValidation';
+import { persistFieldOfficerFarmerProfile } from '../../../utils/persistFieldOfficerFarmerProfile';
 import { OnboardingFormScreen } from './OnboardingFormScreen';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
@@ -176,8 +177,19 @@ export function FarmerOnboardingReviewScreen() {
       let landAreaUnit = draft.land_area_unit;
 
       if (draftAlreadyHasFarmerFarm(draft) && farmerId != null && farmId != null) {
-        // Farmer/farm already created during mapping gate. Mapping-only refresh here;
-        // whole onboarding is not re-marked complete by the mapping API.
+        // Farmer/farm already created during mapping gate. Persist profile edits + mapping refresh.
+        const updated = await persistFieldOfficerFarmerProfile(draft);
+        if (!updated) {
+          throw new Error('Unable to update farmer profile.');
+        }
+        farmerName = String(updated.farmer_name ?? draft.farmer_name);
+        mobile = String(updated.mobile ?? draft.mobile);
+        village = updated.village ? String(updated.village) : draft.village_name;
+        taluka = updated.taluka ? String(updated.taluka) : draft.taluka_name;
+        district = updated.district ? String(updated.district) : draft.district_name;
+        state = updated.state ? String(updated.state) : draft.state;
+        photoUrl = updated.photo_url ? String(updated.photo_url) : undefined;
+
         if (mappingCompleted) {
           const center =
             landMappingSummary.center

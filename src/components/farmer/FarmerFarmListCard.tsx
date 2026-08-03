@@ -60,8 +60,14 @@ export function FarmerFarmListCard({
     <View style={[styles.card, dashboardShadow]}>
       <Pressable style={styles.headerPress} onPress={onViewDetails}>
         <View style={styles.headerLeft}>
+          <Text style={styles.fieldLabel}>Farm Name</Text>
           <Text style={styles.name}>{farm.name}</Text>
-          {farm.farmerName ? <Text style={styles.farmerName}>{farm.farmerName}</Text> : null}
+          {farm.farmerName ? (
+            <>
+              <Text style={styles.fieldLabel}>Farmer Name</Text>
+              <Text style={styles.farmerName}>{farm.farmerName}</Text>
+            </>
+          ) : null}
           <Text style={styles.code}>ID: {farm.code}</Text>
           <Text style={styles.location}>{farm.locationLabel}</Text>
         </View>
@@ -135,6 +141,13 @@ const styles = StyleSheet.create({
   headerLeft: {
     flex: 1,
     gap: 2,
+  },
+  fieldLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '600',
+    color: dashboardTheme.outline,
+    marginTop: 2,
   },
   name: {
     fontSize: 20,

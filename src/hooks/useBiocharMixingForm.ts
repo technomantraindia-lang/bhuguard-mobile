@@ -28,6 +28,11 @@ import {
   type BiocharMixingEvidenceKey,
 } from '../constants/biocharMixing';
 import type { MixingLocationStatus } from '../components/biochar/BiocharMixingSections';
+import {
+  buildTimeAuditMetadata,
+  getServerSyncedNow,
+  shouldBlockOfflineTimestampSubmit,
+} from '../services/serverTimeSync';
 import { extractList, pickString, type ApiRecord } from '../utils/apiHelpers';
 import { todayIsoDate } from '../utils/activityDateHelpers';
 import { captureLivePhotoEvidence } from '../utils/liveEvidenceCapture';
@@ -37,6 +42,18 @@ import {
 } from '../utils/biocharGpsCapture';
 import type { ArtisanGpsAccuracyTier } from '../utils/artisanGpsAccuracy';
 import { classifyArtisanGpsAccuracy } from '../utils/artisanGpsAccuracy';
+import { safeNetInfoIsConnected } from '../utils/safeNetInfo';
+
+function indiaIsoDate(from: Date = getServerSyncedNow()): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(from);
+  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+  return `${value('year')}-${value('month')}-${value('day')}`;
+}
 
 export type BiocharMixingEvidenceAsset = {
   uri: string;
@@ -733,7 +750,7 @@ export function useBiocharMixingForm({
     setSelectedBatchIds([]);
   }, []);
 
-  const buildFormData = useCallback((): FormData => {
+  const buildFormData = useCallback((mixingDateOverride?: string): FormData => {
     const formData = new FormData();
     const farmIdToSend = resolvedFarmId ?? initialFarmId;
 
@@ -755,7 +772,7 @@ export function useBiocharMixingForm({
     if (site.trim()) {
       formData.append('site', site.trim());
     }
-    formData.append('date_of_mixing', dateOfMixing);
+    formData.append('date_of_mixing', mixingDateOverride || dateOfMixing || indiaIsoDate());
     if (latitude != null) {
       formData.append('latitude', String(latitude));
       formData.append('gps_latitude', String(latitude));
@@ -866,7 +883,22 @@ export function useBiocharMixingForm({
         throw new Error('Select at least one approved Biochar Production Batch before submit.');
       }
 
-      const formData = buildFormData();
+      const isOnline = await safeNetInfoIsConnected();
+      if (shouldBlockOfflineTimestampSubmit(isOnline)) {
+        throw new Error(
+          'Cannot submit offline right now. This step records a timestamp and needs a recent server time sync. Reconnect to the internet, retry sync, and try again.',
+        );
+      }
+
+      // Prefer server-synced IST date; audit stays local (mixing FormData contract
+      // does not accept device_utc / server_utc fields).
+      buildTimeAuditMetadata('biochar_mixing_submit', {
+        latitude,
+        longitude,
+        accuracyM,
+      });
+
+      const formData = buildFormData(indiaIsoDate(getServerSyncedNow()));
       const response = (
         isArtisanMode
           ? await completeArtisanBiocharMixing(formData)
@@ -927,6 +959,7 @@ export function useBiocharMixingForm({
       setSubmitting(false);
     }
   }, [
+    accuracyM,
     applyRecord,
     buildFormData,
     districtName,

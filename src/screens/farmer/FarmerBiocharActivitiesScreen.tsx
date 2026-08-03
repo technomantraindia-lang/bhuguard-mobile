@@ -78,6 +78,7 @@ export function FarmerBiocharActivitiesScreen() {
     const id = Number(record.id);
     const batchCode = pickString(record, 'batch_code', 'batchCode');
     const farmerName = pickString(record, 'farmer_name', 'farmerName');
+    const farmName = pickString(record, 'farm_name', 'farmName');
     const status = pickString(record, 'status');
     const statusLabel = pickString(record, 'status_label', 'statusLabel');
     const canEdit = record.can_edit === true;
@@ -96,6 +97,10 @@ export function FarmerBiocharActivitiesScreen() {
         <View style={styles.fieldBlock}>
           <Text style={styles.fieldLabel}>Batch ID</Text>
           <Text style={styles.fieldValue}>{batchCode !== '-' ? batchCode : `Record #${id}`}</Text>
+        </View>
+        <View style={styles.fieldBlock}>
+          <Text style={styles.fieldLabel}>Farm Name</Text>
+          <Text style={styles.fieldValue}>{farmName !== '-' ? farmName : '—'}</Text>
         </View>
         <View style={styles.fieldBlock}>
           <Text style={styles.fieldLabel}>Farmer Name</Text>

@@ -74,7 +74,7 @@ export function FarmerEditFarmScreen({ navigation, route }: Props) {
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <FarmFormField
-          label="Farm / plot name"
+          label="Farm Name"
           value={form.name}
           onChangeText={(value) => updateField('name', value)}
           error={fieldErrors.name}

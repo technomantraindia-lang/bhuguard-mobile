@@ -34,8 +34,14 @@ export function FarmDetailHeroCard({
     <View style={[styles.card, dashboardShadow]}>
       <View style={styles.headerRow}>
         <View style={styles.copy}>
+          <Text style={styles.identityLabel}>Farm Name</Text>
           <Text style={styles.farmName}>{farmName}</Text>
-          {farmerName ? <Text style={styles.farmerName}>{farmerName}</Text> : null}
+          {farmerName ? (
+            <>
+              <Text style={styles.identityLabel}>Farmer Name</Text>
+              <Text style={styles.farmerName}>{farmerName}</Text>
+            </>
+          ) : null}
           <Text style={styles.farmCode}>{farmCode}</Text>
         </View>
         <View style={styles.badges}>
@@ -73,7 +79,16 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
-    gap: 4,
+    gap: 2,
+  },
+  identityLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '600',
+    color: dashboardTheme.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 4,
   },
   farmName: {
     fontSize: 22,

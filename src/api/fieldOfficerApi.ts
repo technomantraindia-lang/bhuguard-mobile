@@ -359,6 +359,29 @@ export async function createFarmerOnboarding(formData: FormData): Promise<ApiRec
   return response.data.data?.farmer ?? (response.data.data as unknown as ApiRecord);
 }
 
+/** Update FO-editable farmer profile fields when farmer_id already exists (Phase 10.11). */
+export async function updateFieldOfficerFarmer(
+  farmerId: number | string,
+  payload: ApiRecord | FormData,
+): Promise<ApiRecord> {
+  if (payload instanceof FormData) {
+    // Multipart PUT is unreliable in PHP; method-spoof via POST so files parse correctly.
+    payload.append('_method', 'PUT');
+    const response = await apiClient.post<ApiSuccessResponse<{ farmer: ApiRecord }>>(
+      `/field-officer/farmers/${farmerId}`,
+      payload,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return response.data.data?.farmer ?? (response.data.data as unknown as ApiRecord);
+  }
+
+  const response = await putApiData<{ farmer: ApiRecord }>(
+    `/field-officer/farmers/${farmerId}`,
+    payload,
+  );
+  return response?.farmer ?? (response as unknown as ApiRecord);
+}
+
 /** Create an additional Farm for an existing Farmer (Phase 10.11). Does not create a Farmer. */
 export async function createFieldOfficerFarmerFarm(
   farmerId: number | string,

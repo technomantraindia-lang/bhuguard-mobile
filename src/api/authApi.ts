@@ -217,7 +217,8 @@ export async function verifyLoginOtp(mobile: string, otp: string): Promise<Login
   const device = await devicePayload();
   const response = await apiClient.post('/auth/login/verify-otp', {
     mobile: mobile.trim(),
-    otp: otp.trim(),
+    // Always send a string — numeric JSON OTPs fail Laravel `string` validation.
+    otp: String(otp ?? '').trim(),
     ...device,
   });
 

@@ -97,6 +97,10 @@ function buildAdditionalFarmPayload(draft: OnboardingDraft): ApiRecord {
     land_area: draft.land_area.trim() ? Number(draft.land_area) : undefined,
     land_area_unit: draft.land_area_unit.trim() || undefined,
     ownership_type: draft.ownership_type.trim() || undefined,
+    ownership_other_detail:
+      draft.ownership_type.trim() === 'other'
+        ? draft.ownership_other_detail.trim() || undefined
+        : undefined,
     irrigation_type: draft.irrigation_type.trim() || undefined,
     soil_type: draft.soil_type.trim() || undefined,
     crop_type: draft.crop_type.trim() || undefined,

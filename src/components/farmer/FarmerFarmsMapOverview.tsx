@@ -65,9 +65,14 @@ export function FarmerFarmsMapOverview({
             <View key={farm.id} style={styles.labelRow}>
               <BhuguardMaterialIcon name="location_on" size={16} color={dashboardTheme.primaryContainer} />
               <View style={styles.labelCopy}>
-                <Text style={styles.labelFarmName}>{farm.name}</Text>
+                <Text style={styles.labelFarmName}>Farm Name: {farm.name}</Text>
                 <Text style={styles.labelMeta}>
-                  {[farmerName || farm.farmerName, farm.code ? `Farm ID: ${farm.code}` : null]
+                  {[
+                    farmerName || farm.farmerName
+                      ? `Farmer Name: ${farmerName || farm.farmerName}`
+                      : null,
+                    farm.code ? `Farm ID: ${farm.code}` : null,
+                  ]
                     .filter(Boolean)
                     .join(' · ')}
                 </Text>

@@ -236,6 +236,9 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         appendScalar(formData, 'gps_accuracy', draft.gps_accuracy);
         appendScalar(formData, 'crop_type', draft.crop_type);
         appendScalar(formData, 'ownership_type', draft.ownership_type);
+        if (draft.ownership_type.trim() === 'other') {
+          appendScalar(formData, 'ownership_other_detail', draft.ownership_other_detail);
+        }
         appendScalar(formData, 'irrigation_type', draft.irrigation_type);
         appendScalar(formData, 'soil_type', draft.soil_type);
 

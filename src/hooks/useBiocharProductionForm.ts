@@ -46,9 +46,7 @@ import {
 } from '../utils/moistureReadingValidation';
 import {
   currentBiocharTimeValue,
-  DEFAULT_ARTISAN_KILN_ID,
   isValidArtisanKilnId,
-  isValidKilnId,
   kilnIdValidationError,
   mapProductionUnit,
   normalizeAltitude,
@@ -73,6 +71,7 @@ import {
   showBiocharPoorAccuracyWarning,
   BIOCHAR_POOR_ACCURACY_MESSAGE,
 } from '../utils/biocharGpsCapture';
+import { normalizeCaptureLocationPart } from '../utils/livePhotoLocation';
 import type { ArtisanGpsAccuracyTier } from '../utils/artisanGpsAccuracy';
 import { classifyArtisanGpsAccuracy } from '../utils/artisanGpsAccuracy';
 import {
@@ -1179,7 +1178,7 @@ export function useBiocharProductionForm({
           applyBatch(batch);
         } else if (!initialSubmissionUuid) {
           applySelectionPrefill();
-          setKilnId((current) => current || DEFAULT_ARTISAN_KILN_ID);
+          // Do not soft-fill BHG-001 — leave kiln empty until assigned/selected/typed.
         }
 
         if (viewOnly || initialSubmissionUuid) {
@@ -1324,13 +1323,7 @@ export function useBiocharProductionForm({
         }
       }
 
-      if (!initialBatchId && mappedUnits[0]) {
-        setSelectedUnitId((current) => current ?? mappedUnits[0].id);
-        setKilnId((current) => current || mappedUnits[0].kilnId || mappedUnits[0].label);
-        if (mappedUnits[0].operatorName) {
-          setOperatorName((current) => current || mappedUnits[0].operatorName || '');
-        }
-      }
+      // FO must explicitly pick a kiln/unit — do not auto-select mappedUnits[0].
     } catch (loadError) {
       setError(getApiErrorMessage(loadError, 'Unable to load biochar production form.'));
     } finally {
@@ -1490,17 +1483,12 @@ export function useBiocharProductionForm({
         `${String(capturedDate.getHours()).padStart(2, '0')}:${String(capturedDate.getMinutes()).padStart(2, '0')}`,
       );
 
-      if (capture.locationResolved) {
-        setVillageName(capture.village);
-        setTalukaName(capture.taluka);
-        setDistrictName(capture.district);
-        setStateName(capture.state);
-        setGpsCaptureError(null);
-      } else {
-        setGpsCaptureError(
-          'GPS captured but address lookup failed. You can enter the address manually or tap Retry GPS.',
-        );
-      }
+      // Always keep GPS; unresolved reverse-geocode becomes "Unknown" (never blocks).
+      setVillageName(normalizeCaptureLocationPart(capture.village));
+      setTalukaName(normalizeCaptureLocationPart(capture.taluka));
+      setDistrictName(normalizeCaptureLocationPart(capture.district));
+      setStateName(normalizeCaptureLocationPart(capture.state) || 'Gujarat');
+      setGpsCaptureError(null);
     } catch (gpsError) {
       const message = getApiErrorMessage(gpsError, 'Unable to capture GPS location.');
       setGpsCaptureError(message);
@@ -3033,8 +3021,12 @@ export function useBiocharProductionForm({
         throw new Error(
           kilnId.trim()
             ? kilnIdValidationError(kilnId, 'artisan') || 'Enter a valid Kiln ID (BHG-###) or select an existing Pyrolysis Unit.'
-            : 'Enter a valid Kiln ID (BHG-###) or select an existing Pyrolysis Unit.',
+            : 'No kiln assigned. Enter a valid Kiln ID (BHG-###) or select an existing Pyrolysis Unit before submitting.',
         );
+      }
+
+      if (!isArtisanMode && !isFarmerMode && !selectedUnitId && !kilnId.trim()) {
+        throw new Error('Select a Pyrolysis Unit / Kiln before submitting. Do not leave kiln empty.');
       }
 
       if (latitude == null || longitude == null) {

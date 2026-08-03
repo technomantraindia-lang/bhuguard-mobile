@@ -47,7 +47,7 @@ export function FarmDetailHeader({
         </Pressable>
 
         <Pressable style={styles.iconButton} onPress={onEditPress} accessibilityLabel="Edit farm">
-          <BhuguardMaterialIcon name="assignment" size={22} color={dashboardTheme.primary} />
+          <Text style={styles.pencilGlyph}>✎</Text>
         </Pressable>
       </View>
 
@@ -77,6 +77,12 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pencilGlyph: {
+    fontSize: 20,
+    lineHeight: 22,
+    color: dashboardTheme.primary,
+    fontWeight: '600',
   },
   titleCopy: {
     flex: 1,

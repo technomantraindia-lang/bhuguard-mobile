@@ -62,6 +62,14 @@ export interface OfflineProductionPayload {
   timestamp_time: string | null;
   submitted_offline_at: string;
   evidence: Partial<Record<BiocharEvidenceKey, BiocharEvidenceAsset>>;
+  /** Phase 19 — audit only; never authoritative. */
+  device_utc?: string;
+  server_utc?: string;
+  clock_skew_ms?: number | null;
+  device_time_suspicious?: boolean;
+  time_sync_source?: string | null;
+  time_detection_at?: string;
+  activity_context?: string;
 }
 
 export interface OfflineSubmitFormSnapshot {
@@ -253,5 +261,16 @@ export function buildOfflineProductionPayload(params: {
     timestamp_time: form.timestampTime || null,
     submitted_offline_at: params.submittedOfflineAt,
     evidence: form.evidence,
+    ...(form.device_utc
+      ? {
+          device_utc: form.device_utc,
+          server_utc: form.server_utc,
+          clock_skew_ms: form.clock_skew_ms ?? null,
+          device_time_suspicious: form.device_time_suspicious,
+          time_sync_source: form.time_sync_source ?? null,
+          time_detection_at: form.time_detection_at,
+          activity_context: form.activity_context,
+        }
+      : {}),
   };
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -17,17 +17,23 @@ import { getApiErrorMessage } from '../../api/authApi';
 import { AppButton } from '../../components/AppButton';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
+import {
+  buildTimeAuditMetadata,
+  getServerSyncedNow,
+  shouldBlockOfflineTimestampSubmit,
+} from '../../services/serverTimeSync';
 import { colors } from '../../theme/colors';
 import { extractList, pickString, type ApiRecord } from '../../utils/apiHelpers';
 import { formatFarmerDisplayId } from '../../utils/displayIds';
 import { formatFarmDisplayCode } from '../../utils/entityId';
+import { safeNetInfoIsConnected } from '../../utils/safeNetInfo';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'FieldOfficerBiocharApplication'>;
 type ScreenRoute = RouteProp<FieldOfficerStackParamList, 'FieldOfficerBiocharApplication'>;
 
 type Step = 'farmers' | 'farms' | 'mixing' | 'submit';
 
-function indiaDateTime(): { date: string; time: string; label: string } {
+function indiaDateTime(from: Date = getServerSyncedNow()): { date: string; time: string; label: string } {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Kolkata',
     year: 'numeric',
@@ -36,7 +42,7 @@ function indiaDateTime(): { date: string; time: string; label: string } {
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
-  }).formatToParts(new Date());
+  }).formatToParts(from);
   const value = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
 
   return {
@@ -53,7 +59,8 @@ function indiaDateTime(): { date: string; time: string; label: string } {
 export function FieldOfficerBiocharApplicationScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<ScreenRoute>();
-  const now = useMemo(indiaDateTime, []);
+  const now = useMemo(() => indiaDateTime(), []);
+  const deepLinkMixingAdvancedRef = useRef(false);
 
   const [step, setStep] = useState<Step>(
     route.params?.farmId && route.params?.farmerId ? 'mixing' : 'farmers',
@@ -119,6 +126,70 @@ export function FieldOfficerBiocharApplicationScreen() {
       void loadFarmers();
     }
   }, [loadFarmers, step]);
+
+  const loadMixingsForFarm = useCallback(async (farmerIdForLoad: number, farmIdForLoad: number) => {
+    const response = await getOfficerFarmerBiocharMixingRecords(farmerIdForLoad);
+    const list = extractList(response as ApiRecord, ['mixings', 'records', 'data']);
+    return list.filter((item) => {
+      const itemFarmId = Number(item.farm_id ?? item.farmId ?? 0);
+      return !itemFarmId || itemFarmId === farmIdForLoad;
+    });
+  }, []);
+
+  // Deep-link / resume: when route lands on mixing (farmerId+farmId), load mixings
+  // the same way selectFarm does. Prefer advancing to submit when mixingId is set.
+  useEffect(() => {
+    let mounted = true;
+
+    const loadDeepLinkMixings = async () => {
+      if (step !== 'mixing' || !farmerId || !farmId) {
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const forFarm = await loadMixingsForFarm(farmerId, farmId);
+        if (!mounted) {
+          return;
+        }
+
+        setMixings(forFarm);
+
+        const preferredMixingId = route.params?.mixingId != null ? Number(route.params.mixingId) : undefined;
+        const routeMatchesCurrent =
+          Number(route.params?.farmerId) === farmerId && Number(route.params?.farmId) === farmId;
+
+        if (
+          !deepLinkMixingAdvancedRef.current &&
+          routeMatchesCurrent &&
+          preferredMixingId != null &&
+          Number.isFinite(preferredMixingId) &&
+          preferredMixingId > 0
+        ) {
+          deepLinkMixingAdvancedRef.current = true;
+          setMixingId(preferredMixingId);
+          setStep('submit');
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(getApiErrorMessage(err, 'Failed to load mixing records.'));
+          setMixings([]);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadDeepLinkMixings();
+
+    return () => {
+      mounted = false;
+    };
+  }, [farmId, farmerId, loadMixingsForFarm, route.params?.mixingId, step]);
 
   useEffect(() => {
     let mounted = true;
@@ -212,25 +283,10 @@ export function FieldOfficerBiocharApplicationScreen() {
     setMixingId(undefined);
     setBatches([]);
     setQuantities({});
-    setLoading(true);
+    setMixings([]);
     setError(null);
-
-    try {
-      const response = await getOfficerFarmerBiocharMixingRecords(farmerId);
-      const list = extractList(response as ApiRecord, ['mixings', 'records', 'data']);
-      const forFarm = list.filter((item) => {
-        const itemFarmId = Number(item.farm_id ?? item.farmId ?? 0);
-        return !itemFarmId || itemFarmId === id;
-      });
-      setMixings(forFarm);
-      setStep('mixing');
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to load mixing records.'));
-      setMixings([]);
-      setStep('mixing');
-    } finally {
-      setLoading(false);
-    }
+    // Step → mixing triggers the shared loadMixingsForFarm effect (same as deep-link).
+    setStep('mixing');
   };
 
   const selectMixing = (record: ApiRecord | null) => {
@@ -300,31 +356,44 @@ export function FieldOfficerBiocharApplicationScreen() {
       return;
     }
 
-    const formData = new FormData();
-    formData.append('farmer_id', String(farmerId));
-    formData.append('farm_id', String(farmId));
-    formData.append('application_date', now.date);
-    formData.append('application_time', now.time);
-    formData.append('notes', notes);
-    items.forEach((item, index) => {
-      formData.append(`items[${index}][batch_id]`, String(item.batch_id));
-      if (item.mixing_record_id) {
-        formData.append(`items[${index}][mixing_record_id]`, String(item.mixing_record_id));
-      }
-      formData.append(`items[${index}][quantity_applied]`, String(item.quantity_applied));
-      formData.append(`items[${index}][unit]`, item.unit);
-    });
-    evidences.forEach((evidence, index) => {
-      formData.append(
-        `evidences[${index}][file]`,
-        { uri: evidence.uri, name: evidence.name, type: evidence.type } as unknown as Blob,
-      );
-      formData.append(`evidences[${index}][evidence_type]`, evidence.evidenceType);
-    });
-
     setLoading(true);
     setError(null);
+
     try {
+      const isOnline = await safeNetInfoIsConnected();
+      if (shouldBlockOfflineTimestampSubmit(isOnline)) {
+        throw new Error(
+          'Cannot submit offline right now. This step records a timestamp and needs a recent server time sync. Reconnect to the internet, retry sync, and try again.',
+        );
+      }
+
+      // Prefer server-synced IST wall clock for application_date/time; audit stays local
+      // (API FormData contract does not accept device_utc / server_utc fields).
+      const submitNow = indiaDateTime(getServerSyncedNow());
+      buildTimeAuditMetadata('field_officer_biochar_application_submit');
+
+      const formData = new FormData();
+      formData.append('farmer_id', String(farmerId));
+      formData.append('farm_id', String(farmId));
+      formData.append('application_date', submitNow.date);
+      formData.append('application_time', submitNow.time);
+      formData.append('notes', notes);
+      items.forEach((item, index) => {
+        formData.append(`items[${index}][batch_id]`, String(item.batch_id));
+        if (item.mixing_record_id) {
+          formData.append(`items[${index}][mixing_record_id]`, String(item.mixing_record_id));
+        }
+        formData.append(`items[${index}][quantity_applied]`, String(item.quantity_applied));
+        formData.append(`items[${index}][unit]`, item.unit);
+      });
+      evidences.forEach((evidence, index) => {
+        formData.append(
+          `evidences[${index}][file]`,
+          { uri: evidence.uri, name: evidence.name, type: evidence.type } as unknown as Blob,
+        );
+        formData.append(`evidences[${index}][evidence_type]`, evidence.evidenceType);
+      });
+
       const response = await submitOfficerBiocharApplication(formData);
       setSubmitted((response.record ?? response) as ApiRecord);
     } catch (err) {
