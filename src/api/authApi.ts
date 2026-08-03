@@ -222,6 +222,14 @@ export async function verifyLoginOtp(mobile: string, otp: string): Promise<Login
   });
 
   const { token, user } = normalizeAuthResponse(response.data);
+  const { capabilityFromAuthPayload } = await import('./patternApi');
+  const capability = capabilityFromAuthPayload(response.data);
+
+  if (capability.pattern_supported) {
+    user.pattern_supported = true;
+    user.has_pattern = capability.has_pattern;
+    user.pattern_setup_required = capability.pattern_setup_required;
+  }
 
   return { token, user, user_type: resolveUserRole(user) ?? user.user_type };
 }

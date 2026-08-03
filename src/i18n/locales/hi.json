@@ -194,6 +194,27 @@
     "marquee": "Bhuguard किसी भी भुगतान के लिए कॉल नहीं करता। अपना OTP, PIN, पासवर्ड या Pattern किसी के साथ साझा न करें।",
     "accessibilityLabel": "धोखाधड़ी चेतावनी: Bhuguard किसी भी भुगतान के लिए कॉल नहीं करता। अपना OTP, PIN, पासवर्ड या Pattern किसी के साथ साझा न करें।"
   },
+  "pattern": {
+    "setupTitle": "Pattern सेट करें",
+    "resetTitle": "नया Pattern सेट करें",
+    "loginTitle": "Pattern से अनलॉक करें",
+    "changeTitle": "Pattern बदलें",
+    "drawHint": "कम से कम 4 बिंदु जोड़ें",
+    "confirmHint": "पुष्टि के लिए वही Pattern फिर बनाएं",
+    "minPoints": "कम से कम 4 जुड़े हुए बिंदु उपयोग करें।",
+    "mismatch": "Pattern मेल नहीं खाए। फिर कोशिश करें।",
+    "incorrect": "गलत Pattern। फिर कोशिश करें।",
+    "locked": "बहुत अधिक असफल प्रयास। कृपया प्रतीक्षा करें।",
+    "unsupported": "इस सर्वर पर Pattern लॉगिन अभी उपलब्ध नहीं है। मौजूदा सुरक्षित लॉगिन जारी रहेगा।",
+    "setupFailed": "Pattern सेव नहीं हो सका। फिर कोशिश करें।",
+    "changeFailed": "Pattern बदल नहीं सका। फिर कोशिश करें।",
+    "drawToUnlock": "जारी रखने के लिए अपना Pattern बनाएं",
+    "forgot": "Pattern भूल गए?",
+    "enterCurrent": "अपना वर्तमान Pattern बनाएं",
+    "changedTitle": "Pattern अपडेट हुआ",
+    "changedMessage": "आपका अनलॉक Pattern सफलतापूर्वक बदला गया।",
+    "startOver": "फिर से शुरू करें"
+  },
   "apiServer": {
     "title": "सर्वर सेटिंग्स",
     "subtitle": "ऐप को Bhuguard API सर्वर से कनेक्ट करें। दूसरे नेटवर्क पर क्लाइंट को दिखाने के लिए उपयोग करें।",

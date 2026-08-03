@@ -70,9 +70,25 @@ export async function finishMobileLogin(
 
   if (options.continueSetupChain) {
     const user = options.user ?? (await getAuthUser());
+    const hasPattern = Boolean(user?.has_pattern);
+    const patternSupported = Boolean(user?.pattern_supported || user?.pattern_setup_required || hasPattern);
+    const patternSetupRequired = Boolean(user?.pattern_setup_required) || (patternSupported && !hasPattern);
     const hasMpin = Boolean(user?.has_mpin);
     const mobile = user?.mobile ?? options.user.mobile;
     const name = user?.name ?? options.user.name;
+    const role = (user?.user_type ?? '').toLowerCase();
+    const isFarmer = role.includes('farmer');
+
+    if (isFarmer && patternSupported && patternSetupRequired) {
+      navigation.navigate('SetPattern', { mobile, mode: 'setup' });
+      return true;
+    }
+
+    if (isFarmer && patternSupported && hasPattern) {
+      // Pattern already set — continue to biometric offer / dashboard chain.
+      navigation.navigate('BiometricSetup', { mobile, name });
+      return true;
+    }
 
     if (!hasMpin) {
       // Keep Mobile → OTP under CreateMpin so back does not crash on an empty stack.

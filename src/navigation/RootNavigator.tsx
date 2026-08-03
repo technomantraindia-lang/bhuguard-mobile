@@ -76,6 +76,14 @@ export function RootNavigator() {
           getComponent={() => require('../screens/auth/CreateMpinScreen').CreateMpinScreen}
         />
         <Stack.Screen
+          name="SetPattern"
+          getComponent={() => require('../screens/auth/SetPatternScreen').SetPatternScreen}
+        />
+        <Stack.Screen
+          name="PatternLogin"
+          getComponent={() => require('../screens/auth/PatternLoginScreen').PatternLoginScreen}
+        />
+        <Stack.Screen
           name="BiometricSetup"
           getComponent={() => require('../screens/auth/BiometricSetupScreen').BiometricSetupScreen}
         />

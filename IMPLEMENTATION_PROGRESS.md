@@ -76,10 +76,10 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Remove MPIN from Farmer onboarding; 3x3 Pattern UI | Pattern screens, OnboardingContext | pattern_hash migration, endpoints | — | ⏳ PENDING | Live API may lack Pattern |
-| Setup/confirm/change/forgot via OTP; rate limit | patternApi, settings | Auth controllers | — | ⏳ PENDING | Live deploy |
-| Capability detection; no fake success | auth client | — | — | ⏳ PENDING | — |
-| Preserve historical MPIN | — | users.mpin kept | — | ⏳ PENDING | — |
+| Remove MPIN from Farmer onboarding; 3x3 Pattern UI | PatternLockPad, Set/PatternLogin/Change screens; FarmerBasicDetailsScreen | pattern endpoints (local) | UI + routing wired; capability detection; no fake success | ⚠️ PARTIAL | Live API Pattern not deployed; no device test |
+| Setup/confirm/change/forgot via OTP; rate limit | patternApi, OtpVerification forgot_pattern, finishMobileLogin | Auth controllers | Code paths present | ⚠️ PARTIAL | Live deploy + device |
+| Capability detection; no fake success | patternApi.capabilityFromAuthPayload / PatternUnsupportedError | — | Falls back to MPIN when unsupported | ✅ PASS | — |
+| Preserve historical MPIN | onboarding no longer collects MPIN | users.mpin kept | MPIN fields not deleted | ✅ PASS | — |
 
 ---
 

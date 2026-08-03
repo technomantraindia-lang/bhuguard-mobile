@@ -13,6 +13,9 @@ export interface AuthUser {
   user_type: UserType;
   status: string;
   has_mpin?: boolean;
+  has_pattern?: boolean;
+  pattern_supported?: boolean;
+  pattern_setup_required?: boolean;
   role?: string;
   role_name?: string;
   type?: string;

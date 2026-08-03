@@ -300,6 +300,12 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
           return;
         }
         navigation.navigate('CreateMpin', { mobile, flowOrigin });
+      } else if (purpose === 'forgot_pattern') {
+        await verifyForgotMpinOtp(mobile, otp.trim());
+        if (!mountedRef.current) {
+          return;
+        }
+        navigation.navigate('SetPattern', { mobile, mode: 'reset' });
       } else {
         await verifyForgotPasswordOtp(mobile, otp.trim());
         if (!mountedRef.current) {

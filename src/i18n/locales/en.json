@@ -203,6 +203,27 @@
     "marquee": "Bhuguard never calls users to request payment. Never share your OTP, PIN, password or pattern.",
     "accessibilityLabel": "Fraud prevention warning: Bhuguard never calls users to request payment. Never share your OTP, PIN, password or pattern."
   },
+  "pattern": {
+    "setupTitle": "Set Pattern",
+    "resetTitle": "Set New Pattern",
+    "loginTitle": "Unlock with Pattern",
+    "changeTitle": "Change Pattern",
+    "drawHint": "Connect at least 4 points",
+    "confirmHint": "Draw the same pattern again to confirm",
+    "minPoints": "Use at least 4 connected points.",
+    "mismatch": "Patterns did not match. Try again.",
+    "incorrect": "Incorrect pattern. Try again.",
+    "locked": "Too many failed attempts. Please wait and try again.",
+    "unsupported": "Pattern login is not available on this server yet. Continuing with the existing secure login.",
+    "setupFailed": "Could not save pattern. Please try again.",
+    "changeFailed": "Could not change pattern. Please try again.",
+    "drawToUnlock": "Draw your pattern to continue",
+    "forgot": "Forgot Pattern?",
+    "enterCurrent": "Draw your current pattern",
+    "changedTitle": "Pattern updated",
+    "changedMessage": "Your unlock pattern was changed successfully.",
+    "startOver": "Start over"
+  },
   "apiServer": {
     "title": "Server settings",
     "subtitle": "Connect the app to your Bhuguard API server.",

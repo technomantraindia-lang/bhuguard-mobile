@@ -33,6 +33,8 @@ export type StartupRoute =
   | { name: 'MobileLogin' }
   | { name: 'MpinLogin'; params: RootStackParamList['MpinLogin'] }
   | { name: 'CreateMpin'; params: RootStackParamList['CreateMpin'] }
+  | { name: 'SetPattern'; params: RootStackParamList['SetPattern'] }
+  | { name: 'PatternLogin'; params: RootStackParamList['PatternLogin'] }
   | { name: 'BiometricSetup'; params?: RootStackParamList['BiometricSetup'] }
   | { name: keyof RootStackParamList; params?: object };
 
@@ -72,9 +74,40 @@ async function userHasMpin(user: AuthUser): Promise<boolean> {
   return Boolean(profile?.mobile && normalizeMobile(profile.mobile) === userMobile);
 }
 
+async function userHasUnlockCredential(user: AuthUser): Promise<boolean> {
+  if (user.has_pattern || user.pattern_setup_required || user.pattern_supported) {
+    if (user.has_pattern) {
+      return true;
+    }
+    if (user.pattern_setup_required) {
+      return false;
+    }
+  }
+
+  return userHasMpin(user);
+}
+
 function unlockRouteForUser(user: AuthUser): StartupRoute {
   const role = (resolveUserRole(user) ?? user.user_type) as string;
   const mobile = normalizeMobile(user.mobile);
+  const roleLower = String(role).toLowerCase();
+  const isFarmer = roleLower.includes('farmer');
+  const usePattern =
+    isFarmer
+    && Boolean(user.pattern_supported || user.has_pattern)
+    && Boolean(user.has_pattern);
+
+  if (usePattern) {
+    return {
+      name: 'PatternLogin',
+      params: {
+        mobile,
+        name: user.name,
+        role: role as RootStackParamList['PatternLogin']['role'],
+        mode: 'unlock',
+      },
+    };
+  }
 
   return {
     name: 'MpinLogin',
@@ -88,6 +121,19 @@ function unlockRouteForUser(user: AuthUser): StartupRoute {
 }
 
 function setupMpinRouteForUser(user: AuthUser): StartupRoute {
+  const role = (resolveUserRole(user) ?? user.user_type) as string;
+  const isFarmer = String(role).toLowerCase().includes('farmer');
+
+  if (isFarmer && (user.pattern_supported || user.pattern_setup_required)) {
+    return {
+      name: 'SetPattern',
+      params: {
+        mobile: normalizeMobile(user.mobile),
+        mode: 'setup',
+      },
+    };
+  }
+
   return {
     name: 'CreateMpin',
     params: {
@@ -196,7 +242,7 @@ export async function routeAfterLanguageContinue(): Promise<StartupRoute> {
     return { name: 'MobileLogin' };
   }
 
-  const hasMpin = await userHasMpin(user);
+  const hasMpin = await userHasUnlockCredential(user);
 
   if (hasMpin) {
     setAuthStartupPhase('locked');
@@ -232,7 +278,7 @@ export async function resolveRouteAfterMobileContinue(mobile: string): Promise<S
     return null;
   }
 
-  const hasMpin = await userHasMpin(user);
+  const hasMpin = await userHasUnlockCredential(user);
 
   if (!hasMpin) {
     setAuthStartupPhase('mpin_setup');

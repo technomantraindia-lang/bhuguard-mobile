@@ -84,6 +84,10 @@ export function FarmerNavigator() {
           getComponent={() => require('../screens/farmer/FarmerProfileScreen').FarmerProfileScreen}
         />
         <Stack.Screen name="FarmerSettings" component={FarmerSettingsScreen} />
+        <Stack.Screen
+          name="ChangePattern"
+          getComponent={() => require('../screens/auth/ChangePatternScreen').ChangePatternScreen}
+        />
         <Stack.Screen name="FarmerFarms" component={FarmerFarmsScreen} />
         <Stack.Screen name="FarmerFarmDetail" component={FarmerFarmDetailScreen} />
         <Stack.Screen

@@ -594,77 +594,10 @@ export function FarmerProfileScreen() {
           expanded={expanded === 'security'}
           onToggle={() => toggleSection('security')}
         >
-          <SecurityCard title="Change Password">
-            <ProfileSecureField
-              label="Current Password"
-              value={currentPassword}
-              onChangeText={(value) => {
-                setCurrentPassword(value);
-                setPasswordApiError(null);
-              }}
-            />
-            <ProfileSecureField
-              label="New Password"
-              value={newPassword}
-              onChangeText={(value) => {
-                setNewPassword(value);
-                setPasswordApiError(null);
-              }}
-              helperText="Use at least 8 characters"
-            />
-            <ProfileSecureField
-              label="Confirm New Password"
-              value={confirmPassword}
-              onChangeText={(value) => {
-                setConfirmPassword(value);
-                setPasswordApiError(null);
-              }}
-              errorText={passwordMismatch ? 'Passwords do not match.' : undefined}
-            />
-            {passwordApiError ? <Text style={styles.apiErrorText}>{passwordApiError}</Text> : null}
-            <SectionButton
-              label="Update Password"
-              onPress={() => void handleUpdatePassword()}
-              loading={passwordUpdating}
-              variant="outline"
-            />
-          </SecurityCard>
-
-          <SecurityCard title="Change MPIN">
-            <ProfileMpinInput
-              label="Current MPIN"
-              value={currentMpin}
-              onChange={(value) => {
-                setCurrentMpin(value);
-                setMpinApiError(null);
-              }}
-            />
-            <ProfileMpinInput
-              label="New 6-Digit MPIN"
-              value={newMpin}
-              onChange={(value) => {
-                setNewMpin(value);
-                setMpinApiError(null);
-              }}
-              helperText="MPIN is used for quick secure login"
-            />
-            <ProfileMpinInput
-              label="Confirm New MPIN"
-              value={confirmMpin}
-              onChange={(value) => {
-                setConfirmMpin(value);
-                setMpinApiError(null);
-              }}
-              errorText={mpinMismatch ? 'MPINs do not match.' : undefined}
-            />
-            {mpinApiError ? <Text style={styles.apiErrorText}>{mpinApiError}</Text> : null}
-            <SectionButton
-              label="Update MPIN"
-              onPress={() => void handleUpdateMpin()}
-              loading={mpinUpdating}
-              variant="outline"
-            />
-          </SecurityCard>
+          <ProfileLinkRow
+            label={t('pattern.changeTitle')}
+            onPress={() => navigation.navigate('ChangePattern')}
+          />
 
           <ProfileToggleRow
             label="Biometric Login"

@@ -12,7 +12,7 @@ export type ForgotPasswordParams = {
 
 export type OtpVerificationParams = {
   mobile: string;
-  purpose?: 'forgot_password' | 'forgot_mpin' | 'login';
+  purpose?: 'forgot_password' | 'forgot_mpin' | 'forgot_pattern' | 'login';
   role?: AppLoginRole;
   flowOrigin?: SecurityFlowOrigin;
 };
@@ -73,6 +73,8 @@ export type RootStackParamList = {
   ForgotPassword: ForgotPasswordParams | undefined;
   MpinLogin: MpinLoginParams;
   CreateMpin: CreateMpinParams | undefined;
+  SetPattern: { mobile?: string; mode?: 'setup' | 'reset' } | undefined;
+  PatternLogin: MpinLoginParams;
   BiometricSetup: BiometricSetupParams | undefined;
   OtpVerification: OtpVerificationParams;
   ResetPassword: ResetPasswordParams;
@@ -213,6 +215,7 @@ export type FarmerStackParamList = {
   FarmerDashboard: undefined;
   FarmerProfile: undefined;
   FarmerSettings: undefined;
+  ChangePattern: undefined;
   FarmerFarms: undefined;
   FarmerFarmDetail: { farmId: number };
   FarmerFarmGps: { farmId: number };

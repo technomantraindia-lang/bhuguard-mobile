@@ -1,5 +1,4 @@
 import type { OnboardingDraft } from '../context/OnboardingContext';
-import { isWeakMpin } from './securityFlow';
 
 export function validateBasicDetails(draft: OnboardingDraft): string | null {
   const name = draft.farmer_name.trim();
@@ -20,17 +19,7 @@ export function validateBasicDetails(draft: OnboardingDraft): string | null {
     return 'Mobile number must be 10 digits and start with 6-9.';
   }
 
-  if (draft.mpin.length !== 6 || !/^\d{6}$/.test(draft.mpin)) {
-    return 'Create MPIN must be exactly 6 digits.';
-  }
-
-  if (isWeakMpin(draft.mpin) || draft.mobile.trim().endsWith(draft.mpin) || draft.mobile.trim().startsWith(draft.mpin)) {
-    return 'Choose a stronger MPIN. Avoid simple, repeating, sequential, or mobile-based patterns.';
-  }
-
-  if (draft.confirm_mpin !== draft.mpin) {
-    return 'Confirm MPIN must match Create MPIN.';
-  }
+  // Farmer MPIN setup removed from onboarding — Pattern auth is set at first login.
 
   if (draft.alternate_mobile.trim() && !/^[6-9]\d{9}$/.test(draft.alternate_mobile.trim())) {
     return 'Alternate mobile must be 10 digits and start with 6-9.';

@@ -193,6 +193,27 @@
     "marquee": "Bhuguard ક્યારેય ચુકવણી માટે કૉલ કરતું નથી. તમારો OTP, PIN, પાસવર્ડ અથવા Pattern કોઈની સાથે શેર ન કરો.",
     "accessibilityLabel": "છેતરપિંડી ચેતવણી: Bhuguard ક્યારેય ચુકવણી માટે કૉલ કરતું નથી. તમારો OTP, PIN, પાસવર્ડ અથવા Pattern કોઈની સાથે શેર ન કરો."
   },
+  "pattern": {
+    "setupTitle": "Pattern સેટ કરો",
+    "resetTitle": "નવો Pattern સેટ કરો",
+    "loginTitle": "Pattern થી અનલૉક કરો",
+    "changeTitle": "Pattern બદલો",
+    "drawHint": "ઓછામાં ઓછા 4 પોઈન્ટ જોડો",
+    "confirmHint": "પુષ્ટિ માટે એ જ Pattern ફરી બનાવો",
+    "minPoints": "ઓછામાં ઓછા 4 જોડાયેલા પોઈન્ટ વાપરો.",
+    "mismatch": "Pattern મેળ ખાતા નથી. ફરી પ્રયાસ કરો.",
+    "incorrect": "ખોટો Pattern. ફરી પ્રયાસ કરો.",
+    "locked": "ઘણા નિષ્ફળ પ્રયાસો. કૃપા કરીને રાહ જુઓ.",
+    "unsupported": "આ સર્વર પર Pattern લૉગિન હજુ ઉપલબ્ધ નથી. હાલનું સુરક્ષિત લૉગિન ચાલુ રહેશે.",
+    "setupFailed": "Pattern સેવ થયું નહીં. ફરી પ્રયાસ કરો.",
+    "changeFailed": "Pattern બદલી શકાયું નહીં. ફરી પ્રયાસ કરો.",
+    "drawToUnlock": "ચાલુ રાખવા માટે તમારો Pattern બનાવો",
+    "forgot": "Pattern ભૂલી ગયા?",
+    "enterCurrent": "તમારો વર્તમાન Pattern બનાવો",
+    "changedTitle": "Pattern અપડેટ થયો",
+    "changedMessage": "તમારો અનલૉક Pattern સફળતાપૂર્વક બદલાયો.",
+    "startOver": "ફરી શરૂ કરો"
+  },
   "apiServer": {
     "title": "સર્વર સેટિંગ્સ",
     "subtitle": "એપને Bhuguard API સર્વર સાથે કનેક્ટ કરો.",

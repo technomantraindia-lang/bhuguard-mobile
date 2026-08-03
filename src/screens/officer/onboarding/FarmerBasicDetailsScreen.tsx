@@ -48,7 +48,7 @@ export function FarmerBasicDetailsScreen() {
     <OnboardingStepShell
       stepCurrent={1}
       title="Basic Details"
-      subtitle="Farmer profile and secure MPIN creation."
+      subtitle="Farmer profile details for onboarding."
       onNext={next}
       nextLabel={ONBOARDING_NEXT_LABELS[1]}
       footerError={error}
@@ -77,26 +77,6 @@ export function FarmerBasicDetailsScreen() {
             agreement_verified_at: '',
             agreement_verified_mobile: '',
           })}
-        />
-
-        <OnboardingTextField
-          label="Create MPIN"
-          value={draft.mpin}
-          onChangeText={(value) => updateDraft({ mpin: value.replace(/\D/g, '').slice(0, 6) })}
-          placeholder="6-digit MPIN"
-          keyboardType="numeric"
-          secureTextEntry
-          maxLength={6}
-        />
-
-        <OnboardingTextField
-          label="Confirm MPIN"
-          value={draft.confirm_mpin}
-          onChangeText={(value) => updateDraft({ confirm_mpin: value.replace(/\D/g, '').slice(0, 6) })}
-          placeholder="Re-enter 6-digit MPIN"
-          keyboardType="numeric"
-          secureTextEntry
-          maxLength={6}
         />
 
         <OnboardingLanguageChips
