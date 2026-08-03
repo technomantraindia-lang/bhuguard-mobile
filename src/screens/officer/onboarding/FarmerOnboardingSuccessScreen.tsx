@@ -70,7 +70,7 @@ export function FarmerOnboardingSuccessScreen() {
               label="Profile photo"
             />
           </View>
-          <Text style={styles.line}>Farmer code: {farmerCode}</Text>
+          <Text style={styles.line}>Farmer ID: {farmerCode}</Text>
           <Text style={styles.line}>Created: {createdAt}</Text>
           {result?.village ? <Text style={styles.line}>Village: {result.village}</Text> : null}
           {result?.district ? <Text style={styles.line}>District: {result.district}</Text> : null}

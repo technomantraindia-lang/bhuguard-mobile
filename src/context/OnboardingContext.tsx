@@ -33,6 +33,7 @@ export interface OnboardingDraft {
   farmer_id: number | null;
   farm_id: number | null;
   farmer_code: string;
+  farmer_display_id: string;
   farm_code: string;
   farm_name: string;
   farmer_name: string;
@@ -59,6 +60,7 @@ export interface OnboardingDraft {
   land_area: string;
   land_area_unit: string;
   ownership_type: string;
+  ownership_other_detail: string;
   crop_type: string;
   irrigation_type: string;
   soil_type: string;
@@ -100,6 +102,7 @@ const defaultDraft: OnboardingDraft = {
   farmer_id: null,
   farm_id: null,
   farmer_code: '',
+  farmer_display_id: '',
   farm_code: '',
   farm_name: '',
   farmer_name: '',
@@ -126,6 +129,7 @@ const defaultDraft: OnboardingDraft = {
   land_area: '',
   land_area_unit: 'acre',
   ownership_type: '',
+  ownership_other_detail: '',
   crop_type: '',
   irrigation_type: '',
   soil_type: '',

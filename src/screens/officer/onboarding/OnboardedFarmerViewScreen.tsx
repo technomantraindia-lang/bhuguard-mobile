@@ -134,7 +134,7 @@ export function OnboardedFarmerViewScreen() {
                 <OnboardingReviewPhoto file={draft.farmer_photo} remotePhotoUrl={photoUrl} />
               </View>
               <Text style={styles.line}>
-                Farmer code: {farmerCode !== '-' ? farmerCode : resolvedFarmerId ? formatFarmerCode(resolvedFarmerId) : '—'}
+                Farmer ID: {farmerCode !== '-' ? farmerCode : resolvedFarmerId ? formatFarmerCode(resolvedFarmerId) : '—'}
               </Text>
               <Text style={styles.line}>Farmer ID: {resolvedFarmerId || '—'}</Text>
               {farmContext.farmId ? (
@@ -142,7 +142,7 @@ export function OnboardedFarmerViewScreen() {
                   <Text style={styles.line}>Farm: {farmContext.farmName && farmContext.farmName !== '-' ? farmContext.farmName : '—'}</Text>
                   <Text style={styles.line}>Farm ID: {farmContext.farmId}</Text>
                   <Text style={styles.line}>
-                    Farm code: {farmContext.farmCode && farmContext.farmCode !== '-' ? farmContext.farmCode : '—'}
+                    Farm ID: {farmContext.farmCode && farmContext.farmCode !== '-' ? farmContext.farmCode : '—'}
                   </Text>
                 </>
               ) : null}

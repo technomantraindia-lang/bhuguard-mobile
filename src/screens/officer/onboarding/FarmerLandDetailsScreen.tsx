@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,6 +12,7 @@ import { colors } from '../../../theme/colors';
 import type { AreaUnit } from '../../../utils/boundaryGeometry';
 import { mappedAreaLabelForDraft } from '../../../utils/onboardingBoundary';
 import { validateBoundaryMapping, validateLandDetails } from '../../../utils/onboardingValidation';
+import { defaultFarmName } from '../../../utils/displayIds';
 import { FormField, OnboardingFormScreen } from './OnboardingFormScreen';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
@@ -20,8 +21,6 @@ const OWNERSHIP_OPTIONS = [
   { value: 'owned', label: 'Owned' },
   { value: 'leased', label: 'Leased' },
   { value: 'shared', label: 'Shared' },
-  { value: 'government', label: 'Government' },
-  { value: 'community', label: 'Community' },
   { value: 'other', label: 'Other' },
 ] as const;
 
@@ -57,6 +56,14 @@ export function FarmerLandDetailsScreen() {
   const { draft, result, updateDraft } = useOnboarding();
   const [error, setError] = useState<string | null>(null);
   const continuingRef = useRef(false);
+
+  useEffect(() => {
+    if (!draft.farm_name.trim() && draft.farmer_name.trim()) {
+      updateDraft({ farm_name: defaultFarmName(draft.farmer_name, 1) });
+    }
+    // Seed once when name is available; avoid fighting user edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.farmer_name]);
 
   const applyBiocharServiceInterest = () => ({
     service_interests: ['Biochar'] as string[],
@@ -157,10 +164,16 @@ export function FarmerLandDetailsScreen() {
       nextLabel={ONBOARDING_NEXT_LABELS[4]}
     >
       <FormField
-        label="Land survey number *"
+        label="Land survey number / Khasra Number *"
         value={draft.land_survey_number}
         onChangeText={(v) => updateDraft({ land_survey_number: v })}
         placeholder="Survey / khasra number"
+      />
+      <FormField
+        label="Farm Name *"
+        value={draft.farm_name}
+        onChangeText={(v) => updateDraft({ farm_name: v })}
+        placeholder={defaultFarmName(draft.farmer_name || 'Farmer', 1)}
       />
       <FormField
         label="Land area *"
@@ -187,8 +200,22 @@ export function FarmerLandDetailsScreen() {
         label="Ownership *"
         value={draft.ownership_type}
         options={OWNERSHIP_OPTIONS}
-        onChange={(ownership_type) => updateDraft({ ownership_type, documents_step_completed: false })}
+        onChange={(ownership_type) =>
+          updateDraft({
+            ownership_type,
+            documents_step_completed: false,
+            ...(ownership_type !== 'other' ? { ownership_other_detail: '' } : null),
+          })
+        }
       />
+      {draft.ownership_type === 'other' ? (
+        <FormField
+          label="Ownership details (Other) *"
+          value={draft.ownership_other_detail}
+          onChangeText={(v) => updateDraft({ ownership_other_detail: v })}
+          placeholder="Describe ownership type"
+        />
+      ) : null}
       <FormField
         label="Crop type"
         value={draft.crop_type}
@@ -207,18 +234,18 @@ export function FarmerLandDetailsScreen() {
         options={SOIL_OPTIONS}
         onChange={(soil_type) => updateDraft({ soil_type })}
       />
-      <FormField
-        label="Existing farming practice"
-        value={draft.existing_farming_practice}
-        onChangeText={(v) => updateDraft({ existing_farming_practice: v })}
-        placeholder="Current practices on the farm"
-      />
       <View style={styles.chipGroup}>
         <Text style={styles.chipLabel}>Service Interest *</Text>
         <View style={[styles.serviceChip, styles.unitChipActive]}>
           <Text style={[styles.unitText, styles.unitTextActive]}>Biochar</Text>
         </View>
       </View>
+      <FormField
+        label="Existing Agri Bio-Waste"
+        value={draft.existing_farming_practice}
+        onChangeText={(v) => updateDraft({ existing_farming_practice: v })}
+        placeholder="Crop residue, cotton stalk, straw, husk, pruning, Other…"
+      />
       <FormField
         label="Remarks (optional)"
         value={draft.remarks}

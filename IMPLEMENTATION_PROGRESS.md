@@ -87,8 +87,8 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Farmer ID BHG-KISHAN-*; Artisan ID BHG-ART-* | labels, profile/cards | additive fields + backfill | — | ⏳ PENDING | Live deploy |
-| Farm labels: Farm ID / Farmer ID only | i18n + screens | — | — | ⏳ PENDING | — |
+| Farmer ID BHG-KISHAN-*; Artisan ID BHG-ART-* | displayIds.ts helpers; label renames | additive display_id fields (in progress) | Client never fabricates IDs; legacy fallback labeled | ⚠️ PARTIAL | Live/local backfill deploy |
+| Farm labels: Farm ID / Farmer ID only | OnboardedFarmerView, Success screens | — | Code→ID label renames | ⚠️ PARTIAL | Broader sweep remaining |
 
 ---
 
@@ -96,8 +96,8 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Farm Name under Khasra; default BHG-{Name}-Farm-0N | onboarding land details | farms.farm_name | — | ⏳ PENDING | — |
-| Show Farm Name across cards/mapping/biochar | multiple screens | — | — | ⏳ PENDING | — |
+| Farm Name under Khasra; default BHG-{Name}-Farm-0N | FarmerLandDetailsScreen, OnboardingContext | farms.farm_name | Field + default seed added | ⚠️ PARTIAL | Device + submit verify |
+| Show Farm Name across cards/mapping/biochar | review already uses farm_name | — | Partial | ⚠️ PARTIAL | Broader surfaces |
 
 ---
 
