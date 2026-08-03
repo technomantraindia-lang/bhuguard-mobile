@@ -30,6 +30,10 @@ import { LOGO_SIZES } from '../../constants/branding';
 import type { ArtisanStackParamList } from '../../navigation/types';
 import { countOfflineSubmissionsByStatus } from '../../storage/offlineBiocharProductionDb';
 import {
+  findIncompleteBiocharProductionDraft,
+  type IncompleteBiocharProductionDraftSummary,
+} from '../../storage/biocharProductionDraftStorage';
+import {
   startBiocharProductionSyncListeners,
   syncPendingBiocharProductions,
 } from '../../services/biocharProductionSyncService';
@@ -170,6 +174,7 @@ export function ArtisanDashboardScreen() {
 
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const [syncFailedCount, setSyncFailedCount] = useState(0);
+  const [incompleteDraft, setIncompleteDraft] = useState<IncompleteBiocharProductionDraftSummary | null>(null);
 
   const load = useCallback(async (options?: { force?: boolean; silent?: boolean }) => {
     const force = options?.force === true;
@@ -276,6 +281,16 @@ export function ArtisanDashboardScreen() {
       } else {
         setPendingSyncCount(0);
         setSyncFailedCount(0);
+      }
+
+      try {
+        const draft = await findIncompleteBiocharProductionDraft({
+          apiMode: 'artisan',
+          userId: authUser?.id ?? null,
+        });
+        setIncompleteDraft(draft);
+      } catch {
+        setIncompleteDraft(null);
       }
 
       hasLoadedRef.current = true;
@@ -456,6 +471,37 @@ export function ArtisanDashboardScreen() {
           </View>
         ) : null}
 
+        {incompleteDraft && incompleteDraft.farmId ? (
+          <Pressable
+            style={styles.resumeCard}
+            onPress={() => {
+              if (!ensureCheckedInOrPrompt()) {
+                return;
+              }
+              navigation.navigate('ArtisanBiocharProduction', {
+                farmId: incompleteDraft.farmId as number,
+                farmerId: incompleteDraft.farmerId ?? undefined,
+                batchId: incompleteDraft.batchId ?? undefined,
+              });
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Complete the Process — resume unfinished biochar production batch"
+          >
+            <View style={styles.resumeIconBubble}>
+              <BhuguardMaterialIcon name="eco" size={22} color={artisanTheme.white} />
+            </View>
+            <View style={styles.resumeCopy}>
+              <Text style={styles.resumeTitle}>Complete the Process</Text>
+              <Text style={styles.resumeBody}>
+                {incompleteDraft.batchCode?.trim()
+                  ? `Batch ${incompleteDraft.batchCode} is unfinished. Tap to resume.`
+                  : 'You have an unfinished Biochar Production batch. Tap to resume.'}
+              </Text>
+            </View>
+            <BhuguardMaterialIcon name="chevron_right" size={20} color={artisanTheme.white} />
+          </Pressable>
+        ) : null}
+
         {emptyNotice && !error ? (
           <View style={styles.noticeCard}>
             <Text style={styles.noticeTitle}>No dashboard data available</Text>
@@ -537,7 +583,11 @@ export function ArtisanDashboardScreen() {
           />
           <DashboardCard
             title="Biochar Production"
-            description="Start or continue a process batch"
+            description={
+              incompleteDraft && incompleteDraft.farmId
+                ? 'Unfinished batch — tap Complete the Process above, or start a new one'
+                : 'Start or continue a process batch'
+            }
             icon="eco"
             accent={CARD_ACCENTS.production.accent}
             bubble={CARD_ACCENTS.production.bubble}
@@ -763,6 +813,31 @@ const styles = StyleSheet.create({
     backgroundColor: artisanTheme.actionGreen,
   },
   noticeRetryText: { color: artisanTheme.white, fontWeight: '700', fontSize: 12 },
+  resumeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 16,
+    padding: spacing.md,
+    backgroundColor: artisanTheme.actionGreen,
+    marginBottom: 12,
+    shadowColor: '#0B2E1F',
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  resumeIconBubble: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  resumeCopy: { flex: 1 },
+  resumeTitle: { fontSize: 14, fontWeight: '800', color: artisanTheme.white },
+  resumeBody: { fontSize: 12, color: 'rgba(255,255,255,0.9)', marginTop: 2, lineHeight: 16 },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

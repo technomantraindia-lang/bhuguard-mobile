@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
@@ -18,9 +18,14 @@ interface ArtisanLiveEvidenceCameraModalProps {
   onCaptured: (capture: ArtisanLiveCameraCapture) => void;
 }
 
+interface PendingCapture {
+  uri: string;
+  shutterEpochMs: number;
+}
+
 /**
  * Full-screen in-app camera for Artisan Biochar Production live evidence.
- * Shutter → immediate accept (no Crop / OK / Use Photo).
+ * Shutter → preview with OK / Retry (no crop — the frame is used as-is).
  */
 export function ArtisanLiveEvidenceCameraModal({
   visible,
@@ -31,6 +36,7 @@ export function ArtisanLiveEvidenceCameraModal({
   const cameraRef = useRef<CameraView>(null);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [capturing, setCapturing] = useState(false);
+  const [pendingCapture, setPendingCapture] = useState<PendingCapture | null>(null);
 
   const takePicture = async () => {
     if (capturing) {
@@ -50,16 +56,52 @@ export function ArtisanLiveEvidenceCameraModal({
         return;
       }
 
-      onCaptured({ uri: photo.uri, shutterEpochMs });
+      setPendingCapture({ uri: photo.uri, shutterEpochMs });
     } finally {
       setCapturing(false);
     }
   };
 
+  const retake = () => {
+    setPendingCapture(null);
+  };
+
+  const confirmCapture = () => {
+    if (!pendingCapture) {
+      return;
+    }
+    onCaptured(pendingCapture);
+    setPendingCapture(null);
+  };
+
+  const handleCancel = () => {
+    setPendingCapture(null);
+    onCancel();
+  };
+
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onCancel}>
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={handleCancel}>
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        {!cameraPermission ? (
+        {pendingCapture ? (
+          <View style={styles.cameraWrap}>
+            <Image source={{ uri: pendingCapture.uri }} style={styles.camera} resizeMode="cover" />
+            <View style={styles.topBar}>
+              <Pressable style={styles.closeButton} onPress={handleCancel}>
+                <Text style={styles.closeButtonText}>Cancel</Text>
+              </Pressable>
+              <Text style={styles.title}>{title}</Text>
+              <View style={styles.closeButtonSpacer} />
+            </View>
+            <View style={styles.previewBottomBar}>
+              <Pressable style={styles.retryButton} onPress={retake}>
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </Pressable>
+              <Pressable style={styles.okButton} onPress={confirmCapture}>
+                <Text style={styles.okButtonText}>OK — Use Photo</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : !cameraPermission ? (
           <View style={styles.centered}>
             <ActivityIndicator color={artisanTheme.actionGreen} />
             <Text style={styles.permissionText}>Checking camera permission…</Text>
@@ -74,7 +116,7 @@ export function ArtisanLiveEvidenceCameraModal({
             <Pressable style={styles.linkButton} onPress={() => void Linking.openSettings()}>
               <Text style={styles.linkButtonText}>Open Settings</Text>
             </Pressable>
-            <Pressable style={styles.cancelButton} onPress={onCancel}>
+            <Pressable style={styles.cancelButton} onPress={handleCancel}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </Pressable>
           </View>
@@ -82,14 +124,14 @@ export function ArtisanLiveEvidenceCameraModal({
           <View style={styles.cameraWrap}>
             <CameraView ref={cameraRef} style={styles.camera} facing="back" />
             <View style={styles.topBar}>
-              <Pressable style={styles.closeButton} onPress={onCancel} disabled={capturing}>
+              <Pressable style={styles.closeButton} onPress={handleCancel} disabled={capturing}>
                 <Text style={styles.closeButtonText}>Cancel</Text>
               </Pressable>
               <Text style={styles.title}>{title}</Text>
               <View style={styles.closeButtonSpacer} />
             </View>
             <View style={styles.bottomBar}>
-              <Text style={styles.hint}>Tap shutter once — photo is saved automatically</Text>
+              <Text style={styles.hint}>Tap shutter, then confirm with OK</Text>
               <Pressable
                 style={[styles.shutterOuter, capturing && styles.shutterDisabled]}
                 onPress={() => void takePicture()}
@@ -228,5 +270,42 @@ const styles = StyleSheet.create({
   },
   shutterDisabled: {
     opacity: 0.6,
+  },
+  previewBottomBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingBottom: 36,
+    gap: 12,
+  },
+  retryButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    paddingVertical: 14,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  okButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: artisanTheme.actionGreen,
+    paddingVertical: 14,
+  },
+  okButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
   },
 });

@@ -379,6 +379,7 @@ export function FieldOfficerFarmActivityStartScreen() {
       farmerCode: selectedFarmerMeta.farmerCode,
       farmName: selectedFarm.location_name ?? undefined,
       village: selectedFarm.village ?? undefined,
+      returnToReview: route.params?.returnToReview,
     });
   };
 

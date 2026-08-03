@@ -1068,6 +1068,8 @@ export function ArtisanBiocharProcessFormContent({
 
                   mapPreviewUrl={form.mapPreviewUrl}
 
+                  gpsError={form.gpsCaptureError}
+
                 />
 
                 <FeedstockQuantitySection

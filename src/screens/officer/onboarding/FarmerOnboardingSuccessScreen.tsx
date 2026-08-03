@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton } from '../../../components/AppButton';
@@ -81,6 +81,21 @@ export function FarmerOnboardingSuccessScreen() {
           ) : null}
         </AppCard>
         <AppButton label="View farmer" onPress={viewFarmer} />
+        <AppButton
+          label="Edit Farmer Profile"
+          variant="secondary"
+          onPress={() => navigation.navigate('FarmerBasicDetails')}
+        />
+        <AppButton
+          label="Add New Farm with Mapping"
+          variant="secondary"
+          onPress={() =>
+            Alert.alert(
+              'Not available yet',
+              'Adding a new farm to an existing farmer requires a dedicated backend endpoint that does not exist yet. Please contact the development team to enable this.',
+            )
+          }
+        />
         <AppButton label="Onboard another farmer" onPress={onboardAnother} variant="secondary" />
         <AppButton
           label={isArtisanStack ? 'Back to Artisan Pro dashboard' : 'Back to field officer dashboard'}

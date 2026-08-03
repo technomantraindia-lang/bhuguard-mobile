@@ -600,7 +600,15 @@ export function FarmVerificationActivityScreen() {
     setPhotos((prev) => prev.filter((photo) => photo.localId !== localId));
   }, []);
 
+  const returnToReview = Boolean(route.params?.returnToReview);
+
   const goToDashboard = useCallback(() => {
+    // Phase 10.12: Farm Activity launched from Review & Submit must return to the
+    // Review screen (still in this same stack) instead of resetting to a dashboard.
+    if (returnToReview) {
+      navigation.navigate('FarmerOnboardingReview');
+      return;
+    }
     const routeNames = navigation.getState()?.routeNames ?? [];
     if (routeNames.includes('ArtisanDashboard')) {
       navigation.dispatch(
@@ -617,9 +625,13 @@ export function FarmVerificationActivityScreen() {
         routes: [{ name: 'FieldOfficerTabs', params: { screen: 'Home' } }],
       }),
     );
-  }, [navigation]);
+  }, [navigation, returnToReview]);
 
   const goToFarmActivities = useCallback(() => {
+    if (returnToReview) {
+      navigation.navigate('FarmerOnboardingReview');
+      return;
+    }
     const routeNames = navigation.getState()?.routeNames ?? [];
     if (routeNames.includes('ArtisanDashboard')) {
       navigation.dispatch(
@@ -642,7 +654,7 @@ export function FarmVerificationActivityScreen() {
         ],
       }),
     );
-  }, [navigation]);
+  }, [navigation, returnToReview]);
 
   const handleSubmit = useCallback(async () => {
     if (!activityId || actionLockRef.current || readOnly || workflowState === 'submitting') {
@@ -953,12 +965,20 @@ export function FarmVerificationActivityScreen() {
                     <Text style={styles.summaryLine}>
                       Next due: {formatStamp(submissionSummary.nextDueAt ?? nextDueAt) ?? '—'}
                     </Text>
-                    <Pressable style={styles.secondaryChip} onPress={goToFarmActivities}>
-                      <Text style={styles.secondaryChipText}>Back to Farm Activities</Text>
-                    </Pressable>
-                    <Pressable style={styles.secondaryChip} onPress={goToDashboard}>
-                      <Text style={styles.secondaryChipText}>Go to Dashboard</Text>
-                    </Pressable>
+                    {returnToReview ? (
+                      <Pressable style={styles.secondaryChip} onPress={goToDashboard}>
+                        <Text style={styles.secondaryChipText}>Back to Review &amp; Submit</Text>
+                      </Pressable>
+                    ) : (
+                      <>
+                        <Pressable style={styles.secondaryChip} onPress={goToFarmActivities}>
+                          <Text style={styles.secondaryChipText}>Back to Farm Activities</Text>
+                        </Pressable>
+                        <Pressable style={styles.secondaryChip} onPress={goToDashboard}>
+                          <Text style={styles.secondaryChipText}>Go to Dashboard</Text>
+                        </Pressable>
+                      </>
+                    )}
                   </View>
                 ) : (
                   <View style={styles.uploadWrap}>

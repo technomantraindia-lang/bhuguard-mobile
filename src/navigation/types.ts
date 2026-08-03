@@ -317,6 +317,8 @@ export type FieldOfficerStackParamList = {
         farmCode?: string;
         lockFarmSelection?: boolean;
         overdue?: boolean;
+        /** Phase 10.12: when true, completing/exiting the Farm Activity returns to Review & Submit instead of the dashboard. */
+        returnToReview?: boolean;
       }
     | undefined;
   FieldOfficerCallFarmer: undefined;
@@ -363,6 +365,8 @@ export type FieldOfficerStackParamList = {
     taluka?: string;
     district?: string;
     state?: string;
+    /** Phase 10.12: when true, completing/exiting the Farm Activity returns to Review & Submit instead of the dashboard. */
+    returnToReview?: boolean;
   };
   BiocharApplicationVerification: { applicationId?: number; assignmentId?: number };
   EvidenceVerification: { assignmentId: number };

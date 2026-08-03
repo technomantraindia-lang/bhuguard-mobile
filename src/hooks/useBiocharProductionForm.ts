@@ -463,6 +463,7 @@ export function useBiocharProductionForm({
   const [accuracyM, setAccuracyM] = useState<number | null>(null);
   const [gpsAccuracyTier, setGpsAccuracyTier] = useState<ArtisanGpsAccuracyTier>('unknown');
   const [gpsCapturedAt, setGpsCapturedAt] = useState<string | null>(null);
+  const [gpsCaptureError, setGpsCaptureError] = useState<string | null>(null);
   const [altitude, setAltitude] = useState<number | null>(null);
   const [timestampDate, setTimestampDate] = useState(todayIsoDate());
   const [timestampTime, setTimestampTime] = useState(currentTimeValue());
@@ -1455,6 +1456,7 @@ export function useBiocharProductionForm({
   const recaptureGps = useCallback(async () => {
     const permission = await Location.requestForegroundPermissionsAsync();
     if (!permission.granted) {
+      setGpsCaptureError('Location permission required. Enable location access to capture production GPS.');
       Alert.alert('Location permission required', 'Enable location access to capture production GPS.');
       return;
     }
@@ -1480,13 +1482,20 @@ export function useBiocharProductionForm({
         setTalukaName(capture.taluka);
         setDistrictName(capture.district);
         setStateName(capture.state);
+        setGpsCaptureError(null);
+      } else {
+        setGpsCaptureError(
+          'GPS captured but address lookup failed. You can enter the address manually or tap Retry.',
+        );
       }
 
       if (capture.isPoorAccuracy) {
         showBiocharPoorAccuracyWarning();
       }
     } catch (gpsError) {
-      Alert.alert('GPS capture failed', getApiErrorMessage(gpsError, 'Unable to capture GPS location.'));
+      const message = getApiErrorMessage(gpsError, 'Unable to capture GPS location.');
+      setGpsCaptureError(message);
+      Alert.alert('GPS capture failed', message);
     }
   }, []);
 
@@ -3347,6 +3356,7 @@ export function useBiocharProductionForm({
     accuracyM,
     gpsAccuracyTier,
     gpsCapturedAt,
+    gpsCaptureError,
     biocharGpsAccuracyLabel,
     altitude,
     timestampDate,

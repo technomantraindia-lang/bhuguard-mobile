@@ -358,6 +358,23 @@ export function FarmerOnboardingReviewScreen() {
         <Pressable onPress={() => edit('OnboardingBoundaryStart')}>
           <Text style={styles.edit}>{mappingCompleted ? 'Edit land mapping' : 'Start / continue land mapping'}</Text>
         </Pressable>
+        {draftAlreadyHasFarmerFarm(draft) ? (
+          <Pressable
+            onPress={() =>
+              navigation.navigate('FieldOfficerFarmActivityStart', {
+                farmerId: toPositiveEntityId(draft.farmer_id) ?? undefined,
+                farmId: toPositiveEntityId(draft.farm_id) ?? undefined,
+                farmerName: draft.farmer_name || undefined,
+                farmerCode: draft.farmer_code || draft.farmer_display_id || undefined,
+                farmCode: draft.farm_code || undefined,
+                lockFarmSelection: true,
+                returnToReview: true,
+              })
+            }
+          >
+            <Text style={styles.edit}>Log Farm Activity</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <ReviewSection title="GPS" onEdit={() => edit('FarmerGpsCapture')}>

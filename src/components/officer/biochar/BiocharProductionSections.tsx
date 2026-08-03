@@ -253,6 +253,7 @@ interface InitialDataSectionProps {
   onCaptureGps: () => void;
   onRecaptureGps: () => void;
   mapPreviewUrl?: string;
+  gpsError?: string | null;
 }
 
 export function InitialDataSection({
@@ -279,6 +280,7 @@ export function InitialDataSection({
   onCaptureGps,
   onRecaptureGps,
   mapPreviewUrl,
+  gpsError = null,
 }: InitialDataSectionProps) {
   const accuracyLabel =
     accuracyM != null
@@ -395,6 +397,15 @@ export function InitialDataSection({
             <Text style={styles.mapPreviewText}>Map preview unavailable until GPS is captured.</Text>
           )}
         </View>
+        {gpsError ? (
+          <View style={styles.gpsErrorBlock}>
+            <Text style={styles.gpsWarningText}>{gpsError}</Text>
+            <Pressable style={styles.recaptureButton} onPress={onRecaptureGps}>
+              <BhuguardMaterialIcon name="location_on" size={18} color={officerTheme.primaryContainer} />
+              <Text style={styles.recaptureButtonText}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
 
       <Text style={styles.fieldLabel}>Village Name</Text>
@@ -1784,6 +1795,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   gpsHeader: { gap: 10 },
+  gpsErrorBlock: {
+    gap: 6,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 8,
+    padding: 10,
+  },
   gpsTitle: { fontSize: 12, fontWeight: '700', color: officerTheme.primary },
   gpsActionRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   capturedBadge: {

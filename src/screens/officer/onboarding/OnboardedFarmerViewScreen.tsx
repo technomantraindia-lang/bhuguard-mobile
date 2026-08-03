@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -219,6 +219,23 @@ export function OnboardedFarmerViewScreen() {
               <AppButton
                 label="Biochar Application"
                 onPress={() => navigation.navigate('FieldOfficerBiocharApplication', farmContext)}
+              />
+              {draft.farmer_id && resolvedFarmerId && draft.farmer_id === resolvedFarmerId ? (
+                <AppButton
+                  label="Edit Farmer Profile"
+                  variant="secondary"
+                  onPress={() => navigation.navigate('FarmerBasicDetails')}
+                />
+              ) : null}
+              <AppButton
+                label="Add New Farm with Mapping"
+                variant="secondary"
+                onPress={() =>
+                  Alert.alert(
+                    'Not available yet',
+                    'Adding a new farm to an existing farmer requires a dedicated backend endpoint that does not exist yet. Please contact the development team to enable this.',
+                  )
+                }
               />
               {farmContext.farmId && mappingPending ? (
                 <AppButton
