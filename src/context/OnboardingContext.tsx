@@ -217,8 +217,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
         appendScalar(formData, 'farmer_name', draft.farmer_name);
         appendScalar(formData, 'mobile', draft.mobile);
-        appendScalar(formData, 'mpin', draft.mpin);
-        appendScalar(formData, 'mpin_confirmation', draft.confirm_mpin);
+        // Farmer unlock is Pattern-based after OTP; do not send legacy MPIN from onboarding.
         appendScalar(formData, 'agreement_verification_token', draft.agreement_verification_token);
         appendScalar(formData, 'email', draft.email);
         appendScalar(formData, 'preferred_language', draft.preferred_language);

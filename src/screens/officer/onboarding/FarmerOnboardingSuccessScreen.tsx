@@ -12,6 +12,8 @@ import { useOnboarding } from '../../../context/OnboardingContext';
 import { resetToOnboardingHome } from '../../../navigation/continueFarmerOnboarding';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
+import { beginAddNewFarmWithMapping } from '../../../utils/beginAddNewFarmFlow';
+import { getApiErrorMessage } from '../../../api/authApi';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
 
@@ -29,7 +31,7 @@ function formatDate(iso?: string): string {
 
 export function FarmerOnboardingSuccessScreen() {
   const navigation = useNavigation<Nav>();
-  const { result, draft, resetDraft } = useOnboarding();
+  const { result, draft, updateDraft, resetDraft } = useOnboarding();
 
   const farmerName = result?.farmer_name ?? 'Farmer';
   const mobile = result?.mobile ?? '-';
@@ -50,6 +52,26 @@ export function FarmerOnboardingSuccessScreen() {
 
   const viewFarmer = () => {
     navigation.navigate('OnboardedFarmerView');
+  };
+
+  const addNewFarm = () => {
+    void (async () => {
+      try {
+        await beginAddNewFarmWithMapping({
+          draft,
+          updateDraft,
+          navigation,
+          farmerId: result?.farmer_id ?? draft.farmer_id,
+          farmerName,
+          farmCountHint: draft.farm_id ? 1 : 0,
+        });
+      } catch (err) {
+        Alert.alert(
+          'Unable to add farm',
+          getApiErrorMessage(err, 'Could not start Add New Farm. Please try again.'),
+        );
+      }
+    })();
   };
 
   return (
@@ -89,12 +111,7 @@ export function FarmerOnboardingSuccessScreen() {
         <AppButton
           label="Add New Farm with Mapping"
           variant="secondary"
-          onPress={() =>
-            Alert.alert(
-              'Not available yet',
-              'Adding a new farm to an existing farmer requires a dedicated backend endpoint that does not exist yet. Please contact the development team to enable this.',
-            )
-          }
+          onPress={addNewFarm}
         />
         <AppButton label="Onboard another farmer" onPress={onboardAnother} variant="secondary" />
         <AppButton

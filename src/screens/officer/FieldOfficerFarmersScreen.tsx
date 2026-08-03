@@ -14,6 +14,7 @@ import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIc
 import type { FieldOfficerStackParamList, FieldOfficerTabParamList } from '../../navigation/types';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
 import { extractList, pickString, type ApiRecord } from '../../utils/apiHelpers';
+import { formatFarmerDisplayId } from '../../utils/displayIds';
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<FieldOfficerTabParamList, 'Farmers'>,
@@ -132,8 +133,13 @@ export function FieldOfficerFarmersScreen() {
                     <View style={styles.headerCopy}>
                       <Text style={styles.name}>{pickString(farmer, 'name')}</Text>
                       <Text style={styles.idText}>
-                        ID: {pickString(farmer, 'farmer_code') !== '-' ? pickString(farmer, 'farmer_code') : farmerId}
+                        Farmer ID: {formatFarmerDisplayId(farmer)}
                       </Text>
+                      {pickString(farmer, 'primary_farm_name', 'farm_name') !== '-' ? (
+                        <Text style={styles.idText}>
+                          Farm Name: {pickString(farmer, 'primary_farm_name', 'farm_name')}
+                        </Text>
+                      ) : null}
                     </View>
                     <View style={styles.farmCountPill}>
                       <Text style={styles.farmCountText}>{farmCount} farm{farmCount === 1 ? '' : 's'}</Text>

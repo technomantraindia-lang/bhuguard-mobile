@@ -343,7 +343,7 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
     try {
       if (purpose === 'login') {
         await requestLoginOtp(mobile);
-      } else if (purpose === 'forgot_mpin') {
+      } else if (purpose === 'forgot_mpin' || purpose === 'forgot_pattern') {
         await requestForgotMpinOtp(mobile);
       } else {
         await requestForgotPasswordOtp(mobile);

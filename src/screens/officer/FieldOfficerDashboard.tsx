@@ -190,7 +190,6 @@ export function FieldOfficerDashboard() {
         />
 
         <OfficerQuickAccessSection
-          onAssignedVisits={() => guardedNavigate(() => navigation.navigate('Visits'))}
           onGpsCheckIn={handleGpsCheckIn}
           onProfile={() => guardedNavigate(() => navigation.navigate('FieldOfficerProfile'))}
           onSupport={() =>

@@ -69,6 +69,8 @@ type Props = {
   currentLocation: LatLng | null;
   /** Farm GPS used when no saved boundary points exist yet. */
   farmLocation?: LatLng | null;
+  /** When false, hide the device GPS puck (read-only View Mapping / View Farm). */
+  showUserLocation?: boolean;
   followGps: boolean;
   requestFitToPolygon: number;
   onMapStyleModeChange: (mode: MapStyleMode) => void;
@@ -111,6 +113,7 @@ export function FoBoundaryMap({
   mapStyleMode,
   currentLocation,
   farmLocation = null,
+  showUserLocation = true,
   followGps,
   requestFitToPolygon,
   onMapStyleModeChange,
@@ -521,7 +524,7 @@ export function FoBoundaryMap({
             minZoom={MAP_MIN_ZOOM}
             maxZoom={MAP_MAX_ZOOM}
           />
-          <UserLocation accuracy animated />
+          {showUserLocation ? <UserLocation accuracy animated /> : null}
 
           {styleLoaded ? (
             <>

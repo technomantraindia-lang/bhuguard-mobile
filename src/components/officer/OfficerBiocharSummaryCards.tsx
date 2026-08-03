@@ -55,7 +55,7 @@ export function OfficerBiocharSummaryCards({
     <View style={styles.wrap}>
       <View style={styles.header}>
         <BhuguardMaterialIcon name="agriculture" size={20} color={officerTheme.primary} />
-        <Text style={styles.title}>Farm Activity</Text>
+        <Text style={styles.title}>My Activity</Text>
       </View>
 
       <View style={styles.grid}>

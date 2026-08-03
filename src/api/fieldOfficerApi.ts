@@ -359,6 +359,19 @@ export async function createFarmerOnboarding(formData: FormData): Promise<ApiRec
   return response.data.data?.farmer ?? (response.data.data as unknown as ApiRecord);
 }
 
+/** Create an additional Farm for an existing Farmer (Phase 10.11). Does not create a Farmer. */
+export async function createFieldOfficerFarmerFarm(
+  farmerId: number | string,
+  payload: ApiRecord,
+): Promise<ApiRecord> {
+  const response = await apiClient.post<ApiSuccessResponse<{ farm: ApiRecord }>>(
+    `/field-officer/farmers/${farmerId}/farms`,
+    payload,
+  );
+
+  return response.data.data?.farm ?? (response.data.data as unknown as ApiRecord);
+}
+
 export async function createFarmerPlot(farmerId: number | string, payload: ApiRecord) {
   return postApiData(`/field-officer/farmers/${farmerId}/plots`, payload);
 }

@@ -14,6 +14,7 @@ import {
   PatternUnsupportedError,
   verifyPattern,
 } from '../../api/patternApi';
+import { requestForgotMpinOtp, getApiErrorMessage } from '../../api/authApi';
 import {
   routeAfterAuthenticatedUnlock,
   setAuthStartupPhase,
@@ -34,6 +35,7 @@ export function PatternLoginScreen({ navigation, route }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const lockRef = useRef(false);
+  const forgotLockRef = useRef(false);
   const padKey = useRef(0);
   const [, force] = useState(0);
 
@@ -106,6 +108,31 @@ export function PatternLoginScreen({ navigation, route }: Props) {
     [loading, mobile, mode, name, navigation, t],
   );
 
+  const onForgotPattern = useCallback(async () => {
+    if (forgotLockRef.current || loading || !mobile) {
+      return;
+    }
+
+    forgotLockRef.current = true;
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Reuse forgot-MPIN OTP channel for Pattern recovery (same mobile OTP gate).
+      await requestForgotMpinOtp(mobile);
+      navigation.navigate('OtpVerification', {
+        mobile,
+        purpose: 'forgot_pattern',
+        flowOrigin: 'auth',
+      });
+    } catch (err) {
+      setError(getApiErrorMessage(err, t('errors.loginFailed')));
+    } finally {
+      forgotLockRef.current = false;
+      setLoading(false);
+    }
+  }, [loading, mobile, navigation, t]);
+
   return (
     <SafeAreaView style={styles.root}>
       <Text style={styles.title}>{t('pattern.loginTitle')}</Text>
@@ -128,13 +155,9 @@ export function PatternLoginScreen({ navigation, route }: Props) {
       <Pressable
         style={styles.link}
         disabled={loading}
-        onPress={() =>
-          navigation.navigate('OtpVerification', {
-            mobile,
-            purpose: 'forgot_pattern',
-            flowOrigin: 'auth',
-          })
-        }
+        onPress={() => {
+          void onForgotPattern();
+        }}
         accessibilityRole="link"
         accessibilityLabel={t('pattern.forgot')}
       >

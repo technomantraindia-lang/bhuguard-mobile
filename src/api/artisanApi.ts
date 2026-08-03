@@ -445,6 +445,12 @@ export type ArtisanWorkCheckInPayload = {
   farm_id?: number | null;
   activity_context?: string | null;
   device_timestamp?: string | null;
+  device_utc?: string | null;
+  server_utc?: string | null;
+  clock_skew_ms?: number | null;
+  device_time_suspicious?: boolean | null;
+  time_sync_source?: string | null;
+  time_detection_at?: string | null;
   app_version?: string | null;
   battery_level?: number | null;
   notes?: string | null;

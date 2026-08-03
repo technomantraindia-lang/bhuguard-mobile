@@ -55,6 +55,8 @@ export function MapLibreManualBoundaryMapInner(props: ManualBoundaryMapProps) {
     onMapUsableChange,
   } = props;
 
+  const showUserLocation = !(props.readOnly === true || phase === 'completed');
+
   const selectedIndex = useMemo(() => {
     if (selectedVertexIndex != null) {
       return selectedVertexIndex;
@@ -104,6 +106,7 @@ export function MapLibreManualBoundaryMapInner(props: ManualBoundaryMapProps) {
       mapStyleMode={toFoStyleMode(mapStyleMode)}
       currentLocation={currentLocation}
       farmLocation={farmLocation}
+      showUserLocation={showUserLocation}
       followGps={followGps}
       requestFitToPolygon={requestFitToPolygon}
       onMapStyleModeChange={handleStyleChange}

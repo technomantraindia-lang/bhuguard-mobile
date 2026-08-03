@@ -17,6 +17,7 @@ import { useOnboarding } from '../../../context/OnboardingContext';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
 import { extractList, pickString, type ApiRecord } from '../../../utils/apiHelpers';
+import { beginAddNewFarmWithMapping } from '../../../utils/beginAddNewFarmFlow';
 import { formatFarmerDisplayId } from '../../../utils/displayIds';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'OnboardedFarmerView'>;
@@ -34,8 +35,9 @@ function resolvePrimaryFarm(detail: ApiRecord | null): ApiRecord | null {
 export function OnboardedFarmerViewScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<ScreenRoute>();
-  const { result, draft } = useOnboarding();
+  const { result, draft, updateDraft } = useOnboarding();
   const [loading, setLoading] = useState(false);
+  const [addingFarm, setAddingFarm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<ApiRecord | null>(null);
 
@@ -230,12 +232,33 @@ export function OnboardedFarmerViewScreen() {
               <AppButton
                 label="Add New Farm with Mapping"
                 variant="secondary"
-                onPress={() =>
-                  Alert.alert(
-                    'Not available yet',
-                    'Adding a new farm to an existing farmer requires a dedicated backend endpoint that does not exist yet. Please contact the development team to enable this.',
-                  )
-                }
+                disabled={addingFarm || !resolvedFarmerId}
+                onPress={() => {
+                  void (async () => {
+                    if (!resolvedFarmerId || addingFarm) {
+                      return;
+                    }
+                    setAddingFarm(true);
+                    try {
+                      const farms = extractList(detail ?? {}, ['farms']);
+                      await beginAddNewFarmWithMapping({
+                        draft,
+                        updateDraft,
+                        navigation,
+                        farmerId: resolvedFarmerId,
+                        farmerName,
+                        farmCountHint: farms.length,
+                      });
+                    } catch (err) {
+                      Alert.alert(
+                        'Unable to add farm',
+                        getApiErrorMessage(err, 'Could not start Add New Farm. Please try again.'),
+                      );
+                    } finally {
+                      setAddingFarm(false);
+                    }
+                  })();
+                }}
               />
               {farmContext.farmId && mappingPending ? (
                 <AppButton

@@ -1,4 +1,4 @@
-import { createFarmerOnboarding } from '../api/fieldOfficerApi';
+import { createFarmerOnboarding, createFieldOfficerFarmerFarm } from '../api/fieldOfficerApi';
 import type { OnboardingDraft } from '../context/OnboardingContext';
 import { getApiErrorMessage } from '../api/authApi';
 import { pickString, type ApiRecord } from './apiHelpers';
@@ -67,10 +67,55 @@ function readEnsuredFromApi(farmer: ApiRecord, draft: OnboardingDraft): EnsuredO
   };
 }
 
+function readEnsuredFromAdditionalFarm(
+  farm: ApiRecord,
+  draft: OnboardingDraft,
+  farmerId: number,
+): EnsuredOnboardingIds {
+  const farmId = toPositiveEntityId(farm.id ?? farm.farm_id);
+  if (farmId == null) {
+    throw new Error('Farm creation succeeded but farm ID was missing from the API response.');
+  }
+
+  return {
+    farmerId,
+    farmId,
+    farmerCode: draft.farmer_code?.trim() || null,
+    farmCode: pickString(farm, 'farm_code') !== '-' ? pickString(farm, 'farm_code') : null,
+    farmerName: draft.farmer_name.trim() || 'Farmer',
+    farmName:
+      pickString(farm, 'farm_name') !== '-'
+        ? pickString(farm, 'farm_name')
+        : draft.farm_name?.trim() || null,
+  };
+}
+
+function buildAdditionalFarmPayload(draft: OnboardingDraft): ApiRecord {
+  return {
+    farm_name: draft.farm_name.trim(),
+    land_survey_number: draft.land_survey_number.trim() || undefined,
+    land_area: draft.land_area.trim() ? Number(draft.land_area) : undefined,
+    land_area_unit: draft.land_area_unit.trim() || undefined,
+    ownership_type: draft.ownership_type.trim() || undefined,
+    irrigation_type: draft.irrigation_type.trim() || undefined,
+    soil_type: draft.soil_type.trim() || undefined,
+    crop_type: draft.crop_type.trim() || undefined,
+    existing_farming_practice: draft.existing_farming_practice.trim() || undefined,
+    gps_latitude: draft.gps_latitude.trim() ? Number(draft.gps_latitude) : undefined,
+    gps_longitude: draft.gps_longitude.trim() ? Number(draft.gps_longitude) : undefined,
+    gps_accuracy: draft.gps_accuracy.trim() ? Number(draft.gps_accuracy) : undefined,
+    district_id: draft.district_id.trim() ? Number(draft.district_id) : undefined,
+    taluka_id: draft.taluka_id.trim() ? Number(draft.taluka_id) : undefined,
+    village_id: draft.village_id.trim() ? Number(draft.village_id) : undefined,
+    state: draft.state.trim() || undefined,
+    pincode: draft.pincode.trim() || undefined,
+  };
+}
+
 /**
  * Ensures Farmer + Farm records exist before FO boundary mapping.
  * Idempotent when draft already holds valid IDs.
- * Returns typed status so UI can show Farm vs Consent errors separately.
+ * When farmer_id exists but farm_id is cleared (Add New Farm), creates only a new Farm.
  */
 export async function ensureOnboardingFarmerFarm(
   draft: OnboardingDraft,
@@ -81,17 +126,38 @@ export async function ensureOnboardingFarmerFarm(
     return { status: 'ready', ids: existing };
   }
 
-  const profileError = validateFarmerProfileStep1(draft);
-  if (profileError) {
-    return { status: 'missing_profile', message: profileError };
-  }
-
+  const existingFarmerId = toPositiveEntityId(draft.farmer_id);
   const landError = validateLandDetails(draft);
   if (landError) {
     return {
       status: 'missing_farm',
       message: 'Please complete and save the Farm Details step before mapping.',
     };
+  }
+
+  // Phase 10.11 — additional farm for an already-persisted Farmer.
+  if (existingFarmerId != null) {
+    try {
+      const farm = await createFieldOfficerFarmerFarm(
+        existingFarmerId,
+        buildAdditionalFarmPayload(draft),
+      );
+      return { status: 'ready', ids: readEnsuredFromAdditionalFarm(farm, draft, existingFarmerId) };
+    } catch (error) {
+      const raw = getApiErrorMessage(
+        error,
+        'Unable to create the new farm. Please check your connection and retry.',
+      );
+      return {
+        status: 'network_error',
+        message: sanitizeOnboardingApiError(raw) ?? sanitizeMappingApiError(raw),
+      };
+    }
+  }
+
+  const profileError = validateFarmerProfileStep1(draft);
+  if (profileError) {
+    return { status: 'missing_profile', message: profileError };
   }
 
   const consentError = validateConsent(draft);
@@ -106,7 +172,10 @@ export async function ensureOnboardingFarmerFarm(
     const farmer = await createFarmerOnboarding(toFormData());
     return { status: 'ready', ids: readEnsuredFromApi(farmer, draft) };
   } catch (error) {
-    const raw = getApiErrorMessage(error, 'Unable to load mapping details. Please check your connection and retry.');
+    const raw = getApiErrorMessage(
+      error,
+      'Unable to load mapping details. Please check your connection and retry.',
+    );
     return {
       status: 'network_error',
       message: sanitizeOnboardingApiError(raw) ?? sanitizeMappingApiError(raw),

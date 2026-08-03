@@ -20,6 +20,8 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { colors, spacing } from '../../theme';
 import type { AssignedFarmSearchRecord } from '../../types/assignedLocations';
+import type { ApiRecord } from '../../utils/apiHelpers';
+import { formatFarmerDisplayId } from '../../utils/displayIds';
 import { openGoogleMaps } from '../../utils/officerGpsCapture';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'FieldOfficerNavigate'>;
@@ -165,7 +167,7 @@ export function FieldOfficerNavigateScreen() {
             renderItem={({ item }) => (
               <Pressable style={styles.card} onPress={() => selectFarmer(item.farmer_id)}>
                 <Text style={styles.cardTitle}>{item.farmer_name ?? 'Farmer'}</Text>
-                <Text style={styles.meta}>Farmer ID: {item.farmer_code ?? item.farmer_id}</Text>
+                <Text style={styles.meta}>Farmer ID: {formatFarmerDisplayId(item as unknown as ApiRecord)}</Text>
                 <Text style={styles.meta}>Village: {item.village || '—'}</Text>
               </Pressable>
             )}
@@ -192,7 +194,7 @@ export function FieldOfficerNavigateScreen() {
                 <Text style={styles.cardTitle}>Navigation context</Text>
                 <Text style={styles.meta}>Farmer Name: {selectedFarmer?.farmer_name ?? '—'}</Text>
                 <Text style={styles.meta}>
-                  Farmer ID: {selectedFarmer?.farmer_code ?? selectedFarmer?.farmer_id ?? '—'}
+                  Farmer ID: {formatFarmerDisplayId((selectedFarmer ?? {}) as unknown as ApiRecord)}
                 </Text>
                 <Text style={styles.meta}>Farm ID: {selectedFarm.farm_code ?? selectedFarm.farm_id}</Text>
                 <Text style={styles.meta}>Village: {selectedFarm.village || '—'}</Text>

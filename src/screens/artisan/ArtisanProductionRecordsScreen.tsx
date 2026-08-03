@@ -20,7 +20,8 @@ import { spacing } from '../../theme';
 import { extractList, pickString, type ApiRecord } from '../../utils/apiHelpers';
 import { getAuthUser } from '../../utils/authStorage';
 import type { OfflineProductionPayload } from '../../utils/offlineBiocharProductionPayload';
-import { Pressable } from 'react-native';
+import { getFarmCoordinates, openGoogleMaps } from '../../utils/farmMapHelpers';
+import { Alert, Pressable } from 'react-native';
 
 type Nav = NativeStackNavigationProp<ArtisanStackParamList, 'ArtisanProductionRecords'>;
 
@@ -160,11 +161,42 @@ export function ArtisanProductionRecordsScreen() {
                 <Text style={styles.fieldLabel}>Farm</Text>
                 <Text style={styles.fieldValue}>{pickString(record, 'farm_name', 'farmName')}</Text>
 
+                <Text style={styles.fieldLabel}>Farm ID</Text>
+                <Text style={styles.fieldValue}>
+                  {pickString(record, 'farm_code', 'farmCode') !== '-'
+                    ? pickString(record, 'farm_code', 'farmCode')
+                    : pickString(record, 'farm_id', 'farmId')}
+                </Text>
+
                 <Text style={styles.fieldLabel}>Farmer Name</Text>
                 <Text style={styles.fieldValue}>{pickString(record, 'farmer_name', 'farmerName')}</Text>
 
                 <Text style={styles.fieldLabel}>Status</Text>
                 <Text style={styles.statusValue}>{statusLabel !== '-' ? statusLabel : 'Pending'}</Text>
+
+                <Pressable
+                  style={styles.navigateButton}
+                  onPress={() => {
+                    void (async () => {
+                      const coords = getFarmCoordinates(record);
+                      if (!coords) {
+                        Alert.alert(
+                          'GPS missing',
+                          'This farm has no saved GPS coordinates. Navigation cannot invent a location.',
+                        );
+                        return;
+                      }
+                      await openGoogleMaps(
+                        coords,
+                        pickString(record, 'farm_name', 'farmName') !== '-'
+                          ? pickString(record, 'farm_name', 'farmName')
+                          : undefined,
+                      );
+                    })();
+                  }}
+                >
+                  <Text style={styles.navigateButtonText}>Navigate Farm</Text>
+                </Pressable>
               </View>
             );
           })
@@ -198,4 +230,17 @@ const styles = StyleSheet.create({
   },
   fieldValue: { fontSize: 15, fontWeight: '700', color: artisanTheme.deepText },
   statusValue: { fontSize: 15, fontWeight: '800', color: artisanTheme.actionGreen },
+  navigateButton: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    backgroundColor: artisanTheme.actionGreen,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  navigateButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
 });

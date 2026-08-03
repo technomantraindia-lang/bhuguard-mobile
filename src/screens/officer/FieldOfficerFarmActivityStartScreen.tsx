@@ -32,6 +32,8 @@ import { useAssignedLocations } from '../../hooks/useAssignedLocations';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { colors, spacing } from '../../theme';
 import type { AssignedFarmSearchRecord } from '../../types/assignedLocations';
+import { formatFarmerDisplayId } from '../../utils/displayIds';
+import type { ApiRecord } from '../../utils/apiHelpers';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'FieldOfficerFarmActivityStart'>;
 type ScreenRoute = RouteProp<FieldOfficerStackParamList, 'FieldOfficerFarmActivityStart'>;
@@ -459,7 +461,7 @@ export function FieldOfficerFarmActivityStartScreen() {
                 renderItem={({ item }) => (
                   <Pressable style={styles.card} onPress={() => selectFarmer(item)}>
                     <Text style={styles.cardTitle}>{item.farmer_name ?? 'Farmer'}</Text>
-                    <Text style={styles.cardMeta}>Farmer ID: {item.farmer_code ?? item.farmer_id}</Text>
+                    <Text style={styles.cardMeta}>Farmer ID: {formatFarmerDisplayId(item as unknown as ApiRecord)}</Text>
                     {item.village ? <Text style={styles.cardMeta}>Village: {item.village}</Text> : null}
                   </Pressable>
                 )}

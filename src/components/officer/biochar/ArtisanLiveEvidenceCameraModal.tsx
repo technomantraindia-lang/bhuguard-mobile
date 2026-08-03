@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
 import { artisanTheme } from '../../../theme/artisanTheme';
+import { getServerSyncedEpochMs } from '../../../services/serverTimeSync';
 
 export interface ArtisanLiveCameraCapture {
   uri: string;
@@ -44,7 +45,7 @@ export function ArtisanLiveEvidenceCameraModal({
     }
 
     setCapturing(true);
-    const shutterEpochMs = Date.now();
+    const shutterEpochMs = getServerSyncedEpochMs();
 
     try {
       const photo = await cameraRef.current?.takePictureAsync({
