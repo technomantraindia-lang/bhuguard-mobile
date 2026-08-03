@@ -130,11 +130,24 @@ export async function validateTrustedSession(): Promise<AuthUser | null> {
   }
 }
 
-/** Always LanguageSelection after preloader on cold start. Never open dashboard here. */
+/**
+ * After preloader on cold start:
+ * - If a device (or scoped) language was previously selected → continue to login/unlock.
+ * - Otherwise → LanguageSelection (first use only).
+ * Never opens a role dashboard from here.
+ */
 export async function routeAfterPreloader(): Promise<StartupRoute> {
-  setAuthStartupPhase('language_selection');
-  // Warm session validation in parallel; Language screen does not wait on it.
+  // Warm session validation in parallel with language resolution.
   void validateTrustedSession();
+
+  const existingLanguage = await resolvePreferredLanguage();
+
+  if (existingLanguage) {
+    markColdStartLanguageShown();
+    return routeAfterLanguageContinue();
+  }
+
+  setAuthStartupPhase('language_selection');
   return { name: 'LanguageSelection' };
 }
 
