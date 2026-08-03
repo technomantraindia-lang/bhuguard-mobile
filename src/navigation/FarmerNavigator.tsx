@@ -57,6 +57,7 @@ import { FullscreenImageScreen } from '../screens/shared/FullscreenImageScreen';
 import { StitchScreenRoute } from '../screens/stitch/StitchScreenRoute';
 import { FarmerTabNavigator } from './FarmerTabNavigator';
 import type { FarmerStackParamList } from './types';
+import { RoleAppLayout } from '../components/shared/AuthenticatedAppShell';
 
 const Stack = createNativeStackNavigator<FarmerStackParamList>();
 
@@ -73,6 +74,7 @@ export function FarmerNavigator() {
       <Stack.Navigator
         id="FarmerRootStack"
         initialRouteName="FarmerTabs"
+        layout={({ children }) => <RoleAppLayout>{children}</RoleAppLayout>}
         screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
       >
         <Stack.Screen name="FarmerTabs" component={FarmerTabNavigator} />

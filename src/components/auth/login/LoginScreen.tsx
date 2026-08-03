@@ -17,11 +17,11 @@ import {
 } from "react-native";
 
 import {
-  PlusJakartaSans_500Medium,
-  PlusJakartaSans_600SemiBold,
-  PlusJakartaSans_700Bold,
+  Outfit_500Medium,
+  Outfit_600SemiBold,
+  Outfit_700Bold,
   useFonts,
-} from "@expo-google-fonts/plus-jakarta-sans";
+} from "@expo-google-fonts/outfit";
 
 import {
   SafeAreaView,
@@ -60,6 +60,8 @@ import { BhuguardLogo } from "../../shared/BhuguardLogo";
 
 import { fadeUpIn } from "./Animations";
 
+import { ChangeLanguagePill } from "./ChangeLanguagePill";
+
 import { LoginBackground } from "./LoginBackground";
 
 import { PhoneInput } from "./PhoneInput";
@@ -72,20 +74,14 @@ const VALID_MOBILE = /^\d{10}$/;
 
 const COLORS = {
   white: "#FFFFFF",
-
-  softWhite: "rgba(255, 255, 255, 0.84)",
-
-  lime: "#B9E85A",
-
-  muted: "rgba(255, 255, 255, 0.62)",
-
-  error: "#FF9D8F",
-
-  buttonActive: "#3F7D24",
-
-  buttonDisabledBg: "rgba(15, 58, 32, 0.55)",
-
-  buttonDisabledText: "rgba(255, 255, 255, 0.45)",
+  softWhite: "rgba(255, 255, 255, 0.92)",
+  lime: "#2F6B1F",
+  brand: "#0B2E1F",
+  muted: "rgba(11, 46, 31, 0.72)",
+  error: "#B53B3B",
+  buttonActive: "#0F7A45",
+  buttonDisabledBg: "rgba(15, 58, 32, 0.35)",
+  buttonDisabledText: "rgba(255, 255, 255, 0.55)",
 } as const;
 
 function cleanMobile(value: string): string {
@@ -110,11 +106,9 @@ function LoginScreenComponent({ navigation }: Props) {
   const [touched, setTouched] = useState(false);
 
   const [fontsLoaded] = useFonts({
-    PlusJakartaSans_500Medium,
-
-    PlusJakartaSans_600SemiBold,
-
-    PlusJakartaSans_700Bold,
+    Outfit_500Medium,
+    Outfit_600SemiBold,
+    Outfit_700Bold,
   });
 
   const contentOpacity = useRef(new Animated.Value(1)).current;
@@ -426,7 +420,7 @@ function LoginScreenComponent({ navigation }: Props) {
   return (
     <View style={styles.root}>
       <StatusBar
-        barStyle="light-content"
+        barStyle="dark-content"
         translucent
         backgroundColor="transparent"
       />
@@ -434,26 +428,30 @@ function LoginScreenComponent({ navigation }: Props) {
       <LoginBackground />
 
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+        <View style={styles.languageRow} pointerEvents="box-none">
+          <ChangeLanguagePill
+            label={t("mobileLogin.changeLanguage")}
+            disabled={loading}
+            onPress={() =>
+              safeAuthGoBack(navigation, "LanguageSelection")
+            }
+          />
+        </View>
         <KeyboardAvoidingView
           style={styles.flex}
-
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-
-          keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 24}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
         >
           <ScrollView
             contentContainerStyle={[
               styles.scroll,
               { paddingBottom: footerPad },
             ]}
-
             keyboardShouldPersistTaps="handled"
-
             showsVerticalScrollIndicator={false}
-
             bounces
-
             keyboardDismissMode="on-drag"
+            automaticallyAdjustKeyboardInsets
           >
             <Animated.View
               style={[
@@ -486,10 +484,10 @@ function LoginScreenComponent({ navigation }: Props) {
 
               <Text
                 style={[styles.brandName, fontsLoaded ? styles.fontBold : null]}
-
                 allowFontScaling={false}
+                accessibilityRole="header"
               >
-                BHUGUARD
+                {t("mobileLogin.brandName")}
               </Text>
 
               <Text
@@ -497,19 +495,17 @@ function LoginScreenComponent({ navigation }: Props) {
                   styles.tagline,
                   fontsLoaded ? styles.fontSemiBold : null,
                 ]}
-
                 allowFontScaling={false}
               >
-                SECURE FARMS. SUSTAINABLE FUTURE.
+                {t("mobileLogin.brandTagline")}
               </Text>
 
               <View style={styles.welcomeBlock}>
                 <Text
                   style={[styles.welcome, fontsLoaded ? styles.fontBold : null]}
-
                   allowFontScaling={false}
                 >
-                  Welcome
+                  {t("mobileLogin.welcome")}
                 </Text>
 
                 <Text
@@ -517,27 +513,19 @@ function LoginScreenComponent({ navigation }: Props) {
                     styles.subtitle,
                     fontsLoaded ? styles.fontMedium : null,
                   ]}
-
                   allowFontScaling={false}
                 >
-                  Secure access to your farm operations{"\n"}and sustainable
-                  field management.
+                  {t("mobileLogin.subtitle")}
                 </Text>
               </View>
 
               <PhoneInput
                 value={mobile}
-
                 fontsLoaded={fontsLoaded}
-
                 invalid={showMobileValidation}
-
                 editable={!loading}
-
-                placeholder="Enter your mobile number"
-
+                placeholder={t("mobileLogin.placeholder")}
                 onBlur={() => setTouched(true)}
-
                 onChangeText={onChangeMobile}
               />
 
@@ -589,12 +577,10 @@ function LoginScreenComponent({ navigation }: Props) {
 
               <Pressable
                 onPress={() => void forgotMpin()}
-
                 disabled={loading}
-
                 style={styles.linkWrap}
-
                 accessibilityRole="link"
+                accessibilityLabel={t("mobileLogin.forgotMpin")}
               >
                 <Text
                   style={[
@@ -602,18 +588,16 @@ function LoginScreenComponent({ navigation }: Props) {
                     fontsLoaded ? styles.fontSemiBold : null,
                   ]}
                 >
-                  Forgot MPIN?
+                  {t("mobileLogin.forgotMpin")}
                 </Text>
               </Pressable>
 
               <Pressable
                 onPress={loginWithAnotherMobile}
-
                 disabled={loading}
-
                 style={styles.linkWrap}
-
                 accessibilityRole="link"
+                accessibilityLabel={t("mobileLogin.anotherMobile")}
               >
                 <Text
                   style={[
@@ -621,7 +605,7 @@ function LoginScreenComponent({ navigation }: Props) {
                     fontsLoaded ? styles.fontSemiBold : null,
                   ]}
                 >
-                  Login with another mobile number
+                  {t("mobileLogin.anotherMobile")}
                 </Text>
               </Pressable>
 
@@ -657,208 +641,133 @@ export const LoginScreen = memo(LoginScreenComponent);
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-
-    backgroundColor: "#011F11",
+    backgroundColor: "#E8F5E4",
   },
-
   safe: {
     flex: 1,
   },
-
   flex: {
     flex: 1,
   },
-
+  languageRow: {
+    position: "absolute",
+    top: 8,
+    right: 16,
+    zIndex: 20,
+  },
   scroll: {
     flexGrow: 1,
-
     justifyContent: "center",
-
     alignItems: "center",
-
     paddingHorizontal: 20,
-
-    paddingTop: 16,
+    paddingTop: 56,
   },
-
   content: {
     alignSelf: "center",
-
     alignItems: "center",
-
     gap: 12,
   },
-
   logoWrap: {
     alignItems: "center",
-
     marginBottom: 4,
   },
-
   brandName: {
-    fontSize: 27,
-
+    fontSize: 28,
     fontWeight: "800",
-
-    letterSpacing: 8,
-
-    color: COLORS.white,
-
+    letterSpacing: 6,
+    color: COLORS.brand,
     textAlign: "center",
-
     marginTop: 6,
   },
-
   tagline: {
     fontSize: 11,
-
     fontWeight: "600",
-
-    letterSpacing: 2.2,
-
+    letterSpacing: 1.6,
     color: COLORS.lime,
-
     textAlign: "center",
-
     paddingHorizontal: 8,
-
     textTransform: "uppercase",
   },
-
   welcomeBlock: {
-    marginTop: 28,
-
+    marginTop: 24,
     marginBottom: 8,
-
     alignItems: "center",
-
     gap: 10,
-
     width: "100%",
   },
-
   welcome: {
-    fontSize: 32,
-
+    fontSize: 30,
     fontWeight: "800",
-
-    color: COLORS.white,
-
+    color: COLORS.brand,
     textAlign: "center",
   },
-
   subtitle: {
     fontSize: 15,
-
     lineHeight: 22,
-
     fontWeight: "500",
-
-    color: COLORS.softWhite,
-
+    color: COLORS.muted,
     textAlign: "center",
-
     paddingHorizontal: 4,
   },
-
   validationError: {
     fontSize: 13,
-
     color: COLORS.error,
-
     fontWeight: "600",
-
     textAlign: "center",
-
     paddingHorizontal: 8,
-
     marginTop: -4,
   },
-
   loginButton: {
     marginTop: 4,
-
-    minHeight: 64,
-
+    minHeight: 54,
     width: "100%",
-
-    borderRadius: 999,
-
+    borderRadius: 14,
     alignItems: "center",
-
     justifyContent: "center",
   },
-
   loginButtonActive: {
     backgroundColor: COLORS.buttonActive,
-
-    borderWidth: 1,
-
-    borderColor: "rgba(185, 232, 90, 0.35)",
   },
-
   loginButtonDisabled: {
     backgroundColor: COLORS.buttonDisabledBg,
   },
-
   loginLabel: {
-    fontSize: 18,
-
+    fontSize: 17,
     fontWeight: "700",
-
     color: COLORS.white,
-
     letterSpacing: 0.3,
   },
-
   loginLabelDisabled: {
     color: COLORS.buttonDisabledText,
   },
-
   linkWrap: {
     paddingVertical: 6,
   },
-
   link: {
     fontSize: 14,
-
     fontWeight: "600",
-
-    color: COLORS.lime,
-
+    color: COLORS.brand,
     textAlign: "center",
-
     textDecorationLine: "underline",
   },
-
   legal: {
     marginTop: 12,
-
     fontSize: 12,
-
     lineHeight: 18,
-
     color: COLORS.muted,
-
     textAlign: "center",
-
     paddingHorizontal: 4,
   },
-
   legalHighlight: {
     color: COLORS.lime,
-
     fontWeight: "700",
   },
-
   fontBold: {
     fontFamily: loginTheme.fonts.bold,
   },
-
   fontSemiBold: {
     fontFamily: loginTheme.fonts.semiBold,
   },
-
   fontMedium: {
     fontFamily: loginTheme.fonts.medium,
   },

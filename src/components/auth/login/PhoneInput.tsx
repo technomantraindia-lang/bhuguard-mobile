@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   prefixFont: {
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontFamily: 'Outfit_700Bold',
   },
   input: {
     flex: 1,
@@ -123,6 +123,6 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   inputFont: {
-    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontFamily: 'Outfit_600SemiBold',
   },
 });

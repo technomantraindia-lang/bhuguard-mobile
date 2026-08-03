@@ -69,6 +69,7 @@ import { OfficerSupportThreadsRoute } from '../screens/shared/SupportThreadsScre
 import { StitchScreenRoute } from '../screens/stitch/StitchScreenRoute';
 import { OfficerTabNavigator } from './OfficerTabNavigator';
 import type { FieldOfficerStackParamList } from './types';
+import { RoleAppLayout } from '../components/shared/AuthenticatedAppShell';
 
 const Stack = createNativeStackNavigator<FieldOfficerStackParamList>();
 
@@ -91,7 +92,7 @@ export function OfficerNavigator() {
   return (
     <OnboardingProvider>
       <BoundaryCaptureProvider>
-      <Stack.Navigator initialRouteName="FieldOfficerTabs" screenOptions={{ headerShown: false }}>
+      <Stack.Navigator initialRouteName="FieldOfficerTabs" layout={({ children }) => <RoleAppLayout>{children}</RoleAppLayout>} screenOptions={{ headerShown: false }}>
         <Stack.Screen name="FieldOfficerTabs" component={OfficerTabNavigator} />
         <Stack.Screen name="StitchScreen" component={StitchScreenRoute} />
         <Stack.Screen name="FieldOfficerProfile" component={FieldOfficerProfileScreen} />

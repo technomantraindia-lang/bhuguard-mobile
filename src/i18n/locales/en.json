@@ -194,7 +194,14 @@
     "invalidMobile": "Please enter a valid 10-digit mobile number.",
     "serverUnreachable": "Server not reachable. Please check internet or server URL.",
     "notRegistered": "Mobile number not registered. Please contact Bhuguard admin.",
-    "unableToContinue": "Unable to continue. Please try again."
+    "unableToContinue": "Unable to continue. Please try again.",
+    "forgotMpin": "Forgot MPIN?",
+    "anotherMobile": "Login with another mobile number",
+    "login": "Login"
+  },
+  "fraudWarning": {
+    "marquee": "Bhuguard never calls users to request payment. Never share your OTP, PIN, password or pattern.",
+    "accessibilityLabel": "Fraud prevention warning: Bhuguard never calls users to request payment. Never share your OTP, PIN, password or pattern."
   },
   "apiServer": {
     "title": "Server settings",

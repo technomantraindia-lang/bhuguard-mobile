@@ -57,8 +57,9 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Premium light Farm local background | LoginScreen, LoginBackground, assets | — | — | ⏳ PENDING | — |
-| Preserve OTP/validation/keyboard/a11y | LoginScreen.tsx | — | — | ⏳ PENDING | — |
+| Premium light Farm local background | LoginBackground.tsx, assets/auth-environment-bg.jpg | — | Light gradient overlay on bundled farm image | ⚠️ PARTIAL | No adb device visual check |
+| Outfit brand font + logo spacing | LoginScreen.tsx, Theme.ts, PhoneInput.tsx | — | Outfit fonts wired | ⚠️ PARTIAL | Device verify |
+| Preserve OTP/validation/keyboard/a11y + Change Language | LoginScreen + ChangeLanguagePill | — | Pill restored; keyboard insets enabled | ⚠️ PARTIAL | Device keyboard check |
 
 ---
 
@@ -66,8 +67,8 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Slim permanent marquee EN/HI for authenticated roles | new component + role navigators | — | — | ⏳ PENDING | — |
-| Hide on camera/viewer/boundary; reduced-motion | marquee + route options | — | — | ⏳ PENDING | — |
+| Slim permanent marquee EN/HI for authenticated roles | FraudWarningMarquee.tsx, RoleAppLayout, Farmer/Officer/Artisan navigators | — | Mounted once via navigator layout; i18n keys added | ⚠️ PARTIAL | Device verify + reduced-motion |
+| Hide on camera/viewer/boundary; reduced-motion | FRAUD_MARQUEE_HIDDEN_ROUTES + AccessibilityInfo | — | Route hide set + reduce-motion pause | ⚠️ PARTIAL | Device verify |
 
 ---
 
