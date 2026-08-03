@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { useNavigationState, type NavigationState, type PartialState } from '@react-navigation/native';
 
 import { FraudWarningMarquee } from './FraudWarningMarquee';
+import { DeviceTimeWarningBanner } from './DeviceTimeWarningBanner';
 
 /** Routes where the fraud marquee would obstruct critical full-screen controls. */
 export const FRAUD_MARQUEE_HIDDEN_ROUTES = new Set([
@@ -62,6 +63,7 @@ function RoleAppLayoutComponent({ children }: RoleAppLayoutProps) {
   return (
     <View style={styles.root}>
       <FraudWarningMarquee visible={showMarquee} />
+      <DeviceTimeWarningBanner />
       <View style={styles.body}>{children}</View>
     </View>
   );

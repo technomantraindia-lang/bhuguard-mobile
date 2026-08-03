@@ -8,6 +8,7 @@ import { I18nProvider } from './src/i18n/I18nContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { registerLivePhotoWatermarkProcessor } from './src/services/livePhotoWatermarkService';
+import { loadPersistedServerTimeSync, syncServerTime } from './src/services/serverTimeSync';
 import type { LivePhotoWatermarkProcessorHandle } from './src/components/evidence/LivePhotoWatermarkProcessor';
 import { ThemeProvider } from './src/theme/ThemeContext';
 
@@ -71,6 +72,13 @@ export default function App() {
 
   const handleAnimatedSplashFinish = useCallback(() => {
     setShowAnimatedSplash(false);
+  }, []);
+
+  useEffect(() => {
+    void (async () => {
+      await loadPersistedServerTimeSync();
+      await syncServerTime();
+    })();
   }, []);
 
   return (

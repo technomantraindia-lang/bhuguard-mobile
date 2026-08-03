@@ -159,7 +159,15 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Same mandatory gate as FO for Artisan | ArtisanNavigator gate | artisan check-in | — | ⏳ PENDING | — |
+| Same mandatory gate as FO for Artisan | ArtisanCheckInGate, useArtisanMandatoryCheckIn, ArtisanNavigator | artisan check-in API | Gate wired fail-closed | ⚠️ PARTIAL | Device GPS verify |
+
+---
+
+## Phase 19 — Server-authoritative time
+
+| Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
+|-------------|--------------|---------------|----------------|--------|-------------------|
+| Sync server UTC; ±2min warning; audit metadata; offline submit block | serverTimeSync.ts, DeviceTimeWarningBanner, App.tsx | GET /api/server-time (local) | Sync on launch; suspicious banner; live endpoint may 404 | ⚠️ PARTIAL | Live deploy + full activity wiring |
 
 ---
 

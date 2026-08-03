@@ -226,6 +226,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         appendScalar(formData, 'village_id', draft.village_id);
         appendScalar(formData, 'pincode', draft.pincode);
         appendScalar(formData, 'land_survey_number', draft.land_survey_number);
+        appendScalar(formData, 'farm_name', draft.farm_name);
         appendScalar(formData, 'land_area', draft.land_area);
         appendScalar(formData, 'land_area_unit', draft.land_area_unit);
         appendScalar(formData, 'gps_latitude', draft.gps_latitude);

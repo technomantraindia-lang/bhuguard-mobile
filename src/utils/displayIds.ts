@@ -94,3 +94,17 @@ export function formatArtisanDisplayId(record: DisplayIdRecord): string {
     ?? DISPLAY_ID_UNAVAILABLE
   );
 }
+
+/**
+ * Phase 7 — default Farm Name suggested on Land Registration: `BHG-{FarmerName}-Farm-0N`.
+ * Spaces are stripped from the farmer name so the generated name reads like a code.
+ * This is a UI-only suggestion the Field Officer can edit before submit — it is not a
+ * server-issued ID and must not be confused with farmer/artisan display IDs above.
+ */
+export function defaultFarmName(farmerName: string, farmIndex: number = 1): string {
+  const sanitizedName = (farmerName ?? '').trim().replace(/\s+/g, '');
+  const safeName = sanitizedName || 'Farmer';
+  const safeIndex = String(Math.max(1, Math.trunc(farmIndex) || 1)).padStart(2, '0');
+
+  return `BHG-${safeName}-Farm-${safeIndex}`;
+}

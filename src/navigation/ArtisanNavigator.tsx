@@ -7,6 +7,7 @@ import { BoundaryCaptureProvider } from '../context/BoundaryCaptureContext';
 import { OnboardingProvider } from '../context/OnboardingContext';
 import type { ArtisanStackParamList } from './types';
 import { RoleAppLayout } from '../components/shared/AuthenticatedAppShell';
+import { ArtisanCheckInGate } from '../components/artisan/ArtisanCheckInGate';
 
 const Stack = createNativeStackNavigator<ArtisanStackParamList>();
 
@@ -51,6 +52,7 @@ export function ArtisanNavigator() {
     <ArtisanWorkSessionProvider>
       <OnboardingProvider>
         <BoundaryCaptureProvider>
+          <ArtisanCheckInGate>
           <Stack.Navigator layout={({ children }) => <RoleAppLayout>{children}</RoleAppLayout>} screenOptions={{ headerShown: false }} initialRouteName="ArtisanDashboard">
             <Stack.Screen
               name="ArtisanDashboard"
@@ -301,6 +303,7 @@ export function ArtisanNavigator() {
               }
             />
           </Stack.Navigator>
+          </ArtisanCheckInGate>
         </BoundaryCaptureProvider>
       </OnboardingProvider>
     </ArtisanWorkSessionProvider>

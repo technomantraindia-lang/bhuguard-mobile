@@ -225,6 +225,12 @@
     "changedMessage": "Your unlock pattern was changed successfully.",
     "startOver": "Start over"
   },
+  "timeSync": {
+    "suspiciousWarning": "Your device date/time appears incorrect. Bhuguard will use secure server time for this activity.",
+    "suspiciousWarningHi": "आपके डिवाइस की तारीख या समय गलत दिखाई दे रहा है। Bhuguard इस गतिविधि के लिए सुरक्षित सर्वर समय का उपयोग करेगा।",
+    "retrySync": "Retry time sync",
+    "offlineBlocked": "Connect to sync secure server time before submitting this timestamped activity."
+  },
   "apiServer": {
     "title": "Server settings",
     "subtitle": "Connect the app to your Bhuguard API server.",
