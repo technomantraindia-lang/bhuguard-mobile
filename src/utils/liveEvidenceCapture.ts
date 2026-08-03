@@ -215,6 +215,67 @@ export async function captureLivePhotoEvidence(options?: {
   };
 }
 
+export interface PlainCapturedPhoto {
+  uri: string;
+  name: string;
+  type: string;
+}
+
+export type PlainCaptureResult =
+  | { ok: true; photo: PlainCapturedPhoto }
+  | { ok: false; cancelled: boolean; error?: string };
+
+/**
+ * Farmer profile picture capture — intentionally NO GPS/timestamp/village stamp.
+ * This is the sole exception to the live-evidence stamping rule (Phase 10.1).
+ */
+export async function capturePlainPhoto(options?: {
+  defaultName?: string;
+  allowsEditing?: boolean;
+}): Promise<PlainCaptureResult> {
+  const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+  if (!permission.granted) {
+    return { ok: false, cancelled: false, error: 'Camera permission is required to capture the photo.' };
+  }
+
+  const result = await ImagePicker.launchCameraAsync(
+    liveEvidenceCameraOptions({
+      quality: 0.7,
+      allowsEditing: options?.allowsEditing ?? false,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    }),
+  );
+
+  if (result.canceled || !result.assets[0]) {
+    return { ok: false, cancelled: true };
+  }
+
+  const asset = result.assets[0];
+
+  try {
+    const compressedUri = await compressEvidenceImage(asset.uri, {
+      maxWidth: 1280,
+      quality: 0.7,
+    });
+
+    return {
+      ok: true,
+      photo: {
+        uri: compressedUri,
+        name: asset.fileName ?? options?.defaultName ?? 'photo.jpg',
+        type: asset.mimeType ?? 'image/jpeg',
+      },
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      cancelled: false,
+      error: error instanceof Error ? error.message : 'Failed to process the captured photo.',
+    };
+  }
+}
+
 export async function pickStampedPhotoEvidence(options?: {
   defaultName?: string;
   allowsEditing?: boolean;

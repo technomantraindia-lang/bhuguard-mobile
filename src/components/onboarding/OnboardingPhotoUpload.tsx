@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import type { FileAsset } from '../../context/OnboardingContext';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
-import { captureLivePhotoEvidence } from '../../utils/liveEvidenceCapture';
+import { capturePlainPhoto } from '../../utils/liveEvidenceCapture';
 import { fileAssetFromImagePickerAsset, validateOnboardingPhotoAsset } from '../../utils/onboardingPhoto';
 
 interface OnboardingPhotoUploadProps {
@@ -59,13 +59,17 @@ function UploadPlaceholderIcon() {
 export function OnboardingPhotoUpload({ file, onChange }: OnboardingPhotoUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
+  // Holds a just-captured photo pending farmer OK/Retry confirmation — never
+  // auto-saved to the draft until explicitly confirmed (Phase 10.1).
+  const [pendingUri, setPendingUri] = useState<string | null>(null);
+  const pendingAssetRef = useRef<{ uri: string; fileName?: string; mimeType?: string } | null>(null);
 
   const openCamera = async () => {
     setCapturing(true);
     setError(null);
 
     try {
-      const result = await captureLivePhotoEvidence({
+      const result = await capturePlainPhoto({
         defaultName: 'farmer-photo.jpg',
         allowsEditing: true,
       });
@@ -83,9 +87,9 @@ export function OnboardingPhotoUpload({ file, onChange }: OnboardingPhotoUploadP
       }
 
       const assetLike = {
-        uri: result.evidence.uri,
-        fileName: result.evidence.name,
-        mimeType: result.evidence.type,
+        uri: result.photo.uri,
+        fileName: result.photo.name,
+        mimeType: result.photo.type,
         fileSize: undefined,
         width: 0,
         height: 0,
@@ -98,13 +102,59 @@ export function OnboardingPhotoUpload({ file, onChange }: OnboardingPhotoUploadP
         return;
       }
 
-      onChange(fileAssetFromImagePickerAsset(assetLike));
+      pendingAssetRef.current = assetLike;
+      setPendingUri(result.photo.uri);
     } finally {
       setCapturing(false);
     }
   };
 
+  const confirmPending = () => {
+    if (!pendingAssetRef.current) {
+      return;
+    }
+    onChange(fileAssetFromImagePickerAsset(pendingAssetRef.current));
+    pendingAssetRef.current = null;
+    setPendingUri(null);
+  };
+
+  const retryPending = () => {
+    pendingAssetRef.current = null;
+    setPendingUri(null);
+    void openCamera();
+  };
+
   const hasPhoto = Boolean(file?.uri);
+
+  if (pendingUri) {
+    return (
+      <View style={styles.wrap}>
+        <View style={[styles.circle, styles.circleWithPhoto]}>
+          <Image source={{ uri: pendingUri }} style={styles.previewImage} resizeMode="cover" />
+        </View>
+        <Text style={styles.helperText}>Use this photo?</Text>
+        <View style={styles.confirmRow}>
+          <Pressable
+            style={[styles.confirmButton, styles.retryButton]}
+            onPress={retryPending}
+            accessibilityRole="button"
+            accessibilityLabel="Retake photo"
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.confirmButton, styles.okButton]}
+            onPress={confirmPending}
+            accessibilityRole="button"
+            accessibilityLabel="Confirm photo"
+          >
+            <Text style={styles.okButtonText}>OK</Text>
+          </Pressable>
+        </View>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.wrap}>
@@ -132,7 +182,7 @@ export function OnboardingPhotoUpload({ file, onChange }: OnboardingPhotoUploadP
       </Pressable>
 
       <Text style={styles.helperText}>
-        {capturing ? 'Opening camera...' : hasPhoto ? 'Retake Live Photo' : 'Capture live farmer photo'}
+        {capturing ? 'Opening camera...' : hasPhoto ? 'Retake Photo' : 'Capture farmer photo'}
       </Text>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
@@ -221,6 +271,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: dashboardTheme.primary,
+  },
+  confirmRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  confirmButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  retryButton: {
+    borderColor: dashboardTheme.outlineVariant,
+    backgroundColor: dashboardTheme.surfaceLowest,
+  },
+  retryButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: dashboardTheme.onSurfaceVariant,
+  },
+  okButton: {
+    borderColor: dashboardTheme.primary,
+    backgroundColor: dashboardTheme.primary,
+  },
+  okButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: dashboardTheme.onPrimary,
   },
   errorText: {
     fontSize: 12,

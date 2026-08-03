@@ -87,8 +87,8 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Farmer ID BHG-KISHAN-*; Artisan ID BHG-ART-* | displayIds.ts helpers; label renames | additive display_id fields (in progress) | Client never fabricates IDs; legacy fallback labeled | ⚠️ PARTIAL | Live/local backfill deploy |
-| Farm labels: Farm ID / Farmer ID only | OnboardedFarmerView, Success screens | — | Code→ID label renames | ⚠️ PARTIAL | Broader sweep remaining |
+| Farmer ID BHG-KISHAN-*; Artisan ID BHG-ART-* | displayIds.ts helpers (formatFarmerDisplayId/formatArtisanDisplayId); all local fabrication call sites removed (entityId.ts, onboardingNotes.ts, farmerActivityHelpers.ts, useFarmerProfileForm.ts) and rewired through the shared helper; ArtisanProfileScreen/ArtisanDashboardScreen/OnboardedFarmerView/FarmerOnboardingSuccess use it | additive display_id fields (mobile-latest local backend, see below) | `tsc --noEmit` clean for all touched files; grep confirms no remaining `BHG-FRM-`/`BG-F-`/`BG-BHG-FRM-` local fabrication; client prefers farmer_display_id/artisan_display_id/farmer_id_display, falls back to legacy code, else safe placeholder | ✅ PASS (mobile) | Backend live deploy + backfill for real BHG-KISHAN-*/BHG-ART-* values |
+| Farm labels: Farm ID / Farmer ID only | OnboardedFarmerView, FarmerOnboardingSuccess, FarmerOnboardingReview, FarmerLandDetails; i18n locales already use "Farm ID"/"Farmer ID" | — | Repo-wide search confirms no remaining "Farmer Code"/"Farm Code"/"Artisan Code" UI text | ✅ PASS | — |
 
 ---
 
@@ -96,8 +96,8 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Farm Name under Khasra; default BHG-{Name}-Farm-0N | FarmerLandDetailsScreen, OnboardingContext | farms.farm_name | Field + default seed added | ⚠️ PARTIAL | Device + submit verify |
-| Show Farm Name across cards/mapping/biochar | review already uses farm_name | — | Partial | ⚠️ PARTIAL | Broader surfaces |
+| Farm Name under Khasra; default BHG-{Name}-Farm-0N | FarmerLandDetailsScreen (field placed directly below Khasra Number), OnboardingContext (farm_name in draft + toFormData), displayIds.ts `defaultFarmName()`, onboardingValidation (farm_name required) | farms.farm_name (additive column, see backend doc) | Default seeds as `BHG-{SanitizedFarmerName}-Farm-01` (spaces stripped), editable before submit, `tsc --noEmit` clean | ✅ PASS (mobile) | Device/live submit verify |
+| Show Farm Name across cards/mapping/biochar | FarmerOnboardingReviewScreen (Land details line), FarmerOnboardingSuccessScreen, OnboardedFarmerViewScreen, continueFarmerOnboarding params already threaded to boundary/biochar screens | — | Farm name flows from draft through onboarding review → success → farmer detail | ✅ PASS (core onboarding flow) | Downstream farmer/artisan module cards (non-onboarding) may still show farm_code only |
 
 ---
 

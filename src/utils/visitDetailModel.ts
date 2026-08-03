@@ -1,5 +1,6 @@
 import type { ApiRecord } from './apiHelpers';
 import { pickNestedString, pickString } from './apiHelpers';
+import { formatFarmerDisplayId } from './displayIds';
 import {
   parseVisitChecklistRecord,
   resolveVisitChecklistTarget,

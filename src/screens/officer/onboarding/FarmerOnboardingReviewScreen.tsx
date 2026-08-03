@@ -299,6 +299,7 @@ export function FarmerOnboardingReviewScreen() {
       </ReviewSection>
       <ReviewSection title="Land details" onEdit={() => edit('FarmerLandDetails')}>
         <Line label="Survey no." value={draft.land_survey_number} />
+        <Line label="Farm Name" value={draft.farm_name} />
         <Line label="Area" value={`${draft.land_area} ${draft.land_area_unit}`} />
         <Line label="Ownership" value={OPTION_LABELS[draft.ownership_type] ?? draft.ownership_type} />
         <Line label="Crop" value={draft.crop_type} />

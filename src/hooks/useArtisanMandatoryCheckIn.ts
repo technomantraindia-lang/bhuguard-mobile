@@ -3,6 +3,7 @@ import { AppState, type AppStateStatus } from 'react-native';
 
 import { artisanWorkCheckIn, getArtisanActiveCheckIn } from '../api/artisanApi';
 import { captureHighAccuracyGps } from '../utils/officerGpsCapture';
+import { resolveValidatedCaptureLocation } from '../utils/livePhotoLocation';
 import type { ApiRecord } from '../utils/apiHelpers';
 
 export type ArtisanMandatoryCheckInPhase = 'checkingStatus' | 'granted' | 'blocked' | 'statusError';
@@ -29,7 +30,8 @@ export function useArtisanMandatoryCheckIn() {
           return;
         }
         const payload = (data?.check_in_status ?? data ?? {}) as ApiRecord;
-        const active = payload.is_checked_in === true || payload.active === true || Boolean(payload.check_in);
+        const active =
+          payload.is_checked_in === true || payload.active === true || Boolean(payload.check_in);
         if (active) {
           grantedRef.current = true;
           setPhase('granted');
@@ -68,12 +70,25 @@ export function useArtisanMandatoryCheckIn() {
     setSubmitError(null);
     try {
       const gps = await captureHighAccuracyGps({ targetAccuracyM: 30, maxAttempts: 4, timeoutMs: 25000 });
+      const resolved = await resolveValidatedCaptureLocation(gps.latitude, gps.longitude);
+
+      if (!resolved?.resolved || !resolved.villageId || !resolved.talukaId || !resolved.districtId) {
+        throw new Error('Unable to resolve Village / Taluka / District for check-in. Retry with better GPS.');
+      }
+
       await artisanWorkCheckIn({
         latitude: gps.latitude,
         longitude: gps.longitude,
         accuracy: gps.accuracyM,
         gps_accuracy: gps.accuracyM,
-      } as never);
+        district_id: Number(resolved.districtId),
+        taluka_id: Number(resolved.talukaId),
+        village_id: Number(resolved.villageId),
+        district_name: resolved.district ?? null,
+        taluka_name: resolved.taluka ?? null,
+        village_name: resolved.village ?? null,
+        state_name: resolved.state ?? null,
+      });
       grantedRef.current = true;
       setPhase('granted');
     } catch (error) {

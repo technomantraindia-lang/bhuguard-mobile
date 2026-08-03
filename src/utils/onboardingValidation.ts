@@ -99,6 +99,10 @@ export function validateLandDetails(draft: OnboardingDraft): string | null {
     return 'Land survey number is required.';
   }
 
+  if (!draft.farm_name.trim()) {
+    return 'Farm name is required.';
+  }
+
   if (!draft.land_area.trim() || Number.isNaN(Number(draft.land_area)) || Number(draft.land_area) <= 0) {
     return 'Land area is required and must be a positive number.';
   }
@@ -109,6 +113,10 @@ export function validateLandDetails(draft: OnboardingDraft): string | null {
 
   if (!draft.ownership_type) {
     return 'Ownership is required.';
+  }
+
+  if (draft.ownership_type === 'other' && !draft.ownership_other_detail.trim()) {
+    return 'Describe the ownership type when "Other" is selected.';
   }
 
   if (!draft.soil_type) {

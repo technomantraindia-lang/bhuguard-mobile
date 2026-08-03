@@ -70,6 +70,7 @@ export function FarmerOnboardingSuccessScreen() {
             />
           </View>
           <Text style={styles.line}>Farmer ID: {farmerCode}</Text>
+          {draft.farm_name ? <Text style={styles.line}>Farm: {draft.farm_name}</Text> : null}
           <Text style={styles.line}>Created: {createdAt}</Text>
           {result?.village ? <Text style={styles.line}>Village: {result.village}</Text> : null}
           {result?.district ? <Text style={styles.line}>District: {result.district}</Text> : null}

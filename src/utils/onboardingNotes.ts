@@ -39,11 +39,15 @@ export function buildOnboardingNotes(draft: OnboardingDraft): string {
   }
 
   if (draft.ownership_type.trim()) {
-    extras.push(`Ownership type: ${draft.ownership_type.trim()}`);
+    const ownershipLabel =
+      draft.ownership_type.trim() === 'other' && draft.ownership_other_detail.trim()
+        ? `Other (${draft.ownership_other_detail.trim()})`
+        : draft.ownership_type.trim();
+    extras.push(`Ownership type: ${ownershipLabel}`);
   }
 
   if (draft.existing_farming_practice.trim()) {
-    extras.push(`Existing farming practice: ${draft.existing_farming_practice.trim()}`);
+    extras.push(`Existing Agri Bio-Waste: ${draft.existing_farming_practice.trim()}`);
   }
 
   if (draft.project_interest.length > 0) {

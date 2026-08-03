@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -37,6 +37,48 @@ const SOIL_OPTIONS = [
   { value: 'other', label: 'Other' },
 ] as const;
 
+const AGRI_BIO_WASTE_OPTIONS = [
+  'Crop residue',
+  'Cotton stalk',
+  'Paddy/wheat straw',
+  'Sugarcane trash',
+  'Husk/shell waste',
+  'Pruning/plantation waste',
+] as const;
+
+/** Existing Agri Bio-Waste selections are stored as a comma-separated string in
+ * `existing_farming_practice` for backend compatibility (no schema change). */
+function parseAgriBioWaste(value: string): { selected: string[]; otherText: string } {
+  const tokens = value
+    .split(',')
+    .map((token) => token.trim())
+    .filter(Boolean);
+
+  const selected: string[] = [];
+  const rest: string[] = [];
+
+  tokens.forEach((token) => {
+    const match = AGRI_BIO_WASTE_OPTIONS.find((option) => option.toLowerCase() === token.toLowerCase());
+    if (match) {
+      if (!selected.includes(match)) {
+        selected.push(match);
+      }
+    } else {
+      rest.push(token);
+    }
+  });
+
+  return { selected, otherText: rest.join(', ') };
+}
+
+function serializeAgriBioWaste(selected: string[], otherEnabled: boolean, otherText: string): string {
+  const parts = [...selected];
+  if (otherEnabled && otherText.trim()) {
+    parts.push(otherText.trim());
+  }
+  return parts.join(', ');
+}
+
 const IRRIGATION_OPTIONS = [
   { value: 'rainfed', label: 'Rainfed' },
   { value: 'drip_irrigation', label: 'Drip Irrigation' },
@@ -56,6 +98,13 @@ export function FarmerLandDetailsScreen() {
   const { draft, result, updateDraft } = useOnboarding();
   const [error, setError] = useState<string | null>(null);
   const continuingRef = useRef(false);
+  const bioWasteParsed = useMemo(
+    () => parseAgriBioWaste(draft.existing_farming_practice),
+    [draft.existing_farming_practice],
+  );
+  const [otherBioWasteOpen, setOtherBioWasteOpen] = useState(
+    () => parseAgriBioWaste(draft.existing_farming_practice).otherText.length > 0,
+  );
 
   useEffect(() => {
     if (!draft.farm_name.trim() && draft.farmer_name.trim()) {
@@ -155,6 +204,29 @@ export function FarmerLandDetailsScreen() {
     });
   };
 
+  const toggleBioWasteOption = (option: string) => {
+    const { selected, otherText } = bioWasteParsed;
+    const nextSelected = selected.includes(option)
+      ? selected.filter((item) => item !== option)
+      : [...selected, option];
+    updateDraft({ existing_farming_practice: serializeAgriBioWaste(nextSelected, otherBioWasteOpen, otherText) });
+  };
+
+  const toggleBioWasteOther = () => {
+    const { selected, otherText } = bioWasteParsed;
+    if (otherBioWasteOpen) {
+      setOtherBioWasteOpen(false);
+      updateDraft({ existing_farming_practice: serializeAgriBioWaste(selected, false, '') });
+    } else {
+      setOtherBioWasteOpen(true);
+      updateDraft({ existing_farming_practice: serializeAgriBioWaste(selected, true, otherText) });
+    }
+  };
+
+  const handleBioWasteOtherText = (text: string) => {
+    updateDraft({ existing_farming_practice: serializeAgriBioWaste(bioWasteParsed.selected, true, text) });
+  };
+
   return (
     <OnboardingFormScreen
       stepCurrent={4}
@@ -240,12 +312,37 @@ export function FarmerLandDetailsScreen() {
           <Text style={[styles.unitText, styles.unitTextActive]}>Biochar</Text>
         </View>
       </View>
-      <FormField
-        label="Existing Agri Bio-Waste"
-        value={draft.existing_farming_practice}
-        onChangeText={(v) => updateDraft({ existing_farming_practice: v })}
-        placeholder="Crop residue, cotton stalk, straw, husk, pruning, Other…"
-      />
+      <View style={styles.chipGroup}>
+        <Text style={styles.chipLabel}>Existing Agri Bio-Waste</Text>
+        <View style={styles.multiSelectWrap}>
+          {AGRI_BIO_WASTE_OPTIONS.map((option) => {
+            const active = bioWasteParsed.selected.includes(option);
+            return (
+              <Pressable
+                key={option}
+                style={[styles.multiSelectChip, active && styles.unitChipActive]}
+                onPress={() => toggleBioWasteOption(option)}
+              >
+                <Text style={[styles.unitText, active && styles.unitTextActive]}>{option}</Text>
+              </Pressable>
+            );
+          })}
+          <Pressable
+            style={[styles.multiSelectChip, otherBioWasteOpen && styles.unitChipActive]}
+            onPress={toggleBioWasteOther}
+          >
+            <Text style={[styles.unitText, otherBioWasteOpen && styles.unitTextActive]}>Other</Text>
+          </Pressable>
+        </View>
+        {otherBioWasteOpen ? (
+          <FormField
+            label="Other bio-waste (specify) *"
+            value={bioWasteParsed.otherText}
+            onChangeText={handleBioWasteOtherText}
+            placeholder="Describe other bio-waste"
+          />
+        ) : null}
+      </View>
       <FormField
         label="Remarks (optional)"
         value={draft.remarks}
@@ -336,6 +433,15 @@ const styles = StyleSheet.create({
   unitTextActive: { color: colors.eco, fontWeight: '700' },
   chipGroup: { gap: 8 },
   chipLabel: { fontSize: 14, fontWeight: '600', color: colors.text },
+  multiSelectWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  multiSelectChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: colors.surface,
+  },
   serviceChip: {
     borderWidth: 1,
     borderColor: colors.border,

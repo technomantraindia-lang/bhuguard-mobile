@@ -340,6 +340,14 @@
       "logoutConfirmMessage": "You must check in to use the Field Officer app. Log out and return later?"
     }
   },
+  "serverTime": {
+    "skewWarningTitle": "Device clock looks incorrect",
+    "skewWarningBody": "Your device time is off from the Bhuguard server by more than 2 minutes. Fix your device date/time or retry sync before continuing.",
+    "syncing": "Syncing server time…",
+    "retrySync": "Retry Sync",
+    "offlineBlockedTitle": "Cannot submit offline right now",
+    "offlineBlockedBody": "This step records a timestamp and needs a recent server time sync. Reconnect to the internet, retry sync, and try again."
+  },
   "errors": {
     "somethingWrong": "Something went wrong",
     "loginFailed": "Login failed. Please try again.",

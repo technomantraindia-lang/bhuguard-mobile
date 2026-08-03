@@ -1,20 +1,15 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useTranslation } from '../../i18n/I18nContext';
-import {
-  isDeviceTimeSuspicious,
-  syncServerTime,
-} from '../../services/serverTimeSync';
+import { useServerTimeSync } from '../../hooks/useServerTimeSync';
 
-type Props = {
-  onSynced?: () => void;
-};
-
-function DeviceTimeWarningBannerComponent({ onSynced }: Props) {
+function DeviceTimeWarningBannerComponent() {
   const { t, language } = useTranslation();
+  const { isSuspiciousSkew, retrySync } = useServerTimeSync({ autoSync: false });
+  const [, bump] = useState(0);
 
-  if (!isDeviceTimeSuspicious()) {
+  if (!isSuspiciousSkew) {
     return null;
   }
 
@@ -29,8 +24,8 @@ function DeviceTimeWarningBannerComponent({ onSynced }: Props) {
       <Pressable
         onPress={() => {
           void (async () => {
-            await syncServerTime();
-            onSynced?.();
+            await retrySync();
+            bump((n) => n + 1);
           })();
         }}
         accessibilityRole="button"
