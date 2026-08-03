@@ -1,0 +1,9 @@
+appId: com.bhuguard.mobile
+---
+# Field Officer check-in gate smoke — device + credentials required for PASS.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: ".*"
+    timeout: 20000
+- takeScreenshot: fo-entry

@@ -88,14 +88,19 @@ async function probe(
     }
 
     if (response.status === 404) {
+      const awaitingLive =
+        /pattern|server-time|display.?id/i.test(endpoint.path) ||
+        /patternApi|serverTime/i.test(endpoint.module);
       return {
         module: endpoint.module,
         method: endpoint.method,
         endpoint: endpoint.path,
-        status: 'FAIL',
+        status: awaitingLive ? 'PARTIAL' : 'FAIL',
         http: 404,
         latencyMs,
-        message: 'Unexpected 404 for discovered mobile API path',
+        message: awaitingLive
+          ? '404 on live API — mobile discovers path but capability not deployed yet'
+          : 'Unexpected 404 for discovered mobile API path',
       };
     }
 

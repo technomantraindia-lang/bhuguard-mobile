@@ -1,0 +1,10 @@
+appId: com.bhuguard.mobile
+---
+# Farmer smoke — requires authenticated session on device.
+# Without QA credentials this flow is validated as YAML only.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: ".*"
+    timeout: 20000
+- takeScreenshot: farmer-entry

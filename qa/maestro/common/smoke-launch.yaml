@@ -1,0 +1,8 @@
+appId: com.bhuguard.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: ".*"
+    timeout: 20000
+- takeScreenshot: smoke-launch
