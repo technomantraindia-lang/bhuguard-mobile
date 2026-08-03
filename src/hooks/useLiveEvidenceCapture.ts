@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import {
   captureLivePhotoEvidence,
   pickStampedPhotoEvidence,
+  refreshEvidenceGeocode,
   type LiveCapturedEvidence,
 } from '../utils/liveEvidenceCapture';
 
@@ -53,6 +54,39 @@ export function useLiveEvidenceCapture(options?: UseLiveEvidenceCaptureOptions) 
     setPendingEvidence(null);
     return captureEvidence();
   }, [captureEvidence]);
+
+  const retryGeocode = useCallback(async (): Promise<LiveCapturedEvidence | null> => {
+    const current = pendingEvidence ?? evidence;
+
+    if (!current) {
+      setError('Capture a photo with GPS before retrying location.');
+      return null;
+    }
+
+    setCapturing(true);
+    setError(null);
+
+    try {
+      const result = await refreshEvidenceGeocode(current);
+
+      if (!result.ok) {
+        if (result.error) {
+          setError(result.error);
+        }
+        return null;
+      }
+
+      if (pendingEvidence) {
+        setPendingEvidence(result.evidence);
+      } else {
+        setEvidence(result.evidence);
+      }
+
+      return result.evidence;
+    } finally {
+      setCapturing(false);
+    }
+  }, [evidence, pendingEvidence]);
 
   const confirmPending = useCallback(() => {
     if (!pendingEvidence) {
@@ -111,6 +145,7 @@ export function useLiveEvidenceCapture(options?: UseLiveEvidenceCaptureOptions) 
     setEvidence,
     captureEvidence,
     retakeEvidence,
+    retryGeocode,
     confirmPending,
     rejectPending,
     pickGalleryEvidence,

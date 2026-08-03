@@ -5,7 +5,7 @@ import {
   classifyArtisanGpsAccuracy,
   type ArtisanGpsAccuracyTier,
 } from './artisanGpsAccuracy';
-import { resolveValidatedCaptureLocation } from './livePhotoLocation';
+import { resolveValidatedCaptureLocation, normalizeCaptureLocationPart } from './livePhotoLocation';
 import { captureHighAccuracyGps } from './officerGpsCapture';
 
 export const BIOCHAR_POOR_ACCURACY_MESSAGE =
@@ -36,9 +36,13 @@ export async function captureBiocharGps(): Promise<BiocharGpsCaptureResult> {
   const position = await captureHighAccuracyGps();
   const validated = await resolveValidatedCaptureLocation(position.latitude, position.longitude);
   const accuracyTier = classifyArtisanGpsAccuracy(position.accuracyM);
-  const address = [validated.village, validated.taluka, validated.district, validated.state]
+  const village = normalizeCaptureLocationPart(validated.village);
+  const taluka = normalizeCaptureLocationPart(validated.taluka);
+  const district = normalizeCaptureLocationPart(validated.district);
+  const state = normalizeCaptureLocationPart(validated.state) || 'Gujarat';
+  const address = [village, taluka, district, state]
     .map((part) => part.trim())
-    .filter((part) => part && part !== '-')
+    .filter((part) => part && part !== '-' && part !== '—')
     .join(', ');
 
   return {
@@ -49,10 +53,10 @@ export async function captureBiocharGps(): Promise<BiocharGpsCaptureResult> {
     isPoorAccuracy: accuracyTier === 'poor',
     altitude: position.altitude,
     capturedAt: position.timestamp,
-    village: validated.village,
-    taluka: validated.taluka,
-    district: validated.district,
-    state: validated.state,
+    village,
+    taluka,
+    district,
+    state,
     locationResolved: validated.resolved,
     address,
   };

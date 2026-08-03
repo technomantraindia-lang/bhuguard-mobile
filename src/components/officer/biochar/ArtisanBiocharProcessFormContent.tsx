@@ -438,9 +438,7 @@ export function ArtisanBiocharProcessFormContent({
       form.latitude != null
       && form.longitude != null
       && form.accuracyM != null
-      && classifyArtisanGpsAccuracy(form.accuracyM) !== 'poor'
-      && Boolean((form.villageName || '').trim())
-      && form.villageName !== '-';
+      && classifyArtisanGpsAccuracy(form.accuracyM) !== 'poor';
 
     const hasFeedstock =
 
@@ -597,10 +595,6 @@ export function ArtisanBiocharProcessFormContent({
     if (form.latitude == null || form.longitude == null) missing.push('GPS Captured Location');
     else if (form.accuracyM != null && classifyArtisanGpsAccuracy(form.accuracyM) === 'poor') {
       missing.push('GPS accuracy too low — Retry GPS');
-    }
-
-    if (!(form.villageName || '').trim() || form.villageName === '-') {
-      missing.push('Village (from GPS address)');
     }
 
     if (!form.feedstockQuantity.trim()) missing.push('Feedstock Quantity');

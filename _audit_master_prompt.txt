@@ -1,0 +1,2400 @@
+<timestamp>Monday, Aug 3, 2026, 10:19 AM (UTC+5:30)</timestamp>
+<user_query>
+PROJECT: BHUGUARD — COMPLETE MOBILE + BACKEND CLIENT CHANGE IMPLEMENTATION
+
+========================================================
+MANDATORY EXECUTION INSTRUCTIONS
+========================================================
+
+Do not stop after creating a plan or audit.
+
+Implement one phase, test it, commit it, and then continue to the next phase.
+
+Do not mark anything PASS unless actual code and test evidence exist.
+
+Do not provide only:
+- A plan
+- An audit
+- A checklist
+- Recommendations
+- Suggested code
+- Patch templates
+- A high-level summary
+
+You must inspect the actual project, modify the actual source code, test every completed phase, commit every stable phase, push the branch, and continue automatically to the next phase.
+
+Do not wait for repeated user instructions between phases.
+
+After each phase:
+
+1. Inspect the changed files.
+2. Run relevant tests.
+3. Test the flow on the connected Android device where possible.
+4. Update IMPLEMENTATION_PROGRESS.md.
+5. Use only:
+   ✅ PASS
+   ⚠️ PARTIAL
+   ❌ FAIL
+6. Create a descriptive Git commit.
+7. Push the current branch.
+8. Continue to the next phase automatically.
+
+A feature must not be marked ✅ PASS merely because:
+- A screen exists
+- A component was created
+- A route was added
+- A report was prepared
+- A patch template was created
+- Comments were added
+- A TODO exists
+- Code compiles
+
+Mark ✅ PASS only when:
+- The requirement is actually implemented.
+- Navigation is connected.
+- Validation works.
+- Persistence works where required.
+- Existing functionality remains safe.
+- Relevant test evidence exists.
+- No fake backend success or fabricated data is used.
+
+========================================================
+PROJECT LOCATIONS
+========================================================
+
+MOBILE APPLICATION:
+
+C:\Users\Admin\Desktop\bhuguard-mobile
+
+LOCAL BACKEND WORKING COPY, ONLY AFTER VERIFYING IT MATCHES THE CURRENT LIVE BACKEND:
+
+C:\Users\Admin\Desktop\bhuguard-latest
+
+LIVE LARAVEL BACKEND + ADMIN PANEL:
+
+/www/wwwroot/erp.bhuguard.com
+
+LIVE DOMAIN:
+
+https://erp.bhuguard.com
+
+LIVE API:
+
+https://erp.bhuguard.com/api
+
+IMPORTANT:
+
+- The mobile app currently connects to the live production API.
+- Implement mobile changes in the mobile project.
+- Backend changes may be prepared locally only after auditing the current backend structure.
+- Do not assume the local backend is identical to the live backend.
+- Do not overwrite the live backend blindly.
+- Backend deployment must happen only after comparison, backup, migration review and testing.
+- Do not automatically deploy to the live path without explicit access and verification.
+
+========================================================
+CURRENT MOBILE TECHNICAL ENVIRONMENT
+========================================================
+
+Preserve the currently working environment:
+
+- Node.js: v20.20.2
+- Expo SDK: ~56.0.18
+- React Native: 0.85.3
+- babel-preset-expo: ~56.0.0 or the exact Expo SDK 56-compatible version
+- Main entry: index.ts
+- Existing development client
+- Existing Android native project
+- Existing MapLibre/MapTiler integration
+- Existing live API configuration
+- Existing package-lock.json
+
+Do not:
+
+- Upgrade Expo SDK
+- Upgrade React Native
+- Upgrade Node.js
+- Install babel-preset-expo version 57
+- Replace package-lock.json unnecessarily
+- Run npm audit fix --force
+- Change Metro packages manually
+- Reintroduce metro-cache FileStore configuration
+- Replace navigation architecture broadly
+- Delete native Android configuration
+- Remove MapLibre/MapTiler native packages
+
+Keep metro.config.js Expo SDK 56 compatible:
+
+const { getDefaultConfig } = require('expo/metro-config');
+
+const config = getDefaultConfig(__dirname);
+
+config.resolver.unstable_enablePackageExports = false;
+
+module.exports = config;
+
+========================================================
+GIT BRANCH AND COMMIT RULES
+========================================================
+
+Before modifying the project:
+
+cd C:\Users\Admin\Desktop\bhuguard-mobile
+
+Run:
+
+git status
+git branch
+git remote -v
+git diff
+git log --oneline -10
+
+Use the branch:
+
+office-rebuild-client-changes-2026-08
+
+If it does not exist:
+
+git switch -c office-rebuild-client-changes-2026-08
+
+Push it:
+
+git push -u origin office-rebuild-client-changes-2026-08
+
+If it already exists:
+
+git switch office-rebuild-client-changes-2026-08
+git pull origin office-rebuild-client-changes-2026-08
+
+Do not work directly on main.
+
+Do not run:
+
+git reset --hard
+git clean -fd
+git push --force
+
+After every stable phase:
+
+git add .
+git commit -m "Complete Bhuguard phase: describe the completed phase"
+git push origin office-rebuild-client-changes-2026-08
+
+Do not leave all changes uncommitted until the end.
+
+========================================================
+PRIMARY OBJECTIVE
+========================================================
+
+Implement every client-requested change listed below in the existing Bhuguard application.
+
+Do not remove, weaken, skip or reinterpret any requirement.
+
+Required workflow:
+
+1. Inspect the actual mobile and backend code.
+2. Identify existing screens, components, routes, navigators, contexts, API clients, models, controllers, services, database tables and fields.
+3. Create a complete implementation checklist.
+4. Implement each phase in the exact order below.
+5. Test the completed phase.
+6. Fix errors introduced by the phase.
+7. Commit and push the phase.
+8. Continue automatically to the next phase.
+9. Continue until all possible mobile and backend work is completed.
+10. Do not claim full completion without test evidence.
+11. Do not ask the user to repeat existing project details.
+12. Do not leave requirements silently unimplemented.
+
+Create:
+
+IMPLEMENTATION_PROGRESS.md
+
+Add every requirement below as an individual checkbox with:
+
+- Requirement
+- Mobile files
+- Backend files
+- Test performed
+- Status
+- Remaining blocker
+
+Use only:
+
+✅ PASS
+⚠️ PARTIAL
+❌ FAIL
+
+========================================================
+NON-NEGOTIABLE SAFETY RULES
+========================================================
+
+1. Preserve all existing data.
+
+2. Preserve:
+
+- Farmer records
+- Field Officer records
+- Artisan records
+- Artisan Pro records
+- Farm records
+- Farm boundaries
+- Farmer Onboarding records
+- Consent and legal records
+- Evidence images and videos
+- Biochar Production records
+- Biochar Mixing records
+- Biochar Application records
+- Authentication records
+- MPIN historical records
+- Check-in records
+- Kiln records
+- Working-area assignments
+- Notifications
+- Offline records
+- Pending Sync records
+- Historical submitted records
+- Existing role permissions
+- Existing API routes
+- Existing user relationships
+
+3. Never run:
+
+php artisan migrate:fresh
+php artisan db:wipe
+php artisan schema:drop
+destructive seeders
+database reset commands
+mass deletion commands
+DROP TABLE
+DROP COLUMN
+TRUNCATE
+git reset --hard
+git clean -fd
+git push --force
+npm audit fix --force
+
+4. Use only safe additive migrations when genuinely required.
+
+5. Do not delete historical database fields merely because their UI is removed.
+
+6. Do not replace existing primary keys.
+
+7. Farmer ID and Artisan ID described below are business/display IDs only.
+
+8. Do not alter unrelated Admin Panel modules.
+
+9. Do not overwrite the complete live backend using a local copy.
+
+10. Do not replace the live Laravel .env.
+
+11. Do not expose:
+
+- APP_KEY
+- Database credentials
+- SMS credentials
+- API tokens
+- Authentication tokens
+- Passwords
+- OTP values
+- MPIN values
+- Pattern values
+- Pattern coordinates
+- Pattern hashes
+- MapTiler keys
+- Signing passwords
+- Android keystores
+- Firebase private credentials
+
+12. Do not damage the existing MapLibre/MapTiler implementation:
+
+- Native in-app mapping
+- Satellite style
+- Street style
+- Hybrid style
+- GPS accuracy
+- Manual fingertip boundary drawing
+- Start Point/Start Drawing
+- Complete Boundary/End Point
+- Undo
+- Reset
+- Edit Boundary
+- Draggable/editable vertices
+- Save Boundary
+- Polygon validation
+- Self-intersection checks
+- Area calculations
+- Reopening saved boundaries
+- Existing API payload
+- Existing saved coordinates
+- Existing historical boundaries
+- Square metre calculations
+- Square foot calculations
+- Acre calculations
+- Hectare calculations
+
+13. Do not introduce:
+
+- Maximum update depth loops
+- Unstable Context provider values
+- Dynamic MapLibre keys
+- Repeated navigation loops
+- Infinite API retries
+- Duplicate API submissions
+- Duplicate Check-ins
+- Duplicate Farmers
+- Duplicate Farms
+- Duplicate Biochar batches
+- Duplicate evidence
+- Duplicate offline sync
+- Blank screens
+- Startup crashes
+- Automatic form resets
+
+14. Memoize Context provider values.
+
+15. Memoize heavy list and map components.
+
+16. Guard useEffect setters and navigation actions.
+
+17. Clean GPS and location subscriptions on unmount.
+
+18. Never hide errors using:
+
+- @ts-ignore
+- Broad unsafe any casts
+- Empty catch blocks
+- Disabling TypeScript
+- Commenting out failing functionality
+- Removing required features
+- Returning fake API success
+- Hard-coded dummy records
+
+19. Do not fabricate:
+
+- Farmer IDs
+- Artisan IDs
+- Wallet balances
+- Kiln assignments
+- Check-in results
+- Pattern authentication success
+- Server time
+- Farm authorization
+- User roles
+- Biochar records
+
+========================================================
+PRE-IMPLEMENTATION AUDIT
+========================================================
+
+Inspect:
+
+- App.tsx
+- index.ts
+- src/
+- assets/
+- android/
+- app.json
+- app.config.js
+- eas.json
+- package.json
+- package-lock.json
+- metro.config.js
+- babel.config.js
+- tsconfig.json
+- navigation
+- authentication providers
+- language providers
+- API clients
+- offline storage
+- mapping providers
+- camera/image utilities
+- role dashboards
+- Farmer Onboarding
+- Farm Activity
+- Biochar Production
+- Biochar Mixing
+- Biochar Application
+- Artisan Farm Lookup
+- existing backend patch folders
+- screenshots and screenshot notes
+
+Exclude these from compilation and TypeScript source scope where applicable:
+
+- _ubuntu_sync_stage
+- old backup folders
+- copied projects
+- temp folders
+- dist
+- build
+- Android build output
+- Expo cache
+- Metro cache
+- node_modules backups
+
+Create or update:
+
+IMPLEMENTATION_PROGRESS.md
+
+Then immediately begin Phase 1.
+
+Do not stop after completing the audit.
+
+========================================================
+PHASE 1 — APPLICATION STARTUP
+========================================================
+
+Remove the unwanted small image shown in the centre immediately after the application opens.
+
+Current unwanted sequence:
+
+Native launch
+→ small centre or rectangular image
+→ existing Bhuguard preloader
+
+Required sequence:
+
+Native launch with only a clean Bhuguard brand background
+→ existing approved Bhuguard preloader
+
+Requirements:
+
+- Remove the small native centre image/logo.
+- Keep the existing Bhuguard preloader unchanged.
+- Do not redesign or remove the approved preloader.
+- Native startup should display only a clean branded background.
+- Avoid white flash.
+- Avoid stretched image.
+- Avoid thumbnail-sized logo.
+- Avoid rectangular splash artwork.
+- Inspect app.json, app.config.js, Android drawable and splash resources.
+- Remove obsolete splash image references safely.
+- Preserve expo-splash-screen initialization.
+- Prevent double hideAsync calls.
+- Prevent the app from remaining stuck on the splash after API failure.
+- Do not remove the custom animated preloader.
+
+Tests:
+
+- Cold start
+- Warm start
+- App process restart
+- Development-client start
+- Offline start
+- Server unavailable state
+
+After tests:
+
+- Update IMPLEMENTATION_PROGRESS.md
+- Commit
+- Push
+- Continue automatically to Phase 2
+
+========================================================
+PHASE 2 — LANGUAGE PERSISTENCE
+========================================================
+
+The Language Selection screen should appear only when no language has ever been selected on the device.
+
+Required behaviour:
+
+1. First application use:
+   - Show Language Selection.
+
+2. After selecting Hindi or English:
+   - Persist the selection using existing persistent storage.
+   - Do not show Language Selection again on every login.
+
+3. Preserve the selected language during:
+   - Logout
+   - OTP login
+   - Pattern login
+   - Token refresh
+   - Application restart
+   - Application process kill
+   - Switching between roles
+
+4. Different users on one device:
+   - Use the last device-selected language unless a user-specific preference already exists.
+
+5. Settings:
+   - Keep Change Language.
+   - Apply language immediately.
+   - Persist the value.
+   - Do not require logout or app restart.
+
+6. Logout:
+   - Do not clear language storage.
+
+7. Startup routing:
+   - Inspect AuthStartupController.routeAfterPreloader.
+   - Do not always route to LanguageSelection.
+   - If language exists, route to correct login or dashboard state.
+
+8. Preserve existing i18n architecture.
+
+9. Add translation keys instead of scattering hard-coded strings.
+
+Tests:
+
+- Fresh storage
+- First language selection
+- Logout/login
+- App restart
+- User-role change
+- Settings language change
+
+Commit and push after testing.
+
+========================================================
+PHASE 3 — LOGIN SCREEN REDESIGN
+========================================================
+
+Replace the plain green Login screen with a premium light Farm background.
+
+Requirements:
+
+- Use a bundled local HD Farm image.
+- Do not use a remote URL.
+- Inspect existing assets first.
+- Possible existing assets:
+  - assets/auth-environment-bg.jpg
+  - assets/splash-farm-bg.jpg
+- Select the most suitable light realistic Farm image.
+- Add a subtle overlay or gradient.
+- Keep Bhuguard logo clearly visible.
+- Correct logo size and spacing.
+- Correct Bhuguard title font.
+- Use approved Outfit/brand font.
+- Keep screen readable.
+- Preserve mobile-number validation.
+- Preserve OTP flow.
+- Preserve Pattern flow.
+- Preserve role detection.
+- Preserve Change Language.
+- Make keyboard handling smooth.
+- Ensure keyboard does not cover fields/buttons.
+- Support smaller Android screens.
+- Do not use excessive glassmorphism.
+- Do not make it look like a generic AI template.
+- Preserve accessibility labels.
+
+Tests:
+
+- Small screen
+- Keyboard open
+- Invalid number
+- Valid number
+- Language button
+- OTP navigation
+
+Commit and push after testing.
+
+========================================================
+PHASE 4 — FRAUD-PREVENTION MARQUEE
+========================================================
+
+Add a slim permanent fraud-warning marquee at the top of authenticated application screens.
+
+English:
+
+“Bhuguard never calls users to request payment. Never share your OTP, PIN, password or pattern.”
+
+Hindi:
+
+“Bhuguard किसी भी भुगतान के लिए कॉल नहीं करता। अपना OTP, PIN, पासवर्ड या Pattern किसी के साथ साझा न करें।”
+
+Requirements:
+
+- Use selected application language.
+- Smooth continuous horizontal movement.
+- Respect Safe Area.
+- Do not overlap headers.
+- Do not block header buttons.
+- Keep strip slim and readable.
+- Add accessibility label.
+- Reduce or pause motion when reduced-motion is enabled.
+- Show for:
+  - Farmer
+  - Field Officer
+  - Artisan
+  - Artisan Pro
+- Hide over:
+  - Full-screen Camera
+  - Full-screen Image Viewer
+  - Farm Boundary drawing
+  - Screens where controls would be obstructed
+- Do not duplicate marquee inside nested navigators.
+- Create one reusable component.
+- Use translation keys.
+
+Commit and push after testing.
+
+========================================================
+PHASE 5 — FARMER AUTHENTICATION WITH PATTERN
+========================================================
+
+Remove Farmer MPIN setup from Farmer Onboarding.
+
+New first Farmer-login flow:
+
+Mobile Number
+→ OTP Verification
+→ Set Pattern
+→ Confirm Pattern
+→ Farmer Dashboard
+
+Requirements:
+
+1. Remove Set MPIN from Farmer Onboarding.
+
+2. Add Android-style 3x3 Pattern UI.
+
+3. Minimum four connected points.
+
+4. Require Pattern confirmation.
+
+5. Reject mismatched confirmation.
+
+6. Reject incomplete/invalid Pattern.
+
+7. Add Retry and Reset.
+
+8. Do not store coordinates in plain text.
+
+9. Never log:
+   - Pattern sequence
+   - Coordinates
+   - Pattern hash
+   - Pattern request body
+
+10. Backend must store a secure Pattern hash.
+
+11. Use Laravel Hash/Bcrypt/Argon according to existing application architecture.
+
+12. Existing Farmers:
+   - Preserve existing accounts.
+   - Preserve historical MPIN data.
+   - After OTP verification, check if Pattern exists.
+   - Require setup only when Pattern is missing.
+   - Do not expose MPIN in Farmer UI.
+
+13. Farmer Settings:
+   - Remove Change MPIN/Change Password where conflicting.
+   - Add Change Pattern.
+
+14. Change Pattern:
+   - Verify old Pattern or verified OTP.
+   - Require new Pattern confirmation.
+   - Do not allow unauthenticated replacement.
+
+15. Forgotten Pattern:
+   - Use OTP recovery.
+   - Allow Set New Pattern after OTP verification.
+
+16. Rate-limit failed Pattern attempts.
+
+17. Do not change Field Officer/Artisan login unless shared code requires role guards.
+
+18. Preserve current production flow until backend Pattern capability is available.
+
+19. Use backend capability detection.
+
+Backend requirements:
+
+- Pattern setup-required field in OTP response
+- Pattern setup endpoint
+- Pattern verify endpoint
+- Pattern change endpoint
+- Pattern reset after OTP
+- Secure pattern_hash field if required
+- Additive migration only
+- Validation and authorization
+
+Tests:
+
+- New Farmer
+- Existing Farmer without Pattern
+- Existing Farmer with Pattern
+- Incorrect Pattern
+- Mismatch
+- Forgotten Pattern
+- Change Pattern
+- Backend-unavailable fallback
+
+Commit and push after testing.
+
+========================================================
+PHASE 6 — BUSINESS DISPLAY IDS
+========================================================
+
+Do not replace actual database primary IDs.
+
+--------------------------------------------------------
+FARMER ID
+--------------------------------------------------------
+
+Display format:
+
+BHG-KISHAN-01
+BHG-KISHAN-02
+BHG-KISHAN-03
+
+Requirements:
+
+- Start from 01.
+- Continue naturally beyond 99.
+- Unique.
+- Immutable.
+- Generate server-side.
+- Generate transactionally.
+- Prevent duplicates during simultaneous registrations.
+- Backfill existing Farmers safely where missing.
+- Preserve internal numeric/UUID primary key.
+- Preserve relationships.
+- Add unique index safely.
+- Do not generate permanent ID locally.
+
+Replace labels everywhere:
+
+Farmer Code → Farmer ID
+Farmer-Code → Farmer ID
+Farmer code → Farmer ID
+FarmerCode → Farmer ID
+
+--------------------------------------------------------
+ARTISAN ID
+--------------------------------------------------------
+
+Display format:
+
+BHG-ART-01
+BHG-ART-02
+BHG-ART-03
+
+Requirements:
+
+- Unique.
+- Immutable.
+- Server-generated.
+- Transaction-safe.
+- Backfill existing Artisans where missing.
+- Display in mobile.
+- Display in Admin where relevant.
+- Preserve database/role ID.
+- Add safe unique index.
+
+--------------------------------------------------------
+FARM LABELS
+--------------------------------------------------------
+
+Use:
+
+- Farm ID
+- Farmer ID
+
+Never show:
+
+- Farm Code
+- Farmer Code
+- Farm-Code
+- Farmer-Code
+
+Use existing canonical Farm ID.
+
+Do not invent a new Farm ID system unless an approved existing display ID does not exist.
+
+Mobile fallback:
+
+- Do not fabricate IDs.
+- Use safe loading or legacy-ID fallback.
+- Clearly distinguish missing backend display ID.
+
+Commit and push after testing.
+
+========================================================
+PHASE 7 — FARM NAME
+========================================================
+
+In Farmer Onboarding, add Farm Name directly below Khasra Number.
+
+Suggested default:
+
+BHG-{FarmerName}-Farm-01
+
+Requirements:
+
+- Add immediately below Khasra Number.
+- Allow authorized editing before submission.
+- Keep Farm ID separately.
+- Do not use Farm Name as primary key.
+- Additional Farms:
+  - BHG-{FarmerName}-Farm-02
+  - BHG-{FarmerName}-Farm-03
+- Prevent duplicate Farm Name under the same Farmer where practical.
+- Preserve existing Farms.
+- Backfill only when safe.
+- Show Farm Name in:
+  - Farm cards
+  - Farm details
+  - Farm Location
+  - View Mapping
+  - View Farm
+  - Review & Submit
+  - Biochar screens
+
+Backend remains authoritative for final persisted Farm Name.
+
+Commit and push after testing.
+
+========================================================
+PHASE 8 — FIELD OFFICER MANDATORY CHECK-IN
+========================================================
+
+When Field Officer opens the authenticated application:
+
+1. Check whether valid active Check-in exists.
+
+2. If no active Check-in:
+   - Show mandatory Check-in popup/screen.
+   - Dashboard must remain blocked.
+   - Popup cannot be dismissed except Logout or Retry.
+
+3. Capture:
+   - High-accuracy GPS
+   - Latitude
+   - Longitude
+   - GPS accuracy
+   - Server-authoritative time
+   - Village
+   - Taluka
+   - District
+   - State where available
+
+4. Prevent duplicate Check-ins from:
+   - Multiple taps
+   - Repeated renders
+   - Navigation remount
+   - Network retry
+   - App resume
+
+5. Once checked in:
+   - Do not repeatedly show within active session/day according to existing business rules.
+
+6. Use existing Check-in records and authorization.
+
+7. Do not trust device time.
+
+8. Add loading, Retry and Logout states.
+
+9. Do not allow Back/deep-link bypass.
+
+10. Do not fake Check-in success when backend endpoint is unavailable.
+
+Commit and push after testing.
+
+========================================================
+PHASE 9 — FIELD OFFICER DASHBOARD
+========================================================
+
+Required changes:
+
+1. Rename:
+
+Farm Activity → My Activity
+
+2. Move Farmer Onboarding higher on Dashboard.
+
+3. Highlight Farmer Onboarding as primary action.
+
+4. Remove Dashboard cards:
+
+- Visited Field
+- Pending Visit
+
+5. Do not delete historical backend data.
+
+6. Remove only cards/widgets/counters.
+
+7. Preserve remaining quick actions.
+
+8. Keep Dashboard clean, premium and practical.
+
+Commit and push after testing.
+
+========================================================
+PHASE 10 — FIELD OFFICER FARMER ONBOARDING
+========================================================
+
+--------------------------------------------------------
+10.1 FARMER PROFILE PICTURE
+--------------------------------------------------------
+
+Farmer Profile Picture must not show timestamp.
+
+This exception applies only to the profile picture.
+
+Requirements:
+
+- No timestamp
+- No GPS stamp
+- No Village stamp
+- No crop UI
+- Do not crop unexpectedly
+- After capture:
+  - OK
+  - Retry
+- Do not auto-advance
+- Show preview after OK
+- Allow Retry/remove before submission
+
+Other evidence must preserve timestamp rules.
+
+--------------------------------------------------------
+10.2 OWNERSHIP TYPE
+--------------------------------------------------------
+
+Dropdown options exactly:
+
+- Owned
+- Leased
+- Shared
+- Other
+
+When Other is selected:
+
+- Show required text input.
+- Validate non-empty.
+- Hide input when another option selected.
+- Clear stale Other value safely.
+- Preserve existing historical values.
+
+--------------------------------------------------------
+10.3 EXISTING AGRI BIO-WASTE
+--------------------------------------------------------
+
+Rename:
+
+Existing Farming Practice
+→ Existing Agri Bio-Waste
+
+Move it below Service Interest.
+
+Use data-driven multi-select/dropdown.
+
+Use backend options where available.
+
+Fallback configurable initial options:
+
+- Crop residue
+- Cotton stalk
+- Paddy/wheat straw
+- Sugarcane trash
+- Husk/shell waste
+- Pruning/plantation waste
+- Other
+
+When Other is selected:
+
+- Show required custom input.
+- Support multiple selected waste types.
+- Preserve existing values.
+- Keep architecture backend-configurable.
+
+--------------------------------------------------------
+10.4 STEP FIVE EVIDENCE ORDER
+--------------------------------------------------------
+
+Order exactly:
+
+1. Ownership Document
+2. Farm Photos
+3. Farmer with Farm Photo
+
+Ownership Document:
+
+- Upload from file
+- Capture from camera
+- Clear title
+- Clear instruction
+- Required/optional state
+- Preview
+- Upload status
+- Remove
+- Retry
+
+Farm Photos:
+
+- Multiple camera photos
+- Multiple file uploads
+- Multiple previews
+- Uploaded count
+- Remove
+- Retry
+- Do not auto-advance
+- Preserve during navigation/restart
+- Store as separate Farm Photo evidence records
+
+Farmer with Farm Photo:
+
+- Required live capture
+- Farmer and Farm both visible
+- Clear title and instruction
+- No crop
+- OK
+- Retry
+- Approved timestamp/location rules
+- Preview
+
+Do not mix evidence categories.
+
+--------------------------------------------------------
+10.5 CONSENT FORM PLACEMENT
+--------------------------------------------------------
+
+Correct order:
+
+Previous Onboarding Steps
+→ Consent Form
+→ Review & Submit
+
+Consent screen must display:
+
+- Farmer ID
+- Farmer Name
+- Farm ID
+- Farm Name where relevant
+- Existing legal/consent forms
+- OTP/consent verification
+- Consent status
+
+Do not remove approved legal forms.
+
+--------------------------------------------------------
+10.6 MAPPING PENDING
+--------------------------------------------------------
+
+Show Complete Farm Mapping only when:
+
+- Mapping was skipped
+- Mapping status is genuinely pending
+- No valid polygon exists
+
+Do not show when:
+
+- Mapping is completed
+- Coordinates exist
+- Valid polygon exists
+- Mapped area exists
+
+Do not invent coordinates or area.
+
+--------------------------------------------------------
+10.7 VIEW MAPPING
+--------------------------------------------------------
+
+Read-only View Mapping must show only:
+
+- Selected Farm polygon
+- Farmer Name
+- Farmer ID
+- Farm Name
+- Farm ID
+- Mapped area
+
+Do not show:
+
+- Current Field Officer location
+- Current user marker
+- Whole-world extent
+- Other Farms
+- Editable handles
+- Draggable vertices
+- Edit button
+- Drawing controls
+
+Fit camera to polygon with sensible padding.
+
+--------------------------------------------------------
+10.8 EDIT BOUNDARY SCREEN
+--------------------------------------------------------
+
+Editable screen:
+
+- Show Edit Boundary clearly near top.
+- Keep Done below editing controls.
+- Preserve Undo.
+- Preserve Reset.
+- Preserve Save Boundary.
+- Preserve draggable vertices.
+- Preserve polygon validation.
+- Preserve self-intersection validation.
+- Preserve MapLibre/MapTiler.
+- Preserve area calculations.
+- Preserve API payload.
+
+Below map:
+
+- Make saved boundary information dynamically scrollable.
+- Remove large dead space.
+- Keep controls accessible on small Android devices.
+
+--------------------------------------------------------
+10.9 DONE BUTTON
+--------------------------------------------------------
+
+On read-only Mapping View:
+
+- Done acts as Back.
+- Return to exact originating screen.
+- Do not restart Onboarding.
+- Do not incorrectly return to Dashboard.
+- Do not reset completed steps.
+- Do not duplicate routes.
+
+--------------------------------------------------------
+10.10 VIEW FARM
+--------------------------------------------------------
+
+View Farm must:
+
+- Show only selected mapped Farm.
+- Fit selected polygon.
+- Show Farm Name.
+- Show Farmer Name.
+- Show Farmer ID.
+- Show Farm ID.
+- Show mapped area.
+- Not show current location.
+- Not show world map.
+- Not show Edit Boundary.
+- Not allow editing.
+- Not show another Farm.
+- Not display editable vertices.
+
+--------------------------------------------------------
+10.11 FINAL FARMER ACTIONS
+--------------------------------------------------------
+
+Add:
+
+- Edit Farmer Profile
+- Add New Farm with Mapping
+
+Edit Farmer Profile:
+
+- Open authorized editing.
+- Preserve Farmer ID.
+- Preserve relationships.
+- Do not duplicate Farmer.
+- Do not reset Onboarding.
+- Edit only approved fields.
+
+Add New Farm with Mapping:
+
+- Use existing Farmer.
+- Create separate Farm.
+- Generate/use separate Farm ID.
+- Generate new Farm Name sequence.
+- Open Farm details and Mapping.
+- Do not repeat full Farmer identity Onboarding.
+- Display all Farms for multiple-Farm Farmer.
+
+--------------------------------------------------------
+10.12 RETURN FROM FARM ACTIVITY
+--------------------------------------------------------
+
+When launched from Review & Submit:
+
+After Farm Activity completion:
+
+- Return to same Review & Submit context.
+- Do not return to Dashboard.
+- Do not restart Onboarding.
+- Do not reset steps.
+- Do not clear entered data.
+- Do not mark unrelated steps incomplete.
+
+Commit and push after testing all Phase 10 items.
+
+========================================================
+PHASE 11 — FIELD OFFICER ADD ARTISAN
+========================================================
+
+Address fields:
+
+- State: Gujarat by default
+- District: dropdown
+- Taluka: dependent dropdown
+- Village: dependent dropdown
+
+Working Area:
+
+- District: multi-select
+- Taluka: multi-select
+- Village: multi-select
+
+Requirements:
+
+- Preserve existing assigned values.
+- Merge new selections.
+- Do not silently replace old selections.
+- Prevent invalid combinations.
+- Show selected chips or count.
+- Allow removal only when authorized.
+- Sync Admin-assigned and Field Officer-added values safely.
+- Preserve historical assignments.
+- Prevent duplicates.
+- Preserve backend authorization.
+
+Commit and push after testing.
+
+========================================================
+PHASE 12 — FARMER MODULE
+========================================================
+
+--------------------------------------------------------
+12.1 FARMER ID
+--------------------------------------------------------
+
+Display:
+
+BHG-KISHAN-01
+
+Use Farmer ID label everywhere.
+
+--------------------------------------------------------
+12.2 FARM LOCATION MAP LABEL
+--------------------------------------------------------
+
+Show:
+
+- Farm Name
+- Farmer Name
+- Farm ID where space allows
+
+Do not show generic names.
+
+--------------------------------------------------------
+12.3 ALL FARMS
+--------------------------------------------------------
+
+For every Farm:
+
+- Keep View Boundary.
+- Show units only:
+  - Acre
+  - Hectare
+
+Hide Bigha from Farmer mobile UI.
+
+Do not delete stored unit calculations.
+
+--------------------------------------------------------
+12.4 FARM ACTIVITY UI
+--------------------------------------------------------
+
+Reuse approved Field Officer Farm Activity visual design in Farmer module.
+
+Preserve Farmer permissions:
+
+- Read-only where approved
+- No Field Officer verification
+- No approval/rejection
+- No restricted editing
+- No unauthorized detail access
+
+Use shared visual components only when authorization stays separate.
+
+--------------------------------------------------------
+12.5 IMAGE CAPTURE
+--------------------------------------------------------
+
+Across Farmer flows:
+
+- Disable crop UI.
+- After capture show:
+  - OK
+  - Retry
+- Do not auto-advance.
+- Show preview after OK.
+- Tapping preview opens Full-Screen Image Viewer.
+- Preserve multiple images.
+- Show upload state.
+- Do not mark uploaded until persistence succeeds.
+- Preserve orientation and clarity.
+- Preserve data during background/restart where required.
+
+--------------------------------------------------------
+12.6 TIMESTAMP VILLAGE
+--------------------------------------------------------
+
+Evidence stamp must show correct Village.
+
+Requirements:
+
+- Use high-accuracy GPS.
+- Use reverse geocoding/backend location data.
+- Prefer stored Village ID/name.
+- Do not show blank Village.
+- Do not silently use incorrect nearby Village.
+- Show controlled loading.
+- Store readable name and ID.
+- Preserve latitude, longitude and accuracy.
+- Profile Picture remains no-timestamp exception.
+
+--------------------------------------------------------
+12.7 FARMER PROFILE EDITING
+--------------------------------------------------------
+
+Default state:
+
+- Show fields as read-only text.
+- Keyboard must not open automatically.
+- Do not autofocus input.
+
+For each editable field:
+
+- Show Pencil icon.
+- On Pencil tap:
+  - Enable only that field.
+  - Open keyboard.
+- Show Save.
+- Show Cancel.
+- Validate.
+- Do not lose unsaved data.
+- Confirm before leaving with unsaved data.
+- Farmer ID cannot be edited.
+
+--------------------------------------------------------
+12.8 CHANGE PATTERN
+--------------------------------------------------------
+
+Add:
+
+Change Pattern
+
+Remove Farmer-facing:
+
+- Change MPIN
+- Change Password
+
+where conflicting with Pattern.
+
+Forgotten Pattern uses OTP recovery.
+
+Commit and push after testing.
+
+========================================================
+PHASE 13 — ARTISAN MANDATORY CHECK-IN
+========================================================
+
+When Artisan enters authenticated app:
+
+- Check active Check-in.
+- If none:
+  - Show mandatory popup/screen.
+  - Block Dashboard.
+  - Allow only Logout or Retry.
+- Capture:
+  - GPS
+  - Latitude
+  - Longitude
+  - Accuracy
+  - Server time
+  - Village
+  - Taluka
+  - District
+  - State
+- Prevent duplicates.
+- Preserve authorization.
+- Prevent Back/deep-link bypass.
+- Apply same rule to Field Officer.
+- Do not apply to Farmer unless separately required.
+- Do not fake success.
+
+Commit and push after testing.
+
+========================================================
+PHASE 14 — ARTISAN DASHBOARD
+========================================================
+
+Add:
+
+- Wallet
+- Help & Support
+- Biochar Training
+- Farm Navigator
+
+Wallet:
+
+- Inspect existing backend.
+- Use real data only.
+- Do not fabricate balance.
+- Do not fabricate transactions.
+- If backend does not exist, show controlled unavailable/read-only state and mark PARTIAL.
+
+Help & Support:
+
+- Use configured support details.
+- Do not invent contact information.
+- Use safe call/email/message actions.
+
+Biochar Training:
+
+- Use existing training content/API where available.
+- Support Hindi and English.
+- Do not fabricate certification.
+
+Commit and push after testing.
+
+========================================================
+PHASE 15 — ARTISAN ID AND ARTISAN PRO BATCHES
+========================================================
+
+Display Artisan ID:
+
+BHG-ART-01
+
+Add to Artisan Pro Batch cards:
+
+- Farm ID
+- Navigate Farm
+
+Preserve submitted-production restrictions:
+
+- No unauthorized detail access.
+- No restricted deep link.
+- Backend authorization remains enforced.
+
+Commit and push after testing.
+
+========================================================
+PHASE 16 — FARM NAVIGATOR
+========================================================
+
+Add/extend Farm Navigator in Artisan module.
+
+Workflow:
+
+1. Search:
+   - Farm ID
+   - Farmer Name
+
+2. Show only authorized Farmers/Farms.
+
+3. Select Farm.
+
+4. Display:
+   - Farm Name
+   - Farmer Name
+   - Farm ID
+   - Village
+   - Distance where available
+
+5. Navigate Farm:
+   - Use saved GPS.
+   - Open installed Google Maps/default navigation.
+   - Handle missing GPS.
+   - Show clear error.
+   - Do not expose unauthorized personal data.
+   - Do not modify Farm boundary.
+
+6. Preserve working-area restrictions.
+
+7. Extend existing ArtisanFarmLookupScreen where possible.
+
+Commit and push after testing.
+
+========================================================
+PHASE 17 — BIOCHAR PRODUCTION
+========================================================
+
+--------------------------------------------------------
+17.1 STRICT STEP-BY-STEP FLOW
+--------------------------------------------------------
+
+- Next step unlocks only when current required step is valid.
+- No required step may be skipped.
+- Do not open all steps at once.
+- Do not auto-scroll unexpectedly.
+- Do not navigate to unrelated section.
+- Keep completed-step status visible.
+- Allow reviewing previous completed steps.
+- Reviewing must not delete data.
+- Preserve state through navigation/restart.
+
+--------------------------------------------------------
+17.2 BATCH START TIME
+--------------------------------------------------------
+
+Fix duplicate Batch Start Time.
+
+Requirements:
+
+1. Capture once.
+2. Use 24-hour format.
+3. Start timing after confirmation.
+4. Do not auto-scroll.
+5. Do not redirect.
+6. Hide/disable Start Time after confirmation.
+7. Show confirmed time read-only.
+8. Prevent duplicate API calls.
+9. Continue to Batch details only after success.
+10. Preserve during navigation, restart, offline and retry.
+
+--------------------------------------------------------
+17.3 ASSIGNED KILNS
+--------------------------------------------------------
+
+Kilns assigned by Admin/Field Officer.
+
+Artisan may select only assigned Kilns.
+
+Requirements:
+
+- Fetch assigned active Kilns.
+- Dropdown only.
+- No free-text.
+- No Other.
+- No arbitrary suffix.
+- Canonical format:
+  - BHG-001
+  - BHG-002
+- Fixed prefix.
+- Store true relationship.
+- Disabled/retired/unassigned unavailable.
+- Preserve historical Kilns.
+- Add minimal safe allocation support if missing.
+- Prevent duplicate allocation.
+- Backend rejects unauthorized Kiln.
+
+--------------------------------------------------------
+17.4 GPS AND AUTOMATIC ADDRESS
+--------------------------------------------------------
+
+After GPS capture fill:
+
+- Address
+- Village
+- Taluka
+- District
+- State
+- Latitude
+- Longitude
+- Accuracy
+
+Requirements:
+
+- Reject stale/invalid coordinates.
+- Do not silently accept poor GPS.
+- Add Retry GPS.
+- Use existing geolocation service.
+- Preserve Farm relationship.
+- Preserve location through restart.
+
+--------------------------------------------------------
+17.5 PHOTO WORKFLOW
+--------------------------------------------------------
+
+For every required Production photo:
+
+- No crop.
+- After capture:
+  - OK
+  - Retry
+- Do not immediately unlock next step.
+- After OK:
+  - Thumbnail
+  - Upload status
+  - Upload progress
+- Tapping thumbnail opens Full-Screen.
+- Preserve through app background, navigation, crash and restart.
+- Mark complete only after safe persistence.
+- Preserve evidence timestamp/GPS rules.
+
+--------------------------------------------------------
+17.6 PROCESS RECOVERY
+--------------------------------------------------------
+
+If user exits, app crashes, phone restarts or app reopens:
+
+Dashboard highlights:
+
+“Complete the Process”
+
+Resume:
+
+- Exact Batch
+- Exact incomplete step
+- Entered values
+- Images
+- GPS
+- Farm
+- Farmer
+- Kiln
+- Start Time
+- Moisture readings
+- Evidence
+- Notes
+
+Requirements:
+
+- Silent auto-save.
+- No visible Save Draft.
+- Persist locally.
+- Persist server-side where supported.
+- Idempotent updates.
+- Reconcile latest state.
+- Do not overwrite newer server state.
+- Do not duplicate submitted Batch.
+- Preserve Pending Sync records.
+
+--------------------------------------------------------
+17.7 COMPLETION TIME
+--------------------------------------------------------
+
+Place immediately below Unloading.
+
+Requirements:
+
+- Unlock after Unloading evidence.
+- Use server time.
+- Calculate total duration.
+- Block completion if required step missing.
+- Show time and duration in Review.
+- Prevent duplicate completion request.
+
+--------------------------------------------------------
+17.8 ADD NEW BIOCHAR
+--------------------------------------------------------
+
+Add New Biochar must:
+
+- Create completely new Batch.
+- Generate/request new Batch ID.
+- Not reopen completed Batch.
+- Not mutate old Batch.
+- Preserve incomplete Batch.
+- Show clear concurrent-Batch restriction when applicable.
+
+--------------------------------------------------------
+17.9 FINAL VALIDATION
+--------------------------------------------------------
+
+Validate:
+
+- Required fields
+- Required images
+- Assigned Kiln
+- GPS
+- Farm
+- Farmer
+- Start Time
+- Completion Time
+- Moisture readings
+- Process steps
+- Feedstock evidence
+- Mid-process evidence
+- End-process evidence
+- Unloading evidence
+- Duration
+- Chronological order
+
+Show field-specific error.
+
+Navigate only to incomplete step.
+
+Do not submit incomplete records.
+
+Do not treat validation errors as offline failure.
+
+Commit and push after testing.
+
+========================================================
+PHASE 18 — BIOCHAR APPLICATION
+========================================================
+
+Remove the initial Search input.
+
+New flow:
+
+Screen 1:
+
+- Show authorized Farmers.
+- No Search box.
+- Paginated list.
+- Tap Farmer.
+
+Screen 2:
+
+- Show selected Farmer’s Farms.
+- Each Farm card:
+  - Farm Name
+  - Farm ID
+  - Village
+- Tap Farm.
+
+Screen 3:
+
+- Show selected Farm.
+- Load eligible completed Mixing records.
+- Show quantities.
+- Preserve approved multi-selection.
+- Do not expose unauthorized records.
+- Show Application button after valid selection.
+
+After submission:
+
+- Success state
+- Application reference
+- Add New
+- Go to Dashboard
+
+Add New:
+
+- Return to Farmer list.
+- Do not reopen submitted record.
+- Do not return to removed Search screen.
+
+Commit and push after testing.
+
+========================================================
+PHASE 19 — SERVER-AUTHORITATIVE TIME
+========================================================
+
+Apply to:
+
+- Farmer
+- Field Officer
+- Artisan
+- Artisan Pro
+- Check-in
+- Farmer Onboarding
+- Farm Activity
+- Evidence
+- Biochar Production
+- Biochar Mixing
+- Biochar Application
+- All timestamped actions
+
+Problem:
+
+User may change phone date/time.
+
+Required:
+
+1. Never trust device wall-clock as authoritative.
+
+2. Use server UTC from:
+   - API Date header, or
+   - Authenticated Server Time endpoint.
+
+3. On session start:
+   - Fetch server UTC.
+   - Compare device UTC epoch.
+   - Store sync timestamp.
+   - Store monotonic elapsed reference.
+
+4. Suspicious threshold:
+   - More than two minutes.
+
+5. When suspicious:
+   - Set device_time_suspicious=true.
+   - Show red warning.
+
+English:
+
+“Your device date/time appears incorrect. Bhuguard will use secure server time for this activity.”
+
+Hindi:
+
+“आपके डिवाइस की तारीख या समय गलत दिखाई दे रहा है। Bhuguard इस गतिविधि के लिए सुरक्षित सर्वर समय का उपयोग करेगा।”
+
+6. Display synchronized server time.
+
+7. Store audit metadata:
+
+- Device UTC
+- Server UTC
+- Difference
+- Detection time
+- User ID
+- Role
+- Activity context
+- GPS where relevant
+
+8. Timezone difference must not trigger warning.
+
+9. Backend assigns authoritative:
+   - created_at
+   - updated_at
+   - submitted_at
+   - activity timestamps
+   - completion timestamps
+   - Check-in timestamps
+
+10. Client time cannot override backend time.
+
+11. Device time only as audit metadata.
+
+12. Offline without valid recent sync:
+   - Allow local capture.
+   - Block timestamp-sensitive final submission.
+   - Queue until verified.
+
+13. Evidence:
+   - Use synchronized time.
+   - Include correct Village.
+   - Profile Picture remains no-timestamp exception.
+   - Do not trust EXIF time.
+
+14. Add Retry Time Sync.
+
+15. Clear warning after correction and successful sync.
+
+Commit and push after testing.
+
+========================================================
+PHASE 20 — BACKEND AND ADMIN SUPPORT
+========================================================
+
+Implement minimal safe backend support for:
+
+- Farmer Pattern authentication
+- Pattern setup status
+- Pattern recovery
+- Farmer display ID
+- Artisan display ID
+- Farm Name
+- Field Officer Check-in
+- Artisan Check-in
+- Active Check-in validation
+- Server-time endpoint
+- Device-time discrepancy audit
+- Kiln allocation
+- Assigned Kiln endpoint
+- Kiln authorization
+- Working-area multi-select merge
+- Evidence categories
+- Multiple Farm photos
+- Mapping status
+- Biochar in-progress persistence
+- Resume incomplete process
+- New Batch creation
+- Biochar Application hierarchy
+- Correct Farmer/Farm relationships
+- Temporary environment-controlled OTP testing where approved
+
+Requirements:
+
+- Additive migrations only.
+- Transaction-safe sequential IDs.
+- Unique indexes.
+- Preserve old data.
+- Preserve historical MPIN.
+- Preserve historical Kiln links.
+- Preserve existing API contracts where possible.
+- Add optional fields rather than breaking responses.
+- Use authentication middleware.
+- Use role authorization.
+- Use request validation.
+- Use Policies or equivalent authorization.
+- Use transactions.
+- Use idempotency.
+- Never trust mobile role.
+- Never trust mobile Farm ownership.
+- Never trust mobile Kiln assignment.
+- Never trust mobile authoritative timestamp.
+
+Before migrations:
+
+1. Display full migration.
+2. Confirm no table drop.
+3. Confirm no column drop.
+4. Confirm no deletion.
+5. Confirm rollback behaviour.
+6. Run:
+
+php artisan migrate:status
+
+Only after review:
+
+php artisan migrate --force
+
+After backend changes:
+
+php artisan optimize:clear
+php artisan config:cache
+php artisan route:cache
+php artisan route:list
+
+Maintain:
+
+docs/mobile-api-integration.md
+
+For every endpoint document:
+
+- Method
+- URL
+- Authentication
+- Role
+- Request
+- Success response
+- Validation response
+- Authorization response
+- Database fields
+- Mobile consumer
+
+Backend must be tested locally before live deployment.
+
+Commit backend changes separately if the backend is a Git repository.
+
+========================================================
+PHASE 21 — UI/UX STANDARDS
+========================================================
+
+- Premium practical Bhuguard design.
+- No generic AI card overload.
+- No excessive glassmorphism.
+- No unnecessary gradients.
+- No unexplained auto-scroll.
+- Consistent spacing.
+- Consistent typography.
+- Clear loading states.
+- Clear disabled states.
+- Keyboard-safe forms.
+- Small Android support.
+- FlatList/FlashList for large lists.
+- Pagination for server lists.
+- Full-Screen Image Viewer.
+- Human-readable errors.
+- No raw Laravel HTML.
+- Hindi and English translations.
+- No scattered hard-coded text.
+- Accessibility support.
+- Reduced-motion support.
+- Do not auto-open keyboard.
+- Keep actions above system navigation bar.
+
+========================================================
+PHASE 22 — PERFORMANCE
+========================================================
+
+- Avoid unnecessary rerenders.
+- Memoize Context values.
+- Memoize maps.
+- Memoize list rows.
+- Cancel stale requests.
+- Prevent duplicate submits.
+- Compress images without damaging evidence.
+- Preserve evidence metadata.
+- Paginate Farmers/Farms.
+- Keep app smooth on low-end devices.
+- Preserve offline records.
+- Avoid infinite retries.
+- Avoid startup loops.
+- Do not clear all AsyncStorage unnecessarily.
+
+========================================================
+IMAGES AND SCREENSHOTS — MANDATORY
+========================================================
+
+Every screenshot or image supplied before or after this prompt is part of the client requirements.
+
+For every screenshot:
+
+1. Identify:
+   - User role
+   - Screen
+   - Current problem
+   - Missing action
+   - Incorrect content
+   - Navigation issue
+   - Layout issue
+   - Map issue
+   - Camera issue
+   - Validation issue
+   - Error message
+
+2. Add each screenshot requirement to IMPLEMENTATION_PROGRESS.md.
+
+3. Screenshots extend the written requirements.
+
+4. Screenshots must not replace or remove written requirements.
+
+5. Preserve approved elements visible in screenshots.
+
+6. Do not redesign unrelated screens.
+
+7. If multiple screenshots belong to one workflow:
+   - Treat them as one connected end-to-end flow.
+   - Fix all connected screens.
+
+8. For errors:
+   - Find root cause.
+   - Do not only hide the error message.
+   - Test the complete workflow.
+
+9. Do not mark screenshot requirement PASS until verified on Android.
+
+10. New screenshots shared later must be appended without weakening old requirements.
+
+========================================================
+VALIDATION AFTER EVERY PHASE
+========================================================
+
+Mobile commands:
+
+cd C:\Users\Admin\Desktop\bhuguard-mobile
+
+Run relevant commands:
+
+node -v
+npm ls expo react-native babel-preset-expo
+npx expo-doctor
+npx tsc --noEmit
+npm run lint
+npx expo start --dev-client --clear
+
+Run lint only when configured.
+
+Do not modify unrelated legacy warnings merely to create a clean report.
+
+Backend commands where applicable:
+
+php artisan optimize:clear
+php artisan route:list
+php artisan migrate:status
+php artisan test
+
+Run targeted tests for:
+
+- OTP
+- Pattern setup
+- Pattern login
+- Pattern reset
+- Farmer ID
+- Artisan ID
+- Check-in
+- Duplicate Check-in prevention
+- Assigned Kilns
+- Unauthorized Kiln
+- Working-area merge
+- Multiple Farm photos
+- Mapping status
+- Biochar resume
+- New Batch
+- Server Time
+- Device-time audit
+- Biochar Application hierarchy
+
+========================================================
+PHYSICAL ANDROID TEST MATRIX
+========================================================
+
+STARTUP:
+
+- No centre image.
+- Preloader appears.
+- No white flash.
+- No crash.
+- No endless Splash.
+
+LANGUAGE:
+
+- First use asks.
+- Re-login does not ask.
+- Logout preserves.
+- Restart preserves.
+- Settings change persists.
+
+LOGIN:
+
+- Light Farm background.
+- Logo readable.
+- Font correct.
+- Keyboard safe.
+- OTP preserved.
+- Pattern preserved.
+
+PATTERN:
+
+- Set Pattern.
+- Confirm Pattern.
+- Mismatch rejected.
+- Wrong Pattern rejected.
+- Change Pattern.
+- Forgotten Pattern.
+- Pattern not logged.
+
+FIELD OFFICER:
+
+- Dashboard blocked before Check-in.
+- GPS Check-in.
+- Duplicate prevention.
+- Farmer Onboarding highlighted.
+- My Activity visible.
+- Visited Field removed.
+- Pending Visit removed.
+- Profile image no timestamp.
+- Ownership Other.
+- Agri Bio-Waste.
+- Evidence order.
+- Multiple Farm photos.
+- Consent before Review.
+- Mapping Pending logic.
+- Read-only polygon.
+- No current location.
+- No Edit in read-only.
+- Edit Boundary visible.
+- Done returns.
+- Add New Farm.
+- Return to Review.
+
+FARMER:
+
+- Farmer ID.
+- Farm Name.
+- Map label.
+- Acre/Hectare.
+- Bigha hidden.
+- Farm Activity UI.
+- Read-only permissions.
+- OK/Retry.
+- No crop.
+- Full-screen preview.
+- Village stamp.
+- Pencil editing.
+- Change Pattern.
+
+ARTISAN:
+
+- Mandatory Check-in.
+- Artisan ID.
+- Wallet safe state.
+- Help.
+- Training.
+- Farm Navigator.
+- Unauthorized Farms hidden.
+- Navigate Farm.
+- Artisan Pro Farm ID.
+- Restrictions preserved.
+
+BIOCHAR PRODUCTION:
+
+- Sequential steps.
+- No skipping.
+- Start Time once.
+- No auto-scroll.
+- Assigned Kilns.
+- GPS address.
+- Photo OK/Retry.
+- Preview.
+- Process resume.
+- Complete the Process.
+- Completion Time.
+- Incomplete submission blocked.
+- New Batch.
+- Previous Batch preserved.
+
+BIOCHAR APPLICATION:
+
+- No initial Search.
+- Farmer → Farm → Application.
+- Unauthorized data hidden.
+- Add New returns to Farmer list.
+
+TIME:
+
+- Correct time no warning.
+- Backward time warning.
+- Forward time warning.
+- Server time used.
+- Correct backend timestamp.
+- Correct Village.
+- Retry sync.
+- Warning clears.
+- Offline timestamp-sensitive submission blocked.
+
+REGRESSION:
+
+- MapLibre works.
+- MapTiler works.
+- Saved boundaries reopen.
+- Boundary editing works.
+- Area calculation works.
+- All role logins work.
+- Historical data remains.
+- No Metro failure.
+- No missing Babel preset.
+- No maximum update depth.
+- No IllegalViewOperationException.
+- No undefined component.
+- No route registration error.
+- No blank screen.
+- No startup crash.
+- No duplicate records.
+
+========================================================
+FINAL APK
+========================================================
+
+After completing mobile phases:
+
+1. Inspect existing build scripts.
+2. Build a standalone Preview/Production APK.
+3. Do not use Development Build as final client APK.
+4. The APK must not require:
+   - Metro
+   - Laptop
+   - Same Wi-Fi
+   - Expo development server
+
+5. Install APK on physical Android.
+6. Stop Metro.
+7. Open APK.
+8. Confirm it uses:
+
+https://erp.bhuguard.com/api
+
+9. Test login and dashboards.
+
+Place APK in:
+
+BHUGUARD_OFFLINE_DELIVERY/mobile-release/
+
+Record:
+
+- File name
+- Version
+- Package ID
+- Build profile
+- Build date
+- SHA-256
+- Installation result
+
+========================================================
+DELIVERY FILES
+========================================================
+
+Create and verify:
+
+1. Bhuguard-Mobile-Source-Updated.zip
+
+Include:
+
+- src
+- assets
+- android required source/config
+- App.tsx
+- index.ts
+- package.json
+- package-lock.json
+- app.json
+- app.config.js
+- eas.json
+- babel.config.js
+- metro.config.js
+- tsconfig.json
+- scripts
+- docs
+- IMPLEMENTATION_PROGRESS.md
+
+Exclude:
+
+- node_modules
+- .expo
+- Metro caches
+- .env
+- keystores
+- passwords
+- tokens
+- APK/AAB unless separately included
+- temporary backups
+
+2. Bhuguard-Backend-Updated.zip
+
+Exclude:
+
+- .env
+- vendor
+- logs
+- cache
+- user uploads
+- credentials
+- production evidence
+- database data
+
+3. Bhuguard-Deployment-Documents.zip
+
+Include:
+
+- FINAL_REQUIREMENT_STATUS.md
+- FILE_CHANGE_REPORT.md
+- TEST_REPORT.md
+- PHYSICAL_DEVICE_TEST_REPORT.md
+- LIVE_DEPLOYMENT_README.md
+- MIGRATION_SAFETY_REPORT.md
+- MOBILE_API_CONTRACT.md
+- PENDING_LIVE_ACTIONS.md
+- GIT_DIFF_SUMMARY.md
+
+4. Standalone APK separately.
+
+Verify every ZIP opens and contains expected files.
+
+========================================================
+FINAL REPORT
+========================================================
+
+Create:
+
+BHUGUARD_OFFLINE_DELIVERY/reports/FINAL_REQUIREMENT_STATUS.md
+
+Include one row per requirement:
+
+| Requirement | Status | Mobile files | Backend files | Test evidence | Remaining action |
+
+Create:
+
+- FILE_CHANGE_REPORT.md
+- TEST_REPORT.md
+- PHYSICAL_DEVICE_TEST_REPORT.md
+- LIVE_DEPLOYMENT_README.md
+- MIGRATION_SAFETY_REPORT.md
+- MOBILE_API_CONTRACT.md
+- PENDING_LIVE_ACTIONS.md
+- GIT_DIFF_SUMMARY.md
+- CLIENT_DEMO_READINESS.md
+
+Final response must include:
+
+- Total requirements
+- PASS count
+- PARTIAL count
+- FAIL count
+- Mobile completion percentage
+- Backend completion percentage
+- Physical Android testing percentage
+- APK result
+- Exact ZIP paths
+- Exact APK path
+- Exact pending items
+- Git commit hashes
+- Git branch
+- Confirmation no data deleted
+- Confirmation no destructive migration
+- Confirmation MapLibre/MapTiler preserved
+- Confirmation unrelated modules preserved
+- Confirmation no fake data/authentication created
+
+Do not say “everything is complete” unless all critical requirements are tested.
+
+Do not stop after creating a plan or audit.
+
+Implement one phase, test it, commit it, push it, and then continue to the next phase.
+
+Do not mark anything PASS unless actual code and test evidence exist.
+
+Begin the implementation now.
+</user_query>

@@ -18,6 +18,8 @@ interface LiveEvidenceCaptureCardProps {
   error?: string | null;
   onOpenCamera: () => void;
   onRetake: () => void;
+  /** Retry reverse-geocoding only (keeps GPS + photo). */
+  onRetryGeocode?: () => void;
   onConfirmPending?: () => void;
   onRejectPending?: () => void;
   onUpload?: () => void;
@@ -36,6 +38,7 @@ export function LiveEvidenceCaptureCard({
   error = null,
   onOpenCamera,
   onRetake,
+  onRetryGeocode,
   onConfirmPending,
   onRejectPending,
   onUpload,
@@ -48,6 +51,14 @@ export function LiveEvidenceCaptureCard({
   const busy = capturing || uploading;
   const displayEvidence = pendingEvidence ?? evidence;
   const isPending = pendingEvidence != null;
+  const villageUnresolved =
+    Boolean(displayEvidence)
+    && hasGpsCapture(displayEvidence)
+    && (!displayEvidence?.village?.trim()
+      || displayEvidence.village === 'Unknown'
+      || displayEvidence.village === '-'
+      || displayEvidence.village === '—');
+
 
   return (
     <View style={styles.wrap}>
@@ -142,6 +153,15 @@ export function LiveEvidenceCaptureCard({
                   loading={capturing}
                   disabled={busy}
                 />
+                {villageUnresolved && onRetryGeocode ? (
+                  <AppButton
+                    label={capturing ? 'Looking up…' : 'Retry location'}
+                    onPress={onRetryGeocode}
+                    variant="secondary"
+                    loading={capturing}
+                    disabled={busy}
+                  />
+                ) : null}
                 {showUploadButton && onUpload ? (
                   <AppButton
                     label={uploading ? 'Uploading…' : uploadLabel}
