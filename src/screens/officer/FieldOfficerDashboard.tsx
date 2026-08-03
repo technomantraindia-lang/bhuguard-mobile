@@ -26,6 +26,7 @@ import { OfficerListState } from '../../components/officer/OfficerListState';
 import { OfficerQuickAccessSection } from '../../components/officer/OfficerQuickAccessSection';
 import { OfficerScreenChrome } from '../../components/officer/OfficerScreenChrome';
 import { useFieldOfficerDashboardData } from '../../hooks/useFieldOfficerDashboardData';
+import type { OfficerDashboardVisit } from '../../hooks/useFieldOfficerDashboardData';
 import { useScrollBottomPadding } from '../../hooks/useTabBarLayout';
 import type { FieldOfficerStackParamList, FieldOfficerTabParamList } from '../../navigation/types';
 import { officerTheme } from '../../theme/officerDashboardTheme';

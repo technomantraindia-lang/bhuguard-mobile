@@ -70,18 +70,6 @@ export function OfficerSummaryCard({ dashboard }: { dashboard: FieldOfficerDashb
 export function OfficerStatsGrid({ dashboard }: { dashboard: FieldOfficerDashboardViewModel }) {
   const stats = [
     {
-      label: 'Visited Fields',
-      value: String(dashboard.visitedFieldsCount ?? dashboard.completedVisitsCount),
-      unit: 'Farms',
-      color: officerTheme.primary,
-    },
-    {
-      label: 'Pending Visits',
-      value: String(dashboard.pendingVisitsCount),
-      unit: 'Visits',
-      color: officerTheme.secondary,
-    },
-    {
       label: 'Active Check-ins',
       value: String(dashboard.activeCheckinsCount ?? dashboard.checkedInVisitsCount),
       unit: 'Visits',
@@ -141,13 +129,20 @@ export function OfficerQuickActionCards({
     title: string;
     icon: BhuguardIconName;
     onPress?: () => void;
+    primary?: boolean;
   }> = [
+    {
+      key: 'farmerOnboarding',
+      title: 'Farmer Onboarding',
+      icon: 'person_add',
+      onPress: onOpenFarmerOnboarding,
+      primary: true,
+    },
+    { key: 'farmActivity', title: 'My Activity', icon: 'agriculture', onPress: onOpenFarmActivity },
     { key: 'myFarmers', title: 'My Farmers', icon: 'group', onPress: onOpenMyFarmers },
-    { key: 'farmActivity', title: 'Farm Activity', icon: 'agriculture', onPress: onOpenFarmActivity },
     { key: 'inventory', title: 'Inventory', icon: 'assignment', onPress: onOpenInventory },
     { key: 'myArtisans', title: 'My Artisan Pros', icon: 'badge', onPress: onOpenMyArtisans },
     { key: 'artisanBiocharBatches', title: 'Artisan Pro Biochar Batches', icon: 'assignment', onPress: onOpenArtisanBiocharBatches },
-    { key: 'farmerOnboarding', title: 'Farmer Onboarding', icon: 'person_add', onPress: onOpenFarmerOnboarding },
     { key: 'scheduleVisit', title: 'Schedule Visit', icon: 'event_note', onPress: onOpenScheduleVisit },
   ];
 
@@ -161,15 +156,28 @@ export function OfficerQuickActionCards({
         {actions.map((action) => (
           <Pressable
             key={action.key}
-            style={({ pressed }) => [styles.quickActionCard, officerCardShadow, pressed && styles.quickActionPressed]}
+            style={({ pressed }) => [
+              styles.quickActionCard,
+              action.primary ? styles.quickActionPrimary : null,
+              officerCardShadow,
+              pressed && styles.quickActionPressed,
+            ]}
             onPress={action.onPress}
             accessibilityRole="button"
             accessibilityLabel={action.title}
           >
-            <View style={styles.quickActionIcon}>
-              <BhuguardMaterialIcon name={action.icon} size={22} color={officerTheme.primary} filled />
+            <View style={[styles.quickActionIcon, action.primary ? styles.quickActionIconPrimary : null]}>
+              <BhuguardMaterialIcon
+                name={action.icon}
+                size={22}
+                color={action.primary ? '#FFFFFF' : officerTheme.primary}
+                filled
+              />
             </View>
-            <Text style={styles.quickActionTitle} numberOfLines={2}>
+            <Text
+              style={[styles.quickActionTitle, action.primary ? styles.quickActionTitlePrimary : null]}
+              numberOfLines={2}
+            >
               {action.title}
             </Text>
           </Pressable>
@@ -626,6 +634,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: officerTheme.onSurface,
     lineHeight: 18,
+  },
+  quickActionPrimary: {
+    backgroundColor: officerTheme.primary,
+    borderColor: officerTheme.primary,
+  },
+  quickActionIconPrimary: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  quickActionTitlePrimary: {
+    color: '#FFFFFF',
   },
   visitList: { gap: 12 },
   visitCard: {

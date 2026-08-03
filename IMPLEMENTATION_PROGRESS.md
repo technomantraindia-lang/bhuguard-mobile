@@ -105,8 +105,8 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Block dashboard until active check-in | OfficerNavigator gate, checkInApi | FO check-in status | — | ⏳ PENDING | — |
-| GPS + server time; no duplicates; no fake success | FieldOfficerCheckInScreen | — | — | ⏳ PENDING | — |
+| Block dashboard until active check-in | FieldOfficerCheckInGate, useFieldOfficerMandatoryCheckIn, OfficerNavigator | FO check-in status API | Gate wired; fail-closed; duplicate submit lock | ⚠️ PARTIAL | No adb device |
+| GPS + server time; no duplicates; no fake success | MandatoryCheckInScreen + hook | live check-in endpoint | Code uses server status; no device-time auth | ⚠️ PARTIAL | Device GPS test |
 
 ---
 
@@ -114,8 +114,8 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Farm Activity → My Activity; elevate Onboarding | FO dashboard screen | — | — | ⏳ PENDING | — |
-| Remove Visited Field / Pending Visit cards only | FO dashboard | data preserved | — | ⏳ PENDING | — |
+| Farm Activity → My Activity; elevate Onboarding | OfficerDashboardSections.tsx | — | Quick actions reordered; primary highlight | ⚠️ PARTIAL | Device visual |
+| Remove Visited Field / Pending Visit cards only | OfficerStatsGrid | data preserved | Cards removed from UI | ✅ PASS | — |
 
 ---
 

@@ -11,6 +11,8 @@ const AUTH_FLOW_ROUTES = new Set<keyof RootStackParamList | string>([
   'MobileLogin',
   'OtpVerification',
   'CreateMpin',
+  'SetPattern',
+  'PatternLogin',
   'BiometricSetup',
   'MpinLogin',
   'ResetPassword',

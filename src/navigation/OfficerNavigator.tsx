@@ -70,6 +70,7 @@ import { StitchScreenRoute } from '../screens/stitch/StitchScreenRoute';
 import { OfficerTabNavigator } from './OfficerTabNavigator';
 import type { FieldOfficerStackParamList } from './types';
 import { RoleAppLayout } from '../components/shared/AuthenticatedAppShell';
+import { FieldOfficerCheckInGate } from '../components/officer/checkin/FieldOfficerCheckInGate';
 
 const Stack = createNativeStackNavigator<FieldOfficerStackParamList>();
 
@@ -83,7 +84,7 @@ function assertScreenComponent(name: string, component: unknown): void {
 
 assertScreenComponent('FieldOfficerProfile', FieldOfficerProfileScreen);
 assertScreenComponent('FieldOfficerProfileSection', FieldOfficerProfileSectionScreen);
-assertScreenComponent('FieldOfficerTabs', OfficerTabNavigator);
+assertScreenComponent('FieldOfficerTabs', FieldOfficerCheckInGate);
 assertScreenComponent('SupportThreads', OfficerSupportThreadsRoute);
 assertScreenComponent('ChatbotSupport', OfficerChatbotSupportRoute);
 assertScreenComponent('SupportChat', SupportChatScreenRoute);
@@ -93,7 +94,7 @@ export function OfficerNavigator() {
     <OnboardingProvider>
       <BoundaryCaptureProvider>
       <Stack.Navigator initialRouteName="FieldOfficerTabs" layout={({ children }) => <RoleAppLayout>{children}</RoleAppLayout>} screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="FieldOfficerTabs" component={OfficerTabNavigator} />
+        <Stack.Screen name="FieldOfficerTabs" component={FieldOfficerCheckInGate} />
         <Stack.Screen name="StitchScreen" component={StitchScreenRoute} />
         <Stack.Screen name="FieldOfficerProfile" component={FieldOfficerProfileScreen} />
         <Stack.Screen name="FieldOfficerProfileSection" component={FieldOfficerProfileSectionScreen} />

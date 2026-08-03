@@ -254,6 +254,7 @@
     "submit": "Submit",
     "logout": "Logout",
     "retry": "Retry",
+    "ok": "OK",
     "loading": "Loading…",
     "login": "Login",
     "settings": "Settings",
@@ -305,7 +306,20 @@
       "registerAnother": "Register Another Farmer",
       "viewProfile": "View Farmer Profile",
       "goToDashboard": "Go to Dashboard",
-      "loginReady": "Farmer can now login using MPIN or OTP"
+      "loginReady": "Farmer can now login using Pattern or OTP"
+    },
+    "checkIn": {
+      "title": "Daily Check-in Required",
+      "subtitle": "Complete your field check-in before using the Field Officer dashboard.",
+      "helper": "Bhuguard captures high-accuracy GPS and uses secure server time for this check-in.",
+      "checkingStatus": "Checking your check-in status…",
+      "checkInNow": "Check in now",
+      "checkingIn": "Checking in…",
+      "stageLocating": "Capturing high-accuracy GPS…",
+      "stageSubmitting": "Submitting check-in…",
+      "statusErrorFallback": "Unable to verify check-in status. Retry or log out.",
+      "logoutConfirmTitle": "Log out?",
+      "logoutConfirmMessage": "You must check in to use the Field Officer app. Log out and return later?"
     }
   },
   "errors": {
