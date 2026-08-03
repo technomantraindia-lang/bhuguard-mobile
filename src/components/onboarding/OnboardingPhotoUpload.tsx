@@ -62,7 +62,14 @@ export function OnboardingPhotoUpload({ file, onChange }: OnboardingPhotoUploadP
   // Holds a just-captured photo pending farmer OK/Retry confirmation — never
   // auto-saved to the draft until explicitly confirmed (Phase 10.1).
   const [pendingUri, setPendingUri] = useState<string | null>(null);
-  const pendingAssetRef = useRef<{ uri: string; fileName?: string; mimeType?: string } | null>(null);
+  const pendingAssetRef = useRef<{
+    uri: string;
+    fileName?: string;
+    mimeType?: string;
+    fileSize?: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   const openCamera = async () => {
     setCapturing(true);
