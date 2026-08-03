@@ -66,7 +66,11 @@ export function EvidenceUploadForm({
   onUnitChange,
   onWeighingDateChange,
 }: EvidenceUploadFormProps) {
-  const liveEvidence = useLiveEvidenceCapture({ defaultName: 'evidence.jpg', allowsEditing: true });
+  const liveEvidence = useLiveEvidenceCapture({
+    defaultName: 'evidence.jpg',
+    allowsEditing: false,
+    requireConfirm: true,
+  });
   const [documentFile, setDocumentFile] = useState<{ uri: string; name: string; type: string } | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
 
@@ -135,6 +139,7 @@ export function EvidenceUploadForm({
 
       <LiveEvidenceCaptureCard
         evidence={liveEvidence.evidence}
+        pendingEvidence={liveEvidence.pendingEvidence}
         capturing={liveEvidence.capturing}
         uploading={uploading}
         error={displayError}
@@ -146,6 +151,8 @@ export function EvidenceUploadForm({
           setDocumentFile(null);
           void liveEvidence.retakeEvidence();
         }}
+        onConfirmPending={() => liveEvidence.confirmPending()}
+        onRejectPending={() => liveEvidence.rejectPending()}
         onUpload={() => void handleSubmit()}
         uploadLabel={submitLabel}
         showUploadButton

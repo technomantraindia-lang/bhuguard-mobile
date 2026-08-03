@@ -138,13 +138,22 @@ export async function captureLivePhotoEvidence(options?: {
       ? await resolveValidatedCaptureLocation(latitude, longitude)
       : { village: '', taluka: '', district: '', state: 'Gujarat', resolved: false };
 
+  const villageName = (location.village || '').trim();
+  if (!villageName || villageName === '-') {
+    return {
+      ok: false,
+      cancelled: false,
+      error: 'Village could not be resolved for this GPS location. Move outdoors, improve GPS accuracy, and Retry.',
+    };
+  }
+
   const watermark = buildLivePhotoWatermarkMeta({
     capturedAt: timestamp.capturedAtUtc,
     timestamp,
     latitude,
     longitude,
     accuracy,
-    village: location.village || '-',
+    village: villageName,
     taluka: location.taluka || '-',
     district: location.district || '-',
     state: location.state || 'Gujarat',
@@ -172,7 +181,7 @@ export async function captureLivePhotoEvidence(options?: {
       latitude,
       longitude,
       accuracy,
-      village: location.village,
+      village: villageName,
       taluka: location.taluka,
       district: location.district,
       state: location.state,
@@ -210,7 +219,7 @@ export async function captureLivePhotoEvidence(options?: {
       timezone: timestamp.timezone,
       utcOffsetMinutes: timestamp.utcOffsetMinutes,
       captureSource: timestamp.captureSource,
-      village: location.village || '',
+      village: villageName,
       taluka: location.taluka || '',
       district: location.district || '',
       state: location.state || 'Gujarat',
@@ -353,13 +362,22 @@ export async function pickStampedPhotoEvidence(options?: {
       ? await resolveValidatedCaptureLocation(latitude, longitude)
       : { village: '', taluka: '', district: '', state: 'Gujarat', resolved: false };
 
+  const villageName = (location.village || '').trim();
+  if (!villageName || villageName === '-') {
+    return {
+      ok: false,
+      cancelled: false,
+      error: 'Village could not be resolved for this GPS location. Move outdoors, improve GPS accuracy, and Retry.',
+    };
+  }
+
   const watermark = buildLivePhotoWatermarkMeta({
     capturedAt: timestamp.capturedAtUtc,
     timestamp,
     latitude,
     longitude,
     accuracy,
-    village: location.village || '-',
+    village: villageName,
     taluka: location.taluka || '-',
     district: location.district || '-',
     state: location.state || 'Gujarat',
@@ -378,7 +396,7 @@ export async function pickStampedPhotoEvidence(options?: {
       latitude,
       longitude,
       accuracy,
-      village: location.village,
+      village: villageName,
       taluka: location.taluka,
       district: location.district,
       state: location.state,
@@ -408,7 +426,7 @@ export async function pickStampedPhotoEvidence(options?: {
         timezone: timestamp.timezone,
         utcOffsetMinutes: timestamp.utcOffsetMinutes,
         captureSource: timestamp.captureSource,
-        village: location.village || '',
+        village: villageName,
         taluka: location.taluka || '',
         district: location.district || '',
         state: location.state || 'Gujarat',

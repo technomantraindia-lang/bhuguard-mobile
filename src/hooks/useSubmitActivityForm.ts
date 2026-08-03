@@ -53,7 +53,11 @@ export function useSubmitActivityForm({ initialFarmId }: UseSubmitActivityFormOp
     biocharYield: '',
     fixedCarbonPercent: '',
   });
-  const liveEvidence = useLiveEvidenceCapture({ defaultName: 'activity-evidence.jpg', allowsEditing: true });
+  const liveEvidence = useLiveEvidenceCapture({
+    defaultName: 'activity-evidence.jpg',
+    allowsEditing: false,
+    requireConfirm: true,
+  });
   const [latitude, setLatitude] = useState<number | null>(null);  const [longitude, setLongitude] = useState<number | null>(null);
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -316,6 +320,7 @@ export function useSubmitActivityForm({ initialFarmId }: UseSubmitActivityFormOp
     biocharDmrv,
     setBiocharDmrv,
     evidence: liveEvidence.evidence,
+    pendingEvidence: liveEvidence.pendingEvidence,
     clearEvidence: liveEvidence.clearEvidence,
     latitude,
     longitude,
@@ -325,6 +330,8 @@ export function useSubmitActivityForm({ initialFarmId }: UseSubmitActivityFormOp
     captureGps,
     pickCameraEvidence,
     retakeCameraEvidence: liveEvidence.retakeEvidence,
+    confirmPendingEvidence: liveEvidence.confirmPending,
+    rejectPendingEvidence: liveEvidence.rejectPending,
     evidenceCapturing: liveEvidence.capturing,
     evidenceError: liveEvidence.error,
     submitActivity,

@@ -15,6 +15,7 @@ export interface FarmerFarmViewModel {
   id: number;
   name: string;
   code: string;
+  farmerName: string;
   village: string;
   areaLabel: string;
   hectareLabel: string;
@@ -91,11 +92,22 @@ export function getFarmAreaLabel(farm: ApiRecord): string {
     return '—';
   }
 
-  const unitRaw = pickString(farm, 'land_area_unit', 'area_unit');
-  const unit = unitRaw === '-' ? 'Acres' : unitRaw.charAt(0).toUpperCase() + unitRaw.slice(1);
-  const formatted = area % 1 === 0 ? area.toFixed(0) : area.toFixed(1);
+  const unitRaw = pickString(farm, 'land_area_unit', 'area_unit').toLowerCase();
+  // Phase 12.3 — Farmer mobile UI shows Acre / Hectare only. Convert Bigha for display.
+  let displayArea = area;
+  let unitLabel = 'Acres';
 
-  return `${formatted} ${unit}`;
+  if (unitRaw.includes('hect')) {
+    unitLabel = 'Hectares';
+  } else if (unitRaw.includes('bigha')) {
+    displayArea = area / 1.613;
+    unitLabel = 'Acres';
+  } else {
+    unitLabel = 'Acres';
+  }
+
+  const formatted = displayArea % 1 === 0 ? displayArea.toFixed(0) : displayArea.toFixed(2);
+  return `${formatted} ${unitLabel}`;
 }
 
 // Never fabricate a local farm code (e.g. "BG-FARM-000") — Farm ID is either
@@ -128,16 +140,21 @@ export function mapFarmRecord(farm: ApiRecord): FarmerFarmViewModel {
   const mapped = isFarmMapped(farm);
   const acres = Number(farm.area_acres ?? farm.land_area ?? 0);
   const hectares = Number(farm.area_hectares ?? (acres ? acres * 0.404686 : 0));
+  // Keep bigha calc for stored conversion only — never shown in Farmer UI.
   const bigha = acres ? acres * 1.613 : 0;
 
   return {
     id: Number(farm.id),
     name: pickString(farm, 'farm_name', 'name') !== '-' ? pickString(farm, 'farm_name', 'name') : `Farm ${farm.id}`,
     code: getFarmCode(farm),
+    farmerName:
+      pickString(farm, 'farmer_name', 'farmerName', 'owner_name') !== '-'
+        ? pickString(farm, 'farmer_name', 'farmerName', 'owner_name')
+        : '',
     village: pickString(farm, 'village') !== '-' ? pickString(farm, 'village') : '—',
     areaLabel: getFarmAreaLabel(farm),
     hectareLabel: hectares > 0 ? `${hectares.toFixed(2)} Hectare` : '—',
-    bighaLabel: bigha > 0 ? `${bigha.toFixed(2)} Bigha` : '—',
+    bighaLabel: '', // Hidden from Farmer mobile UI (Phase 12.3).
     cropLabel: pickString(farm, 'crop_type', 'current_crop') !== '-' ? pickString(farm, 'crop_type', 'current_crop') : '—',
     soilLabel: pickString(farm, 'soil_type') !== '-' ? pickString(farm, 'soil_type') : '—',
     verificationBadge: getFarmVerificationBadge(farm),

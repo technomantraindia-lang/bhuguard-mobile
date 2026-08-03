@@ -9,12 +9,16 @@ import {
 interface UseLiveEvidenceCaptureOptions {
   defaultName?: string;
   allowsEditing?: boolean;
+  /** When true, capture lands in pending until confirmPending / rejectPending. */
+  requireConfirm?: boolean;
 }
 
 export function useLiveEvidenceCapture(options?: UseLiveEvidenceCaptureOptions) {
   const [evidence, setEvidence] = useState<LiveCapturedEvidence | null>(null);
+  const [pendingEvidence, setPendingEvidence] = useState<LiveCapturedEvidence | null>(null);
   const [capturing, setCapturing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requireConfirm = options?.requireConfirm === true;
 
   const captureEvidence = useCallback(async (): Promise<LiveCapturedEvidence | null> => {
     setCapturing(true);
@@ -27,6 +31,10 @@ export function useLiveEvidenceCapture(options?: UseLiveEvidenceCaptureOptions) 
       });
 
       if (result.ok) {
+        if (requireConfirm) {
+          setPendingEvidence(result.evidence);
+          return null;
+        }
         setEvidence(result.evidence);
         return result.evidence;
       }
@@ -39,14 +47,29 @@ export function useLiveEvidenceCapture(options?: UseLiveEvidenceCaptureOptions) 
     } finally {
       setCapturing(false);
     }
-  }, [options?.allowsEditing, options?.defaultName]);
+  }, [options?.allowsEditing, options?.defaultName, requireConfirm]);
 
   const retakeEvidence = useCallback(async (): Promise<LiveCapturedEvidence | null> => {
+    setPendingEvidence(null);
     return captureEvidence();
   }, [captureEvidence]);
 
+  const confirmPending = useCallback(() => {
+    if (!pendingEvidence) {
+      return null;
+    }
+    setEvidence(pendingEvidence);
+    setPendingEvidence(null);
+    return pendingEvidence;
+  }, [pendingEvidence]);
+
+  const rejectPending = useCallback(() => {
+    setPendingEvidence(null);
+  }, []);
+
   const clearEvidence = useCallback(() => {
     setEvidence(null);
+    setPendingEvidence(null);
     setError(null);
   }, []);
 
@@ -61,6 +84,10 @@ export function useLiveEvidenceCapture(options?: UseLiveEvidenceCaptureOptions) 
       });
 
       if (result.ok) {
+        if (requireConfirm) {
+          setPendingEvidence(result.evidence);
+          return null;
+        }
         setEvidence(result.evidence);
         return result.evidence;
       }
@@ -73,16 +100,19 @@ export function useLiveEvidenceCapture(options?: UseLiveEvidenceCaptureOptions) 
     } finally {
       setCapturing(false);
     }
-  }, [options?.allowsEditing, options?.defaultName]);
+  }, [options?.allowsEditing, options?.defaultName, requireConfirm]);
 
   return {
     evidence,
+    pendingEvidence,
     capturing,
     error,
     setError,
     setEvidence,
     captureEvidence,
     retakeEvidence,
+    confirmPending,
+    rejectPending,
     pickGalleryEvidence,
     clearEvidence,
     gpsCaptured: evidence?.latitude != null && evidence?.longitude != null,

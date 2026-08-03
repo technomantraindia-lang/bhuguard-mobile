@@ -163,10 +163,13 @@ export function FarmerSubmitActivityScreen({ navigation, route }: Props) {
         <SubmitActivityCard>
           <LiveEvidenceCaptureCard
             evidence={form.evidence}
+            pendingEvidence={form.pendingEvidence}
             capturing={form.evidenceCapturing}
             error={form.evidenceError}
             onOpenCamera={() => void form.pickCameraEvidence()}
             onRetake={() => void form.retakeCameraEvidence()}
+            onConfirmPending={() => form.confirmPendingEvidence()}
+            onRejectPending={() => form.rejectPendingEvidence()}
           />
 
           <View style={styles.infoBanner}>

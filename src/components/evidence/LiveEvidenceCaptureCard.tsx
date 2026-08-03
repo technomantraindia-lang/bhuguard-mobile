@@ -12,11 +12,14 @@ import { EvidenceStampedImageFrame } from './EvidenceStampedImageFrame';
 
 interface LiveEvidenceCaptureCardProps {
   evidence: LiveCapturedEvidence | null;
+  pendingEvidence?: LiveCapturedEvidence | null;
   capturing?: boolean;
   uploading?: boolean;
   error?: string | null;
   onOpenCamera: () => void;
   onRetake: () => void;
+  onConfirmPending?: () => void;
+  onRejectPending?: () => void;
   onUpload?: () => void;
   uploadLabel?: string;
   showUploadButton?: boolean;
@@ -27,11 +30,14 @@ interface LiveEvidenceCaptureCardProps {
 
 export function LiveEvidenceCaptureCard({
   evidence,
+  pendingEvidence = null,
   capturing = false,
   uploading = false,
   error = null,
   onOpenCamera,
   onRetake,
+  onConfirmPending,
+  onRejectPending,
   onUpload,
   uploadLabel = 'Upload Evidence',
   showUploadButton = false,
@@ -40,6 +46,8 @@ export function LiveEvidenceCaptureCard({
   onOpenPreview,
 }: LiveEvidenceCaptureCardProps) {
   const busy = capturing || uploading;
+  const displayEvidence = pendingEvidence ?? evidence;
+  const isPending = pendingEvidence != null;
 
   return (
     <View style={styles.wrap}>
@@ -52,14 +60,14 @@ export function LiveEvidenceCaptureCard({
           </View>
         </View>
 
-        {evidence && !hideInlinePreview ? (
+        {displayEvidence && !hideInlinePreview ? (
           <View style={styles.previewBlock}>
             <EvidenceStampedImageFrame
-              uri={evidence.previewUri}
-              onPress={onOpenPreview ? () => onOpenPreview(evidence.previewUri) : undefined}
+              uri={displayEvidence.previewUri}
+              onPress={onOpenPreview && !isPending ? () => onOpenPreview(displayEvidence.previewUri) : undefined}
             />
             <View style={styles.badgeRow}>
-              {hasGpsCapture(evidence) ? (
+              {hasGpsCapture(displayEvidence) ? (
                 <View style={styles.badge}>
                   <BhuguardMaterialIcon name="share_location" size={14} color={colors.primary} />
                   <Text style={styles.badgeText}>GPS Captured</Text>
@@ -71,27 +79,27 @@ export function LiveEvidenceCaptureCard({
               )}
               <View style={styles.badge}>
                 <BhuguardMaterialIcon name="schedule" size={14} color={colors.primary} />
-                <Text style={styles.badgeText}>{formatCapturedTimestamp(evidence.capturedAt)}</Text>
+                <Text style={styles.badgeText}>{formatCapturedTimestamp(displayEvidence.capturedAt)}</Text>
               </View>
             </View>
-            {evidence.latitude != null && evidence.longitude != null ? (
+            {displayEvidence.latitude != null && displayEvidence.longitude != null ? (
               <Text style={styles.coords}>
-                {evidence.watermark.latitudeLabel} · {evidence.watermark.longitudeLabel}
-                {evidence.accuracy != null ? ` · ${evidence.watermark.accuracyLabel}` : ''}
+                {displayEvidence.watermark.latitudeLabel} · {displayEvidence.watermark.longitudeLabel}
+                {displayEvidence.accuracy != null ? ` · ${displayEvidence.watermark.accuracyLabel}` : ''}
               </Text>
             ) : null}
             <Text style={styles.locationMeta}>
               {[
-                evidence.watermark.villageLabel,
-                evidence.watermark.talukaLabel,
-                evidence.watermark.districtLabel,
-                evidence.watermark.stateLabel,
+                displayEvidence.watermark.villageLabel,
+                displayEvidence.watermark.talukaLabel,
+                displayEvidence.watermark.districtLabel,
+                displayEvidence.watermark.stateLabel,
               ]
                 .filter((line) => line && !line.endsWith('—'))
                 .join(' · ')}
             </Text>
           </View>
-        ) : !evidence ? (
+        ) : !displayEvidence ? (
           <View style={styles.placeholder}>
             <BhuguardMaterialIcon name="photo_camera" size={36} color={colors.textMuted} />
             <Text style={styles.placeholderText}>No live photo captured yet</Text>
@@ -100,7 +108,25 @@ export function LiveEvidenceCaptureCard({
 
         {!readOnly ? (
           <View style={styles.actions}>
-            {!evidence ? (
+            {isPending ? (
+              <>
+                <AppButton
+                  label="OK"
+                  onPress={() => onConfirmPending?.()}
+                  disabled={busy}
+                />
+                <AppButton
+                  label={capturing ? 'Processing…' : 'Retry'}
+                  onPress={() => {
+                    onRejectPending?.();
+                    onRetake();
+                  }}
+                  variant="secondary"
+                  loading={capturing}
+                  disabled={busy}
+                />
+              </>
+            ) : !evidence ? (
               <AppButton
                 label={capturing ? 'Processing…' : 'Open Camera'}
                 onPress={onOpenCamera}

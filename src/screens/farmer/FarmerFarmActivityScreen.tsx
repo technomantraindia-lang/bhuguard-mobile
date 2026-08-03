@@ -114,11 +114,14 @@ export function FarmerFarmActivityScreen({ navigation, route }: Props) {
             <Text style={styles.sectionTitle}>{t('farmer.activity.photo')}</Text>
             <LiveEvidenceCaptureCard
               evidence={form.liveEvidence.evidence}
+              pendingEvidence={form.liveEvidence.pendingEvidence}
               capturing={form.liveEvidence.capturing}
               error={form.liveEvidence.error}
               readOnly={isSubmittedReadOnly}
               onOpenCamera={() => void form.liveEvidence.captureEvidence()}
               onRetake={() => void form.liveEvidence.retakeEvidence()}
+              onConfirmPending={() => form.liveEvidence.confirmPending()}
+              onRejectPending={() => form.liveEvidence.rejectPending()}
               onUpload={() => void form.liveEvidence.pickGalleryEvidence()}
               uploadLabel={t('farmer.activity.uploadGallery')}
               showUploadButton={!isSubmittedReadOnly}

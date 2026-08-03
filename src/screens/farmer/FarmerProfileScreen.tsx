@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -117,9 +117,9 @@ async function pickProfileImage(source: 'camera' | 'gallery'): Promise<{ uri: st
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
+      allowsEditing: false,
       quality: 0.85,
+      exif: false,
     });
 
     if (result.canceled || !result.assets?.[0]?.uri) {
@@ -143,8 +143,7 @@ async function pickProfileImage(source: 'camera' | 'gallery'): Promise<{ uri: st
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
-    allowsEditing: true,
-    aspect: [1, 1],
+    allowsEditing: false,
     quality: 0.85,
   });
 
@@ -213,6 +212,41 @@ export function FarmerProfileScreen() {
 
   const [biometricEnabled, setBiometricEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const activePencilEditsRef = useRef(0);
+  const [hasActivePencilEdit, setHasActivePencilEdit] = useState(false);
+
+  const handlePencilEditingChange = useCallback((editing: boolean) => {
+    activePencilEditsRef.current = Math.max(0, activePencilEditsRef.current + (editing ? 1 : -1));
+    setHasActivePencilEdit(activePencilEditsRef.current > 0);
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (event) => {
+      if (!hasActivePencilEdit) {
+        return;
+      }
+
+      event.preventDefault();
+      Alert.alert(
+        'Unsaved changes',
+        'You have an unsaved field edit. Leave without saving?',
+        [
+          { text: 'Stay', style: 'cancel' },
+          {
+            text: 'Leave',
+            style: 'destructive',
+            onPress: () => {
+              activePencilEditsRef.current = 0;
+              setHasActivePencilEdit(false);
+              navigation.dispatch(event.data.action);
+            },
+          },
+        ],
+      );
+    });
+
+    return unsubscribe;
+  }, [hasActivePencilEdit, navigation]);
 
   const toggleSection = (id: SectionId) => {
     setExpanded((current) => (current === id ? null : id));
@@ -470,7 +504,7 @@ export function FarmerProfileScreen() {
           expanded={expanded === 'personal'}
           onToggle={() => toggleSection('personal')}
         >
-          <ProfileFormField label="Full Name" value={data.fullName} onChangeText={(v) => updateField('fullName', v)} />
+          <ProfileFormField label="Full Name" value={data.fullName} onChangeText={(v) => updateField('fullName', v)} pencilEdit onEditingChange={handlePencilEditingChange} />
           <ProfileFormField
             label="Mobile Number"
             value={data.mobile}
@@ -482,6 +516,8 @@ export function FarmerProfileScreen() {
             value={data.email}
             onChangeText={(v) => updateField('email', v)}
             keyboardType="email-address"
+            pencilEdit
+          onEditingChange={handlePencilEditingChange}
           />
           <ProfileLinkRow label="Gender" onPress={() => setGenderSheetOpen(true)} />
           <Text style={styles.selectorValue}>{data.gender}</Text>
@@ -491,6 +527,8 @@ export function FarmerProfileScreen() {
             onChangeText={(v) => updateField('aadhaarNumber', v.replace(/\D/g, '').slice(0, 12))}
             placeholder={data.aadhaarMasked !== '—' ? data.aadhaarMasked : 'Enter 12-digit Aadhaar'}
             keyboardType="number-pad"
+            pencilEdit
+          onEditingChange={handlePencilEditingChange}
           />
           <ProfileFormField
             label="PAN Number"
@@ -498,6 +536,8 @@ export function FarmerProfileScreen() {
             onChangeText={(v) => updateField('panNumber', v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))}
             placeholder={data.panMasked !== '—' ? data.panMasked : 'ABCDE1234F'}
             autoCapitalize="characters"
+            pencilEdit
+          onEditingChange={handlePencilEditingChange}
           />
           <SectionButton label="Save Personal Info" onPress={() => void handleSavePersonal()} loading={saving} />
         </ProfileAccordionSection>
@@ -508,12 +548,12 @@ export function FarmerProfileScreen() {
           expanded={expanded === 'address'}
           onToggle={() => toggleSection('address')}
         >
-          <ProfileFormField label="Village" value={data.village} onChangeText={(v) => updateField('village', v)} />
-          <ProfileFormField label="Taluka" value={data.taluka} onChangeText={(v) => updateField('taluka', v)} />
-          <ProfileFormField label="District" value={data.district} onChangeText={(v) => updateField('district', v)} />
-          <ProfileFormField label="State" value={data.state} onChangeText={(v) => updateField('state', v)} />
-          <ProfileFormField label="Pincode" value={data.pincode} onChangeText={(v) => updateField('pincode', v)} keyboardType="number-pad" />
-          <ProfileFormField label="Full Address" value={data.fullAddress} onChangeText={(v) => updateField('fullAddress', v)} />
+          <ProfileFormField label="Village" value={data.village} onChangeText={(v) => updateField('village', v)} pencilEdit onEditingChange={handlePencilEditingChange} />
+          <ProfileFormField label="Taluka" value={data.taluka} onChangeText={(v) => updateField('taluka', v)} pencilEdit onEditingChange={handlePencilEditingChange} />
+          <ProfileFormField label="District" value={data.district} onChangeText={(v) => updateField('district', v)} pencilEdit onEditingChange={handlePencilEditingChange} />
+          <ProfileFormField label="State" value={data.state} onChangeText={(v) => updateField('state', v)} pencilEdit onEditingChange={handlePencilEditingChange} />
+          <ProfileFormField label="Pincode" value={data.pincode} onChangeText={(v) => updateField('pincode', v)} keyboardType="number-pad" pencilEdit onEditingChange={handlePencilEditingChange} />
+          <ProfileFormField label="Full Address" value={data.fullAddress} onChangeText={(v) => updateField('fullAddress', v)} pencilEdit onEditingChange={handlePencilEditingChange} />
           <ProfileFormField label="GPS Location Status" value={data.gpsStatus} editable={false} />
           <SectionButton label="Update Address" onPress={() => void handleUpdateAddress()} loading={saving} />
         </ProfileAccordionSection>
@@ -524,8 +564,8 @@ export function FarmerProfileScreen() {
           expanded={expanded === 'bank'}
           onToggle={() => toggleSection('bank')}
         >
-          <ProfileFormField label="Account Holder Name" value={data.accountHolder} onChangeText={(v) => updateField('accountHolder', v)} />
-          <ProfileFormField label="Bank Name" value={data.bankName} onChangeText={(v) => updateField('bankName', v)} />
+          <ProfileFormField label="Account Holder Name" value={data.accountHolder} onChangeText={(v) => updateField('accountHolder', v)} pencilEdit onEditingChange={handlePencilEditingChange} />
+          <ProfileFormField label="Bank Name" value={data.bankName} onChangeText={(v) => updateField('bankName', v)} pencilEdit onEditingChange={handlePencilEditingChange} />
           <ProfileFormField
             label="Account Number"
             value={data.accountNumberRaw || data.accountNumber}
@@ -534,11 +574,13 @@ export function FarmerProfileScreen() {
               updateField('accountNumber', v.replace(/\D/g, ''));
             }}
             keyboardType="number-pad"
+            pencilEdit
+          onEditingChange={handlePencilEditingChange}
           />
-          <ProfileFormField label="IFSC Code" value={data.ifscCode} onChangeText={(v) => updateField('ifscCode', v.toUpperCase())} autoCapitalize="characters" />
-          <ProfileFormField label="Branch Name" value={data.branchName} onChangeText={(v) => updateField('branchName', v)} />
-          <ProfileFormField label="Account Type" value={data.accountType} onChangeText={(v) => updateField('accountType', v)} />
-          <ProfileFormField label="UPI ID (optional)" value={data.upiId} onChangeText={(v) => updateField('upiId', v)} />
+          <ProfileFormField label="IFSC Code" value={data.ifscCode} onChangeText={(v) => updateField('ifscCode', v.toUpperCase())} autoCapitalize="characters" pencilEdit onEditingChange={handlePencilEditingChange} />
+          <ProfileFormField label="Branch Name" value={data.branchName} onChangeText={(v) => updateField('branchName', v)} pencilEdit onEditingChange={handlePencilEditingChange} />
+          <ProfileFormField label="Account Type" value={data.accountType} onChangeText={(v) => updateField('accountType', v)} pencilEdit onEditingChange={handlePencilEditingChange} />
+          <ProfileFormField label="UPI ID (optional)" value={data.upiId} onChangeText={(v) => updateField('upiId', v)} pencilEdit onEditingChange={handlePencilEditingChange} />
           <SectionButton label="Update Bank Details" onPress={() => void handleUpdateBank()} loading={saving} />
         </ProfileAccordionSection>
 

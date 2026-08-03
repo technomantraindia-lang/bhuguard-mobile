@@ -40,7 +40,11 @@ export function FarmerLiveEvidenceUploadScreen({
 }: FarmerLiveEvidenceUploadScreenProps) {
   const navigation = useNavigation<Nav>();
   const title = getFarmerEvidenceFormTitle(screenKey);
-  const liveEvidence = useLiveEvidenceCapture({ defaultName: 'farmer-evidence.jpg', allowsEditing: true });
+  const liveEvidence = useLiveEvidenceCapture({
+    defaultName: 'farmer-evidence.jpg',
+    allowsEditing: false,
+    requireConfirm: true,
+  });
   const [farms, setFarms] = useState<FarmOption[]>([]);
   const [selectedFarmId, setSelectedFarmId] = useState<number | null>(initialFarmId ?? null);
   const [category, setCategory] = useState<FarmerEvidenceCategoryKey>(getDefaultFarmerEvidenceCategory(screenKey));
@@ -201,18 +205,23 @@ export function FarmerLiveEvidenceUploadScreen({
 
         <LiveEvidenceCaptureCard
           evidence={liveEvidence.evidence}
+          pendingEvidence={liveEvidence.pendingEvidence}
           capturing={liveEvidence.capturing}
           uploading={uploading}
           error={displayError}
           onOpenCamera={() => void liveEvidence.captureEvidence()}
           onRetake={() => void liveEvidence.retakeEvidence()}
+          onConfirmPending={() => liveEvidence.confirmPending()}
+          onRejectPending={() => liveEvidence.rejectPending()}
           onUpload={() => void uploadEvidence()}
           uploadLabel="Upload Photo"
           showUploadButton
           hideInlinePreview
         />
 
-        {liveEvidence.evidence ? <EvidenceCapturedPreview evidence={liveEvidence.evidence} /> : null}
+        {liveEvidence.evidence || liveEvidence.pendingEvidence ? (
+          <EvidenceCapturedPreview evidence={(liveEvidence.pendingEvidence ?? liveEvidence.evidence)!} />
+        ) : null}
 
         <TextInput
           style={styles.notesInput}

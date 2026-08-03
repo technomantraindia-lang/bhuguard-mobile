@@ -60,6 +60,7 @@ export function FarmerFarmDetailScreen({ navigation, route }: Props) {
         <FarmDetailHeroCard
           farmName={detail.farmName}
           farmCode={detail.farmCode}
+          farmerName={detail.farm.farmerName}
           statusLabel={detail.statusLabel}
           verificationLabel={detail.verificationLabel}
           projectName={detail.projectName}

@@ -8,11 +8,13 @@ import {
   mapFarmRecord,
   type FarmerFarmViewModel,
 } from '../utils/farmMapHelpers';
+import { getAuthUser } from '../utils/authStorage';
 
 export type FarmFilterMode = 'all' | 'verified' | 'pending' | 'mapped' | 'unmapped';
 
 export function useFarmerFarmsData() {
   const [farms, setFarms] = useState<FarmerFarmViewModel[]>([]);
+  const [farmerName, setFarmerName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,9 +25,20 @@ export function useFarmerFarmsData() {
     setError(null);
 
     try {
-      const data = await getFarmerFarms();
+      const [data, authUser] = await Promise.all([getFarmerFarms(), getAuthUser()]);
+      const profileName = authUser?.name?.trim() || '';
+      setFarmerName(profileName);
+
       const records = extractList(data as ApiRecord, ['farms']);
-      setFarms(records.map(mapFarmRecord).filter((farm) => farm.id > 0));
+      setFarms(
+        records
+          .map(mapFarmRecord)
+          .filter((farm) => farm.id > 0)
+          .map((farm) => ({
+            ...farm,
+            farmerName: farm.farmerName || profileName,
+          })),
+      );
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load farms.'));
     } finally {
@@ -44,11 +57,12 @@ export function useFarmerFarmsData() {
 
     return farms.filter((farm) => {
       const matchesSearch =
-        query.length === 0 ||
-        farm.name.toLowerCase().includes(query) ||
-        farm.code.toLowerCase().includes(query) ||
-        farm.village.toLowerCase().includes(query) ||
-        farm.locationLabel.toLowerCase().includes(query);
+        query.length === 0
+        || farm.name.toLowerCase().includes(query)
+        || farm.code.toLowerCase().includes(query)
+        || farm.village.toLowerCase().includes(query)
+        || farm.farmerName.toLowerCase().includes(query)
+        || farm.locationLabel.toLowerCase().includes(query);
 
       if (!matchesSearch) {
         return false;
@@ -89,6 +103,7 @@ export function useFarmerFarmsData() {
   return {
     farms: filteredFarms,
     allFarms: farms,
+    farmerName,
     summary,
     loading,
     error,

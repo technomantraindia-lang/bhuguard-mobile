@@ -49,6 +49,7 @@ export function FarmerFarmsScreen() {
   const {
     farms,
     allFarms,
+    farmerName,
     summary,
     loading,
     error,
@@ -71,6 +72,14 @@ export function FarmerFarmsScreen() {
     () => allFarms.map((farm) => farm.coordinates).filter((point) => point !== null),
     [allFarms],
   );
+
+  const farmerDisplayName = useMemo(() => {
+    return (
+      farmerName
+      || allFarms.find((farm) => farm.farmerName)?.farmerName
+      || ''
+    );
+  }, [allFarms, farmerName]);
 
   const openFirstMappedFarm = async () => {
     const first = allFarms.find((farm) => farm.coordinates);
@@ -120,7 +129,12 @@ export function FarmerFarmsScreen() {
               pendingCount={summary.pendingCount}
             />
 
-            <FarmerFarmsMapOverview coordinates={mappedCoordinates} onOpenMaps={openFirstMappedFarm} />
+            <FarmerFarmsMapOverview
+              coordinates={mappedCoordinates}
+              farms={allFarms}
+              farmerName={farmerDisplayName}
+              onOpenMaps={openFirstMappedFarm}
+            />
 
             <View style={styles.searchRow}>
               <View style={styles.searchInputWrap}>

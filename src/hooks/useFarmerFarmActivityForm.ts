@@ -186,7 +186,11 @@ function remoteEvidenceFromActivity(activity: ApiRecord): FarmerFarmActivityEvid
 }
 
 export function useFarmerFarmActivityForm({ farmId, activityId }: UseFarmerFarmActivityFormOptions = {}) {
-  const liveEvidence = useLiveEvidenceCapture({ defaultName: 'farm-activity.jpg', allowsEditing: true });
+  const liveEvidence = useLiveEvidenceCapture({
+    defaultName: 'farm-activity.jpg',
+    allowsEditing: false,
+    requireConfirm: true,
+  });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -288,6 +292,13 @@ export function useFarmerFarmActivityForm({ farmId, activityId }: UseFarmerFarmA
 
     if (result) {
       await persistAndSetEvidence(result);
+    }
+  }, [liveEvidence, persistAndSetEvidence]);
+
+  const confirmPendingEvidence = useCallback(async () => {
+    const confirmed = liveEvidence.confirmPending();
+    if (confirmed) {
+      await persistAndSetEvidence(confirmed);
     }
   }, [liveEvidence, persistAndSetEvidence]);
 
@@ -730,6 +741,9 @@ export function useFarmerFarmActivityForm({ farmId, activityId }: UseFarmerFarmA
       captureEvidence,
       retakeEvidence,
       pickGalleryEvidence,
+      confirmPending: () => {
+        void confirmPendingEvidence();
+      },
     },
     status,
     recordId,

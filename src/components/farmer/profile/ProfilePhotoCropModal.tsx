@@ -25,8 +25,8 @@ export function ProfilePhotoCropModal({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.sheet}>
-          <Text style={styles.title}>Preview Profile Photo</Text>
-          <Text style={styles.subtitle}>Adjust your photo before updating your farmer profile.</Text>
+          <Text style={styles.title}>Confirm Profile Photo</Text>
+          <Text style={styles.subtitle}>Review your photo, then tap OK to save or Retry to capture again.</Text>
 
           <View style={styles.previewFrame}>
             <Image source={{ uri: photoUri }} style={styles.image} resizeMode="cover" />
@@ -40,12 +40,12 @@ export function ProfilePhotoCropModal({
             {loading ? (
               <ActivityIndicator color={dashboardTheme.onPrimary} />
             ) : (
-              <Text style={styles.primaryButtonText}>Update Profile Photo</Text>
+              <Text style={styles.primaryButtonText}>OK</Text>
             )}
           </Pressable>
 
           <Pressable style={styles.cancelButton} onPress={onClose} disabled={loading}>
-            <Text style={styles.cancelText}>Cancel</Text>
+            <Text style={styles.cancelText}>Retry</Text>
           </Pressable>
         </View>
       </View>

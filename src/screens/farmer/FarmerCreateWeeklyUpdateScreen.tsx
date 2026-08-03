@@ -65,10 +65,13 @@ export function FarmerCreateWeeklyUpdateScreen({ navigation, route }: Props) {
     submit,
     reloadOptions,
     activityEvidence,
+    pendingActivityEvidence,
     activityEvidenceCapturing,
     activityEvidenceError,
     captureActivityPhoto,
     retakeActivityPhoto,
+    confirmPendingActivityPhoto,
+    rejectPendingActivityPhoto,
   } = useCreateWeeklyUpdateForm(initialFarmId);
 
   const handleSubmit = async () => {
@@ -148,10 +151,13 @@ export function FarmerCreateWeeklyUpdateScreen({ navigation, route }: Props) {
 
           <LiveEvidenceCaptureCard
             evidence={activityEvidence}
+            pendingEvidence={pendingActivityEvidence}
             capturing={activityEvidenceCapturing}
             error={activityEvidenceError}
             onOpenCamera={() => void captureActivityPhoto()}
             onRetake={() => void retakeActivityPhoto()}
+            onConfirmPending={() => confirmPendingActivityPhoto()}
+            onRejectPending={() => rejectPendingActivityPhoto()}
           />
 
           <View style={styles.infoBanner}>

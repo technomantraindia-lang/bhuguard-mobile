@@ -5,6 +5,7 @@ import { dashboardShadow, dashboardTheme } from '../../../../theme/bhuguardDashb
 interface FarmDetailHeroCardProps {
   farmName: string;
   farmCode: string;
+  farmerName?: string;
   statusLabel: string;
   verificationLabel: string;
   projectName: string;
@@ -23,6 +24,7 @@ function HeroStat({ label, value, tone = 'default' }: { label: string; value: st
 export function FarmDetailHeroCard({
   farmName,
   farmCode,
+  farmerName,
   statusLabel,
   verificationLabel,
   projectName,
@@ -33,6 +35,7 @@ export function FarmDetailHeroCard({
       <View style={styles.headerRow}>
         <View style={styles.copy}>
           <Text style={styles.farmName}>{farmName}</Text>
+          {farmerName ? <Text style={styles.farmerName}>{farmerName}</Text> : null}
           <Text style={styles.farmCode}>{farmCode}</Text>
         </View>
         <View style={styles.badges}>
@@ -77,6 +80,12 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     fontWeight: '800',
     color: dashboardTheme.headingGreen,
+  },
+  farmerName: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+    color: dashboardTheme.onSurfaceVariant,
   },
   farmCode: {
     fontSize: 13,

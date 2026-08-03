@@ -50,6 +50,7 @@ export function useCreateWeeklyUpdateForm(initialFarmId?: number) {
   const liveEvidence = useLiveEvidenceCapture({
     defaultName: 'weekly-activity-photo.jpg',
     allowsEditing: false,
+    requireConfirm: true,
   });
 
   const loadOptions = useCallback(async () => {
@@ -175,10 +176,13 @@ export function useCreateWeeklyUpdateForm(initialFarmId?: number) {
     submit,
     reloadOptions: loadOptions,
     activityEvidence: liveEvidence.evidence,
+    pendingActivityEvidence: liveEvidence.pendingEvidence,
     activityEvidenceCapturing: liveEvidence.capturing,
     activityEvidenceError: liveEvidence.error,
     captureActivityPhoto: liveEvidence.captureEvidence,
     retakeActivityPhoto: liveEvidence.retakeEvidence,
+    confirmPendingActivityPhoto: liveEvidence.confirmPending,
+    rejectPendingActivityPhoto: liveEvidence.rejectPending,
     gpsCaptured: liveEvidence.gpsCaptured,
   };
 }
