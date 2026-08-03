@@ -415,22 +415,25 @@ export function ArtisanFarmLookupScreen() {
           <Text style={styles.helper}>
             Farmer ID: {farmer?.farmerCode ?? selectedFarmerId}
           </Text>
-          {selectedFarmerFarms.map((farm) => (
-            <Pressable key={farm.farm_id} style={styles.card} onPress={() => onFarmSelect(farm)}>
-              <Text style={styles.cardTitle}>{farm.displayLabel}</Text>
-              <Text style={styles.cardMeta}>
-                {farm.farm_name ?? farm.farm_code ?? `Farm ${farm.farm_id}`}
-              </Text>
-              <Text style={styles.cardMeta}>
-                {[farm.village, farm.taluka, farm.district].filter(Boolean).join(' · ')}
-              </Text>
-              <View style={styles.cardActions}>
-                <Pressable style={styles.selectButton} onPress={() => onFarmSelect(farm)}>
-                  <Text style={styles.selectButtonText}>{actionLabel}</Text>
-                </Pressable>
-              </View>
-            </Pressable>
-          ))}
+          {selectedFarmerFarms.map((farm) => {
+            const farmName = farm.farm_name?.trim() || farm.displayLabel || `Farm ${farm.farm_id}`;
+            const farmId = farm.farm_code?.trim() || String(farm.farm_id);
+            const village = farm.village?.trim() || '—';
+
+            return (
+              <Pressable key={farm.farm_id} style={styles.card} onPress={() => onFarmSelect(farm)}>
+                <Text style={styles.cardTitle}>{farmName}</Text>
+                <Text style={styles.cardMeta}>Farm Name: {farmName}</Text>
+                <Text style={styles.cardMeta}>Farm ID: {farmId}</Text>
+                <Text style={styles.cardMeta}>Village: {village}</Text>
+                <View style={styles.cardActions}>
+                  <Pressable style={styles.selectButton} onPress={() => onFarmSelect(farm)}>
+                    <Text style={styles.selectButtonText}>{actionLabel}</Text>
+                  </Pressable>
+                </View>
+              </Pressable>
+            );
+          })}
         </View>
       );
     }
@@ -472,10 +475,10 @@ export function ArtisanFarmLookupScreen() {
           Farmer ID: {item.farmer_code ?? item.farmer_id}
         </Text>
         <Text style={styles.cardMeta}>
-          Farm: {labeled?.displayLabel ?? item.farm_name ?? item.farm_code ?? item.farm_id}
+          Farm Name: {labeled?.displayLabel ?? item.farm_name ?? `Farm ${item.farm_id}`}
         </Text>
         <Text style={styles.cardMeta}>Farm ID: {item.farm_code ?? item.farm_id}</Text>
-        <Text style={styles.cardMeta}>{[item.village, item.taluka, item.district].filter(Boolean).join(' · ')}</Text>
+        <Text style={styles.cardMeta}>Village: {item.village?.trim() || '—'}</Text>
         {item.area_acre != null ? <Text style={styles.cardMeta}>Area: {item.area_acre} acre</Text> : null}
         {item.biochar_status ? <Text style={styles.cardStatus}>Biochar: {item.biochar_status}</Text> : null}
         {item.next_due_date ? <Text style={styles.cardMeta}>Next due: {item.next_due_date}</Text> : null}
