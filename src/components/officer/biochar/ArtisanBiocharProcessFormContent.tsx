@@ -358,8 +358,6 @@ export function ArtisanBiocharProcessFormContent({
 
   const [activeStep, setActiveStep] = useState<ArtisanBiocharWorkflowStepKey>('farm_batch_context');
 
-  const scrollHintRef = useRef(activeStep);
-  const lastUnlockedIndexRef = useRef(0);
   const captureRequestIdRef = useRef(0);
   const captureProcessingRef = useRef(false);
   const [isCaptureProcessing, setIsCaptureProcessing] = useState(false);
@@ -521,20 +519,22 @@ export function ArtisanBiocharProcessFormContent({
 
 
 
+  // Intentionally no auto-advance: completing a step must never jump the user
+  // to the next one automatically. They tap the next unlocked step themselves.
+  // The only exception is a one-time positioning when a draft/batch finishes
+  // loading, so resuming work lands on the first incomplete step instead of
+  // always restarting at step 1.
+  const didInitialPositionRef = useRef(false);
   useEffect(() => {
-    // Only auto-advance when unlock progress increases — never flap backward/forward on stamp races.
-    if (unlockedIndex <= lastUnlockedIndexRef.current) {
+    if (didInitialPositionRef.current || form.loading) {
       return;
     }
-
-    lastUnlockedIndexRef.current = unlockedIndex;
-
-    const nextKey = ARTISAN_BIOCHAR_WORKFLOW_STEPS[unlockedIndex]?.key;
-    if (nextKey && nextKey !== scrollHintRef.current) {
-      scrollHintRef.current = nextKey;
-      setActiveStep(nextKey);
+    didInitialPositionRef.current = true;
+    const resumeKey = ARTISAN_BIOCHAR_WORKFLOW_STEPS[unlockedIndex]?.key;
+    if (resumeKey) {
+      setActiveStep(resumeKey);
     }
-  }, [unlockedIndex]);
+  }, [form.loading, unlockedIndex]);
 
 
 
@@ -1008,8 +1008,6 @@ export function ArtisanBiocharProcessFormContent({
                 readOnly={readOnly}
 
                 allowKilnSelect
-
-                kilnPrefixFixed
 
               />
               </>

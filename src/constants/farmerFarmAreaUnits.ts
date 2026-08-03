@@ -1,4 +1,6 @@
-export type FarmerFarmAreaUnit = 'acres' | 'bigha' | 'hectare';
+// Bigha is intentionally excluded from the Farmer-facing area unit — client
+// requires Farmer farms UI to only ever expose Acre / Hectare.
+export type FarmerFarmAreaUnit = 'acres' | 'hectare';
 
 export interface FarmerFarmAreaUnitOption {
   value: FarmerFarmAreaUnit;
@@ -7,7 +9,6 @@ export interface FarmerFarmAreaUnitOption {
 
 export const FARMER_FARM_AREA_UNITS: FarmerFarmAreaUnitOption[] = [
   { value: 'acres', label: 'Acres' },
-  { value: 'bigha', label: 'Bigha' },
   { value: 'hectare', label: 'Hectare' },
 ];
 
@@ -18,7 +19,7 @@ export function mapFarmAreaUnitToApi(unit: FarmerFarmAreaUnit): string {
 }
 
 export function mapFarmAreaUnitFromApi(value: string): FarmerFarmAreaUnit {
-  if (value === 'bigha' || value === 'hectare') {
+  if (value === 'hectare') {
     return value;
   }
 

@@ -140,6 +140,38 @@ export function ArtisanNavigator() {
                 )
               }
             />
+            <Stack.Screen
+              name="ArtisanHelpSupport"
+              getComponent={() =>
+                safeScreen('ArtisanHelpSupportScreen', () =>
+                  require('../screens/artisan/ArtisanHelpSupportScreen'),
+                )
+              }
+            />
+            <Stack.Screen
+              name="ArtisanModuleUnavailable"
+              getComponent={() =>
+                safeScreen('ArtisanModuleUnavailableScreen', () =>
+                  require('../screens/artisan/ArtisanModuleUnavailableScreen'),
+                )
+              }
+            />
+            <Stack.Screen
+              name="ArtisanHelpSupport"
+              getComponent={() =>
+                safeScreen('ArtisanHelpSupportScreen', () =>
+                  require('../screens/artisan/ArtisanHelpSupportScreen'),
+                )
+              }
+            />
+            <Stack.Screen
+              name="ArtisanModuleUnavailable"
+              getComponent={() =>
+                safeScreen('ArtisanModuleUnavailableScreen', () =>
+                  require('../screens/artisan/ArtisanModuleUnavailableScreen'),
+                )
+              }
+            />
 
             {/* Reused Field Officer onboarding + farm activity screens */}
             <Stack.Screen
@@ -200,6 +232,14 @@ export function ArtisanNavigator() {
               name="OnboardingBoundaryCapture"
               getComponent={() =>
                 require('../screens/officer/onboarding/OnboardingBoundaryCaptureScreen').default
+              }
+            />
+            <Stack.Screen
+              name="FarmBoundaryView"
+              getComponent={() =>
+                safeScreen('FarmBoundaryViewScreen', () =>
+                  require('../screens/officer/boundary/FarmBoundaryViewScreen'),
+                )
               }
             />
             <Stack.Screen

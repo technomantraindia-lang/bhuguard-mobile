@@ -9,6 +9,7 @@ import type {
   MandatoryCheckInStage,
 } from '../../../hooks/useFieldOfficerMandatoryCheckIn';
 import { useLogout } from '../../../hooks/useLogout';
+import { useServerTimeSync } from '../../../hooks/useServerTimeSync';
 import { useTranslation } from '../../../i18n/I18nContext';
 import { officerCardShadow, officerTheme } from '../../../theme/officerDashboardTheme';
 
@@ -39,6 +40,7 @@ export function FieldOfficerMandatoryCheckInScreen({
 }: FieldOfficerMandatoryCheckInScreenProps) {
   const { t } = useTranslation();
   const logout = useLogout();
+  const serverTime = useServerTimeSync();
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => true);
@@ -103,7 +105,27 @@ export function FieldOfficerMandatoryCheckInScreen({
             </View>
           ) : null}
 
+          {serverTime.isSuspiciousSkew ? (
+            <View style={styles.skewBanner}>
+              <BhuguardMaterialIcon name="schedule" size={18} color="#92400E" />
+              <View style={styles.skewBannerCopy}>
+                <Text style={styles.skewBannerTitle}>{t('serverTime.skewWarningTitle')}</Text>
+                <Text style={styles.skewBannerBody}>{t('serverTime.skewWarningBody')}</Text>
+              </View>
+            </View>
+          ) : null}
+
           <Text style={styles.helperText}>{t('officer.checkIn.helper')}</Text>
+
+          {serverTime.isSuspiciousSkew ? (
+            <AppButton
+              label={serverTime.syncing ? t('serverTime.syncing') : t('serverTime.retrySync')}
+              variant="secondary"
+              onPress={() => void serverTime.retrySync()}
+              disabled={serverTime.syncing}
+              style={styles.retryButton}
+            />
+          ) : null}
 
           <AppButton
             label={submitting ? t('officer.checkIn.checkingIn') : t('officer.checkIn.checkInNow')}
@@ -188,6 +210,17 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   bannerText: { flex: 1, fontSize: 13, lineHeight: 18, color: officerTheme.onErrorContainer },
+  skewBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    padding: 10,
+  },
+  skewBannerCopy: { flex: 1, gap: 2 },
+  skewBannerTitle: { fontSize: 13, fontWeight: '700', color: '#92400E' },
+  skewBannerBody: { fontSize: 12, lineHeight: 17, color: '#92400E' },
   stageRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   stageText: { fontSize: 13, color: officerTheme.onSurfaceVariant },
   helperText: { fontSize: 12, lineHeight: 17, color: officerTheme.onSurfaceVariant, textAlign: 'center' },

@@ -51,7 +51,6 @@ export function FarmBoundaryPreviewScreen({ navigation }: Props) {
           <Text style={styles.cardTitle}>Area Calculation</Text>
           <Text style={styles.areaMain}>Area: {boundary.areaLabel}</Text>
           <Text style={styles.meta}>{boundary.metrics.areaHectare.toFixed(2)} Hectare</Text>
-          <Text style={styles.meta}>{boundary.metrics.areaBigha.toFixed(2)} Bigha</Text>
           <Text style={styles.meta}>
             Sq ft: {boundary.metrics.areaSquareFeet.toLocaleString()}
           </Text>

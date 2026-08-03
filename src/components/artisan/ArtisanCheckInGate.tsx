@@ -5,6 +5,7 @@ import { BackHandler } from 'react-native';
 import { AppButton } from '../AppButton';
 import { useLogout } from '../../hooks/useLogout';
 import { useArtisanMandatoryCheckIn } from '../../hooks/useArtisanMandatoryCheckIn';
+import { useArtisanWorkSession } from '../../context/ArtisanWorkSessionContext';
 
 type Props = {
   children: React.ReactNode;
@@ -17,6 +18,7 @@ type Props = {
 export function ArtisanCheckInGate({ children }: Props) {
   const checkIn = useArtisanMandatoryCheckIn();
   const logout = useLogout();
+  const workSession = useArtisanWorkSession();
 
   useEffect(() => {
     if (checkIn.phase === 'granted') {
@@ -24,6 +26,17 @@ export function ArtisanCheckInGate({ children }: Props) {
     }
     const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
     return () => sub.remove();
+  }, [checkIn.phase]);
+
+  useEffect(() => {
+    // ArtisanWorkSessionProvider hydrates independently at mount time (before this
+    // gate has granted access), so it can still believe the artisan is not checked
+    // in even though the mandatory gate just confirmed an active session. Force a
+    // refresh once granted so per-activity prompts (ensureCheckedInOrPrompt) agree.
+    if (checkIn.phase === 'granted') {
+      void workSession.hydrate(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkIn.phase]);
 
   if (checkIn.phase === 'granted') {

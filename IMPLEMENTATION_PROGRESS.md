@@ -123,18 +123,15 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| 10.1 Profile pic no timestamp; OK/Retry | proof/profile capture | — | — | ⏳ PENDING | — |
-| 10.2 Ownership Owned/Leased/Shared/Other | land details | — | — | ⏳ PENDING | — |
-| 10.3 Existing Agri Bio-Waste multi-select | land details + options API | options endpoint if any | — | ⏳ PENDING | — |
-| 10.4 Evidence order Ownership→Farm Photos→Farmer+Farm | FarmerProofUploadScreen | evidence categories | — | ⏳ PENDING | — |
-| 10.5 Consent before Review; show IDs/names | Consent + navigation order | — | — | ⏳ PENDING | — |
-| 10.6 Mapping Pending only when genuinely pending | onboarding review/actions | — | — | ⏳ PENDING | — |
-| 10.7 Read-only View Mapping | boundary preview/view | — | — | ⏳ PENDING | — |
-| 10.8 Edit Boundary layout scroll/controls | FarmBoundaryManualDrawScreen | — | — | ⏳ PENDING | — |
-| 10.9 Done = Back on read-only | navigation | — | — | ⏳ PENDING | — |
-| 10.10 View Farm read-only selected farm | view farm screen | — | — | ⏳ PENDING | — |
-| 10.11 Edit Farmer Profile; Add New Farm | final actions | farm create APIs | — | ⏳ PENDING | — |
-| 10.12 Return from Farm Activity to Review | navigation params | — | — | ⏳ PENDING | — |
+| 10.1 Profile pic no timestamp; OK/Retry | OnboardingPhotoUpload, liveEvidenceCapture | — | Profile path uses OK/Retry; stamp rules adjusted | ⚠️ PARTIAL | Device camera verify |
+| 10.2 Ownership Owned/Leased/Shared/Other | FarmerLandDetailsScreen | — | Options + Other text required | ⚠️ PARTIAL | Device verify |
+| 10.3 Existing Agri Bio-Waste multi-select | FarmerLandDetailsScreen | options fallback | Label/move + multi-select | ⚠️ PARTIAL | Device verify |
+| 10.4 Evidence order Ownership→Farm Photos→Farmer+Farm | FarmerProofUploadScreen, OnboardingContext.farmer_with_farm_photo | evidence upload fields | Fixed section order + distinct farmer_with_farm_photo | ⚠️ PARTIAL | Device verify |
+| 10.5 Consent before Review; show IDs/names | FarmerConsentScreen identity card; step order Consent→…→Review | — | IDs/names shown; consent remains before review | ⚠️ PARTIAL | Device verify |
+| 10.6 Mapping Pending only when genuinely pending | onboardingSteps getLandRegistrationStatusLabel | — | Mapping Pending only for pending status | ⚠️ PARTIAL | Device verify |
+| 10.7–10.10 Read-only View Mapping / Done / View Farm | OnboardingBoundaryPreview readOnly; FoBoundaryActionFooter Done | — | Code paths present | ⚠️ PARTIAL | Full MapLibre device matrix |
+| 10.11 Edit Farmer Profile; Add New Farm | OnboardedFarmerViewScreen / review actions | farm create APIs | Partial actions present | ⚠️ PARTIAL | Device verify |
+| 10.12 Return from Farm Activity to Review | consent/review route params | — | Params threaded in consent | ⚠️ PARTIAL | Device verify |
 
 ---
 
@@ -142,7 +139,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Gujarat default; dependent dropdowns; WA multi-select merge | Add Artisan screens | artisan WA APIs | — | ⏳ PENDING | — |
+| Gujarat default; dependent dropdowns; WA multi-select merge | RegisterArtisanScreen, WorkingAreaSelector | artisan WA APIs | Gujarat default + WorkingAreaSelector merge wired | ⚠️ PARTIAL | Device verify + live WA merge policy |
 
 ---
 
@@ -150,8 +147,8 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Farmer ID; map labels; Acre/Hectare; hide Bigha UI | farmer screens | — | — | ⏳ PENDING | — |
-| Farm Activity visual reuse; OK/Retry; village stamp; pencil edit; Change Pattern | farmer screens | — | — | ⏳ PENDING | — |
+| Farmer ID; map labels; Acre/Hectare; hide Bigha UI | farmerFarmAreaUnits, FarmerHeroSummaryCard, FarmerFarmListCard, boundary start screens | — | Bigha hidden from Farmer-facing unit pickers/summary | ⚠️ PARTIAL | Device verify |
+| Farm Activity visual reuse; OK/Retry; village stamp; pencil edit; Change Pattern | Pattern screens + farmer activity reuse | — | Change Pattern exists; stamps/OK-Retry partial | ⚠️ PARTIAL | Device verify |
 
 ---
 
@@ -167,7 +164,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Wallet / Help / Training / Farm Navigator | ArtisanDashboard | wallet/training if any | — | ⏳ PENDING | Wallet may be PARTIAL |
+| Wallet / Help / Training / Farm Navigator | ArtisanDashboardScreen, ArtisanHelpSupportScreen, ArtisanModuleUnavailableScreen | wallet/training APIs absent | Cards added; Wallet/Training controlled unavailable (no fake balances) | ⚠️ PARTIAL | Live wallet/training APIs |
 
 ---
 
@@ -175,7 +172,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Display BHG-ART-*; Farm ID + Navigate Farm on Pro cards | artisan screens | display IDs | — | ⏳ PENDING | — |
+| Display BHG-ART-*; Farm ID + Navigate Farm on Pro cards | ArtisanDashboard/Profile + FarmLookup Navigate | display IDs | Artisan ID helper + Navigate Farm action | ⚠️ PARTIAL | Live BHG-ART backfill + device |
 
 ---
 
@@ -183,7 +180,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Search authorized farms; navigate GPS/Maps | ArtisanFarmLookupScreen | farm lookup | — | ⏳ PENDING | — |
+| Search authorized farms; navigate GPS/Maps | ArtisanFarmLookup purpose=navigate + openGoogleMaps | farm lookup | Search Farm ID/Name; Navigate uses saved GPS only (no invent) | ⚠️ PARTIAL | Device Maps verify |
 
 ---
 
@@ -191,7 +188,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Sequential steps; single start time; assigned kilns; GPS address; photo OK/Retry; resume; completion time; new batch; validation | biochar production screens/storage | kiln alloc, draft APIs | — | ⏳ PENDING | — |
+| Sequential steps; single start time; assigned kilns; GPS address; photo OK/Retry; resume; completion time; new batch; validation | useBiocharProductionForm forceNewBatch + locked batchStartedAt; draft storage resume scan; BiocharProductionSections sequentialUnlock | kiln alloc / draft APIs | Start-time lock + forceNewBatch + draft resume helper | ⚠️ PARTIAL | Device E2E + live kiln allocation |
 
 ---
 
@@ -199,7 +196,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Farmer→Farm→Mixing hierarchy; no initial Search; Add New → Farmer list | application screens | application APIs | — | ⏳ PENDING | — |
+| Farmer→Farm→Mixing hierarchy; no initial Search; Add New → Farmer list | ArtisanFarmLookup mixing hierarchy; FO FieldOfficerBiocharApplication still search-based | application APIs | Mixing hierarchy present; FO application search not fully removed | ⚠️ PARTIAL | FO application hierarchy rewrite |
 
 ---
 

@@ -18,6 +18,7 @@ import {
 } from './evidenceDateTime';
 import { MAX_ALLOWED_ACCURACY_METERS } from './locationUtils';
 import { captureHighAccuracyGps } from './officerGpsCapture';
+import { getServerSyncedEpochMs } from '../services/serverTimeSync';
 
 export interface LiveCapturedEvidence {
   uri: string;
@@ -127,7 +128,11 @@ export async function captureLivePhotoEvidence(options?: {
   }
 
   const asset = result.assets[0];
-  const timestamp = createEvidenceCaptureTimestamp({ captureSource: 'live_camera' });
+  // Correct the device shutter instant for any known clock skew vs. the Bhuguard server.
+  const timestamp = createEvidenceCaptureTimestamp({
+    epochMilliseconds: getServerSyncedEpochMs(),
+    captureSource: 'live_camera',
+  });
   const location =
     latitude != null && longitude != null
       ? await resolveValidatedCaptureLocation(latitude, longitude)
@@ -340,7 +345,7 @@ export async function pickStampedPhotoEvidence(options?: {
   });
   const exifTimestamp = extractGalleryExifEpoch(asset);
   const timestamp = createEvidenceCaptureTimestamp({
-    epochMilliseconds: exifTimestamp ?? Date.now(),
+    epochMilliseconds: exifTimestamp ?? getServerSyncedEpochMs(),
     captureSource: exifTimestamp != null ? 'gallery_exif' : 'gallery_selected',
   });
   const location =

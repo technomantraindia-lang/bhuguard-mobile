@@ -85,6 +85,10 @@ const CARD_ACCENTS = {
     accent: artisanTheme.tealAccent,
     bubble: 'rgba(42, 157, 143, 0.14)',
   },
+  support: {
+    accent: artisanTheme.tertiary,
+    bubble: 'rgba(11, 46, 31, 0.10)',
+  },
 } as const;
 
 interface DashboardCardProps {
@@ -502,6 +506,21 @@ export function ArtisanDashboardScreen() {
             accessibilityLabel="Open farm activity"
           />
           <DashboardCard
+            title="Farm Navigator"
+            description="Search Farm ID / Farmer Name and navigate"
+            icon="map"
+            accent={CARD_ACCENTS.find.accent}
+            bubble={CARD_ACCENTS.find.bubble}
+            fullWidth={!twoColumn}
+            onPress={() => {
+              if (!ensureCheckedInOrPrompt()) {
+                return;
+              }
+              navigation.navigate('ArtisanFarmLookup', { purpose: 'navigate' });
+            }}
+            accessibilityLabel="Open farm navigator"
+          />
+          <DashboardCard
             title="Find Farmer / Farm"
             description="Search farms in your assigned area"
             icon="search"
@@ -562,6 +581,36 @@ export function ArtisanDashboardScreen() {
             accessibilityLabel="Open biochar application"
           />
           <DashboardCard
+            title="Wallet"
+            description="View Artisan wallet when enabled"
+            icon="payments"
+            accent={CARD_ACCENTS.submitted.accent}
+            bubble={CARD_ACCENTS.submitted.bubble}
+            fullWidth={!twoColumn}
+            onPress={() => navigation.navigate('ArtisanModuleUnavailable', { module: 'wallet' })}
+            accessibilityLabel="Open artisan wallet"
+          />
+          <DashboardCard
+            title="Help & Support"
+            description="Contact Bhuguard support"
+            icon="support_agent"
+            accent={CARD_ACCENTS.find.accent}
+            bubble={CARD_ACCENTS.find.bubble}
+            fullWidth={!twoColumn}
+            onPress={() => navigation.navigate('ArtisanHelpSupport')}
+            accessibilityLabel="Open help and support"
+          />
+          <DashboardCard
+            title="Biochar Training"
+            description="Training modules when published"
+            icon="assignment"
+            accent={CARD_ACCENTS.production.accent}
+            bubble={CARD_ACCENTS.production.bubble}
+            fullWidth={!twoColumn}
+            onPress={() => navigation.navigate('ArtisanModuleUnavailable', { module: 'training' })}
+            accessibilityLabel="Open biochar training"
+          />
+          <DashboardCard
             title="Submitted Production"
             description={`${submittedCount} submitted record${submittedCount === 1 ? '' : 's'}${pendingLabel}`}
             icon="fact_check"
@@ -570,6 +619,51 @@ export function ArtisanDashboardScreen() {
             fullWidth={!twoColumn}
             onPress={() => navigation.navigate('ArtisanProductionRecords', { status: 'submitted' })}
             accessibilityLabel={`Submitted production records, ${submittedCount}`}
+          />
+          <DashboardCard
+            title="Farm Navigator"
+            description="Open Google Maps directions to an assigned farm"
+            icon="near_me"
+            accent={CARD_ACCENTS.find.accent}
+            bubble={CARD_ACCENTS.find.bubble}
+            fullWidth={!twoColumn}
+            onPress={() => {
+              if (!ensureCheckedInOrPrompt()) {
+                return;
+              }
+              navigation.navigate('ArtisanFarmLookup', { purpose: 'navigate' });
+            }}
+            accessibilityLabel="Open farm navigator"
+          />
+          <DashboardCard
+            title="Wallet"
+            description="View Artisan Pro wallet balance"
+            icon="account_balance_wallet"
+            accent={CARD_ACCENTS.submitted.accent}
+            bubble={CARD_ACCENTS.submitted.bubble}
+            fullWidth={!twoColumn}
+            onPress={() => navigation.navigate('ArtisanModuleUnavailable', { module: 'wallet' })}
+            accessibilityLabel="Open wallet"
+          />
+          <DashboardCard
+            title="Biochar Training"
+            description="Learn the Biochar production process"
+            icon="school"
+            accent={CARD_ACCENTS.production.accent}
+            bubble={CARD_ACCENTS.production.bubble}
+            fullWidth={!twoColumn}
+            onPress={() => navigation.navigate('ArtisanModuleUnavailable', { module: 'training' })}
+            accessibilityLabel="Open Biochar training"
+          />
+          <DashboardCard
+            title="Help & Support"
+            description="Contact Bhuguard support"
+            icon="support_agent"
+            accent={CARD_ACCENTS.support.accent}
+            bubble={CARD_ACCENTS.support.bubble}
+            fullWidth={!twoColumn}
+            onPress={() => navigation.navigate('ArtisanHelpSupport')}
+            accessibilityLabel="Open Help and Support"
           />
         </View>
       </ScrollView>

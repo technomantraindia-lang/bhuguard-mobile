@@ -178,8 +178,6 @@ export function FarmerHeroSummaryCard({
             </Text>
             <View style={styles.landSecondaryRow}>
               <Text style={styles.landSecondary}>{landInfo.hectaresLabel}</Text>
-              <Text style={styles.landDot}>•</Text>
-              <Text style={styles.landSecondary}>{landInfo.bighaLabel}</Text>
             </View>
           </View>
         </DashboardPressable>

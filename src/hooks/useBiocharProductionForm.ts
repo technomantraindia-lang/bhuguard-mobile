@@ -123,6 +123,13 @@ interface UseBiocharProductionFormOptions {
   submissionUuid?: string;
   viewOnly?: boolean;
   apiMode?: 'officer' | 'farmer' | 'artisan';
+  /**
+   * When true, this is an explicit "Add New" session: never silently resume a
+   * stale local draft for this farmer/farm (which could otherwise reopen an
+   * abandoned-but-not-cleared batch, including one that was already
+   * submitted). Any leftover "new" draft for this farmer/farm is discarded.
+   */
+  forceNewBatch?: boolean;
   selectionPrefill?: {
     farmerName?: string;
     farmerCode?: string;
@@ -422,6 +429,7 @@ export function useBiocharProductionForm({
   viewOnly = false,
   apiMode = 'officer',
   selectionPrefill,
+  forceNewBatch = false,
 }: UseBiocharProductionFormOptions = {}) {
   const isFarmerMode = apiMode === 'farmer';
   const isArtisanMode = apiMode === 'artisan';
@@ -693,10 +701,22 @@ export function useBiocharProductionForm({
     setTimestampTime(hydrated.timestampTime);
     setFinalStageTime(hydrated.finalStageTime);
     setQuenchingTime(hydrated.quenchingTime);
-    setPyrolysisStartedAt(hydrated.pyrolysisStartedAt);
-    setPyrolysisFinishedAt(hydrated.pyrolysisFinishedAt);
-    setBatchStartedAt(hydrated.batchStartedAt);
-    setProcessCompletedAt(hydrated.processCompletedAt);
+    if (hydrated.pyrolysisStartedAt) {
+      setPyrolysisStartedAt(hydrated.pyrolysisStartedAt);
+    }
+    if (hydrated.pyrolysisFinishedAt) {
+      setPyrolysisFinishedAt(hydrated.pyrolysisFinishedAt);
+    }
+    // Batch Start / Completion Time are captured exactly once on-device and are immutable
+    // afterwards. A freshly-created batch has no server value yet — never let that null
+    // response wipe out a value the officer/artisan already captured this session
+    // (this previously forced a duplicate re-capture right after session creation).
+    if (hydrated.batchStartedAt) {
+      setBatchStartedAt(hydrated.batchStartedAt);
+    }
+    if (hydrated.processCompletedAt) {
+      setProcessCompletedAt(hydrated.processCompletedAt);
+    }
     setPyrolysisDurationSeconds(hydrated.pyrolysisDurationSeconds);
     setPyrolysisDurationLabel(hydrated.pyrolysisDurationLabel);
     setQuenchingStartedAt(hydrated.quenchingStartedAt);
@@ -828,6 +848,13 @@ export function useBiocharProductionForm({
     setDistrictName(draft.districtName);
     setStateName(draft.stateName);
     setOfficerNotes(draft.officerNotes);
+    // Capture-once fields: restore from draft so resuming never re-prompts for a new value.
+    if (draft.batchStartedAt) {
+      setBatchStartedAt((current) => current ?? draft.batchStartedAt ?? null);
+    }
+    if (draft.processCompletedAt) {
+      setProcessCompletedAt((current) => current ?? draft.processCompletedAt ?? null);
+    }
 
     const mergedEvidence = await mergeBiocharEvidenceMaps(remoteEvidenceRef.current, draft.evidence);
     setEvidence(mergedEvidence);
@@ -920,6 +947,8 @@ export function useBiocharProductionForm({
       biocharOutputUnit,
       officerNotes,
       evidence,
+      batchStartedAt,
+      processCompletedAt,
     };
   }, [
     accuracyM,
@@ -927,6 +956,7 @@ export function useBiocharProductionForm({
     authUserId,
     batchCode,
     batchId,
+    batchStartedAt,
     draftUuid,
     biocharOutput,
     biocharOutputUnit,
@@ -946,6 +976,7 @@ export function useBiocharProductionForm({
     moistureValue,
     officerNotes,
     operatorName,
+    processCompletedAt,
     productionDate,
     productionRecordCode,
     quenchingTime,
@@ -1298,7 +1329,16 @@ export function useBiocharProductionForm({
     } finally {
       try {
         if (!initialSubmissionUuid && !viewOnly) {
-          await restoreLocalDraft(resolvedUserId);
+          if (forceNewBatch && !initialBatchId) {
+            // Explicit "Add New" — discard any stale draft for this farmer/farm so
+            // an abandoned or already-submitted batch can never resurface silently.
+            await Promise.all([
+              clearBiocharProductionDraft(newDraftStorageKey),
+              clearBiocharProductionDraft(draftStorageKey),
+            ]);
+          } else {
+            await restoreLocalDraft(resolvedUserId);
+          }
         }
       } catch {
         // Ignore invalid local draft recovery.
@@ -1306,7 +1346,7 @@ export function useBiocharProductionForm({
 
       setLoading(false);
     }
-  }, [apiMode, applyBatch, applyOfflinePayload, applySelectionPrefill, authUserId, farmerId, farmId, initialBatchId, initialSubmissionUuid, isArtisanMode, isFarmerMode, restoreLocalDraft, selectionPrefill?.farmCode, selectionPrefill?.farmerName, viewOnly]);
+  }, [apiMode, applyBatch, applyOfflinePayload, applySelectionPrefill, authUserId, draftStorageKey, farmerId, farmId, forceNewBatch, initialBatchId, initialSubmissionUuid, isArtisanMode, isFarmerMode, newDraftStorageKey, restoreLocalDraft, selectionPrefill?.farmCode, selectionPrefill?.farmerName, viewOnly]);
 
   useEffect(() => {
     void loadInitialData();

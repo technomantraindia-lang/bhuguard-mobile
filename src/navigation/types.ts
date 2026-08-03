@@ -113,9 +113,11 @@ export type ArtisanStackParamList = {
   ArtisanNotifications: undefined;
   ArtisanProfile: undefined;
   ArtisanSettings: undefined;
+  ArtisanHelpSupport: undefined;
+  ArtisanModuleUnavailable: { module: 'wallet' | 'training' };
   ArtisanFarmLookup:
     | {
-        purpose?: 'find' | 'production' | 'mixing' | 'application';
+        purpose?: 'find' | 'production' | 'mixing' | 'application' | 'navigate';
       }
     | undefined;
   ArtisanBiocharApplication:
@@ -152,6 +154,8 @@ export type ArtisanStackParamList = {
     submissionUuid?: string;
     viewOnly?: boolean;
     gpsRecaptured?: boolean;
+    /** True when opened via "Add New Biochar" — never silently resume a stale local draft. */
+    forceNewBatch?: boolean;
   };
   ArtisanBiocharProductionStatus: {
     submissionUuid: string;
@@ -197,6 +201,7 @@ export type ArtisanStackParamList = {
   OnboardingBoundaryStart: FieldOfficerStackParamList['OnboardingBoundaryStart'];
   OnboardingBoundaryCapture: FieldOfficerStackParamList['OnboardingBoundaryCapture'];
   FarmBoundaryMap: FieldOfficerStackParamList['FarmBoundaryMap'];
+  FarmBoundaryView: FieldOfficerStackParamList['FarmBoundaryView'];
   OnboardingBoundaryPreview: FieldOfficerStackParamList['OnboardingBoundaryPreview'];
   OnboardingCameraBoundaryStart: FieldOfficerStackParamList['OnboardingCameraBoundaryStart'];
   OnboardingCameraBoundaryLive: FieldOfficerStackParamList['OnboardingCameraBoundaryLive'];
@@ -424,6 +429,22 @@ export type FieldOfficerStackParamList = {
     declaredArea?: string;
     declaredAreaUnit?: 'acre' | 'hectare' | 'bigha';
     returnScreen?: 'OnboardingBoundaryStart';
+  };
+  /**
+   * Read-only saved-boundary viewer (Phase 10.7/10.10) — selected polygon only,
+   * fit bounds, no FO location marker, no editing, no other farms. "Done" always
+   * pops back to the screen that opened it (Phase 10.9).
+   */
+  FarmBoundaryView: {
+    farmerId: number;
+    farmId: number;
+    farmerName: string;
+    farmerCode?: string;
+    farmName?: string;
+    farmCode?: string;
+    village?: string;
+    declaredArea?: string;
+    declaredAreaUnit?: 'acre' | 'hectare' | 'bigha';
   };
   OnboardingBoundaryPreview:
     | {

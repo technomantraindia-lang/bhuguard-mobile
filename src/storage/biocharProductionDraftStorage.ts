@@ -27,6 +27,9 @@ export interface BiocharProductionLocalDraft {
   selectedFarmerId: number | null;
   selectedUnitId: number | null;
   kilnId: string;
+  /** Captured once, locked thereafter — persisted so app restarts never re-prompt for a new value. */
+  batchStartedAt?: string | null;
+  processCompletedAt?: string | null;
   farmerName: string;
   productionDate: string;
   operatorName: string;
@@ -88,6 +91,79 @@ export async function saveBiocharProductionDraft(key: string, draft: BiocharProd
 
 export async function clearBiocharProductionDraft(key: string): Promise<void> {
   await AsyncStorage.removeItem(key);
+}
+
+export interface IncompleteBiocharProductionDraftSummary {
+  key: string;
+  apiMode: 'officer' | 'farmer' | 'artisan';
+  userId: number | null;
+  farmerId: number | null;
+  farmId: number | null;
+  batchId: number | null;
+  batchCode: string;
+  savedAt: string;
+}
+
+function hasMeaningfulDraftProgress(draft: BiocharProductionLocalDraft): boolean {
+  return Boolean(
+    draft.batchCode?.trim() ||
+      draft.batchStartedAt ||
+      draft.feedstockQuantity?.trim() ||
+      Object.keys(draft.evidence ?? {}).length > 0 ||
+      (draft.moistureReadings ?? []).some((reading) => reading.moistureReading?.trim() || reading.photo),
+  );
+}
+
+/**
+ * Scans local drafts for the given user/mode and returns the most recently
+ * saved one that still has meaningful (unsaved-to-server) progress. Used to
+ * silently resume and to power the "Complete the Process" dashboard highlight
+ * — never shows a resume dialog, just detects whether one exists.
+ */
+export async function findIncompleteBiocharProductionDraft(params: {
+  apiMode: 'officer' | 'farmer' | 'artisan';
+  userId?: number | null;
+}): Promise<IncompleteBiocharProductionDraftSummary | null> {
+  const prefix = `${DRAFT_PREFIX}:${params.apiMode}:u${params.userId ?? 0}:`;
+
+  try {
+    const allKeys = await AsyncStorage.getAllKeys();
+    const matchingKeys = allKeys.filter((key) => key.startsWith(prefix));
+
+    let best: IncompleteBiocharProductionDraftSummary | null = null;
+
+    for (const key of matchingKeys) {
+      const draft = await loadBiocharProductionDraft(key);
+      if (!draft || !hasMeaningfulDraftProgress(draft)) {
+        continue;
+      }
+
+      const segments = key.slice(prefix.length).split(':');
+      const [farmerIdRaw, farmIdRaw, batchIdRaw] = segments;
+      const farmerId = Number(farmerIdRaw);
+      const farmId = Number(farmIdRaw);
+      const batchId = batchIdRaw && batchIdRaw !== 'new' ? Number(batchIdRaw) : draft.batchId ?? null;
+
+      const summary: IncompleteBiocharProductionDraftSummary = {
+        key,
+        apiMode: params.apiMode,
+        userId: params.userId ?? null,
+        farmerId: Number.isFinite(farmerId) && farmerId > 0 ? farmerId : draft.selectedFarmerId ?? null,
+        farmId: Number.isFinite(farmId) && farmId > 0 ? farmId : null,
+        batchId: batchId != null && Number.isFinite(batchId) && batchId > 0 ? batchId : null,
+        batchCode: draft.batchCode ?? '',
+        savedAt: draft.savedAt,
+      };
+
+      if (!best || Date.parse(summary.savedAt || '') > Date.parse(best.savedAt || '')) {
+        best = summary;
+      }
+    }
+
+    return best;
+  } catch {
+    return null;
+  }
 }
 
 export async function migrateBiocharProductionDraft(fromKey: string, toKey: string): Promise<void> {

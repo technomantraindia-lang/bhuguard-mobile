@@ -136,7 +136,7 @@ export function FarmerOnboardingReviewScreen() {
       return;
     }
 
-    navigation.navigate('FarmBoundaryMap', {
+    navigation.navigate('FarmBoundaryView', {
       farmerId: farmerId!,
       farmId: farmId!,
       farmerName: draft.farmer_name || 'Farmer',
@@ -144,10 +144,8 @@ export function FarmerOnboardingReviewScreen() {
       farmName: draft.farm_name || undefined,
       farmCode: draft.farm_code || undefined,
       village: draft.village_name || undefined,
-      mappingStatus: mappingCompleted ? 'completed' : 'pending',
       declaredArea: draft.land_area || undefined,
       declaredAreaUnit: (draft.land_area_unit as 'acre' | 'hectare' | 'bigha') || undefined,
-      returnScreen: 'OnboardingBoundaryStart',
     });
   };
 

@@ -7,6 +7,7 @@ import { routeAfterPreloader } from '../../auth/startup/AuthStartupController';
 import { ANIMATED_SPLASH_BG } from '../../components/AnimatedLogoSplash';
 import { safeNavigationReset } from '../../navigation/safeNavigationReset';
 import type { RootStackParamList } from '../../navigation/types';
+import { syncServerTime } from '../../services/serverTimeSync';
 import { bootstrapApiBaseUrl } from '../../storage/apiConfigStorage';
 import { hideNativeSplashOnce } from '../../utils/splashHideGuard';
 
@@ -65,6 +66,9 @@ export function PreloaderScreen({ navigation }: Props) {
           console.warn('[Bhuguard] API bootstrap failed during preloader:', error);
         }
       }
+
+      // Best-effort, non-blocking — never delay startup on this.
+      void syncServerTime();
 
       try {
         const next = await routeAfterPreloader();

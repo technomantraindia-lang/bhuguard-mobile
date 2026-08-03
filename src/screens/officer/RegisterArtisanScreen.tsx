@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -8,12 +8,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getApiErrorMessage } from '../../api/authApi';
 import { createOfficerArtisan } from '../../api/fieldOfficerApi';
 import { AppButton } from '../../components/AppButton';
-import { FormMultiSelect } from '../../components/FormMultiSelect';
-import { FormSelect } from '../../components/FormSelect';
+import { AddressSelector, type AddressValue } from '../../components/AddressSelector';
 import { OfficerScreenChrome } from '../../components/officer/OfficerScreenChrome';
+import { WorkingAreaSelector, type WorkingAreaEntry } from '../../components/officer/WorkingAreaSelector';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
-import { useAddressCascade } from '../../hooks/useAddressCascade';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerTheme } from '../../theme/officerDashboardTheme';
 
@@ -29,20 +28,23 @@ type FormState = {
   name: string;
   mobile: string;
   address: string;
-  village: string;
-  taluka: string;
-  district: string;
-  state: string;
 };
 
 const initialForm: FormState = {
   name: '',
   mobile: '',
   address: '',
-  village: '',
-  taluka: '',
-  district: '',
+};
+
+const initialHomeAddress: AddressValue = {
   state: 'Gujarat',
+  district_id: '',
+  district_name: '',
+  taluka_id: '',
+  taluka_name: '',
+  village_id: '',
+  village_name: '',
+  pincode: '',
 };
 
 function appendFile(formData: FormData, key: string, file: UploadFile | null): void {
@@ -60,30 +62,8 @@ export function RegisterArtisanScreen() {
   const [identityDocument, setIdentityDocument] = useState<UploadFile | null>(null);
   const [trainingCertificate, setTrainingCertificate] = useState<UploadFile | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [workingDistrictId, setWorkingDistrictId] = useState('');
-  const [workingDistrictName, setWorkingDistrictName] = useState('');
-  const [workingTalukaId, setWorkingTalukaId] = useState('');
-  const [workingTalukaName, setWorkingTalukaName] = useState('');
-  const [workingVillageIds, setWorkingVillageIds] = useState<number[]>([]);
-
-  const address = useAddressCascade(form.state || 'Gujarat');
-
-  useEffect(() => {
-    if (workingDistrictId) {
-      void address.loadTalukas(Number(workingDistrictId));
-    }
-  }, [workingDistrictId]);
-
-  useEffect(() => {
-    if (workingTalukaId) {
-      void address.loadVillages(Number(workingTalukaId));
-    }
-  }, [workingTalukaId]);
-
-  const villageOptions = useMemo(
-    () => address.villages.map((item) => ({ id: item.id, name: item.name })),
-    [address.villages],
-  );
+  const [homeAddress, setHomeAddress] = useState<AddressValue>(initialHomeAddress);
+  const [workingAreaEntries, setWorkingAreaEntries] = useState<WorkingAreaEntry[]>([]);
 
   const update = (key: keyof FormState, value: string) => setForm((current) => ({ ...current, [key]: value }));
 
@@ -147,10 +127,10 @@ export function RegisterArtisanScreen() {
       ['Name', form.name],
       ['Mobile number', form.mobile],
       ['Address', form.address],
-      ['Village', form.village],
-      ['Taluka', form.taluka],
-      ['District', form.district],
-      ['State', form.state],
+      ['Village', homeAddress.village_name],
+      ['Taluka', homeAddress.taluka_name],
+      ['District', homeAddress.district_name],
+      ['State', homeAddress.state],
     ];
     const missing = required.find(([, value]) => !value.trim());
 
@@ -159,13 +139,8 @@ export function RegisterArtisanScreen() {
       return;
     }
 
-    if (!workingTalukaId) {
-      Alert.alert('Working area required', 'Select a taluka for the artisan working area.');
-      return;
-    }
-
-    if (workingVillageIds.length === 0) {
-      Alert.alert('Working villages required', 'Select one or more villages for the working area.');
+    if (workingAreaEntries.length === 0) {
+      Alert.alert('Working area required', 'Add at least one taluka and village to the artisan working area.');
       return;
     }
 
@@ -178,12 +153,20 @@ export function RegisterArtisanScreen() {
     payload.append('name', form.name.trim());
     payload.append('mobile', form.mobile.trim());
     payload.append('address', form.address.trim());
-    payload.append('village', form.village.trim());
-    payload.append('taluka', form.taluka.trim());
-    payload.append('district', form.district.trim());
-    payload.append('state', form.state.trim());
-    payload.append('working_taluka_id', workingTalukaId);
-    workingVillageIds.forEach((id) => payload.append('working_village_ids[]', String(id)));
+    payload.append('village', homeAddress.village_name.trim());
+    payload.append('taluka', homeAddress.taluka_name.trim());
+    payload.append('district', homeAddress.district_name.trim());
+    payload.append('state', (homeAddress.state || 'Gujarat').trim());
+    // Merged across every taluka the officer added — never a silent single-taluka replace.
+    // working_taluka_id is a single-taluka filter on the backend, so it is only sent when
+    // the working area is confined to one taluka; otherwise villages are authorized individually.
+    if (workingAreaEntries.length === 1) {
+      payload.append('working_taluka_id', String(workingAreaEntries[0].talukaId));
+    }
+    workingAreaEntries.forEach((entry) => {
+      payload.append('working_taluka_ids[]', String(entry.talukaId));
+      entry.villageIds.forEach((id) => payload.append('working_village_ids[]', String(id)));
+    });
     appendFile(payload, 'profile_photo', profilePhoto);
     appendFile(payload, 'identity_document', identityDocument);
     appendFile(payload, 'training_certificate', trainingCertificate);
@@ -232,51 +215,20 @@ export function RegisterArtisanScreen() {
         <Field label="Full name" value={form.name} onChangeText={(value) => update('name', value)} />
         <Field label="Mobile number" value={form.mobile} onChangeText={(value) => update('mobile', value)} keyboardType="phone-pad" />
         <Field label="Address" value={form.address} onChangeText={(value) => update('address', value)} multiline />
-        <Field label="Village" value={form.village} onChangeText={(value) => update('village', value)} />
-        <Field label="Taluka" value={form.taluka} onChangeText={(value) => update('taluka', value)} />
-        <Field label="District" value={form.district} onChangeText={(value) => update('district', value)} />
-        <Field label="State" value={form.state} onChangeText={(value) => update('state', value)} />
+
+        <Text style={styles.sectionTitle}>Home address</Text>
+        <Text style={styles.sectionHint}>State defaults to Gujarat. District, Taluka, and Village are dependent dropdowns.</Text>
+        <AddressSelector value={homeAddress} onChange={(patch) => setHomeAddress((current) => ({ ...current, ...patch }))} />
 
         <Text style={styles.sectionTitle}>Working area</Text>
-        <Text style={styles.sectionHint}>Select a taluka, then choose one or more villages where this artisan will work.</Text>
-        <FormSelect
-          label="Working district"
-          placeholder="Select district"
-          value={workingDistrictId}
-          displayValue={workingDistrictName || undefined}
-          options={address.districts}
-          loading={address.loadingDistricts}
-          error={address.error}
-          onSelect={(option) => {
-            setWorkingDistrictId(String(option.id));
-            setWorkingDistrictName(option.name);
-            setWorkingTalukaId('');
-            setWorkingTalukaName('');
-            setWorkingVillageIds([]);
-          }}
-        />
-        <FormSelect
-          label="Working taluka"
-          placeholder="Select taluka"
-          value={workingTalukaId}
-          displayValue={workingTalukaName || undefined}
-          options={address.talukas}
-          loading={address.loadingTalukas}
-          disabled={!workingDistrictId}
-          onSelect={(option) => {
-            setWorkingTalukaId(String(option.id));
-            setWorkingTalukaName(option.name);
-            setWorkingVillageIds([]);
-          }}
-        />
-        <FormMultiSelect
-          label="Working villages"
-          placeholder={workingTalukaId ? 'Select one or more villages' : 'Select a taluka first'}
-          values={workingVillageIds}
-          options={villageOptions}
-          loading={address.loadingVillages}
-          disabled={!workingTalukaId}
-          onChange={setWorkingVillageIds}
+        <Text style={styles.sectionHint}>
+          Select a district and taluka, choose one or more villages, then tap Add. Adding another taluka merges it
+          into the working area — it never replaces villages you already added.
+        </Text>
+        <WorkingAreaSelector
+          state={homeAddress.state || 'Gujarat'}
+          entries={workingAreaEntries}
+          onChange={setWorkingAreaEntries}
         />
 
         <Text style={styles.sectionTitle}>Documents</Text>

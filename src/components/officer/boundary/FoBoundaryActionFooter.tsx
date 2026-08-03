@@ -166,11 +166,12 @@ export function FoBoundaryActionFooter({
 
       {workflowState === 'saved' ? (
         <>
-          <PrimaryButton label="Done" onPress={onDone} />
           <OutlineButton label="Edit Boundary" onPress={onEditBoundary} />
           {onViewFarmDetails ? (
             <OutlineButton label="View Farm Details" onPress={onViewFarmDetails} />
           ) : null}
+          {/* Done sits below the other controls — it is the final exit action (Phase 10.8). */}
+          <PrimaryButton label="Done" onPress={onDone} />
         </>
       ) : null}
 

@@ -92,8 +92,6 @@ export function FarmerFarmListCard({
 
       <View style={styles.conversionRow}>
         <Text style={styles.conversionText}>{farm.hectareLabel}</Text>
-        <Text style={styles.conversionDivider}>·</Text>
-        <Text style={styles.conversionText}>{farm.bighaLabel}</Text>
       </View>
 
       <View style={styles.actions}>

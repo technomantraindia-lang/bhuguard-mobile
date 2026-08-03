@@ -195,6 +195,10 @@ export function OfficerNavigator() {
           component={OnboardingBoundaryCaptureScreen}
         />
         <Stack.Screen
+          name="FarmBoundaryView"
+          getComponent={() => require('../screens/officer/boundary/FarmBoundaryViewScreen').FarmBoundaryViewScreen}
+        />
+        <Stack.Screen
           name="OnboardingBoundaryPreview"
           component={OnboardingBoundaryPreviewScreen}
         />

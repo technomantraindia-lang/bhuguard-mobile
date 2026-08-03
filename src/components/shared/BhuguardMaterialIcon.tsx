@@ -44,7 +44,10 @@ export type BhuguardIconName =
   | 'note_add'
   | 'lock'
   | 'description'
-  | 'water_drop';
+  | 'water_drop'
+  | 'near_me'
+  | 'account_balance_wallet'
+  | 'school';
 
 interface BhuguardMaterialIconProps {
   name: BhuguardIconName;
@@ -307,6 +310,21 @@ function iconPath(name: BhuguardIconName, filled: boolean): { d: string; fill?: 
     case 'water_drop':
       return {
         d: 'M12 2c-4 6-8 9.33-8 13a8 8 0 1016 0c0-3.67-4-7-8-13zm0 18a5 5 0 01-5-5c0-2.12 2.08-4.88 5-8.82 2.92 3.94 5 6.7 5 8.82a5 5 0 01-5 5z',
+        fill: true,
+      };
+    case 'near_me':
+      return {
+        d: 'M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z',
+        fill: true,
+      };
+    case 'account_balance_wallet':
+      return {
+        d: 'M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z',
+        fill: true,
+      };
+    case 'school':
+      return {
+        d: 'M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z',
         fill: true,
       };
     default:

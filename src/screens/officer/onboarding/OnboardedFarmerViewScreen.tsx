@@ -171,7 +171,7 @@ export function OnboardedFarmerViewScreen() {
                 <AppButton
                   label="View Saved Mapping"
                   onPress={() =>
-                    navigation.navigate('FarmBoundaryMap', {
+                    navigation.navigate('FarmBoundaryView', {
                       farmerId: farmContext.farmerId,
                       farmId: farmContext.farmId!,
                       farmerName: farmContext.farmerName || 'Farmer',
@@ -179,7 +179,6 @@ export function OnboardedFarmerViewScreen() {
                       farmName: farmContext.farmName !== '-' ? farmContext.farmName : undefined,
                       farmCode: farmContext.farmCode !== '-' ? farmContext.farmCode : undefined,
                       village: farmContext.village,
-                      mappingStatus: 'completed',
                       declaredArea: primaryFarm ? String(primaryFarm.land_area ?? '') : undefined,
                       declaredAreaUnit: primaryFarm?.land_area_unit as 'acre' | 'hectare' | 'bigha' | undefined,
                     })

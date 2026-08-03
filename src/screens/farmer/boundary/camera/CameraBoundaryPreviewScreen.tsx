@@ -37,7 +37,6 @@ export function CameraBoundaryPreviewScreen({ navigation }: Props) {
           <Text style={styles.cardTitle}>Calculated Area</Text>
           <Text style={styles.areaMain}>{boundary.areaLabel}</Text>
           <Text style={styles.meta}>{boundary.metrics.areaHectare.toFixed(2)} Hectare</Text>
-          <Text style={styles.meta}>{boundary.metrics.areaBigha.toFixed(2)} Bigha</Text>
           <Text style={styles.meta}>Perimeter: {boundary.metrics.perimeterMeter} meters</Text>
           <Text style={styles.meta}>Total Captured Photos: {photoCount}</Text>
           <Text style={styles.meta}>Total Points: {boundary.points.length}</Text>

@@ -58,6 +58,8 @@ import { formatFarmerDisplayId } from '../../utils/displayIds';
 
 import { formatFarmDisplayLabel } from '../../utils/farmDisplayLabel';
 
+import { getServerSyncedNowIso } from '../../services/serverTimeSync';
+
 import type { ArtisanFarmSearchRecord } from '../../types/artisanFarmSearch';
 
 
@@ -167,6 +169,8 @@ export function ArtisanBiocharProductionScreen() {
     apiMode: 'artisan',
 
     selectionPrefill,
+
+    forceNewBatch: params?.forceNewBatch === true,
 
   });
 
@@ -488,7 +492,7 @@ export function ArtisanBiocharProductionScreen() {
 
 
 
-    const startedAt = new Date().toISOString();
+    const startedAt = getServerSyncedNowIso();
 
     form.setBatchStartedAt(startedAt);
 
@@ -516,7 +520,7 @@ export function ArtisanBiocharProductionScreen() {
 
 
 
-    const completedAt = new Date().toISOString();
+    const completedAt = getServerSyncedNowIso();
 
     form.setProcessCompletedAt(completedAt);
 

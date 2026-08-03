@@ -543,7 +543,6 @@ interface BatchDetailsSectionProps {
   onBatchCodeChange: (value: string) => void;
   readOnly?: boolean;
   allowKilnSelect?: boolean;
-  kilnPrefixFixed?: boolean;
 }
 
 export function BatchDetailsSection({
@@ -561,14 +560,8 @@ export function BatchDetailsSection({
   onBatchCodeChange,
   readOnly = false,
   allowKilnSelect = false,
-  kilnPrefixFixed = false,
 }: BatchDetailsSectionProps) {
   const [kilnPickerOpen, setKilnPickerOpen] = React.useState(false);
-  const kilnSuffix = kilnPrefixFixed
-    ? kilnId.startsWith(ARTISAN_KILN_PREFIX)
-      ? kilnId.slice(ARTISAN_KILN_PREFIX.length)
-      : kilnId.replace(/^BHG-?/i, '')
-    : '';
   const farmerLabel = formatFarmerDisplayId({ farmer_code: farmerCode });
   const selectedUnit = units.find((unit) => unit.id === selectedUnitId);
   const kilnLabel = selectedUnit
@@ -612,53 +605,23 @@ export function BatchDetailsSection({
       <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Kiln ID / Pyrolysis Unit</Text>
       {allowKilnSelect && !readOnly ? (
         <>
-          {kilnPrefixFixed ? (
-            <View style={styles.kilnInputRow}>
-              <Text style={styles.kilnPrefixLabel}>{ARTISAN_KILN_PREFIX}</Text>
-              <TextInput
-                style={[styles.input, styles.kilnSuffixInput]}
-                value={kilnSuffix}
-                onChangeText={(value) => {
-                  const digits = value.replace(/\D/g, '').slice(0, 3);
-                  onKilnIdChange?.(`${ARTISAN_KILN_PREFIX}${digits}`);
-                }}
-                placeholder="001"
-                placeholderTextColor={officerTheme.outline}
-                keyboardType="number-pad"
-                maxLength={3}
-              />
-            </View>
-          ) : (
-            <TextInput
-              style={styles.input}
-              value={kilnId}
-              onChangeText={onKilnIdChange}
-              placeholder={DEFAULT_ARTISAN_KILN_ID}
-              placeholderTextColor={officerTheme.outline}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              maxLength={50}
-            />
-          )}
           <Pressable
             style={styles.kilnSelectExistingButton}
-            onPress={() => setKilnPickerOpen(true)}
-            accessibilityLabel="Select Existing Kiln"
+            onPress={() => (units.length > 0 ? setKilnPickerOpen(true) : undefined)}
+            accessibilityLabel="Select Assigned Kiln"
+            disabled={units.length === 0}
           >
             <BhuguardMaterialIcon name="assignment" size={18} color={officerTheme.primaryContainer} />
-            <Text style={styles.kilnSelectExistingText}>Select Existing Kiln</Text>
-          </Pressable>
-          {selectedUnit ? (
-            <Text style={styles.helperText}>
-              {[
-                selectedUnit.kilnId || selectedUnit.label,
-                selectedUnit.kilnType,
-                selectedUnit.village,
-                selectedUnit.status,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
+            <Text style={styles.kilnSelectExistingText}>
+              {selectedUnit
+                ? [selectedUnit.kilnId || selectedUnit.label, selectedUnit.kilnType, selectedUnit.village, selectedUnit.status]
+                    .filter(Boolean)
+                    .join(' · ')
+                : 'Select Assigned Kiln'}
             </Text>
+          </Pressable>
+          {units.length === 0 ? (
+            <Text style={styles.helperText}>No assigned kilns found for your account yet.</Text>
           ) : null}
           {kilnIdError ? <Text style={styles.errorText}>{kilnIdError}</Text> : null}
         </>

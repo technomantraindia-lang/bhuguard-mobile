@@ -98,16 +98,18 @@ export function getFarmAreaLabel(farm: ApiRecord): string {
   return `${formatted} ${unit}`;
 }
 
+// Never fabricate a local farm code (e.g. "BG-FARM-000") — Farm ID is either
+// the server-issued farm_code or the existing numeric farm id, per Phase 6/12.
 export function getFarmCode(farm: ApiRecord): string {
   const code = pickString(farm, 'farm_code');
 
   if (code !== '-') {
-    return code.startsWith('BG-') ? code : `BG-${code}`;
+    return code;
   }
 
   const id = pickString(farm, 'id');
 
-  return id !== '-' ? `BG-FARM-${id.padStart(3, '0')}` : 'BG-FARM-000';
+  return id !== '-' ? id : '—';
 }
 
 export function getFarmLocationLabel(farm: ApiRecord): string {

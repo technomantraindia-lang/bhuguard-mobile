@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -24,6 +25,7 @@ import { useArtisanWorkSession } from '../../context/ArtisanWorkSessionContext';
 import type { ArtisanStackParamList } from '../../navigation/types';
 import { colors, spacing } from '../../theme';
 import { groupFarmSearchResultsByFarmer, labelFarmsForFarmer } from '../../utils/farmDisplayLabel';
+import { openGoogleMaps } from '../../utils/farmMapHelpers';
 import type {
   ArtisanAllocatedTaluka,
   ArtisanAllocatedVillage,
@@ -33,7 +35,7 @@ import type {
 
 type Nav = NativeStackNavigationProp<ArtisanStackParamList, 'ArtisanFarmLookup'>;
 type Route = RouteProp<ArtisanStackParamList, 'ArtisanFarmLookup'>;
-type LookupPurpose = 'find' | 'production' | 'mixing' | 'application';
+type LookupPurpose = 'find' | 'production' | 'mixing' | 'application' | 'navigate';
 
 function toSelection(
   record: ArtisanFarmSearchRecord,
@@ -78,6 +80,12 @@ function purposeCopy(purpose: LookupPurpose): {
         title: 'Biochar Application',
         helper: 'Select a farm in your assigned area to apply mixed biochar.',
         sectionTitle: 'Select a farm for application',
+      };
+    case 'navigate':
+      return {
+        title: 'Farm Navigator',
+        helper: 'Search authorized farms by Farm ID or Farmer Name, then navigate using saved GPS or Google Maps.',
+        sectionTitle: 'Authorized Farms',
       };
     default:
       return {
@@ -290,6 +298,34 @@ export function ArtisanFarmLookupScreen() {
     });
   };
 
+  const navigateToFarm = async (selection: ArtisanFarmSelectionParams) => {
+    if (!ensureCheckedInOrPrompt()) {
+      return;
+    }
+
+    if (
+      selection.latitude == null ||
+      selection.longitude == null ||
+      !Number.isFinite(selection.latitude) ||
+      !Number.isFinite(selection.longitude)
+    ) {
+      Alert.alert(
+        'Location unavailable',
+        'This farm has no saved GPS coordinates. Navigation cannot invent a location.',
+      );
+      return;
+    }
+
+    try {
+      await openGoogleMaps(
+        { latitude: selection.latitude, longitude: selection.longitude },
+        selection.farmLabel ?? selection.farmCode ?? `Farm ${selection.farmId}`,
+      );
+    } catch {
+      Alert.alert('Unable to open maps', 'Google Maps could not be opened on this device.');
+    }
+  };
+
   const renderMixingResult = () => {
     if (selectedFarmerId != null) {
       const farmer = farmerSummaries.find((item) => item.farmerId === selectedFarmerId);
@@ -353,6 +389,7 @@ export function ArtisanFarmLookupScreen() {
     const showProduction = purpose === 'find' || purpose === 'production';
     const showMixing = purpose === 'find' || purpose === 'mixing';
     const showApplication = purpose === 'find' || purpose === 'application';
+    const showNavigate = purpose === 'find' || purpose === 'navigate';
 
     return (
       <View style={styles.card}>
@@ -370,6 +407,16 @@ export function ArtisanFarmLookupScreen() {
         {item.next_due_date ? <Text style={styles.cardMeta}>Next due: {item.next_due_date}</Text> : null}
 
         <View style={styles.cardActions}>
+          {showNavigate ? (
+            <Pressable
+              style={purpose === 'navigate' ? styles.selectButton : styles.secondarySelectButton}
+              onPress={() => void navigateToFarm(selection)}
+            >
+              <Text style={purpose === 'navigate' ? styles.selectButtonText : styles.secondarySelectButtonText}>
+                Navigate Farm
+              </Text>
+            </Pressable>
+          ) : null}
           {showProduction ? (
             <Pressable style={styles.selectButton} onPress={() => openProduction(selection)}>
               <Text style={styles.selectButtonText}>

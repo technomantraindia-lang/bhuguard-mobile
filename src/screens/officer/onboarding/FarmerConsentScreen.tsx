@@ -27,6 +27,7 @@ import {
   isDemoConsentOtpEnabled,
   isDemoConsentOtpMatch,
 } from '../../../utils/demoConsentOtp';
+import { formatFarmDisplayCode, formatFarmerDisplayCode } from '../../../utils/entityId';
 import { validateConsent } from '../../../utils/onboardingValidation';
 import { sanitizeOnboardingApiError } from '../../../utils/assignmentErrorMessage';
 import { safeNetInfoIsConnected } from '../../../utils/safeNetInfo';
@@ -269,6 +270,16 @@ export function FarmerConsentScreen() {
       footerError={displayError}
       nextDisabled={!draft.agreement_otp_verified}
     >
+      <View style={styles.identityCard}>
+        <Text style={styles.identityTitle}>Registration Summary</Text>
+        <Text style={styles.identityLine}>
+          Farmer ID: {formatFarmerDisplayCode(draft.farmer_id, draft.farmer_display_id || draft.farmer_code)}
+        </Text>
+        <Text style={styles.identityLine}>Farmer Name: {draft.farmer_name?.trim() || '-'}</Text>
+        <Text style={styles.identityLine}>Farm ID: {formatFarmDisplayCode(draft.farm_id, draft.farm_code)}</Text>
+        <Text style={styles.identityLine}>Farm Name: {draft.farm_name?.trim() || '-'}</Text>
+      </View>
+
       <View style={styles.toggles}>
         <OnboardingToggleSwitch
           title="Data Usage Consent"
@@ -380,6 +391,25 @@ export function FarmerConsentScreen() {
 }
 
 const styles = StyleSheet.create({
+  identityCard: {
+    backgroundColor: dashboardTheme.surfaceLow,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: dashboardTheme.outlineVariant,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 2,
+  },
+  identityTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: dashboardTheme.onSurface,
+    marginBottom: 4,
+  },
+  identityLine: {
+    fontSize: 13,
+    color: dashboardTheme.onSurfaceVariant,
+  },
   toggles: { gap: 16 },
   divider: { height: 1, backgroundColor: `${dashboardTheme.outlineVariant}80` },
   sectionTitle: { color: dashboardTheme.onSurface, fontWeight: '700', fontSize: 15 },

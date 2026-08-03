@@ -268,6 +268,15 @@ export function FarmBoundaryManualDrawScreen() {
     : 'Pending / Not Saved';
 
   const localStatusLabel = workflowLocalStatusLabel(workflowState);
+  // Once a boundary already exists (persisted or mid-edit), the screen is clearly
+  // "editing" rather than a first-time draw (Phase 10.8).
+  const screenTitle =
+    drawing.persistedToBhuguard
+    || workflowState === 'editing'
+    || workflowState === 'saved'
+    || workflowState === 'save_failed'
+      ? 'Edit Boundary'
+      : 'Map Land Boundary';
 
   const mappedAcres = drawing.validation.metrics?.areaAcre ?? null;
   const declaredAcres = useMemo(
@@ -948,7 +957,7 @@ export function FarmBoundaryManualDrawScreen() {
         </Pressable>
         <View style={styles.headerMeta}>
           <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
-            Map Land Boundary
+            {screenTitle}
           </Text>
           <View style={styles.statusChip}>
             <Text style={styles.statusChipText} numberOfLines={1}>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -6,12 +6,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getApiErrorMessage } from '../../api/authApi';
 import { getOfficerArtisan, updateOfficerArtisanWorkingVillages } from '../../api/fieldOfficerApi';
 import { AppButton } from '../../components/AppButton';
-import { FormMultiSelect } from '../../components/FormMultiSelect';
-import { FormSelect } from '../../components/FormSelect';
 import { OfficerListState } from '../../components/officer/OfficerListState';
 import { OfficerScreenChrome } from '../../components/officer/OfficerScreenChrome';
 import { ScreenHeader } from '../../components/ScreenHeader';
-import { useAddressCascade } from '../../hooks/useAddressCascade';
+import { WorkingAreaSelector, type WorkingAreaEntry } from '../../components/officer/WorkingAreaSelector';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
 import { pickString, type ApiRecord } from '../../utils/apiHelpers';
@@ -27,13 +25,7 @@ export function ArtisanDetailScreen({ route }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [editingWorkingArea, setEditingWorkingArea] = useState(false);
   const [savingWorkingArea, setSavingWorkingArea] = useState(false);
-  const [workingDistrictId, setWorkingDistrictId] = useState('');
-  const [workingDistrictName, setWorkingDistrictName] = useState('');
-  const [workingTalukaId, setWorkingTalukaId] = useState('');
-  const [workingTalukaName, setWorkingTalukaName] = useState('');
-  const [workingVillageIds, setWorkingVillageIds] = useState<number[]>([]);
-
-  const address = useAddressCascade('Gujarat');
+  const [workingAreaEntries, setWorkingAreaEntries] = useState<WorkingAreaEntry[]>([]);
 
   const load = useCallback(
     async (silent = false) => {
@@ -64,23 +56,6 @@ export function ArtisanDetailScreen({ route }: Props) {
     }, [load]),
   );
 
-  useEffect(() => {
-    if (workingDistrictId) {
-      void address.loadTalukas(Number(workingDistrictId));
-    }
-  }, [workingDistrictId]);
-
-  useEffect(() => {
-    if (workingTalukaId) {
-      void address.loadVillages(Number(workingTalukaId));
-    }
-  }, [workingTalukaId]);
-
-  const villageOptions = useMemo(
-    () => address.villages.map((item) => ({ id: item.id, name: item.name })),
-    [address.villages],
-  );
-
   const workingVillages = useMemo(() => {
     const list = Array.isArray(artisan?.working_villages) ? (artisan?.working_villages as ApiRecord[]) : [];
     return list
@@ -89,41 +64,59 @@ export function ArtisanDetailScreen({ route }: Props) {
   }, [artisan]);
 
   const startEditWorkingArea = () => {
+    // Seed one entry per taluka already on file so re-opening the editor and adding
+    // more villages MERGES with the existing working area instead of replacing it.
     const villages = Array.isArray(artisan?.working_villages) ? (artisan?.working_villages as ApiRecord[]) : [];
-    const first = villages[0];
-    const villageIds = villages
-      .map((item) => Number(item.id))
-      .filter((id) => Number.isFinite(id) && id > 0);
+    const byTaluka = new Map<number, WorkingAreaEntry>();
 
-    const districtId = first ? String(first.district_id ?? '') : '';
-    const districtName = first ? pickString(first, 'district_name') : '';
-    const talukaId = first ? String(first.taluka_id ?? '') : '';
-    const talukaName = first ? pickString(first, 'taluka_name') : '';
+    for (const item of villages) {
+      const talukaId = Number(item.taluka_id);
+      const villageId = Number(item.id);
+      if (!Number.isFinite(talukaId) || talukaId <= 0 || !Number.isFinite(villageId) || villageId <= 0) {
+        continue;
+      }
 
-    setWorkingDistrictId(districtId !== '-' ? districtId : '');
-    setWorkingDistrictName(districtName !== '-' ? districtName : '');
-    setWorkingTalukaId(talukaId !== '-' ? talukaId : '');
-    setWorkingTalukaName(talukaName !== '-' ? talukaName : '');
-    setWorkingVillageIds(villageIds);
+      const villageName = pickString(item, 'name');
+      const existing = byTaluka.get(talukaId);
+
+      if (existing) {
+        existing.villageIds.push(villageId);
+        existing.villageNames.push(villageName !== '-' ? villageName : `Village ${villageId}`);
+        continue;
+      }
+
+      const districtId = Number(item.district_id);
+
+      byTaluka.set(talukaId, {
+        talukaId,
+        talukaName: pickString(item, 'taluka_name') !== '-' ? pickString(item, 'taluka_name') : `Taluka ${talukaId}`,
+        districtId: Number.isFinite(districtId) && districtId > 0 ? districtId : undefined,
+        districtName: pickString(item, 'district_name') !== '-' ? pickString(item, 'district_name') : undefined,
+        villageIds: [villageId],
+        villageNames: [villageName !== '-' ? villageName : `Village ${villageId}`],
+      });
+    }
+
+    setWorkingAreaEntries(Array.from(byTaluka.values()));
     setEditingWorkingArea(true);
   };
 
   const saveWorkingArea = async () => {
-    if (!workingTalukaId) {
-      Alert.alert('Working area required', 'Select a taluka for the artisan working area.');
+    if (workingAreaEntries.length === 0) {
+      Alert.alert('Working area required', 'Add at least one taluka and village to the working area.');
       return;
     }
 
-    if (workingVillageIds.length === 0) {
-      Alert.alert('Working villages required', 'Select one or more villages for the working area.');
-      return;
-    }
+    const allVillageIds = workingAreaEntries.flatMap((entry) => entry.villageIds);
+    // working_taluka_id is a single-taluka filter on the backend; only send it when the
+    // working area is confined to one taluka so multi-taluka merges are not rejected.
+    const singleTalukaId = workingAreaEntries.length === 1 ? workingAreaEntries[0].talukaId : undefined;
 
     setSavingWorkingArea(true);
     try {
       const data = await updateOfficerArtisanWorkingVillages(artisanId, {
-        working_village_ids: workingVillageIds,
-        working_taluka_id: Number(workingTalukaId),
+        working_village_ids: allVillageIds,
+        working_taluka_id: singleTalukaId,
       });
       setArtisan(data.artisan);
       setEditingWorkingArea(false);
@@ -205,43 +198,14 @@ export function ArtisanDetailScreen({ route }: Props) {
           ) : (
             <View style={styles.editBlock}>
               <Text style={styles.editTitle}>Update working villages</Text>
-              <FormSelect
-                label="Working district"
-                placeholder="Select district"
-                value={workingDistrictId}
-                displayValue={workingDistrictName || undefined}
-                options={address.districts}
-                loading={address.loadingDistricts}
-                onSelect={(option) => {
-                  setWorkingDistrictId(String(option.id));
-                  setWorkingDistrictName(option.name);
-                  setWorkingTalukaId('');
-                  setWorkingTalukaName('');
-                  setWorkingVillageIds([]);
-                }}
-              />
-              <FormSelect
-                label="Working taluka"
-                placeholder="Select taluka"
-                value={workingTalukaId}
-                displayValue={workingTalukaName || undefined}
-                options={address.talukas}
-                loading={address.loadingTalukas}
-                disabled={!workingDistrictId}
-                onSelect={(option) => {
-                  setWorkingTalukaId(String(option.id));
-                  setWorkingTalukaName(option.name);
-                  setWorkingVillageIds([]);
-                }}
-              />
-              <FormMultiSelect
-                label="Working villages"
-                placeholder={workingTalukaId ? 'Select one or more villages' : 'Select a taluka first'}
-                values={workingVillageIds}
-                options={villageOptions}
-                loading={address.loadingVillages}
-                disabled={!workingTalukaId}
-                onChange={setWorkingVillageIds}
+              <Text style={styles.editHint}>
+                Existing talukas are pre-loaded below. Add another taluka to merge it in — saving never silently
+                drops villages you already had.
+              </Text>
+              <WorkingAreaSelector
+                state={pickString(artisan, 'state') !== '-' ? pickString(artisan, 'state') : 'Gujarat'}
+                entries={workingAreaEntries}
+                onChange={setWorkingAreaEntries}
               />
               <AppButton label="Save working villages" onPress={() => void saveWorkingArea()} loading={savingWorkingArea} />
               <AppButton label="Cancel" variant="secondary" onPress={() => setEditingWorkingArea(false)} disabled={savingWorkingArea} />
@@ -286,4 +250,5 @@ const styles = StyleSheet.create({
   editLinkText: { color: officerTheme.primary, fontSize: 14, fontWeight: '700' },
   editBlock: { gap: 12, marginTop: 12 },
   editTitle: { color: officerTheme.onSurface, fontSize: 15, fontWeight: '800' },
+  editHint: { color: officerTheme.onSurfaceVariant, fontSize: 12, lineHeight: 17, marginTop: -6 },
 });

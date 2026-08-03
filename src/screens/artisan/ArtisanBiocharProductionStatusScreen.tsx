@@ -163,6 +163,7 @@ export function ArtisanBiocharProductionStatusScreen() {
       state: route.params.state,
       latitude: route.params.latitude,
       longitude: route.params.longitude,
+      forceNewBatch: true,
     });
   };
 

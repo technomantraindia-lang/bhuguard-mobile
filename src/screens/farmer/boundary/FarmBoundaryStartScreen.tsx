@@ -18,7 +18,8 @@ import { boundaryRouteParams, resolveBoundaryFarmId } from '../../../utils/bound
 
 type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmBoundaryStart'>;
 
-const UNITS: AreaUnit[] = ['acre', 'hectare', 'bigha'];
+// Bigha hidden from Farmer-facing boundary UI — client requires Acre/Hectare only.
+const UNITS: AreaUnit[] = ['acre', 'hectare'];
 
 export function FarmBoundaryStartScreen({ navigation, route }: Props) {
   const farmId = resolveBoundaryFarmId(route.params);
