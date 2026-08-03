@@ -3123,7 +3123,11 @@ export function useBiocharProductionForm({
           );
         }
 
-        const timeAudit = buildTimeAuditMetadata('biochar_production_submit');
+        const timeAudit = buildTimeAuditMetadata('biochar_production_submit', {
+          latitude,
+          longitude,
+          accuracyM,
+        });
 
         const formSnapshot: OfflineSubmitFormSnapshot = {
           batchId,

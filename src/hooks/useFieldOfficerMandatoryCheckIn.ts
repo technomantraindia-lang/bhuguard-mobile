@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { fieldOfficerLiveCheckIn, getFieldOfficerCheckInStatus } from '../api/fieldOfficerApi';
+import {
+  buildTimeAuditMetadata,
+  shouldBlockOfflineTimestampSubmit,
+} from '../services/serverTimeSync';
+import { safeNetInfoIsConnected } from '../utils/safeNetInfo';
 import { captureHighAccuracyGps } from '../utils/officerGpsCapture';
 import { resolveValidatedCaptureLocation } from '../utils/livePhotoLocation';
 import type { ApiRecord } from '../utils/apiHelpers';
@@ -113,6 +118,13 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
     setStage('locating');
 
     try {
+      const isOnline = await safeNetInfoIsConnected();
+      if (shouldBlockOfflineTimestampSubmit(isOnline)) {
+        throw new Error(
+          'Cannot check in offline without a recent server time sync. Reconnect, retry time sync, and try again.',
+        );
+      }
+
       const gps = await captureHighAccuracyGps({ targetAccuracyM: 30, maxAttempts: 4, timeoutMs: 25000 });
 
       setStage('submitting');
@@ -124,6 +136,11 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
         longitude: gps.longitude,
         accuracy: gps.accuracyM,
         gps_accuracy: gps.accuracyM,
+        ...buildTimeAuditMetadata('field_officer_check_in', {
+          latitude: gps.latitude,
+          longitude: gps.longitude,
+          accuracyM: gps.accuracyM,
+        }),
       };
 
       if (gps.altitude != null) {

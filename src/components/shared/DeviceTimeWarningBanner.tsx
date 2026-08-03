@@ -1,37 +1,50 @@
 import { memo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useTranslation } from '../../i18n/I18nContext';
 import { useServerTimeSync } from '../../hooks/useServerTimeSync';
 
 function DeviceTimeWarningBannerComponent() {
-  const { t, language } = useTranslation();
-  const { isSuspiciousSkew, retrySync } = useServerTimeSync({ autoSync: false });
-  const [, bump] = useState(0);
+  const { t } = useTranslation();
+  const { isSuspiciousSkew, retrySync, syncing, lastSyncedServerIso, error } = useServerTimeSync({
+    autoSync: false,
+  });
+  const [retrying, setRetrying] = useState(false);
 
   if (!isSuspiciousSkew) {
     return null;
   }
 
-  const message =
-    language === 'hi'
-      ? t('timeSync.suspiciousWarningHi')
-      : t('timeSync.suspiciousWarning');
+  const message = t('timeSync.suspiciousWarning');
+  const busy = syncing || retrying;
 
   return (
     <View style={styles.wrap} accessibilityRole="alert" accessibilityLabel={message}>
       <Text style={styles.text}>{message}</Text>
+      {lastSyncedServerIso ? (
+        <Text style={styles.serverTime}>
+          {t('timeSync.syncedServerTime')}: {new Date(lastSyncedServerIso).toLocaleString()}
+        </Text>
+      ) : null}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
       <Pressable
+        disabled={busy}
         onPress={() => {
           void (async () => {
-            await retrySync();
-            bump((n) => n + 1);
+            setRetrying(true);
+            try {
+              await retrySync();
+            } finally {
+              setRetrying(false);
+            }
           })();
         }}
         accessibilityRole="button"
         accessibilityLabel={t('timeSync.retrySync')}
+        style={styles.retryRow}
       >
-        <Text style={styles.retry}>{t('timeSync.retrySync')}</Text>
+        {busy ? <ActivityIndicator color="#FFFFFF" size="small" /> : null}
+        <Text style={styles.retry}>{busy ? t('timeSync.retrying') : t('timeSync.retrySync')}</Text>
       </Pressable>
     </View>
   );
@@ -50,6 +63,21 @@ const styles = StyleSheet.create({
     color: '#FFE8E4',
     fontSize: 12,
     fontWeight: '600',
+  },
+  serverTime: {
+    color: '#FFD7D0',
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  error: {
+    color: '#FFC9C0',
+    fontSize: 11,
+  },
+  retryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 2,
   },
   retry: {
     color: '#FFFFFF',

@@ -1,4 +1,10 @@
 import { apiClient } from '../api/client';
+import {
+  SERVER_TIME_ENDPOINT_CANDIDATES,
+  SERVER_TIME_ENDPOINT_PATH,
+} from '../config/serverTimeEndpoints';
+import { appendTimeAuditRecord } from '../storage/timeAuditStorage';
+import { getAuthUser } from '../utils/authStorage';
 
 /**
  * Server-authoritative time sync.
@@ -6,16 +12,13 @@ import { apiClient } from '../api/client';
  * Bhuguard is a fraud-prevention platform — evidence/check-in/batch timestamps
  * must not be trustable purely from the device clock. This service estimates
  * the offset between the device clock and the server clock using either a
- * dedicated `/server-time` endpoint (preferred, once the backend ships it) or
- * the standard HTTP `Date` response header from any reachable endpoint
- * (fallback — works today against the live API with zero backend changes).
+ * dedicated `/server-time` endpoint (preferred) or the standard HTTP `Date`
+ * response header from a lightweight fallback probe.
  *
  * The estimated offset is then used to compute a "server-synced" timestamp:
  * `deviceNow + offsetMs`. This is an approximation (± network latency), not a
  * cryptographic guarantee — the server remains the final source of truth for
- * anything security-sensitive. It exists to (a) correct obviously wrong
- * device clocks before submit and (b) warn the user when the device clock is
- * suspiciously far from the server clock.
+ * anything security-sensitive.
  */
 
 export type ServerTimeSyncSource = 'endpoint' | 'header';
@@ -32,9 +35,19 @@ export interface ServerTimeSyncState {
   error: string | null;
 }
 
-type ServerTimeSyncListener = (state: ServerTimeSyncState) => void;
+export interface TimeAuditMetadata {
+  device_utc: string;
+  server_utc: string;
+  clock_skew_ms: number | null;
+  device_time_suspicious: boolean;
+  time_sync_source: ServerTimeSyncSource | null;
+  time_detection_at: string;
+  activity_context: string;
+  user_id?: number | null;
+  user_role?: string | null;
+}
 
-const SERVER_TIME_ENDPOINT = '/server-time';
+type ServerTimeSyncListener = (state: ServerTimeSyncState) => void;
 
 /** Device vs. server clock gap beyond this is flagged as suspicious. */
 export const MAX_ACCEPTABLE_SKEW_MS = 2 * 60 * 1000;
@@ -147,37 +160,58 @@ export async function syncServerTime(options?: { force?: boolean }): Promise<Ser
 
   inFlight = (async () => {
     const requestStartMs = Date.now();
+    let lastError: string | null = null;
 
     try {
-      const response = await apiClient.get(SERVER_TIME_ENDPOINT, {
-        validateStatus: () => true,
-        timeout: 10000,
-      });
-      const requestEndMs = Date.now();
+      for (const path of SERVER_TIME_ENDPOINT_CANDIDATES) {
+        try {
+          const response = await apiClient.get(path, {
+            validateStatus: () => true,
+            timeout: 10000,
+          });
+          const requestEndMs = Date.now();
+          const extracted = extractServerDateMs(response as RawHttpResponseLike);
 
-      const extracted = extractServerDateMs(response as RawHttpResponseLike);
+          if (!extracted) {
+            lastError =
+              response.status >= 400
+                ? `Server time is unavailable (HTTP ${response.status}) at ${path}.`
+                : `Server time was not present in the response from ${path}.`;
+            // Prefer continuing to fallback probe rather than failing hard on 404.
+            if (path === SERVER_TIME_ENDPOINT_PATH) {
+              continue;
+            }
+            throw new Error(lastError);
+          }
 
-      if (!extracted) {
-        throw new Error(
-          response.status >= 400
-            ? `Server time is unavailable (HTTP ${response.status}).`
-            : 'Server time was not present in the response.',
-        );
+          const roundTripMs = Math.max(0, requestEndMs - requestStartMs);
+          const estimatedServerNowAtReceiveMs = extracted.ms + roundTripMs / 2;
+          const offsetMs = estimatedServerNowAtReceiveMs - requestEndMs;
+
+          state = {
+            offsetMs,
+            lastSyncedAtDeviceMs: requestEndMs,
+            lastSyncedServerIso: new Date(extracted.ms).toISOString(),
+            source: extracted.source,
+            syncing: false,
+            error: null,
+          };
+          lastError = null;
+          break;
+        } catch (probeError) {
+          lastError = probeError instanceof Error ? probeError.message : 'Unable to sync server time.';
+        }
       }
 
-      // Correct for one-way network latency by assuming symmetric round-trip.
-      const roundTripMs = Math.max(0, requestEndMs - requestStartMs);
-      const estimatedServerNowAtReceiveMs = extracted.ms + roundTripMs / 2;
-      const offsetMs = estimatedServerNowAtReceiveMs - requestEndMs;
-
-      state = {
-        offsetMs,
-        lastSyncedAtDeviceMs: requestEndMs,
-        lastSyncedServerIso: new Date(extracted.ms).toISOString(),
-        source: extracted.source,
-        syncing: false,
-        error: null,
-      };
+      if (state.offsetMs == null && lastError) {
+        state = {
+          ...state,
+          syncing: false,
+          error: lastError,
+        };
+      } else if (state.syncing) {
+        state = { ...state, syncing: false };
+      }
     } catch (error) {
       state = {
         ...state,
@@ -226,9 +260,58 @@ export function getServerSyncedNowIso(): string {
 /**
  * Block a timestamp-sensitive final submit when the device is offline and we
  * have no recent server-time confirmation to trust the device clock against.
- * Callers should only invoke this immediately before a final, timestamp-critical
- * submit (e.g. Biochar batch submit) — never for routine drafts/saves.
  */
 export function shouldBlockOfflineTimestampSubmit(isOnline: boolean): boolean {
   return !isOnline && !hasRecentServerTimeSync();
+}
+
+/**
+ * Audit metadata for timestamp-sensitive submits (Phase 19).
+ * Device wall-clock is recorded only for audit — never as authoritative time.
+ * Entries are also persisted locally for later review/support.
+ * GPS extras are stored in the local audit log only (not returned) so callers
+ * can safely spread this object into API payloads without clobbering lat/long.
+ */
+export function buildTimeAuditMetadata(
+  activityContext: string,
+  extras?: {
+    latitude?: number | null;
+    longitude?: number | null;
+    accuracyM?: number | null;
+    userId?: number | null;
+    userRole?: string | null;
+  },
+): TimeAuditMetadata {
+  const deviceEpoch = Date.now();
+  const deviceUtc = new Date(deviceEpoch).toISOString();
+  const serverUtc = getServerSyncedNowIso();
+  const metadata: TimeAuditMetadata = {
+    device_utc: deviceUtc,
+    server_utc: serverUtc,
+    clock_skew_ms: getClockSkewMs(),
+    device_time_suspicious: isClockSkewSuspicious(),
+    time_sync_source: state.source,
+    time_detection_at: serverUtc,
+    activity_context: activityContext,
+    user_id: extras?.userId ?? null,
+    user_role: extras?.userRole ?? null,
+  };
+
+  void (async () => {
+    try {
+      const user = extras?.userId != null ? null : await getAuthUser();
+      await appendTimeAuditRecord({
+        ...metadata,
+        user_id: metadata.user_id ?? user?.id ?? null,
+        user_role: metadata.user_role ?? user?.user_type ?? user?.role ?? null,
+        latitude: extras?.latitude ?? null,
+        longitude: extras?.longitude ?? null,
+        accuracy_m: extras?.accuracyM ?? null,
+      });
+    } catch {
+      // Persistence is best-effort.
+    }
+  })();
+
+  return metadata;
 }

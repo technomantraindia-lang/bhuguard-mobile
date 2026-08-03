@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { artisanWorkCheckIn, getArtisanActiveCheckIn } from '../api/artisanApi';
+import {
+  buildTimeAuditMetadata,
+  shouldBlockOfflineTimestampSubmit,
+} from '../services/serverTimeSync';
+import { safeNetInfoIsConnected } from '../utils/safeNetInfo';
 import { captureHighAccuracyGps } from '../utils/officerGpsCapture';
 import { resolveValidatedCaptureLocation } from '../utils/livePhotoLocation';
 import type { ApiRecord } from '../utils/apiHelpers';
@@ -69,6 +74,13 @@ export function useArtisanMandatoryCheckIn() {
     setSubmitting(true);
     setSubmitError(null);
     try {
+      const isOnline = await safeNetInfoIsConnected();
+      if (shouldBlockOfflineTimestampSubmit(isOnline)) {
+        throw new Error(
+          'Cannot check in offline without a recent server time sync. Reconnect, retry time sync, and try again.',
+        );
+      }
+
       const gps = await captureHighAccuracyGps({ targetAccuracyM: 30, maxAttempts: 4, timeoutMs: 25000 });
       const resolved = await resolveValidatedCaptureLocation(gps.latitude, gps.longitude);
 
@@ -88,6 +100,11 @@ export function useArtisanMandatoryCheckIn() {
         taluka_name: resolved.taluka ?? null,
         village_name: resolved.village ?? null,
         state_name: resolved.state ?? null,
+        ...buildTimeAuditMetadata('artisan_check_in', {
+          latitude: gps.latitude,
+          longitude: gps.longitude,
+          accuracyM: gps.accuracyM,
+        }),
       });
       grantedRef.current = true;
       setPhase('granted');

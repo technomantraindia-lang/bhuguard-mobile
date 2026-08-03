@@ -40,5 +40,6 @@ export function useServerTimeSync(options?: { autoSync?: boolean }): UseServerTi
     isSuspiciousSkew: isClockSkewSuspicious(),
     hasRecentSync: hasRecentServerTimeSync(),
     retrySync,
+    syncing: state.syncing,
   };
 }

@@ -229,6 +229,8 @@
     "suspiciousWarning": "Your device date/time appears incorrect. Bhuguard will use secure server time for this activity.",
     "suspiciousWarningHi": "आपके डिवाइस की तारीख या समय गलत दिखाई दे रहा है। Bhuguard इस गतिविधि के लिए सुरक्षित सर्वर समय का उपयोग करेगा।",
     "retrySync": "Retry time sync",
+    "retrying": "Syncing server time…",
+    "syncedServerTime": "Secure server time",
     "offlineBlocked": "Connect to sync secure server time before submitting this timestamped activity."
   },
   "apiServer": {
