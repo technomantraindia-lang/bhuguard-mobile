@@ -18,11 +18,11 @@ const COPY: Record<
 > = {
   wallet: {
     title: 'Wallet',
-    body: 'Artisan wallet balances are not available on this API build yet. No balance is shown so amounts cannot be invented. Contact Admin after wallet endpoints are enabled on the server.',
+    body: 'Artisan wallet balances are not available on this API build yet. No balance or transactions are shown so amounts cannot be invented. Bhuguard never calls users to request payment or OTP. Contact Admin after wallet endpoints are enabled on the server.',
   },
   training: {
     title: 'Biochar Training',
-    body: 'Biochar Training content is not published for Artisan Pro on this API build yet. Training modules will appear here once Admin enables them — nothing is marked complete until then.',
+    body: 'Biochar Training content is not published for Artisan Pro on this API build yet. Training modules will appear here once Admin enables them — nothing is marked complete until then. This screen never blocks dashboard operations.',
   },
 };
 

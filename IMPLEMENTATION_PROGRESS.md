@@ -168,7 +168,14 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Wallet (real or controlled unavailable), Help & Support, Biochar Training, Farm Navigator entries; no fabricated balances | `ArtisanDashboardScreen.tsx` grid gained 4 cards: **Farm Navigator** → `ArtisanFarmLookup{purpose:'navigate'}`, **Wallet** → `ArtisanModuleUnavailable{module:'wallet'}` (explicit "not available on this API build yet" copy, no invented balance), **Biochar Training** → `ArtisanModuleUnavailable{module:'training'}` (same controlled-unavailable pattern — no fabricated completion state), **Help & Support** → `ArtisanHelpSupportScreen.tsx` (real `mailto:` support contact, no fake ticket history). Both `ArtisanHelpSupportScreen` and `ArtisanModuleUnavailableScreen` existed but were unregistered — this session wired them into `ArtisanNavigator.tsx`'s `Stack.Navigator` and added the 3 missing Material icons (`near_me`, `account_balance_wallet`, `school`) used by the new cards | wallet/training APIs intentionally not called — none exist yet | `tsc --noEmit` + lints clean | ✅ PASS (mobile) | Live wallet/training APIs (when available, swap the unavailable screen for a real balance/content view) |
+| 14.1 Mandatory check-in gate | `ArtisanCheckInGate`, `useArtisanMandatoryCheckIn` (strict `is_checked_in === true`) | `/artisan/check-in`, `/active-check-in` | ArtisanWorkSession 8/8 after message assert fix | ⚠️ PARTIAL | Physical Android GPS / out-of-zone device verify |
+| 14.2–14.3 Dashboard IA + Continue Active Process | `ArtisanDashboardScreen` deduped cards; resume renamed; primary/secondary/field sections | dashboard adds kiln count + recent_batches | Phase14 dashboard test PASS | ⚠️ PARTIAL | Device E2E resume after kill |
+| 14.4 Farm Navigator | primary card → `ArtisanFarmLookup` navigate | `/artisan/farms/search` | Existing search authz tests | ⚠️ PARTIAL | Device Maps verify |
+| 14.5 Wallet | `ArtisanWallet` → controlled unavailable; fraud copy | No artisan wallet API | Phase14 asserts 404 wallet | ⚠️ PARTIAL | Real wallet API not available — must not mark PASS |
+| 14.6 Training | `ArtisanTraining` → controlled unavailable | No mobile training API | Phase14 asserts 404 training | ⚠️ PARTIAL | Real training API not available |
+| 14.7 Help & Support | single `ArtisanHelpSupport` route + fraud note | — | Navigator audit: one registration | ⚠️ PARTIAL | Device verify |
+| 14.8–14.11 Profile ID / area / kilns / recent | display ID + kiln + recent cards | profile `artisan_display_id`; dashboard kiln/recent | ArtisanDashboardPhase14 PASS | ⚠️ PARTIAL | Device verify; live display_id backfill |
+| 14.12–14.16 Nav/fraud/offline/perf/UX | RoleAppLayout marquee; load throttle; no-assignment banner | — | Code review + tsc no new errors in touched files | ⚠️ PARTIAL | Physical Android matrix |
 
 ---
 

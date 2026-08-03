@@ -149,18 +149,18 @@ export function ArtisanNavigator() {
               }
             />
             <Stack.Screen
-              name="ArtisanModuleUnavailable"
+              name="ArtisanWallet"
               getComponent={() =>
-                safeScreen('ArtisanModuleUnavailableScreen', () =>
-                  require('../screens/artisan/ArtisanModuleUnavailableScreen'),
+                safeScreen('ArtisanWalletScreen', () =>
+                  require('../screens/artisan/ArtisanWalletTrainingRoutes'),
                 )
               }
             />
             <Stack.Screen
-              name="ArtisanHelpSupport"
+              name="ArtisanTraining"
               getComponent={() =>
-                safeScreen('ArtisanHelpSupportScreen', () =>
-                  require('../screens/artisan/ArtisanHelpSupportScreen'),
+                safeScreen('ArtisanTrainingScreen', () =>
+                  require('../screens/artisan/ArtisanWalletTrainingRoutes'),
                 )
               }
             />

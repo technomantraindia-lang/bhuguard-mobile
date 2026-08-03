@@ -90,9 +90,13 @@ export async function loginArtisan(login: string, password: string): Promise<{ t
 export const defaultArtisanDashboard: ApiRecord = {
   artisan_name: null,
   artisan_code: null,
+  artisan_display_id: null,
   release_mode: 'biochar_production_only',
   draft_production_count: 0,
   submitted_production_count: 0,
+  assigned_kiln_count: 0,
+  assigned_kilns: [],
+  recent_batches: [],
   has_assignment: false,
   live_checkin: {
     status: 'not_checked_in',

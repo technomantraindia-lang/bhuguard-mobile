@@ -9,6 +9,8 @@ import { DeviceTimeWarningBanner } from './DeviceTimeWarningBanner';
 export const FRAUD_MARQUEE_HIDDEN_ROUTES = new Set([
   'FullscreenImage',
   'OfficerFullscreenImage',
+  'ArtisanLiveEvidenceCamera',
+  'LiveEvidenceCamera',
   'FarmBoundaryCapture',
   'FarmBoundaryPreview',
   'FarmBoundaryManualDraw',

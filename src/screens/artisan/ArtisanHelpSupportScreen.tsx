@@ -30,7 +30,7 @@ export function ArtisanHelpSupportScreen() {
         <Text style={styles.title}>Need help with Artisan Pro?</Text>
         <Text style={styles.message}>
           Reach Bhuguard support for check-in, farm navigator, or biochar workflow issues. Do not share OTP,
-          pattern, or password details in email.
+          pattern, or password details in email. Bhuguard never calls users to request payment or OTP.
         </Text>
 
         <Pressable style={styles.primary} onPress={openEmail} accessibilityRole="button">

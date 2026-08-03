@@ -43,6 +43,7 @@ import { spacing } from '../../theme';
 import { pickString, type ApiRecord } from '../../utils/apiHelpers';
 import { getAuthUser } from '../../utils/authStorage';
 import { formatArtisanDisplayId } from '../../utils/displayIds';
+import { openGoogleMaps } from '../../utils/farmMapHelpers';
 
 function resolveArtisanDashboardError(err: unknown): string {
   const message = getApiErrorMessage(err, 'Dashboard data could not be loaded. Please retry.');
@@ -335,8 +336,28 @@ export function ArtisanDashboardScreen() {
     return 'Artisan Pro';
   }, [dashboard, profile]);
 
-  const artisanCode = formatArtisanDisplayId(profile);
+  const artisanCode = formatArtisanDisplayId({
+    ...(profile ?? {}),
+    artisan_display_id:
+      (profile as ApiRecord | null)?.artisan_display_id
+      ?? dashboard?.artisan_display_id
+      ?? undefined,
+    artisan_code:
+      (profile as ApiRecord | null)?.artisan_code ?? dashboard?.artisan_code ?? undefined,
+  });
   const submittedCount = Number(dashboard?.submitted_production_count ?? 0);
+  const kilnCount = Number(dashboard?.assigned_kiln_count ?? 0);
+  const recentBatches = useMemo(() => {
+    const raw = dashboard?.recent_batches;
+    return Array.isArray(raw) ? (raw as ApiRecord[]).slice(0, 5) : [];
+  }, [dashboard]);
+  const hasAssignment = Boolean(
+    assigned.hasAssignment
+      || dashboard?.has_assignment
+      || (Array.isArray((dashboard?.assigned_area as ApiRecord | undefined)?.villages)
+        && ((dashboard?.assigned_area as ApiRecord).villages as unknown[]).length > 0)
+      || (Array.isArray(assigned.locations?.villages) && assigned.locations.villages.length > 0),
+  );
   const pendingLabel =
     pendingSyncCount + syncFailedCount > 0
       ? ` · ${pendingSyncCount} pending sync${syncFailedCount > 0 ? `, ${syncFailedCount} failed` : ''}`
@@ -493,21 +514,31 @@ export function ArtisanDashboardScreen() {
               });
             }}
             accessibilityRole="button"
-            accessibilityLabel="Complete the Process — resume unfinished biochar production batch"
+            accessibilityLabel="Continue Active Process — resume unfinished biochar production batch"
           >
             <View style={styles.resumeIconBubble}>
               <BhuguardMaterialIcon name="eco" size={22} color={artisanTheme.white} />
             </View>
             <View style={styles.resumeCopy}>
-              <Text style={styles.resumeTitle}>Complete the Process</Text>
+              <Text style={styles.resumeTitle}>Continue Active Process</Text>
               <Text style={styles.resumeBody}>
                 {incompleteDraft.batchCode?.trim()
-                  ? `Batch ${incompleteDraft.batchCode} is unfinished. Tap to resume.`
+                  ? `Batch ${incompleteDraft.batchCode} is unfinished. Tap to resume the exact last step.`
                   : 'You have an unfinished Biochar Production batch. Tap to resume.'}
               </Text>
             </View>
             <BhuguardMaterialIcon name="chevron_right" size={20} color={artisanTheme.white} />
           </Pressable>
+        ) : null}
+
+        {pendingSyncCount + syncFailedCount > 0 ? (
+          <View style={styles.syncBanner}>
+            <Text style={styles.syncBannerText}>
+              {pendingSyncCount > 0 ? `${pendingSyncCount} pending sync` : ''}
+              {pendingSyncCount > 0 && syncFailedCount > 0 ? ' · ' : ''}
+              {syncFailedCount > 0 ? `${syncFailedCount} sync failed` : ''}
+            </Text>
+          </View>
         ) : null}
 
         {emptyNotice && !error ? (
@@ -531,70 +562,44 @@ export function ArtisanDashboardScreen() {
           <Text style={styles.welcomeEyebrow}>Welcome</Text>
           <Text style={styles.welcomeName}>{artisanName}</Text>
           <Text style={styles.welcomeMeta}>
-            {artisanCode !== '—' ? artisanCode : 'Artisan Pro'} · Onboarding, farm activity & biochar
+            Artisan ID: {artisanCode !== '—' && artisanCode !== 'Loading…' ? artisanCode : '—'}
           </Text>
           <Text style={styles.welcomeLocation} numberOfLines={2}>
             {locationSummary}
           </Text>
+          <Text style={styles.welcomeMeta}>
+            Check-in:{' '}
+            {pickString(dashboard?.live_checkin as ApiRecord | undefined, 'status_label') !== '-'
+              ? pickString(dashboard?.live_checkin as ApiRecord | undefined, 'status_label')
+              : 'Active'}
+            {' · '}
+            Kilns:{' '}
+            {Number(dashboard?.assigned_kiln_count ?? 0) > 0
+              ? `${Number(dashboard.assigned_kiln_count)} assigned`
+              : 'No kiln assigned'}
+          </Text>
         </View>
 
+        {!hasAssignment ? (
+          <View style={styles.noticeCard}>
+            <Text style={styles.noticeTitle}>No active working area assigned</Text>
+            <Text style={styles.noticeBody}>
+              Field operations are blocked until Admin assigns District / Taluka / Village. Help &amp; Logout remain
+              available.
+            </Text>
+          </View>
+        ) : null}
+
+        <Text style={styles.sectionLabel}>Primary actions</Text>
         <View style={styles.grid}>
-          <DashboardCard
-            title="Farmer Onboarding"
-            description="Register and complete farmer onboarding"
-            icon="person_add"
-            accent={CARD_ACCENTS.find.accent}
-            bubble={CARD_ACCENTS.find.bubble}
-            fullWidth={!twoColumn}
-            onPress={() => navigation.navigate('FarmerOnboardingStart')}
-            accessibilityLabel="Open farmer onboarding"
-          />
-          <DashboardCard
-            title="Farm Activity"
-            description="Record farm visit, activity and mapping details"
-            icon="agriculture"
-            accent={CARD_ACCENTS.application.accent}
-            bubble={CARD_ACCENTS.application.bubble}
-            fullWidth={!twoColumn}
-            onPress={() => navigation.navigate('FieldOfficerFarmActivityStart')}
-            accessibilityLabel="Open farm activity"
-          />
-          <DashboardCard
-            title="Farm Navigator"
-            description="Search Farm ID / Farmer Name and navigate"
-            icon="map"
-            accent={CARD_ACCENTS.find.accent}
-            bubble={CARD_ACCENTS.find.bubble}
-            fullWidth={!twoColumn}
-            onPress={() => {
-              if (!ensureCheckedInOrPrompt()) {
-                return;
-              }
-              navigation.navigate('ArtisanFarmLookup', { purpose: 'navigate' });
-            }}
-            accessibilityLabel="Open farm navigator"
-          />
-          <DashboardCard
-            title="Find Farmer / Farm"
-            description="Search farms in your assigned area"
-            icon="search"
-            accent={CARD_ACCENTS.find.accent}
-            bubble={CARD_ACCENTS.find.bubble}
-            fullWidth={!twoColumn}
-            onPress={() => {
-              if (!ensureCheckedInOrPrompt()) {
-                return;
-              }
-              navigation.navigate('ArtisanFarmLookup', { purpose: 'find' });
-            }}
-            accessibilityLabel="Find farmer or farm"
-          />
           <DashboardCard
             title="Biochar Production"
             description={
               incompleteDraft && incompleteDraft.farmId
-                ? 'Unfinished batch — tap Complete the Process above, or start a new one'
-                : 'Start or continue a process batch'
+                ? 'Unfinished batch — use Continue Active Process above, or start a new one'
+                : kilnCount > 0
+                  ? 'Start or continue a process batch'
+                  : 'Blocked until a kiln is assigned'
             }
             icon="eco"
             accent={CARD_ACCENTS.production.accent}
@@ -602,6 +607,17 @@ export function ArtisanDashboardScreen() {
             fullWidth={!twoColumn}
             onPress={() => {
               if (!ensureCheckedInOrPrompt()) {
+                return;
+              }
+              if (!hasAssignment) {
+                Alert.alert('No working area', 'Ask Admin to assign your working area before production.');
+                return;
+              }
+              if (kilnCount <= 0) {
+                Alert.alert(
+                  'No kiln assigned',
+                  'Biochar Production requires an Admin/Field Officer kiln assignment (BHG-###).',
+                );
                 return;
               }
               navigation.navigate('ArtisanFarmLookup', { purpose: 'production' });
@@ -619,6 +635,10 @@ export function ArtisanDashboardScreen() {
               if (!ensureCheckedInOrPrompt()) {
                 return;
               }
+              if (!hasAssignment) {
+                Alert.alert('No working area', 'Ask Admin to assign your working area before mixing.');
+                return;
+              }
               navigation.navigate('ArtisanFarmLookup', { purpose: 'mixing' });
             }}
             accessibilityLabel="Open biochar mixing"
@@ -634,53 +654,17 @@ export function ArtisanDashboardScreen() {
               if (!ensureCheckedInOrPrompt()) {
                 return;
               }
+              if (!hasAssignment) {
+                Alert.alert('No working area', 'Ask Admin to assign your working area before application.');
+                return;
+              }
               navigation.navigate('ArtisanFarmLookup', { purpose: 'application' });
             }}
             accessibilityLabel="Open biochar application"
           />
           <DashboardCard
-            title="Wallet"
-            description="View Artisan wallet when enabled"
-            icon="payments"
-            accent={CARD_ACCENTS.submitted.accent}
-            bubble={CARD_ACCENTS.submitted.bubble}
-            fullWidth={!twoColumn}
-            onPress={() => navigation.navigate('ArtisanModuleUnavailable', { module: 'wallet' })}
-            accessibilityLabel="Open artisan wallet"
-          />
-          <DashboardCard
-            title="Help & Support"
-            description="Contact Bhuguard support"
-            icon="support_agent"
-            accent={CARD_ACCENTS.find.accent}
-            bubble={CARD_ACCENTS.find.bubble}
-            fullWidth={!twoColumn}
-            onPress={() => navigation.navigate('ArtisanHelpSupport')}
-            accessibilityLabel="Open help and support"
-          />
-          <DashboardCard
-            title="Biochar Training"
-            description="Training modules when published"
-            icon="assignment"
-            accent={CARD_ACCENTS.production.accent}
-            bubble={CARD_ACCENTS.production.bubble}
-            fullWidth={!twoColumn}
-            onPress={() => navigation.navigate('ArtisanModuleUnavailable', { module: 'training' })}
-            accessibilityLabel="Open biochar training"
-          />
-          <DashboardCard
-            title="Submitted Production"
-            description={`${submittedCount} submitted record${submittedCount === 1 ? '' : 's'}${pendingLabel}`}
-            icon="fact_check"
-            accent={CARD_ACCENTS.submitted.accent}
-            bubble={CARD_ACCENTS.submitted.bubble}
-            fullWidth={!twoColumn}
-            onPress={() => navigation.navigate('ArtisanProductionRecords', { status: 'submitted' })}
-            accessibilityLabel={`Submitted production records, ${submittedCount}`}
-          />
-          <DashboardCard
             title="Farm Navigator"
-            description="Open Google Maps directions to an assigned farm"
+            description="Search Farm ID / Farmer Name and navigate"
             icon="near_me"
             accent={CARD_ACCENTS.find.accent}
             bubble={CARD_ACCENTS.find.bubble}
@@ -689,29 +673,37 @@ export function ArtisanDashboardScreen() {
               if (!ensureCheckedInOrPrompt()) {
                 return;
               }
+              if (!hasAssignment) {
+                Alert.alert('No working area', 'Ask Admin to assign your working area before navigation.');
+                return;
+              }
               navigation.navigate('ArtisanFarmLookup', { purpose: 'navigate' });
             }}
             accessibilityLabel="Open farm navigator"
           />
+        </View>
+
+        <Text style={styles.sectionLabel}>Secondary</Text>
+        <View style={styles.grid}>
           <DashboardCard
             title="Wallet"
-            description="View Artisan Pro wallet balance"
+            description="Coming soon — no fabricated balances"
             icon="account_balance_wallet"
             accent={CARD_ACCENTS.submitted.accent}
             bubble={CARD_ACCENTS.submitted.bubble}
             fullWidth={!twoColumn}
-            onPress={() => navigation.navigate('ArtisanModuleUnavailable', { module: 'wallet' })}
-            accessibilityLabel="Open wallet"
+            onPress={() => navigation.navigate('ArtisanWallet')}
+            accessibilityLabel="Open artisan wallet"
           />
           <DashboardCard
             title="Biochar Training"
-            description="Learn the Biochar production process"
+            description="Coming soon — no fake progress"
             icon="school"
             accent={CARD_ACCENTS.production.accent}
             bubble={CARD_ACCENTS.production.bubble}
             fullWidth={!twoColumn}
-            onPress={() => navigation.navigate('ArtisanModuleUnavailable', { module: 'training' })}
-            accessibilityLabel="Open Biochar training"
+            onPress={() => navigation.navigate('ArtisanTraining')}
+            accessibilityLabel="Open biochar training"
           />
           <DashboardCard
             title="Help & Support"
@@ -721,9 +713,164 @@ export function ArtisanDashboardScreen() {
             bubble={CARD_ACCENTS.support.bubble}
             fullWidth={!twoColumn}
             onPress={() => navigation.navigate('ArtisanHelpSupport')}
-            accessibilityLabel="Open Help and Support"
+            accessibilityLabel="Open help and support"
+          />
+          <DashboardCard
+            title="Find Farmer / Farm"
+            description="Search farms in your assigned area"
+            icon="search"
+            accent={CARD_ACCENTS.find.accent}
+            bubble={CARD_ACCENTS.find.bubble}
+            fullWidth={!twoColumn}
+            onPress={() => {
+              if (!ensureCheckedInOrPrompt()) {
+                return;
+              }
+              if (!hasAssignment) {
+                Alert.alert('No working area', 'Ask Admin to assign your working area first.');
+                return;
+              }
+              navigation.navigate('ArtisanFarmLookup', { purpose: 'find' });
+            }}
+            accessibilityLabel="Find farmer or farm"
           />
         </View>
+
+        <Text style={styles.sectionLabel}>Field work</Text>
+        <View style={styles.grid}>
+          <DashboardCard
+            title="Farmer Onboarding"
+            description="Register and complete farmer onboarding"
+            icon="person_add"
+            accent={CARD_ACCENTS.find.accent}
+            bubble={CARD_ACCENTS.find.bubble}
+            fullWidth={!twoColumn}
+            onPress={() => {
+              if (!ensureCheckedInOrPrompt()) {
+                return;
+              }
+              if (!hasAssignment) {
+                Alert.alert('No working area', 'Ask Admin to assign your working area first.');
+                return;
+              }
+              navigation.navigate('FarmerOnboardingStart');
+            }}
+            accessibilityLabel="Open farmer onboarding"
+          />
+          <DashboardCard
+            title="Farm Activity"
+            description="Record farm visit, activity and mapping details"
+            icon="agriculture"
+            accent={CARD_ACCENTS.application.accent}
+            bubble={CARD_ACCENTS.application.bubble}
+            fullWidth={!twoColumn}
+            onPress={() => {
+              if (!ensureCheckedInOrPrompt()) {
+                return;
+              }
+              if (!hasAssignment) {
+                Alert.alert('No working area', 'Ask Admin to assign your working area first.');
+                return;
+              }
+              navigation.navigate('FieldOfficerFarmActivityStart');
+            }}
+            accessibilityLabel="Open farm activity"
+          />
+          <DashboardCard
+            title="Submitted Production"
+            description={`${submittedCount} submitted record${submittedCount === 1 ? '' : 's'}${pendingLabel}`}
+            icon="fact_check"
+            accent={CARD_ACCENTS.submitted.accent}
+            bubble={CARD_ACCENTS.submitted.bubble}
+            fullWidth
+            onPress={() => navigation.navigate('ArtisanProductionRecords', { status: 'submitted' })}
+            accessibilityLabel={`Submitted production records, ${submittedCount}`}
+          />
+        </View>
+
+        {recentBatches.length > 0 ? (
+          <View style={styles.recentSection}>
+            <Text style={styles.sectionLabel}>Recent work</Text>
+            {recentBatches.map((batch) => {
+              const batchId = Number(batch.id ?? 0);
+              const farmId = Number(batch.farm_id ?? 0);
+              const lat = Number(batch.latitude);
+              const lng = Number(batch.longitude);
+              const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
+              const farmLabel =
+                pickString(batch, 'farm_name', 'farm_code') !== '-'
+                  ? pickString(batch, 'farm_name', 'farm_code')
+                  : farmId
+                    ? `Farm #${farmId}`
+                    : 'Farm';
+              const farmerLabel =
+                pickString(batch, 'farmer_name', 'farmer_code') !== '-'
+                  ? pickString(batch, 'farmer_name', 'farmer_code')
+                  : 'Farmer';
+              const status = pickString(batch, 'status');
+              return (
+                <View key={String(batchId || pickString(batch, 'batch_code'))} style={styles.recentCard}>
+                  <Text style={styles.recentTitle}>
+                    {pickString(batch, 'batch_code') !== '-'
+                      ? pickString(batch, 'batch_code')
+                      : `Batch #${batchId}`}
+                  </Text>
+                  <Text style={styles.recentMeta}>
+                    Farm Name: {farmLabel} · Farm ID: {pickString(batch, 'farm_code') !== '-' ? pickString(batch, 'farm_code') : farmId || '—'}
+                  </Text>
+                  <Text style={styles.recentMeta}>
+                    Farmer Name: {farmerLabel} · Status: {status !== '-' ? status : '—'}
+                  </Text>
+                  <View style={styles.recentActions}>
+                    <Pressable
+                      style={styles.recentAction}
+                      onPress={() => {
+                        const submissionUuid = pickString(batch, 'submission_uuid');
+                        if (submissionUuid !== '-' && farmId) {
+                          navigation.navigate('ArtisanBiocharProductionStatus', {
+                            submissionUuid,
+                            farmId,
+                            farmerId: Number(batch.farmer_id ?? 0) || undefined,
+                            farmCode: pickString(batch, 'farm_code') !== '-' ? pickString(batch, 'farm_code') : undefined,
+                            farmerName:
+                              pickString(batch, 'farmer_name') !== '-'
+                                ? pickString(batch, 'farmer_name')
+                                : undefined,
+                            batchCode:
+                              pickString(batch, 'batch_code') !== '-'
+                                ? pickString(batch, 'batch_code')
+                                : undefined,
+                            status: status !== '-' ? status : undefined,
+                          });
+                          return;
+                        }
+                        navigation.navigate('ArtisanProductionRecords', { status: 'submitted' });
+                      }}
+                    >
+                      <Text style={styles.recentActionText}>View Batch</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.recentAction, !hasCoords && styles.recentActionDisabled]}
+                      disabled={!hasCoords}
+                      onPress={() => {
+                        if (!hasCoords) {
+                          Alert.alert(
+                            'GPS not saved',
+                            'This farm has no saved GPS coordinates. Navigation cannot invent a location.',
+                          );
+                          return;
+                        }
+                        void openGoogleMaps({ latitude: lat, longitude: lng }, farmLabel);
+                      }}
+                    >
+                      <Text style={styles.recentActionText}>Navigate Farm</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -900,4 +1047,46 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   cardAction: { fontSize: 12, fontWeight: '700' },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: artisanTheme.deepText,
+    marginTop: 8,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  syncBanner: {
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    marginBottom: 12,
+  },
+  syncBannerText: { fontSize: 12, fontWeight: '700', color: '#92400E' },
+  recentSection: { marginTop: 4, marginBottom: 8 },
+  recentCard: {
+    backgroundColor: artisanTheme.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: artisanTheme.softBorder,
+    padding: 12,
+    marginBottom: 10,
+    gap: 4,
+  },
+  recentTitle: { fontSize: 14, fontWeight: '800', color: artisanTheme.deepText },
+  recentMeta: { fontSize: 12, color: artisanTheme.secondaryText, lineHeight: 17 },
+  recentActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  recentAction: {
+    borderRadius: 10,
+    backgroundColor: artisanTheme.cream,
+    borderWidth: 1,
+    borderColor: artisanTheme.softBorder,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  recentActionDisabled: { opacity: 0.45 },
+  recentActionText: { fontSize: 12, fontWeight: '700', color: artisanTheme.primary },
 });

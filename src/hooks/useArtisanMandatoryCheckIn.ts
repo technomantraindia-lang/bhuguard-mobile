@@ -35,8 +35,8 @@ export function useArtisanMandatoryCheckIn() {
           return;
         }
         const payload = (data?.check_in_status ?? data ?? {}) as ApiRecord;
-        const active =
-          payload.is_checked_in === true || payload.active === true || Boolean(payload.check_in);
+        // Fail closed: only an explicit active check-in grants dashboard access.
+        const active = payload.is_checked_in === true;
         if (active) {
           grantedRef.current = true;
           setPhase('granted');

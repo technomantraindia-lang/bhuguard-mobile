@@ -114,6 +114,8 @@ export type ArtisanStackParamList = {
   ArtisanProfile: undefined;
   ArtisanSettings: undefined;
   ArtisanHelpSupport: undefined;
+  ArtisanWallet: undefined;
+  ArtisanTraining: undefined;
   ArtisanModuleUnavailable: { module: 'wallet' | 'training' };
   ArtisanFarmLookup:
     | {
