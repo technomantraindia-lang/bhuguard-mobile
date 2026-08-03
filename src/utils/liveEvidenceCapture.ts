@@ -6,7 +6,7 @@ import {
   applyLivePhotoWatermarkDetailed,
   isDeferredStampUri,
 } from '../services/livePhotoWatermarkService';
-import { resolveValidatedCaptureLocation } from './livePhotoLocation';
+import { resolveValidatedCaptureLocation, normalizeCaptureLocationPart } from './livePhotoLocation';
 import { buildLivePhotoWatermarkMeta, type LivePhotoWatermarkMeta } from './livePhotoWatermarkFormat';
 import { BIOCHAR_POOR_ACCURACY_MESSAGE } from './biocharGpsCapture';
 import { compressEvidenceImage } from './compressEvidenceImage';
@@ -64,6 +64,8 @@ export function liveEvidenceCameraOptions(
 export async function captureLivePhotoEvidence(options?: {
   defaultName?: string;
   allowsEditing?: boolean;
+  /** Prefer saved farm/farmer village over reverse-geocode noise (Phase 12.6). */
+  preferredVillage?: string | null;
 }): Promise<LiveCaptureResult> {
   const permission = await ImagePicker.requestCameraPermissionsAsync();
 
@@ -136,16 +138,26 @@ export async function captureLivePhotoEvidence(options?: {
   const location =
     latitude != null && longitude != null
       ? await resolveValidatedCaptureLocation(latitude, longitude)
-      : { village: '', taluka: '', district: '', state: 'Gujarat', resolved: false };
+      : { village: 'Unknown', taluka: 'Unknown', district: 'Unknown', state: 'Gujarat', resolved: false };
 
-  const villageName = (location.village || '').trim();
-  if (!villageName || villageName === '-') {
+  // GPS success is enough to continue. Unresolved reverse-geocode → "Village unavailable" (never block).
+  if (latitude == null || longitude == null || accuracy == null || !Number.isFinite(accuracy)) {
     return {
       ok: false,
       cancelled: false,
-      error: 'Village could not be resolved for this GPS location. Move outdoors, improve GPS accuracy, and Retry.',
+      error: 'GPS location is unavailable. Enable location services and try again.',
     };
   }
+
+  const preferredVillage = options?.preferredVillage?.trim();
+  const villageName = preferredVillage
+    ? preferredVillage
+    : location.village === 'Unknown' || !location.village?.trim()
+      ? 'Village unavailable'
+      : normalizeCaptureLocationPart(location.village);
+  const talukaName = normalizeCaptureLocationPart(location.taluka);
+  const districtName = normalizeCaptureLocationPart(location.district);
+  const stateName = normalizeCaptureLocationPart(location.state) || 'Gujarat';
 
   const watermark = buildLivePhotoWatermarkMeta({
     capturedAt: timestamp.capturedAtUtc,
@@ -154,9 +166,9 @@ export async function captureLivePhotoEvidence(options?: {
     longitude,
     accuracy,
     village: villageName,
-    taluka: location.taluka || '-',
-    district: location.district || '-',
-    state: location.state || 'Gujarat',
+    taluka: talukaName,
+    district: districtName,
+    state: stateName,
   });
 
   // Compress early so preview + stamp + upload stay fast (URI only, never base64).
@@ -182,9 +194,9 @@ export async function captureLivePhotoEvidence(options?: {
       longitude,
       accuracy,
       village: villageName,
-      taluka: location.taluka,
-      district: location.district,
-      state: location.state,
+      taluka: talukaName,
+      district: districtName,
+      state: stateName,
     });
   } catch (error) {
     return {
@@ -220,9 +232,9 @@ export async function captureLivePhotoEvidence(options?: {
       utcOffsetMinutes: timestamp.utcOffsetMinutes,
       captureSource: timestamp.captureSource,
       village: villageName,
-      taluka: location.taluka || '',
-      district: location.district || '',
-      state: location.state || 'Gujarat',
+      taluka: talukaName,
+      district: districtName,
+      state: stateName,
       watermark,
       preStamped: stampResult.preStamped,
     },
@@ -360,16 +372,20 @@ export async function pickStampedPhotoEvidence(options?: {
   const location =
     latitude != null && longitude != null
       ? await resolveValidatedCaptureLocation(latitude, longitude)
-      : { village: '', taluka: '', district: '', state: 'Gujarat', resolved: false };
+      : { village: 'Unknown', taluka: 'Unknown', district: 'Unknown', state: 'Gujarat', resolved: false };
 
-  const villageName = (location.village || '').trim();
-  if (!villageName || villageName === '-') {
+  if (latitude == null || longitude == null || accuracy == null || !Number.isFinite(accuracy)) {
     return {
       ok: false,
       cancelled: false,
-      error: 'Village could not be resolved for this GPS location. Move outdoors, improve GPS accuracy, and Retry.',
+      error: 'GPS location is unavailable. Enable location services and try again.',
     };
   }
+
+  const villageName = normalizeCaptureLocationPart(location.village);
+  const talukaName = normalizeCaptureLocationPart(location.taluka);
+  const districtName = normalizeCaptureLocationPart(location.district);
+  const stateName = normalizeCaptureLocationPart(location.state) || 'Gujarat';
 
   const watermark = buildLivePhotoWatermarkMeta({
     capturedAt: timestamp.capturedAtUtc,
@@ -378,9 +394,9 @@ export async function pickStampedPhotoEvidence(options?: {
     longitude,
     accuracy,
     village: villageName,
-    taluka: location.taluka || '-',
-    district: location.district || '-',
-    state: location.state || 'Gujarat',
+    taluka: talukaName,
+    district: districtName,
+    state: stateName,
   });
 
   try {
@@ -397,9 +413,9 @@ export async function pickStampedPhotoEvidence(options?: {
       longitude,
       accuracy,
       village: villageName,
-      taluka: location.taluka,
-      district: location.district,
-      state: location.state,
+      taluka: talukaName,
+      district: districtName,
+      state: stateName,
     });
 
     if (stampResult.uri === compressedUri && !isDeferredStampUri(stampResult.uri)) {
@@ -427,9 +443,9 @@ export async function pickStampedPhotoEvidence(options?: {
         utcOffsetMinutes: timestamp.utcOffsetMinutes,
         captureSource: timestamp.captureSource,
         village: villageName,
-        taluka: location.taluka || '',
-        district: location.district || '',
-        state: location.state || 'Gujarat',
+        taluka: talukaName,
+        district: districtName,
+        state: stateName,
         watermark,
         preStamped: stampResult.preStamped,
       },
@@ -441,6 +457,59 @@ export async function pickStampedPhotoEvidence(options?: {
       error: error instanceof Error ? error.message : 'Failed to burn timestamp onto the selected photo.',
     };
   }
+}
+
+/**
+ * Retry reverse-geocoding only (keeps existing GPS + photo). Never requires moving outdoors.
+ */
+export async function refreshEvidenceGeocode(
+  evidence: LiveCapturedEvidence,
+): Promise<LiveCaptureResult> {
+  if (
+    evidence.latitude == null
+    || evidence.longitude == null
+    || evidence.accuracy == null
+    || !Number.isFinite(evidence.accuracy)
+  ) {
+    return {
+      ok: false,
+      cancelled: false,
+      error: 'GPS location is unavailable. Capture a new photo with location enabled.',
+    };
+  }
+
+  const location = await resolveValidatedCaptureLocation(evidence.latitude, evidence.longitude);
+  const villageName = normalizeCaptureLocationPart(location.village);
+  const talukaName = normalizeCaptureLocationPart(location.taluka);
+  const districtName = normalizeCaptureLocationPart(location.district);
+  const stateName = normalizeCaptureLocationPart(location.state) || 'Gujarat';
+
+  const watermark = buildLivePhotoWatermarkMeta({
+    capturedAt: evidence.capturedAt,
+    latitude: evidence.latitude,
+    longitude: evidence.longitude,
+    accuracy: evidence.accuracy,
+    village: villageName,
+    taluka: talukaName,
+    district: districtName,
+    state: stateName,
+  });
+
+  return {
+    ok: true,
+    evidence: {
+      ...evidence,
+      village: villageName,
+      taluka: talukaName,
+      district: districtName,
+      state: stateName,
+      watermark: {
+        ...watermark,
+        // Keep the original burned-in capture time label from the photo stamp.
+        capturedAtLabel: evidence.watermark.capturedAtLabel || watermark.capturedAtLabel,
+      },
+    },
+  };
 }
 
 export async function captureStampedPhotoUri(options?: {

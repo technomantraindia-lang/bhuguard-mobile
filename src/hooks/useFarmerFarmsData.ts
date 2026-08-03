@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getFarmerFarms } from '../api/farmerApi';
 import { getApiErrorMessage } from '../api/authApi';
 import { extractList, type ApiRecord } from '../utils/apiHelpers';
+import { formatFarmerDisplayId } from '../utils/displayIds';
 import {
   buildFarmSummary,
   mapFarmRecord,
@@ -15,6 +16,7 @@ export type FarmFilterMode = 'all' | 'verified' | 'pending' | 'mapped' | 'unmapp
 export function useFarmerFarmsData() {
   const [farms, setFarms] = useState<FarmerFarmViewModel[]>([]);
   const [farmerName, setFarmerName] = useState('');
+  const [farmerDisplayId, setFarmerDisplayId] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,6 +30,14 @@ export function useFarmerFarmsData() {
       const [data, authUser] = await Promise.all([getFarmerFarms(), getAuthUser()]);
       const profileName = authUser?.name?.trim() || '';
       setFarmerName(profileName);
+      const authRecord = (authUser ?? {}) as ApiRecord;
+      const profile = (authRecord.farmer_profile as ApiRecord | undefined) ?? authRecord;
+      setFarmerDisplayId(
+        formatFarmerDisplayId({
+          farmer_display_id: profile.farmer_display_id ?? authRecord.farmer_display_id,
+          farmer_code: profile.farmer_code ?? authRecord.farmer_code,
+        }),
+      );
 
       const records = extractList(data as ApiRecord, ['farms']);
       setFarms(
@@ -104,6 +114,7 @@ export function useFarmerFarmsData() {
     farms: filteredFarms,
     allFarms: farms,
     farmerName,
+    farmerDisplayId,
     summary,
     loading,
     error,

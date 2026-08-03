@@ -50,6 +50,7 @@ export function FarmerFarmsScreen() {
     farms,
     allFarms,
     farmerName,
+    farmerDisplayId,
     summary,
     loading,
     error,
@@ -133,6 +134,7 @@ export function FarmerFarmsScreen() {
               coordinates={mappedCoordinates}
               farms={allFarms}
               farmerName={farmerDisplayName}
+              farmerDisplayId={farmerDisplayId}
               onOpenMaps={openFirstMappedFarm}
             />
 
@@ -167,10 +169,31 @@ export function FarmerFarmsScreen() {
           <FarmerFarmListCard
             farm={item}
             onViewDetails={() => navigation.navigate('FarmerFarmDetail', { farmId: item.id })}
-            onAddActivity={() => navigation.navigate('FarmerFarmActivity', { farmId: item.id })}
-            onMapBoundary={() => navigation.navigate('FarmBoundaryStart', { farmId: item.id })}
-            onViewBoundary={() => navigation.navigate('FarmerFarmDetail', { farmId: item.id })}
+            onViewActivities={() => navigation.navigate('Activities')}
+            onCompleteMapping={() => navigation.navigate('FarmBoundaryStart', { farmId: item.id })}
+            onViewFarm={() =>
+              navigation.navigate('FarmerFarmBoundaryView', {
+                farmId: item.id,
+                farmerName: farmerDisplayName || item.farmerName,
+                farmName: item.name,
+                farmCode: item.code,
+                village: item.village,
+                areaLabel: item.areaLabel,
+              })
+            }
             onOpenMap={async () => {
+              if (item.boundaryMapped) {
+                navigation.navigate('FarmerFarmBoundaryView', {
+                  farmId: item.id,
+                  farmerName: farmerDisplayName || item.farmerName,
+                  farmName: item.name,
+                  farmCode: item.code,
+                  village: item.village,
+                  areaLabel: item.areaLabel,
+                });
+                return;
+              }
+
               if (item.coordinates) {
                 await openGoogleMaps(item.coordinates, item.name);
                 return;

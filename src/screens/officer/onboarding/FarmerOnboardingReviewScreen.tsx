@@ -19,7 +19,7 @@ import {
   declaredAreaInAcres,
 } from '../../../utils/landMappingHelpers';
 import { calculateTurfBoundaryMetrics, polygonCentroid } from '../../../utils/manualBoundaryGeometry';
-import { validateSubmit } from '../../../utils/onboardingValidation';
+import { validateSubmit, getSubmitEligibility } from '../../../utils/onboardingValidation';
 import { persistFieldOfficerFarmerProfile } from '../../../utils/persistFieldOfficerFarmerProfile';
 import { OnboardingFormScreen } from './OnboardingFormScreen';
 
@@ -83,6 +83,8 @@ export function FarmerOnboardingReviewScreen() {
   const mappingCompleted =
     draft.boundary_points.length >= 3
     && (draft.boundary_mapping_status === 'mapped' || draft.boundary_mapping_status === 'pending_review');
+
+  const submitEligibility = useMemo(() => getSubmitEligibility(draft), [draft]);
 
   const landMappingSummary = useMemo(() => {
     const declaredValue = Number(String(draft.land_area).replace(/,/g, '').trim());
@@ -278,8 +280,18 @@ export function FarmerOnboardingReviewScreen() {
       onNext={submit}
       nextLabel={ONBOARDING_NEXT_LABELS[6] ?? 'Submit Registration'}
       nextLoading={loading}
+      nextDisabled={!submitEligibility.canSubmit || loading}
       footerError={error}
     >
+      {__DEV__ ? (
+        <View style={styles.devDiagnostics}>
+          <Text style={styles.devTitle}>DEV eligibility</Text>
+          <Text style={styles.devLine}>Completed: {submitEligibility.completed.join(', ') || '—'}</Text>
+          <Text style={styles.devMissing}>
+            Missing: {submitEligibility.missing.join(', ') || 'none'}
+          </Text>
+        </View>
+      ) : null}
       <View style={styles.identityCard}>
         <Text style={styles.identityTitle}>Registration Summary</Text>
         <Line label="Farmer ID" value={formatFarmerDisplayCode(draft.farmer_id, draft.farmer_display_id || draft.farmer_code)} />
@@ -446,6 +458,18 @@ function Line({ label, value }: { label: string; value?: string }) {
 const styles = StyleSheet.create({
   line: { fontSize: 14, color: colors.text, marginTop: 4 },
   edit: { color: colors.primary, fontWeight: '700', marginTop: 8 },
+  devDiagnostics: {
+    backgroundColor: '#FFF7ED',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FDBA74',
+    padding: 12,
+    gap: 4,
+    marginBottom: 8,
+  },
+  devTitle: { fontSize: 12, fontWeight: '800', color: '#9A3412' },
+  devLine: { fontSize: 11, color: '#9A3412' },
+  devMissing: { fontSize: 11, fontWeight: '700', color: '#C2410C' },
   identityCard: {
     backgroundColor: colors.surface,
     borderRadius: 16,

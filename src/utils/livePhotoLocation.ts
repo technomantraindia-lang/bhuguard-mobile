@@ -16,7 +16,7 @@ export interface ValidatedCaptureLocation extends ResolvedCaptureLocation {
   districtId?: number | null;
 }
 
-const UNKNOWN_LOCATION = '-';
+const UNKNOWN_LOCATION = 'Unknown';
 
 const GUJARAT_DISTRICTS = [
   'Ahmedabad',
@@ -98,6 +98,28 @@ function firstDifferent(reference: string, ...values: Array<string | null | unde
   return UNKNOWN_LOCATION;
 }
 
+/** Reject full street / shop addresses that must never land in the Village stamp field. */
+function looksLikeStreetAddress(value: string | null | undefined): boolean {
+  const trimmed = (value ?? '').trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  if (/,/.test(trimmed) && trimmed.split(',').length >= 2 && /\d/.test(trimmed)) {
+    return true;
+  }
+
+  if (/^(shop|plot|flat|floor|near|opp\.?|opposite|road|rd\.?|street|st\.?)\b/i.test(trimmed)) {
+    return true;
+  }
+
+  if (/\b(first|second|third|ground)\s+floor\b/i.test(trimmed)) {
+    return true;
+  }
+
+  return false;
+}
+
 function resolveDistrict(place: Location.LocationGeocodedAddress): string {
   const candidates = [
     cleanPart(place.subregion),
@@ -141,11 +163,24 @@ function findBestAddressMatch(candidate: string, options: AddressOption[]): Addr
 }
 
 async function validateAgainstAddressMaster(raw: ResolvedCaptureLocation): Promise<ValidatedCaptureLocation> {
+  const fallbackVillage =
+    raw.village && raw.village !== UNKNOWN_LOCATION && raw.village !== '-'
+      ? raw.village
+      : UNKNOWN_LOCATION;
+  const fallbackTaluka =
+    raw.taluka && raw.taluka !== UNKNOWN_LOCATION && raw.taluka !== '-'
+      ? raw.taluka
+      : UNKNOWN_LOCATION;
+  const fallbackDistrict =
+    raw.district && raw.district !== UNKNOWN_LOCATION && raw.district !== '-'
+      ? raw.district
+      : UNKNOWN_LOCATION;
+
   const empty: ValidatedCaptureLocation = {
-    village: '',
-    taluka: '',
-    district: '',
-    state: 'Gujarat',
+    village: fallbackVillage,
+    taluka: fallbackTaluka,
+    district: fallbackDistrict,
+    state: raw.state || 'Gujarat',
     resolved: false,
   };
 
@@ -171,12 +206,13 @@ async function validateAgainstAddressMaster(raw: ResolvedCaptureLocation): Promi
 
     const villages = await getVillages(
       matchedTaluka.id,
-      raw.village !== UNKNOWN_LOCATION ? raw.village : undefined,
+      raw.village !== UNKNOWN_LOCATION && raw.village !== '-' ? raw.village : undefined,
     );
     const matchedVillage = findBestAddressMatch(raw.village, villages);
 
     return {
-      village: matchedVillage?.name ?? '',
+      // Keep reverse-geocode / Unknown village when master data has no match — never blank.
+      village: matchedVillage?.name ?? fallbackVillage,
       taluka: matchedTaluka.name,
       district: matchedDistrict.name,
       state: 'Gujarat',
@@ -199,6 +235,17 @@ export async function resolveValidatedCaptureLocation(
   return validateAgainstAddressMaster(raw);
 }
 
+/** Normalize a geocode part for stamps/UI — never blank when GPS exists. */
+export function normalizeCaptureLocationPart(value: string | null | undefined): string {
+  const trimmed = (value ?? '').trim();
+
+  if (!trimmed || trimmed === '-' || trimmed === '—') {
+    return UNKNOWN_LOCATION;
+  }
+
+  return trimmed;
+}
+
 export async function resolveCaptureLocation(
   latitude: number,
   longitude: number,
@@ -211,20 +258,39 @@ export async function resolveCaptureLocation(
       return { village: UNKNOWN_LOCATION, taluka: UNKNOWN_LOCATION, district: UNKNOWN_LOCATION, state: 'Gujarat' };
     }
 
+    // Phase 12.6 — map reverse-geocode fields correctly:
+    // village/hamlet/locality → Village (never street / full formatted address)
+    // city_district/subdistrict/county → Taluka
+    // district → District
+    // state/region → State
+    const placeAny = place as Record<string, string | null | undefined>;
     const district = resolveDistrict(place);
-    const taluka = firstClean(place.city, place.subregion, district);
+    const taluka = firstClean(
+      placeAny.subregion,
+      placeAny.city,
+      placeAny.county,
+      placeAny.district,
+      district,
+    );
     const village = firstDifferent(
       taluka,
-      place.name,
-      place.district,
-      place.street,
-      place.city,
-      place.subregion,
+      placeAny.district, // expo often puts village/locality in `district`
+      placeAny.name && !looksLikeStreetAddress(placeAny.name) ? placeAny.name : null,
+      placeAny.city && placeAny.city.toLowerCase() !== taluka.toLowerCase() ? placeAny.city : null,
+      placeAny.subregion && placeAny.subregion.toLowerCase() !== taluka.toLowerCase()
+        ? placeAny.subregion
+        : null,
     );
 
+    // Never assign a street/POI-style string to Village.
+    const safeVillage =
+      looksLikeStreetAddress(village) || village === UNKNOWN_LOCATION
+        ? 'Village unavailable'
+        : village;
+
     return {
-      village,
-      taluka,
+      village: safeVillage,
+      taluka: taluka === UNKNOWN_LOCATION ? UNKNOWN_LOCATION : taluka,
       district,
       state: cleanPart(place.region) ?? 'Gujarat',
     };

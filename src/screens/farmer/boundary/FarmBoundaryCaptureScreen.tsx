@@ -353,7 +353,7 @@ export function FarmBoundaryCaptureScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.topCard}>
           <Text style={styles.topTitle}>Farm: {boundary.farmName}</Text>
-          <Text style={styles.topMeta}>Farmer ID: {boundary.farmCode}</Text>
+          <Text style={styles.topMeta}>Farm ID: {boundary.farmCode}</Text>
           <Text style={styles.topMeta}>Status: {boundary.mappingStatusLabel}</Text>
           <Text style={styles.topMeta}>
             GPS Accuracy: {boundary.gpsAccuracyLabel}

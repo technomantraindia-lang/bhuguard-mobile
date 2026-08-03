@@ -201,3 +201,70 @@ export function validateSubmit(draft: OnboardingDraft): string | null {
     ?? validateDocuments(draft)
   );
 }
+
+/**
+ * Phase 12.12 — structured eligibility for review/consent submit button.
+ * Used to disable Submit immediately and surface __DEV__ diagnostics.
+ */
+export function getSubmitEligibility(draft: OnboardingDraft): {
+  canSubmit: boolean;
+  completed: string[];
+  missing: string[];
+} {
+  const completed: string[] = [];
+  const missing: string[] = [];
+
+  const mark = (ok: boolean, label: string) => {
+    if (ok) {
+      completed.push(label);
+    } else {
+      missing.push(label);
+    }
+  };
+
+  mark(Boolean(draft.farmer_name.trim()), 'Farmer name');
+  mark(/^[6-9]\d{9}$/.test(draft.mobile.trim()), 'Mobile');
+  mark(Boolean(draft.district_id && draft.taluka_id && draft.village_id), 'Address (district/taluka/village)');
+  mark(Boolean(draft.data_usage_consent), 'Data usage consent');
+  mark(Boolean(draft.carbon_rights_consent), 'Carbon rights consent');
+  mark(Boolean(draft.project_participation_consent), 'Participation consent');
+  mark(Boolean(draft.farmer_signature_confirmed), 'Agreement read confirmed');
+  mark(
+    Boolean(draft.agreement_otp_verified && draft.agreement_verification_token.trim()),
+    'Agreement OTP verified',
+  );
+  mark(Boolean(draft.land_survey_number.trim() && draft.land_area.trim()), 'Land survey + area');
+  mark(Boolean(draft.farm_name?.trim()), 'Farm name');
+
+  const mappingStatus = draft.boundary_mapping_status;
+  const mappingOk =
+    mappingStatus === 'mapped'
+    || mappingStatus === 'pending_review'
+    || mappingStatus === 'pending';
+  mark(mappingOk, 'Land mapping choice (mapped or skip)');
+
+  const hasEvidence =
+    Boolean(draft.farmer_photo)
+    || Boolean(draft.consent_form)
+    || Boolean(draft.proof_of_land_ownership)
+    || (Array.isArray(draft.boundary_points) && draft.boundary_points.length >= 3);
+  mark(hasEvidence || mappingStatus === 'pending', 'Required evidence / mapping');
+
+  const farmerFarmIdsOk =
+    !draftAlreadyNeedsIds(draft)
+    || (Boolean(draft.farmer_id) && Boolean(draft.farm_id));
+  mark(farmerFarmIdsOk, 'Farmer ID / Farm ID available when required');
+
+  // No obsolete MPIN/password requirement.
+  completed.push('MPIN/password not required');
+
+  return {
+    canSubmit: missing.length === 0 && validateSubmit(draft) === null,
+    completed,
+    missing,
+  };
+}
+
+function draftAlreadyNeedsIds(draft: OnboardingDraft): boolean {
+  return draft.boundary_mapping_status === 'mapped' || draft.boundary_mapping_status === 'pending_review';
+}

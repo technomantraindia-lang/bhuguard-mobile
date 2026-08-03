@@ -19,7 +19,7 @@ import {
 import { useFarmDetailData } from '../../hooks/useFarmDetailData';
 import type { FarmerStackParamList } from '../../navigation/types';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
-import { openGoogleMaps } from '../../utils/farmMapHelpers';
+import { openGoogleMaps, isFarmMapped } from '../../utils/farmMapHelpers';
 
 type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmerFarmDetail'>;
 
@@ -47,6 +47,8 @@ export function FarmerFarmDetailScreen({ navigation, route }: Props) {
     void openGoogleMaps(detail.centerCoordinates, detail.farmName);
   };
 
+  const boundaryMapped = isFarmMapped(farmRecord);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <FarmDetailHeader
@@ -73,12 +75,27 @@ export function FarmerFarmDetailScreen({ navigation, route }: Props) {
           center={detail.centerCoordinates}
           polygonCoordinatesLabel={detail.polygonCoordinatesLabel}
           onOpenGoogleMaps={openMaps}
-          onOpenFullScreen={() => navigation.navigate('FarmerFarmMapFullScreen', { farmId })}
+          onOpenFullScreen={() =>
+            boundaryMapped
+              ? navigation.navigate('FarmerFarmBoundaryView', {
+                  farmId,
+                  farmName: detail.farmName,
+                  farmCode: detail.farmCode,
+                  farmerName: detail.farm.farmerName,
+                  village: detail.locationLabel,
+                  areaLabel: detail.areaLabel,
+                })
+              : navigation.navigate('FarmerFarmMapFullScreen', { farmId })
+          }
           onRefresh={() => void reload()}
-          onEditBoundary={() => navigation.navigate('FarmBoundaryStart', { farmId })}
-          onCaptureBoundaryWithCamera={() => navigation.navigate('CameraBoundaryStart', { farmId })}
+          onEditBoundary={
+            boundaryMapped ? undefined : () => navigation.navigate('FarmBoundaryStart', { farmId })
+          }
+          onCaptureBoundaryWithCamera={
+            boundaryMapped ? undefined : () => navigation.navigate('CameraBoundaryStart', { farmId })
+          }
           onViewBoundaryPhotos={() => navigation.navigate('BoundaryPhotoGallery', { farmId })}
-          onRecaptureBoundary={() => navigation.navigate('CameraBoundaryStart', { farmId })}
+          onRecaptureBoundary={undefined}
         />
 
         <FarmSummaryCard

@@ -14,6 +14,7 @@ export const FRAUD_MARQUEE_HIDDEN_ROUTES = new Set([
   'FarmBoundaryManualDraw',
   'FarmBoundaryMap',
   'FarmBoundaryView',
+  'FarmerFarmBoundaryView',
   'FarmBoundaryStart',
   'FarmBoundarySaveConfirm',
   'FarmBoundaryUploading',
@@ -47,8 +48,11 @@ function getDeepestRouteName(
   let name: string | undefined;
 
   while (current?.routes?.length) {
-    const index = current.index ?? current.routes.length - 1;
-    const route = current.routes[index];
+    const routes = current.routes;
+    const routeIndex: number = typeof current.index === 'number' ? current.index : routes.length - 1;
+    const route = routes[routeIndex] as
+      | { name?: string; state?: NavigationState | PartialState<NavigationState> }
+      | undefined;
     name = route?.name;
     current = route?.state;
   }

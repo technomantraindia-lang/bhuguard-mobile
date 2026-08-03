@@ -227,6 +227,15 @@ export type FarmerStackParamList = {
   FarmerFarmMapFullScreen: { farmId: number };
   FarmerEditFarm: { farmId: number };
   FarmBoundaryStart: { farmId: number };
+  FarmerFarmBoundaryView: {
+    farmId: number;
+    farmerName?: string;
+    farmerDisplayId?: string;
+    farmName?: string;
+    farmCode?: string;
+    village?: string;
+    areaLabel?: string;
+  };
   FarmBoundaryCapture: { farmId: number };
   FarmBoundaryPreview: { farmId: number };
   FarmBoundarySaveConfirm: { farmId: number };

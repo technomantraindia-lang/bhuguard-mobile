@@ -95,6 +95,12 @@ export function FarmerNavigator() {
           getComponent={() => require('../screens/farmer/boundary/FarmBoundaryStartScreen').FarmBoundaryStartScreen}
         />
         <Stack.Screen
+          name="FarmerFarmBoundaryView"
+          getComponent={() =>
+            require('../screens/farmer/boundary/FarmerFarmBoundaryViewScreen').FarmerFarmBoundaryViewScreen
+          }
+        />
+        <Stack.Screen
           name="FarmBoundaryCapture"
           getComponent={() => require('../screens/farmer/boundary/FarmBoundaryCaptureScreen').FarmBoundaryCaptureScreen}
         />

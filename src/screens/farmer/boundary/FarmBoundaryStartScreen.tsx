@@ -28,7 +28,7 @@ export function FarmBoundaryStartScreen({ navigation, route }: Props) {
   const { setFarm, loadExistingBoundary, setCurrentLocation } = boundary;
   const [loading, setLoading] = useState(true);
   const [farmName, setFarmName] = useState('Farm');
-  const [farmCode, setFarmCode] = useState('BG-FARM-000');
+  const [farmCode, setFarmCode] = useState('—');
 
   useEffect(() => {
     let mounted = true;

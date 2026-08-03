@@ -14,9 +14,10 @@ export type FarmMapLabelItem = {
 
 interface FarmerFarmsMapOverviewProps {
   coordinates: FarmCoordinates[];
-  /** Phase 12.2 — labeled farms for the location map (Farm Name / Farmer Name / Farm ID). */
+  /** Phase 12.2 — labeled farms for the location map (Farm Name / Farmer Name / Farmer ID / Farm ID). */
   farms?: Array<Pick<FarmerFarmViewModel, 'id' | 'name' | 'code' | 'coordinates'> & { farmerName?: string }>;
   farmerName?: string;
+  farmerDisplayId?: string;
   onOpenMaps: () => void;
 }
 
@@ -24,6 +25,7 @@ export function FarmerFarmsMapOverview({
   coordinates,
   farms = [],
   farmerName = '',
+  farmerDisplayId = '',
   onOpenMaps,
 }: FarmerFarmsMapOverviewProps) {
   const mapUrl = buildStaticMapUrl(coordinates);
@@ -71,6 +73,7 @@ export function FarmerFarmsMapOverview({
                     farmerName || farm.farmerName
                       ? `Farmer Name: ${farmerName || farm.farmerName}`
                       : null,
+                    farmerDisplayId ? `Farmer ID: ${farmerDisplayId}` : null,
                     farm.code ? `Farm ID: ${farm.code}` : null,
                   ]
                     .filter(Boolean)

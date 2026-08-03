@@ -56,6 +56,9 @@ export function FarmerMyActivitiesScreen() {
     const status = pickString(record, 'status');
     const statusLabel = translateStatus(status, t);
     const activityDate = pickString(record, 'activity_date', 'activityDate');
+    const farmName = pickString(record, 'farm_name', 'farmName');
+    const farmUpdateStatus = pickString(record, 'farm_update_status', 'farmUpdateStatus');
+    const dueLabel = pickString(record, 'farm_update_status_label', 'farmUpdateStatusLabel');
     const photoUploadDate = pickString(
       record,
       'submitted_at',
@@ -64,26 +67,46 @@ export function FarmerMyActivitiesScreen() {
       'created_at',
     );
     const nextFarmPhotoUploadDate = pickString(record, 'next_farm_update_date', 'nextFarmUpdateDate');
+    const overdue =
+      farmUpdateStatus === 'overdue'
+      || dueLabel.toLowerCase().includes('overdue');
 
     return (
-      <View key={String(id)} style={styles.recordCard} accessibilityRole="text">
+      <Pressable
+        key={String(id)}
+        style={styles.recordCard}
+        onPress={() =>
+          navigation.navigate('FarmerFarmActivity', {
+            activityId: id,
+            farmId: Number(record.farm_id) || undefined,
+          })
+        }
+        accessibilityRole="button"
+      >
         <View style={styles.recordHeader}>
-          <Text style={styles.recordTitle}>
-            Activity ID: {pickString(record, 'activity_code', 'activityCode', 'id')}
+          <Text style={styles.recordTitle}>Farm Activity</Text>
+          <Text style={[styles.statusBadge, { color: overdue ? '#B91C1C' : statusTone(status) }]}>
+            {overdue ? 'Overdue' : statusLabel}
           </Text>
-          <Text style={[styles.statusBadge, { color: statusTone(status) }]}>{statusLabel}</Text>
         </View>
+        <Text style={styles.recordMeta}>
+          Farm Name: {farmName !== '-' ? farmName : '—'}
+        </Text>
         <Text style={styles.recordMeta}>
           Farm ID: {pickString(record, 'farm_code', 'farmCode', 'farm_id')}
         </Text>
         <Text style={styles.recordMeta}>
           Activity Date: {formatLocalizedDate(activityDate, language)}
         </Text>
+        {dueLabel && dueLabel !== '-' ? (
+          <Text style={styles.recordMeta}>Due status: {dueLabel}</Text>
+        ) : null}
         <Text style={styles.recordMeta}>
           Farm Photo Upload Date:{' '}
           {formatLocalizedDate(photoUploadDate || nextFarmPhotoUploadDate, language)}
         </Text>
-      </View>
+        <Text style={styles.recordHint}>View only — Field Officer completes visits</Text>
+      </Pressable>
     );
   };
 
@@ -160,6 +183,7 @@ const styles = StyleSheet.create({
   recordTitle: { fontSize: 15, fontWeight: '700', color: dashboardTheme.onSurface },
   statusBadge: { fontSize: 12, fontWeight: '700' },
   recordMeta: { fontSize: 13, color: dashboardTheme.textMuted },
+  recordHint: { fontSize: 12, fontWeight: '600', color: dashboardTheme.primaryContainer, marginTop: 4 },
   emptyCard: {
     backgroundColor: dashboardTheme.surfaceLow,
     borderRadius: 16,

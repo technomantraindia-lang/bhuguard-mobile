@@ -7,9 +7,9 @@ import type { FarmerFarmViewModel } from '../../utils/farmMapHelpers';
 interface FarmerFarmListCardProps {
   farm: FarmerFarmViewModel;
   onViewDetails: () => void;
-  onAddActivity: () => void;
-  onMapBoundary: () => void;
-  onViewBoundary: () => void;
+  onViewActivities: () => void;
+  onCompleteMapping: () => void;
+  onViewFarm: () => void;
   onOpenMap: () => void;
 }
 
@@ -41,9 +41,9 @@ function StatusBadge({
 export function FarmerFarmListCard({
   farm,
   onViewDetails,
-  onAddActivity,
-  onMapBoundary,
-  onViewBoundary,
+  onViewActivities,
+  onCompleteMapping,
+  onViewFarm,
   onOpenMap,
 }: FarmerFarmListCardProps) {
   const verificationLabel =
@@ -68,14 +68,16 @@ export function FarmerFarmListCard({
               <Text style={styles.farmerName}>{farm.farmerName}</Text>
             </>
           ) : null}
-          <Text style={styles.code}>ID: {farm.code}</Text>
-          <Text style={styles.location}>{farm.locationLabel}</Text>
+          <Text style={styles.fieldLabel}>Farm ID</Text>
+          <Text style={styles.code}>{farm.code}</Text>
+          <Text style={styles.fieldLabel}>Village</Text>
+          <Text style={styles.location}>{farm.village}</Text>
         </View>
 
         <View style={styles.badges}>
           <StatusBadge label={verificationLabel} tone={verificationTone} icon={verificationIcon} />
           <StatusBadge
-            label={farm.mappingBadge === 'mapped' ? 'Mapped' : 'Not Mapped'}
+            label={farm.mappingBadge === 'mapped' ? 'Mapped' : 'Mapping Pending'}
             tone={farm.mappingBadge}
             icon={farm.mappingBadge === 'mapped' ? 'map' : 'location_on'}
           />
@@ -84,22 +86,18 @@ export function FarmerFarmListCard({
 
       <Pressable style={styles.metrics} onPress={onOpenMap}>
         <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>Boundary</Text>
-          <Text style={styles.metricValue}>{farm.boundaryMapped ? 'Yes' : 'No'}</Text>
-        </View>
-        <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>Land Area</Text>
+          <Text style={styles.metricLabel}>Acre</Text>
           <Text style={styles.metricValue}>{farm.areaLabel}</Text>
         </View>
         <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>GPS Points</Text>
-          <Text style={styles.metricValue}>{farm.boundaryPointCount || '—'}</Text>
+          <Text style={styles.metricLabel}>Hectare</Text>
+          <Text style={styles.metricValue}>{farm.hectareLabel}</Text>
+        </View>
+        <View style={styles.metricItem}>
+          <Text style={styles.metricLabel}>Boundary</Text>
+          <Text style={styles.metricValue}>{farm.boundaryMapped ? 'Mapped' : 'Pending'}</Text>
         </View>
       </Pressable>
-
-      <View style={styles.conversionRow}>
-        <Text style={styles.conversionText}>{farm.hectareLabel}</Text>
-      </View>
 
       <View style={styles.actions}>
         <Pressable style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]} onPress={onViewDetails}>
@@ -107,18 +105,18 @@ export function FarmerFarmListCard({
         </Pressable>
 
         {farm.boundaryMapped ? (
-          <Pressable style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]} onPress={onViewBoundary}>
-            <Text style={styles.secondaryButtonText}>View Boundary</Text>
+          <Pressable style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]} onPress={onViewFarm}>
+            <Text style={styles.secondaryButtonText}>View Farm</Text>
           </Pressable>
         ) : (
-          <Pressable style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]} onPress={onMapBoundary}>
-            <Text style={styles.primaryButtonText}>Map Boundary</Text>
+          <Pressable style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]} onPress={onCompleteMapping}>
+            <Text style={styles.primaryButtonText}>Complete Farm Mapping</Text>
           </Pressable>
         )}
       </View>
 
-      <Pressable style={({ pressed }) => [styles.activityButton, pressed && styles.pressed]} onPress={onAddActivity}>
-        <Text style={styles.activityButtonText}>Add Activity</Text>
+      <Pressable style={({ pressed }) => [styles.activityButton, pressed && styles.pressed]} onPress={onViewActivities}>
+        <Text style={styles.activityButtonText}>View Activities</Text>
       </Pressable>
     </View>
   );
@@ -195,21 +193,6 @@ const styles = StyleSheet.create({
     backgroundColor: dashboardTheme.surface,
     borderRadius: 8,
     padding: 8,
-  },
-  conversionRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-  },
-  conversionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: dashboardTheme.onSurfaceVariant,
-  },
-  conversionDivider: {
-    fontSize: 12,
-    color: dashboardTheme.outline,
   },
   metricItem: {
     flex: 1,
