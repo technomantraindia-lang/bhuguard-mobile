@@ -73,6 +73,10 @@ Thumbs.db
 .env.*
 !.env.example
 !.env.local.example
+!.env.qa.example
+
+# QA Test Center results (regenerated locally)
+test-results/
 
 # local export / zip artifacts
 .expo-export-test/

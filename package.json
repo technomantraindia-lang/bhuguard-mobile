@@ -12,7 +12,7 @@
     "@react-navigation/native-stack": "^7.17.3",
     "@turf/turf": "^7.3.5",
     "axios": "^1.17.0",
-    "expo": "~56.0.14",
+    "expo": "~56.0.18",
     "expo-blur": "~56.0.3",
     "expo-build-properties": "~56.0.24",
     "expo-camera": "~56.0.8",
@@ -45,7 +45,9 @@
   },
   "devDependencies": {
     "@expo/ngrok": "^4.1.0",
+    "@types/node": "^24.3.0",
     "@types/react": "~19.2.2",
+    "tsx": "^4.20.5",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -73,7 +75,19 @@
     "build:eas:local:ios": "powershell -ExecutionPolicy Bypass -File ./scripts/build-eas-local.ps1 -Platform ios -Profile production",
     "prebuild:demo": "powershell -ExecutionPolicy Bypass -File ./scripts/prebuild-demo.ps1",
     "generate:icons": "python ./scripts/generate-app-icons.py",
-    "ensure:splash": "node ./scripts/ensure-solid-android-splash.js"
+    "ensure:splash": "node ./scripts/ensure-solid-android-splash.js",
+    "qa:preflight": "powershell -ExecutionPolicy Bypass -File ./qa/scripts/run-preflight.ps1",
+    "qa:source": "npx tsx qa/cli.ts source",
+    "qa:unit": "npx tsx qa/cli.ts unit",
+    "qa:integration": "npx tsx qa/cli.ts integration",
+    "qa:api": "powershell -ExecutionPolicy Bypass -File ./qa/scripts/run-api-health.ps1",
+    "qa:backend": "powershell -ExecutionPolicy Bypass -File ./qa/scripts/run-backend-tests.ps1",
+    "qa:navigation": "powershell -ExecutionPolicy Bypass -File ./qa/scripts/run-navigation-tests.ps1",
+    "qa:e2e": "powershell -ExecutionPolicy Bypass -File ./qa/scripts/run-android-e2e.ps1",
+    "qa:smoke": "npx tsx qa/cli.ts smoke",
+    "qa:full": "npx tsx qa/cli.ts full",
+    "qa:report": "powershell -ExecutionPolicy Bypass -File ./qa/scripts/generate-report.ps1",
+    "qa:clean": "powershell -ExecutionPolicy Bypass -File ./qa/scripts/cleanup-qa-data.ps1"
   },
   "private": true
 }
