@@ -2,9 +2,8 @@
 
 **Date:** 2026-08-03  
 **Mobile branch:** `office-rebuild-client-changes-2026-08`  
-**Mobile HEAD:** `739345513fa330a360ad08a37026517a266367c9` (plus subsequent commits in this delivery session)  
-**Local backend branch:** `office-rebuild-client-changes-2026-08`  
-**Local backend HEAD:** `d7d72f903951e1391a469147acde8126863bb0e7`  
+**Mobile HEAD:** `afdc939` (branch `office-rebuild-client-changes-2026-08`)  
+**Local backend HEAD:** `d7d72f9`  
 **Live API:** `https://erp.bhuguard.com/api` (Pattern / server-time / new display IDs **not** live-deployed in this run)
 
 ## Environment
@@ -42,8 +41,8 @@ Counts below treat each phase row in `IMPLEMENTATION_PROGRESS.md` at a high leve
 |----------|------|--------|
 | Progress tracker | `IMPLEMENTATION_PROGRESS.md` | Present |
 | Mobile API integration doc | `docs/mobile-api-integration.md` (+ backend copy) | Present |
-| Standalone APK | `BHUGUARD_OFFLINE_DELIVERY/mobile-release/` | See APK notes |
-| Source / Backend / Docs ZIPs | `BHUGUARD_OFFLINE_DELIVERY/zips/` | Generated if tooling succeeds |
+| Standalone APK | `BHUGUARD_OFFLINE_DELIVERY/mobile-release/` | Gradle build in progress / SHA pending |
+| Source / Backend / Docs ZIPs | `BHUGUARD_OFFLINE_DELIVERY/zips/` | Created 2026-08-03 (`Mobile-Source-Updated-*.zip` ~5.4MB lean; Backend/Docs present) |
 | This report | `BHUGUARD_OFFLINE_DELIVERY/reports/FINAL_DELIVERY_REPORT.md` | Present |
 
 ## APK notes
