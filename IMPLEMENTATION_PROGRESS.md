@@ -241,7 +241,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Status | Remaining blocker |
 |-------------|--------|-------------------|
-| Standalone APK in BHUGUARD_OFFLINE_DELIVERY/mobile-release/ | ⚠️ PARTIAL | Gradle assembleRelease running; SHA-256 pending; no adb device |
+| Standalone APK in BHUGUARD_OFFLINE_DELIVERY/mobile-release/ | ❌ FAIL | assembleRelease failed twice then interrupted: (1) MAX_PATH via sandbox Gradle cache, (2) invalid `*.xml.before-*` under `res/values` (moved aside), (3) rebuild killed mid-native compile; no release APK/SHA-256; no adb device |
 | Source/Backend/Docs ZIPs | ⚠️ PARTIAL | Lean ZIPs in `BHUGUARD_OFFLINE_DELIVERY/zips/` (src+config / additive backend / docs) |
 | FINAL reports | ⚠️ PARTIAL | `BHUGUARD_OFFLINE_DELIVERY/reports/FINAL_DELIVERY_REPORT.md` |
 

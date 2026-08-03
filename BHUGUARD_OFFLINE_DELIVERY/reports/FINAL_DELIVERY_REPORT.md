@@ -41,8 +41,8 @@ Counts below treat each phase row in `IMPLEMENTATION_PROGRESS.md` at a high leve
 |----------|------|--------|
 | Progress tracker | `IMPLEMENTATION_PROGRESS.md` | Present |
 | Mobile API integration doc | `docs/mobile-api-integration.md` (+ backend copy) | Present |
-| Standalone APK | `BHUGUARD_OFFLINE_DELIVERY/mobile-release/` | Gradle build in progress / SHA pending |
-| Source / Backend / Docs ZIPs | `BHUGUARD_OFFLINE_DELIVERY/zips/` | Created 2026-08-03 (`Mobile-Source-Updated-*.zip` ~5.4MB lean; Backend/Docs present) |
+| Standalone APK | `BHUGUARD_OFFLINE_DELIVERY/mobile-release/` | ❌ FAIL this run — see INSTALL_NOTES (MAX_PATH then invalid backup XML under res; retry interrupted) |
+| Source / Backend / Docs ZIPs | `BHUGUARD_OFFLINE_DELIVERY/zips/` | Created 2026-08-03 (`Mobile-Source-Updated-20260803-112010.zip` ~5.4MB lean; Backend/Docs present) |
 | This report | `BHUGUARD_OFFLINE_DELIVERY/reports/FINAL_DELIVERY_REPORT.md` | Present |
 
 ## APK notes
