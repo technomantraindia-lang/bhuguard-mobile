@@ -12,7 +12,6 @@ import { useOnboarding } from '../../../context/OnboardingContext';
 import { resetToOnboardingHome } from '../../../navigation/continueFarmerOnboarding';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
-import { formatFarmerCode } from '../../../utils/onboardingNotes';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
 
@@ -34,7 +33,7 @@ export function FarmerOnboardingSuccessScreen() {
 
   const farmerName = result?.farmer_name ?? 'Farmer';
   const mobile = result?.mobile ?? '-';
-  const farmerCode = result?.farmer_id ? formatFarmerCode(result.farmer_id) : '-';
+  const farmerCode = draft.farmer_display_id || draft.farmer_code || '—';
   const createdAt = formatDate(result?.onboarded_at);
   const routeNames = (navigation.getState()?.routeNames ?? []) as string[];
   const isArtisanStack = routeNames.includes('ArtisanDashboard');

@@ -221,10 +221,13 @@ export function FarmerOnboardingReviewScreen() {
           throw new Error('Onboarding succeeded but farmer ID was missing.');
         }
 
+        const farmerDisplayId = farmer.farmer_display_id ?? farmer.farmer_id_display;
+
         updateDraft({
           farmer_id: farmerId,
           farm_id: farmId,
           farmer_code: farmer.farmer_code ? String(farmer.farmer_code) : '',
+          farmer_display_id: farmerDisplayId ? String(farmerDisplayId) : '',
           farm_code: farmer.farm_code ? String(farmer.farm_code) : '',
         });
       }
@@ -279,7 +282,10 @@ export function FarmerOnboardingReviewScreen() {
         <Line label="Pincode" value={draft.pincode} />
         {draftAlreadyHasFarmerFarm(draft) ? (
           <>
-            <Line label="Farmer ID" value={String(draft.farmer_id)} />
+            <Line
+              label="Farmer ID"
+              value={draft.farmer_display_id || draft.farmer_code || String(draft.farmer_id)}
+            />
             <Line label="Farm ID" value={draft.farm_code || String(draft.farm_id)} />
           </>
         ) : null}

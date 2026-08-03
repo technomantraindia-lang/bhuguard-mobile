@@ -212,6 +212,7 @@
     "confirmHint": "Draw the same pattern again to confirm",
     "minPoints": "Use at least 4 connected points.",
     "mismatch": "Patterns did not match. Try again.",
+    "tooShort": "Connect at least 4 dots to continue.",
     "incorrect": "Incorrect pattern. Try again.",
     "locked": "Too many failed attempts. Please wait and try again.",
     "unsupported": "Pattern login is not available on this server yet. Continuing with the existing secure login.",
@@ -299,7 +300,18 @@
       "gpsMapping": "GPS Mapping Tasks",
       "checklist": "Verification Checklist",
       "evidence": "Evidence Upload",
-      "reports": "Reports"
+      "reports": "Reports",
+      "quickActionsTitle": "Quick Actions",
+      "quickActionsSubtitle": "Farmers, artisan work, activities, and visits.",
+      "quickActions": {
+        "farmerOnboarding": "Farmer Onboarding",
+        "myActivity": "My Activity",
+        "myFarmers": "My Farmers",
+        "inventory": "Inventory",
+        "myArtisans": "My Artisan Pros",
+        "artisanBiocharBatches": "Artisan Pro Biochar Batches",
+        "scheduleVisit": "Schedule Visit"
+      }
     },
     "onboarding": {
       "successTitle": "Farmer Registration Success",

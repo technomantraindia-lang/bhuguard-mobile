@@ -215,7 +215,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Additive migrations/APIs for Pattern, IDs, check-in, time, kilns, WA, evidence, biochar | docs/mobile-api-integration.md | bhuguard-latest | — | ⏳ PENDING | No live deploy |
+| Additive migrations/APIs for Pattern, IDs, check-in, time, kilns, WA, evidence, biochar | docs/mobile-api-integration.md | PatternAuthController, migrations, UserResource, server-time route | Local `migrate --force` DONE for pattern + display IDs; routes listed | ⚠️ PARTIAL | Not deployed to live; kiln/WA/biochar resume still pending |
 
 ---
 

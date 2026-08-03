@@ -17,7 +17,7 @@ import { useOnboarding } from '../../../context/OnboardingContext';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
 import { extractList, pickString, type ApiRecord } from '../../../utils/apiHelpers';
-import { formatFarmerCode } from '../../../utils/onboardingNotes';
+import { formatFarmerDisplayId } from '../../../utils/displayIds';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'OnboardedFarmerView'>;
 type ScreenRoute = RouteProp<FieldOfficerStackParamList, 'OnboardedFarmerView'>;
@@ -105,11 +105,22 @@ export function OnboardedFarmerViewScreen() {
 
   const boundaryPointCount = Number(primaryFarm?.boundary_point_count ?? 0);
 
+  const farmerDisplayId = useMemo(
+    () =>
+      formatFarmerDisplayId({
+        farmer_display_id: pickString(detail, 'farmer_display_id', 'farmerDisplayId') !== '-'
+          ? pickString(detail, 'farmer_display_id', 'farmerDisplayId')
+          : undefined,
+        farmer_code: farmerCode !== '-' ? farmerCode : undefined,
+      }),
+    [detail, farmerCode],
+  );
+
   const farmContext = useMemo(() => {
     const farmId = Number(primaryFarm?.id ?? 0) || undefined;
     return {
       farmerId: resolvedFarmerId,
-      farmerCode: farmerCode !== '-' ? farmerCode : formatFarmerCode(resolvedFarmerId),
+      farmerCode: farmerCode !== '-' ? farmerCode : undefined,
       farmerName: farmerName !== '-' ? farmerName : undefined,
       farmId,
       farmCode: primaryFarm ? pickString(primaryFarm, 'farm_code', 'farmCode') : undefined,
@@ -133,16 +144,12 @@ export function OnboardedFarmerViewScreen() {
               <View style={styles.photoWrap}>
                 <OnboardingReviewPhoto file={draft.farmer_photo} remotePhotoUrl={photoUrl} />
               </View>
-              <Text style={styles.line}>
-                Farmer ID: {farmerCode !== '-' ? farmerCode : resolvedFarmerId ? formatFarmerCode(resolvedFarmerId) : '—'}
-              </Text>
-              <Text style={styles.line}>Farmer ID: {resolvedFarmerId || '—'}</Text>
+              <Text style={styles.line}>Farmer ID: {farmerDisplayId}</Text>
               {farmContext.farmId ? (
                 <>
                   <Text style={styles.line}>Farm: {farmContext.farmName && farmContext.farmName !== '-' ? farmContext.farmName : '—'}</Text>
-                  <Text style={styles.line}>Farm ID: {farmContext.farmId}</Text>
                   <Text style={styles.line}>
-                    Farm ID: {farmContext.farmCode && farmContext.farmCode !== '-' ? farmContext.farmCode : '—'}
+                    Farm ID: {farmContext.farmCode && farmContext.farmCode !== '-' ? farmContext.farmCode : farmContext.farmId}
                   </Text>
                 </>
               ) : null}

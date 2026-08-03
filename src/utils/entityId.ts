@@ -58,14 +58,15 @@ export function toPositiveEntityId(value: unknown): number | null {
   return null;
 }
 
+/**
+ * NEVER fabricates a display ID locally (see src/utils/displayIds.ts). Shows the
+ * legacy farmer_code when present, else a safe placeholder — the numeric internal
+ * farmerId is not a business-facing code and must not be reformatted as one.
+ */
 export function formatFarmerDisplayCode(farmerId: number | null | undefined, farmerCode?: string | null): string {
   const code = farmerCode?.trim();
   if (code && !PLACEHOLDER_IDS.has(code.toLowerCase())) {
     return code;
-  }
-
-  if (isValidEntityId(farmerId)) {
-    return `BHG-FRM-${String(farmerId).padStart(6, '0')}`;
   }
 
   return '—';

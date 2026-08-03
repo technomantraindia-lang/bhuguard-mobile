@@ -58,9 +58,13 @@ export function PatternLoginScreen({ navigation, route }: Props) {
         if (mode === 'unlock') {
           setAuthStartupPhase('authenticated');
           const next = await routeAfterAuthenticatedUnlock(result.user);
+          const routeEntry =
+            'params' in next && next.params
+              ? { name: next.name as keyof RootStackParamList, params: next.params }
+              : { name: next.name as keyof RootStackParamList };
           safeNavigationReset(navigation, {
             index: 0,
-            routes: [{ name: next.name, params: next.params as never }],
+            routes: [routeEntry],
           });
           return;
         }
@@ -115,6 +119,8 @@ export function PatternLoginScreen({ navigation, route }: Props) {
         onComplete={(sequence) => {
           void onComplete(sequence);
         }}
+        onCleared={() => setError(null)}
+        onTooShort={() => setError(t('pattern.tooShort'))}
       />
 
       {loading ? <ActivityIndicator color="#0F7A45" style={{ marginTop: 16 }} /> : null}

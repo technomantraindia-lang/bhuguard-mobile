@@ -37,6 +37,7 @@ import { artisanTheme } from '../../theme/artisanTheme';
 import { spacing } from '../../theme';
 import { pickString, type ApiRecord } from '../../utils/apiHelpers';
 import { getAuthUser } from '../../utils/authStorage';
+import { formatArtisanDisplayId } from '../../utils/displayIds';
 
 function resolveArtisanDashboardError(err: unknown): string {
   const message = getApiErrorMessage(err, 'Dashboard data could not be loaded. Please retry.');
@@ -314,7 +315,7 @@ export function ArtisanDashboardScreen() {
     return 'Artisan Pro';
   }, [dashboard, profile]);
 
-  const artisanCode = pickString(profile ?? {}, 'artisan_code', 'artisanCode');
+  const artisanCode = formatArtisanDisplayId(profile);
   const submittedCount = Number(dashboard?.submitted_production_count ?? 0);
   const pendingLabel =
     pendingSyncCount + syncFailedCount > 0
@@ -472,7 +473,7 @@ export function ArtisanDashboardScreen() {
           <Text style={styles.welcomeEyebrow}>Welcome</Text>
           <Text style={styles.welcomeName}>{artisanName}</Text>
           <Text style={styles.welcomeMeta}>
-            {artisanCode !== '-' ? artisanCode : 'Artisan Pro'} · Onboarding, farm activity & biochar
+            {artisanCode !== '—' ? artisanCode : 'Artisan Pro'} · Onboarding, farm activity & biochar
           </Text>
           <Text style={styles.welcomeLocation} numberOfLines={2}>
             {locationSummary}

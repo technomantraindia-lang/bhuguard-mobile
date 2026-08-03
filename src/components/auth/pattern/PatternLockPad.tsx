@@ -17,6 +17,8 @@ export type PatternLockPadProps = {
   disabled?: boolean;
   onComplete: (sequence: string) => void;
   onCleared?: () => void;
+  /** Called when the finger is lifted before connecting the minimum number of points. */
+  onTooShort?: () => void;
   errorText?: string | null;
   hintText?: string | null;
 };
@@ -64,6 +66,7 @@ function PatternLockPadComponent({
   disabled = false,
   onComplete,
   onCleared,
+  onTooShort,
   errorText,
   hintText,
 }: PatternLockPadProps) {
@@ -99,18 +102,22 @@ function PatternLockPadComponent({
   }, []);
 
   const finish = useCallback(() => {
-    const sequence = pathRef.current.map(String).join('');
+    const drawn = pathRef.current;
     setFinger(null);
-    if (sequence.length < MIN_POINTS) {
+    if (drawn.length === 0) {
+      return;
+    }
+    if (drawn.length < MIN_POINTS) {
       reset();
+      onTooShort?.();
       return;
     }
     if (completedRef.current) {
       return;
     }
     completedRef.current = true;
-    onComplete(sequence);
-  }, [onComplete, reset]);
+    onComplete(drawn.map(String).join(''));
+  }, [onComplete, onTooShort, reset]);
 
   const onLayout = useCallback((event: LayoutChangeEvent) => {
     const w = Math.floor(event.nativeEvent.layout.width);

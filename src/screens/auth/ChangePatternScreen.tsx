@@ -125,6 +125,8 @@ export function ChangePatternScreen({ navigation }: Props) {
         onComplete={(sequence) => {
           void onComplete(sequence);
         }}
+        onCleared={() => setError(null)}
+        onTooShort={() => setError(t('pattern.tooShort'))}
       />
 
       {loading ? <ActivityIndicator color="#0F7A45" style={{ marginTop: 16 }} /> : null}

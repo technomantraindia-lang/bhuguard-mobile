@@ -69,6 +69,3 @@ export function buildOnboardingNotes(draft: OnboardingDraft): string {
   return lines.join('\n\n').trim();
 }
 
-export function formatFarmerCode(farmerId: number): string {
-  return `BHG-FRM-${String(farmerId).padStart(6, '0')}`;
-}

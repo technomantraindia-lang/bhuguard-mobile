@@ -244,6 +244,7 @@
     "submit": "સબમિટ કરો",
     "logout": "લૉગઆઉટ",
     "retry": "ફરી પ્રયાસ કરો",
+    "ok": "બરાબર",
     "loading": "લોડ થઈ રહ્યું છે…",
     "login": "લોગિન",
     "settings": "સેટિંગ્સ",
@@ -287,7 +288,18 @@
       "gpsMapping": "GPS મેપિંગ કાર્ય",
       "checklist": "ચકાસણી ચેકલિસ્ટ",
       "evidence": "પુરાવા અપલોડ",
-      "reports": "રિપોર્ટ"
+      "reports": "રિપોર્ટ",
+      "quickActionsTitle": "ઝડપી ક્રિયાઓ",
+      "quickActionsSubtitle": "ખેડૂતો, કારીગર કાર્ય, પ્રવૃત્તિઓ અને વિઝિટ.",
+      "quickActions": {
+        "farmerOnboarding": "ખેડૂત ઓનબોર્ડિંગ",
+        "myActivity": "મારી પ્રવૃત્તિ",
+        "myFarmers": "મારા ખેડૂતો",
+        "inventory": "ઇન્વેન્ટરી",
+        "myArtisans": "મારા કારીગર Pro",
+        "artisanBiocharBatches": "કારીગર Pro બાયોચાર બેચ",
+        "scheduleVisit": "વિઝિટ શેડ્યૂલ કરો"
+      }
     },
     "onboarding": {
       "successTitle": "ખેડૂત નોંધણી સફળ",
@@ -295,6 +307,19 @@
       "viewProfile": "ખેડૂત પ્રોફાઇલ જુઓ",
       "goToDashboard": "ડેશબોર્ડ પર જાઓ",
       "loginReady": "ખેડૂત હવે MPIN અથવા OTPથી લોગિન કરી શકે છે"
+    },
+    "checkIn": {
+      "title": "દૈનિક ચેક-ઇન જરૂરી",
+      "subtitle": "ફિલ્ડ ઓફિસર ડેશબોર્ડનો ઉપયોગ કરતા પહેલા તમારું ફિલ્ડ ચેક-ઇન પૂર્ણ કરો.",
+      "helper": "Bhuguard આ ચેક-ઇન માટે ઉચ્ચ-ચોકસાઈ GPS અને સુરક્ષિત સર્વર સમયનો ઉપયોગ કરે છે.",
+      "checkingStatus": "તમારી ચેક-ઇન સ્થિતિ તપાસાઈ રહી છે…",
+      "checkInNow": "હમણાં ચેક-ઇન કરો",
+      "checkingIn": "ચેક-ઇન થઈ રહ્યું છે…",
+      "stageLocating": "ઉચ્ચ-ચોકસાઈ GPS કેપ્ચર થઈ રહ્યું છે…",
+      "stageSubmitting": "ચેક-ઇન સબમિટ થઈ રહ્યું છે…",
+      "statusErrorFallback": "ચેક-ઇન સ્થિતિ ચકાસી શકાઈ નથી. ફરી પ્રયાસ કરો અથવા લોગઆઉટ કરો.",
+      "logoutConfirmTitle": "લોગઆઉટ કરીએ?",
+      "logoutConfirmMessage": "ફિલ્ડ ઓફિસર એપનો ઉપયોગ કરવા માટે તમારે ચેક-ઇન કરવું આવશ્યક છે. લોગઆઉટ કરી પછી પાછા આવો?"
     }
   },
   "errors": {

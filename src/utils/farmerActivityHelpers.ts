@@ -5,6 +5,7 @@ import type { BhuguardIconName } from '../components/shared/BhuguardMaterialIcon
 import { formatActivityDisplayDate, formatActivityTimestamp } from './activityDateHelpers';
 
 import { extractList, pickNestedString, pickString, type ApiRecord } from './apiHelpers';
+import { formatFarmerDisplayId } from './displayIds';
 
 
 
@@ -426,42 +427,9 @@ export function extractFarmerLocation(profile: ApiRecord): FarmerLocationInfo {
 
 
 
+/** Never fabricates a display ID; prefers server display fields, else legacy farmer_code. */
 export function formatFarmerCode(profile: ApiRecord): string {
-
-  const code = pickString(profile, 'farmer_code');
-
-
-
-  if (code !== '-') {
-
-    if (code.startsWith('BG-')) {
-
-      return code;
-
-    }
-
-
-
-    return `BG-BHG-FRM-${code.padStart(6, '0')}`;
-
-  }
-
-
-
-  const id = parseNumber(profile.id);
-
-
-
-  if (id > 0) {
-
-    return `BG-BHG-FRM-${String(id).padStart(6, '0')}`;
-
-  }
-
-
-
-  return 'BG-BHG-FRM-000000';
-
+  return formatFarmerDisplayId(profile);
 }
 
 

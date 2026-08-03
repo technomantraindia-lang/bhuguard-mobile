@@ -9,6 +9,7 @@ import {
   OfficerQuickActionsSectionHeader,
 } from './OfficerPremiumQuickActionCard';
 import { BhuguardMaterialIcon, type BhuguardIconName } from '../shared/BhuguardMaterialIcon';
+import { useTranslation } from '../../i18n/I18nContext';
 import { officerCardShadow, officerShadow, officerTheme } from '../../theme/officerDashboardTheme';
 
 interface OfficerDashboardSectionsProps {
@@ -124,6 +125,8 @@ export function OfficerQuickActionCards({
   onOpenFarmerOnboarding?: () => void;
   onOpenScheduleVisit?: () => void;
 }) {
+  const { t } = useTranslation();
+
   const actions: Array<{
     key: QuickActionKey;
     title: string;
@@ -133,24 +136,39 @@ export function OfficerQuickActionCards({
   }> = [
     {
       key: 'farmerOnboarding',
-      title: 'Farmer Onboarding',
+      title: t('officer.dashboard.quickActions.farmerOnboarding'),
       icon: 'person_add',
       onPress: onOpenFarmerOnboarding,
       primary: true,
     },
-    { key: 'farmActivity', title: 'My Activity', icon: 'agriculture', onPress: onOpenFarmActivity },
-    { key: 'myFarmers', title: 'My Farmers', icon: 'group', onPress: onOpenMyFarmers },
-    { key: 'inventory', title: 'Inventory', icon: 'assignment', onPress: onOpenInventory },
-    { key: 'myArtisans', title: 'My Artisan Pros', icon: 'badge', onPress: onOpenMyArtisans },
-    { key: 'artisanBiocharBatches', title: 'Artisan Pro Biochar Batches', icon: 'assignment', onPress: onOpenArtisanBiocharBatches },
-    { key: 'scheduleVisit', title: 'Schedule Visit', icon: 'event_note', onPress: onOpenScheduleVisit },
+    {
+      key: 'farmActivity',
+      title: t('officer.dashboard.quickActions.myActivity'),
+      icon: 'agriculture',
+      onPress: onOpenFarmActivity,
+    },
+    { key: 'myFarmers', title: t('officer.dashboard.quickActions.myFarmers'), icon: 'group', onPress: onOpenMyFarmers },
+    { key: 'inventory', title: t('officer.dashboard.quickActions.inventory'), icon: 'assignment', onPress: onOpenInventory },
+    { key: 'myArtisans', title: t('officer.dashboard.quickActions.myArtisans'), icon: 'badge', onPress: onOpenMyArtisans },
+    {
+      key: 'artisanBiocharBatches',
+      title: t('officer.dashboard.quickActions.artisanBiocharBatches'),
+      icon: 'assignment',
+      onPress: onOpenArtisanBiocharBatches,
+    },
+    {
+      key: 'scheduleVisit',
+      title: t('officer.dashboard.quickActions.scheduleVisit'),
+      icon: 'event_note',
+      onPress: onOpenScheduleVisit,
+    },
   ];
 
   return (
     <View style={styles.section}>
       <OfficerQuickActionsSectionHeader
-        title="Quick Actions"
-        subtitle="Farmers, artisan work, activities, and visits."
+        title={t('officer.dashboard.quickActionsTitle')}
+        subtitle={t('officer.dashboard.quickActionsSubtitle')}
       />
       <View style={styles.quickActionsWrap}>
         {actions.map((action) => (

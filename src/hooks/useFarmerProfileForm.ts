@@ -7,6 +7,7 @@ import { useTranslation } from '../i18n/I18nContext';
 import { getAuthUser } from '../storage/authStorage';
 import { resolveMediaUrl } from '../utils/mediaUrl';
 import { pickString, type ApiRecord } from '../utils/apiHelpers';
+import { formatFarmerDisplayId } from '../utils/displayIds';
 import { normalizeAppLanguage } from '../utils/preferredLanguage';
 
 export interface FarmerProfileViewModel {
@@ -39,18 +40,6 @@ export interface FarmerProfileViewModel {
   upiId: string;
   preferredLanguage: string;
   photoUrl: string | null;
-}
-
-function formatFarmerId(code: string, id: string): string {
-  if (code && code !== '-') {
-    return code.startsWith('BG-') ? code : `BG-${code}`;
-  }
-
-  if (id && id !== '-') {
-    return `BG-F-${id.padStart(6, '0')}`;
-  }
-
-  return 'BG-F-000000';
 }
 
 function emptyField(): string {
@@ -150,7 +139,7 @@ export function useFarmerProfileForm() {
       setProfile({
         ...defaults,
         fullName: name,
-        farmerId: formatFarmerId(pickString(farmerProfile, 'farmer_code'), pickString(farmerProfile, 'id')),
+        farmerId: formatFarmerDisplayId(farmerProfile),
         mobile,
         email,
         verificationStatus: ['verified', 'active', 'approved'].includes(status.toLowerCase()) ? 'Verified' : status,

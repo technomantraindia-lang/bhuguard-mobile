@@ -19,6 +19,7 @@ import { getAuthUser } from '../../utils/authStorage';
 import { artisanTheme } from '../../theme/artisanTheme';
 import { spacing } from '../../theme';
 import { pickString, type ApiRecord } from '../../utils/apiHelpers';
+import { formatArtisanDisplayId } from '../../utils/displayIds';
 import { translateStatus } from '../../utils/translateStatus';
 
 type Nav = NativeStackNavigationProp<ArtisanStackParamList, 'ArtisanProfile'>;
@@ -179,7 +180,7 @@ export function ArtisanProfileScreen() {
   }, [loggingOut, performLogout]);
 
   const name = pickString(profile ?? {}, 'name');
-  const code = pickString(profile ?? {}, 'artisan_code', 'artisanCode');
+  const code = formatArtisanDisplayId(profile);
   const mobile = pickString(profile ?? {}, 'mobile');
   const status = pickString(profile ?? {}, 'status');
   const username = pickString(userRecord ?? {}, 'username', 'name');

@@ -45,7 +45,7 @@ export function SetPatternScreen({ navigation, route }: Props) {
   const finishSuccess = useCallback(async () => {
     const user = await getAuthUser();
     const role = user ? resolveUserRole(user) ?? user.user_type : null;
-    const dashboard = getDashboardRoute(role);
+    const dashboard = role ? getDashboardRoute(role) : null;
     if (dashboard) {
       safeNavigationReset(navigation, { index: 0, routes: [{ name: dashboard }] });
       return;
@@ -119,6 +119,7 @@ export function SetPatternScreen({ navigation, route }: Props) {
           void onComplete(sequence);
         }}
         onCleared={() => setError(null)}
+        onTooShort={() => setError(t('pattern.tooShort'))}
       />
 
       {loading ? <ActivityIndicator color="#0F7A45" style={{ marginTop: 16 }} /> : null}

@@ -243,6 +243,7 @@
     "submit": "जमा करें",
     "logout": "लॉगआउट",
     "retry": "पुनः प्रयास",
+    "ok": "ठीक है",
     "loading": "लोड हो रहा है…",
     "login": "लॉगिन",
     "settings": "सेटिंग्स",
@@ -286,7 +287,18 @@
       "gpsMapping": "GPS मैपिंग कार्य",
       "checklist": "सत्यापन चेकलिस्ट",
       "evidence": "साक्ष्य अपलोड",
-      "reports": "रिपोर्ट"
+      "reports": "रिपोर्ट",
+      "quickActionsTitle": "त्वरित कार्य",
+      "quickActionsSubtitle": "किसान, कारीगर कार्य, गतिविधियाँ और विज़िट।",
+      "quickActions": {
+        "farmerOnboarding": "किसान ऑनबोर्डिंग",
+        "myActivity": "मेरी गतिविधि",
+        "myFarmers": "मेरे किसान",
+        "inventory": "इन्वेंटरी",
+        "myArtisans": "मेरे कारीगर Pro",
+        "artisanBiocharBatches": "कारीगर Pro बायोचार बैच",
+        "scheduleVisit": "विज़िट शेड्यूल करें"
+      }
     },
     "onboarding": {
       "successTitle": "किसान पंजीकरण सफल",
@@ -294,6 +306,19 @@
       "viewProfile": "किसान प्रोफ़ाइल देखें",
       "goToDashboard": "डैशबोर्ड पर जाएँ",
       "loginReady": "किसान अब MPIN या OTP से लॉगिन कर सकता है"
+    },
+    "checkIn": {
+      "title": "दैनिक चेक-इन आवश्यक",
+      "subtitle": "फील्ड ऑफिसर डैशबोर्ड का उपयोग करने से पहले अपना फील्ड चेक-इन पूरा करें।",
+      "helper": "Bhuguard इस चेक-इन के लिए उच्च-सटीकता GPS और सुरक्षित सर्वर समय का उपयोग करता है।",
+      "checkingStatus": "आपकी चेक-इन स्थिति जाँची जा रही है…",
+      "checkInNow": "अभी चेक-इन करें",
+      "checkingIn": "चेक-इन हो रहा है…",
+      "stageLocating": "उच्च-सटीकता GPS कैप्चर हो रहा है…",
+      "stageSubmitting": "चेक-इन जमा हो रहा है…",
+      "statusErrorFallback": "चेक-इन स्थिति सत्यापित नहीं हो सकी। पुनः प्रयास करें या लॉगआउट करें।",
+      "logoutConfirmTitle": "लॉगआउट करें?",
+      "logoutConfirmMessage": "फील्ड ऑफिसर ऐप का उपयोग करने के लिए आपको चेक-इन करना होगा। लॉगआउट करके बाद में वापस आएं?"
     }
   },
   "errors": {
