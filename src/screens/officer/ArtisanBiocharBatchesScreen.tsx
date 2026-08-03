@@ -12,6 +12,7 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
 import { pickString, type ApiRecord } from '../../utils/apiHelpers';
+import { getFarmCoordinates, openGoogleMaps } from '../../utils/farmMapHelpers';
 
 type FilterState = {
   from: string;
@@ -287,18 +288,50 @@ export function ArtisanBiocharBatchesScreen() {
               }
             />
           ) : (
-            batches.map((batch) => (
-              <View key={String(batch.id ?? batch.batch_id)} style={[styles.card, officerCardShadow]}>
-                <Text style={styles.batchId}>Batch ID: {pickString(batch, 'batch_id', 'batch_code', 'id')}</Text>
-                <Text style={styles.meta}>Artisan: {pickString(batch, 'artisan_name')}</Text>
-                <Text style={styles.meta}>Farmer: {pickString(batch, 'farmer_name')}</Text>
-                <Text style={styles.meta}>Village: {pickString(batch, 'village')}</Text>
-                <Text style={styles.meta}>Date: {pickString(batch, 'batch_date', 'production_date')}</Text>
-                <Text style={styles.status}>
-                  {displayBatchStatus(pickString(batch, 'status_label', 'status'))}
-                </Text>
-              </View>
-            ))
+            batches.map((batch) => {
+              const farmId = pickString(batch, 'farm_id');
+              const farmCoordinates = getFarmCoordinates(batch);
+
+              return (
+                <View key={String(batch.id ?? batch.batch_id)} style={[styles.card, officerCardShadow]}>
+                  <Text style={styles.batchId}>Batch ID: {pickString(batch, 'batch_id', 'batch_code', 'id')}</Text>
+                  <Text style={styles.meta}>Artisan: {pickString(batch, 'artisan_name')}</Text>
+                  <Text style={styles.meta}>Farmer: {pickString(batch, 'farmer_name')}</Text>
+                  {farmId !== '-' ? (
+                    <Text style={styles.meta}>Farm ID: {pickString(batch, 'farm_code') !== '-' ? pickString(batch, 'farm_code') : farmId}</Text>
+                  ) : null}
+                  <Text style={styles.meta}>Village: {pickString(batch, 'village')}</Text>
+                  <Text style={styles.meta}>Date: {pickString(batch, 'batch_date', 'production_date')}</Text>
+                  <Text style={styles.status}>
+                    {displayBatchStatus(pickString(batch, 'status_label', 'status'))}
+                  </Text>
+
+                  {farmId !== '-' ? (
+                    <Pressable
+                      style={[styles.navigateButton, !farmCoordinates && styles.navigateButtonDisabled]}
+                      onPress={() => {
+                        if (!farmCoordinates) {
+                          return;
+                        }
+                        void openGoogleMaps(farmCoordinates, pickString(batch, 'farmer_name') !== '-' ? pickString(batch, 'farmer_name') : undefined);
+                      }}
+                      disabled={!farmCoordinates}
+                      accessibilityRole="button"
+                      accessibilityLabel="Navigate to farm"
+                    >
+                      <BhuguardMaterialIcon
+                        name="share_location"
+                        size={16}
+                        color={farmCoordinates ? officerTheme.onPrimary : officerTheme.onSurfaceVariant}
+                      />
+                      <Text style={[styles.navigateButtonText, !farmCoordinates && styles.navigateButtonTextDisabled]}>
+                        {farmCoordinates ? 'Navigate Farm' : 'GPS not saved for this farm'}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              );
+            })
           )}
         </ScrollView>
       )}
@@ -424,5 +457,26 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 3,
     textTransform: 'uppercase',
+  },
+  navigateButton: {
+    alignItems: 'center',
+    backgroundColor: officerTheme.primary,
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 6,
+    justifyContent: 'center',
+    marginTop: 8,
+    paddingVertical: 10,
+  },
+  navigateButtonDisabled: {
+    backgroundColor: officerTheme.surfaceVariant,
+  },
+  navigateButtonText: {
+    color: officerTheme.onPrimary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  navigateButtonTextDisabled: {
+    color: officerTheme.onSurfaceVariant,
   },
 });

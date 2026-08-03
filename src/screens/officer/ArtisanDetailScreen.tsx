@@ -13,6 +13,7 @@ import { WorkingAreaSelector, type WorkingAreaEntry } from '../../components/off
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
 import { pickString, type ApiRecord } from '../../utils/apiHelpers';
+import { formatArtisanDisplayId } from '../../utils/displayIds';
 import { formatStatusLabel } from '../../utils/statusLabels';
 
 type Props = NativeStackScreenProps<FieldOfficerStackParamList, 'ArtisanDetail'>;
@@ -160,6 +161,7 @@ export function ArtisanDetailScreen({ route }: Props) {
       >
         <View style={[styles.summaryCard, officerCardShadow]}>
           <Text style={styles.name}>{pickString(artisan, 'name')}</Text>
+          <Text style={styles.artisanId}>Artisan ID: {formatArtisanDisplayId(artisan)}</Text>
           <Text style={styles.mobile}>{pickString(artisan, 'mobile', 'phone')}</Text>
           <View style={[styles.statusPill, status === 'rejected' && styles.statusRejected]}>
             <Text style={[styles.statusText, status === 'rejected' && styles.statusRejectedText]}>{formatStatusLabel(status)}</Text>
@@ -230,6 +232,7 @@ const styles = StyleSheet.create({
   content: { gap: 12, padding: officerTheme.marginMobile, paddingBottom: 48 },
   summaryCard: { backgroundColor: officerTheme.surfaceLowest, borderColor: officerTheme.outlineVariant, borderRadius: 16, borderWidth: 1, gap: 6, padding: 16 },
   name: { color: officerTheme.onSurface, fontSize: 22, fontWeight: '800' },
+  artisanId: { color: officerTheme.onSurfaceVariant, fontSize: 13, fontWeight: '700', marginTop: 2 },
   mobile: { color: officerTheme.onSurfaceVariant, fontSize: 14 },
   statusPill: { alignSelf: 'flex-start', backgroundColor: officerTheme.secondaryContainer, borderRadius: 999, marginTop: 4, paddingHorizontal: 10, paddingVertical: 5 },
   statusRejected: { backgroundColor: officerTheme.errorContainer },

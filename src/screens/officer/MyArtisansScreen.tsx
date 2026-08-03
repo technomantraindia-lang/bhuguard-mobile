@@ -12,6 +12,7 @@ import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIc
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
 import { pickString, type ApiRecord } from '../../utils/apiHelpers';
+import { formatArtisanDisplayId } from '../../utils/displayIds';
 import { formatStatusLabel } from '../../utils/statusLabels';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'MyArtisans'>;
@@ -145,6 +146,7 @@ export function MyArtisansScreen() {
                     </View>
                     <View style={styles.cardCopy}>
                       <Text style={styles.name}>{pickString(artisan, 'name')}</Text>
+                      <Text style={styles.artisanId}>{formatArtisanDisplayId(artisan)}</Text>
                       <Text style={styles.mobile}>{pickString(artisan, 'mobile', 'phone')}</Text>
                     </View>
                     <View style={[styles.statusPill, status === 'rejected' && styles.statusRejected]}>
@@ -211,6 +213,7 @@ const styles = StyleSheet.create({
   avatarText: { color: officerTheme.onSecondaryContainer, fontSize: 16, fontWeight: '800' },
   cardCopy: { flex: 1, gap: 2 },
   name: { color: officerTheme.onSurface, fontSize: 16, fontWeight: '700' },
+  artisanId: { color: officerTheme.onSurfaceVariant, fontSize: 11, fontWeight: '700' },
   mobile: { color: officerTheme.onSurfaceVariant, fontSize: 12 },
   statusPill: { backgroundColor: officerTheme.secondaryContainer, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 },
   statusRejected: { backgroundColor: officerTheme.errorContainer },

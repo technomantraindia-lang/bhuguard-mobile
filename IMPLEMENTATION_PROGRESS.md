@@ -141,7 +141,8 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Gujarat default; dependent dropdowns; WA multi-select merge | RegisterArtisanScreen, WorkingAreaSelector | artisan WA APIs | Gujarat default + WorkingAreaSelector merge wired | ⚠️ PARTIAL | Device verify + live WA merge policy |
+| State Gujarat default; District/Taluka/Village dependent dropdowns for home address | `RegisterArtisanScreen.tsx` uses shared `AddressSelector` (`state` defaults to `'Gujarat'` via `initialHomeAddress`); District→Taluka→Village cascade via `useAddressCascade` | — | `tsc`/lint clean; cascade re-used from existing Farmer/FO onboarding flows | ✅ PASS (mobile) | Device verify |
+| Working Area multi-select MERGE (do not silently replace) | New `WorkingAreaSelector.tsx` component: pick District→Taluka→Village(s), "Add to working area" appends a per-taluka entry and unions village ids when the same taluka is re-added; per-village/per-taluka removal chips. Wired into both `RegisterArtisanScreen.tsx` (new artisan) and `ArtisanDetailScreen.tsx` (edit existing artisan — `startEditWorkingArea` now groups the artisan's current `working_villages` by taluka so re-opening the editor pre-seeds every existing taluka before any new one is merged in) | `FieldOfficerArtisanService::resolveWorkingVillages` — removed the "all working villages must belong to the same taluka" validation (now authorizes each village individually via `locationAuthorization->authorizeLocationIds`) so registration/update accept villages spanning multiple talukas | `tsc --noEmit` clean on all touched files; lints clean; traced payload — `working_taluka_id` (singular, backend filter) is only sent when the working area is confined to one taluka, `working_taluka_ids[]`/`working_village_ids[]` always carry the full merged set | ✅ PASS (mobile + local backend) | Live backend deploy of the relaxed validation; device verify |
 
 ---
 
@@ -149,8 +150,9 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Farmer ID; map labels; Acre/Hectare; hide Bigha UI | farmerFarmAreaUnits, FarmerHeroSummaryCard, FarmerFarmListCard, boundary start screens | — | Bigha hidden from Farmer-facing unit pickers/summary | ⚠️ PARTIAL | Device verify |
-| Farm Activity visual reuse; OK/Retry; village stamp; pencil edit; Change Pattern | Pattern screens + farmer activity reuse | — | Change Pattern exists; stamps/OK-Retry partial | ⚠️ PARTIAL | Device verify |
+| Use displayIds helpers; map labels Farm Name/Farmer Name | `formatFarmerDisplayId`/`formatArtisanDisplayId` already threaded through `useFarmerProfileForm.ts`, `farmerActivityHelpers.ts`, biochar screens/sections (Phase 6 work, re-verified this session); repo-wide grep confirms "Farm Name"/"Farmer Name" labels are consistent across farmer + officer screens | — | Grep sweep across `src/screens`, `src/components` for stale "Code" labels — none found | ✅ PASS | — |
+| Acre/Hectare only — hide Bigha UI in farmer farms UI | `FarmBoundaryStartScreen.tsx`/`CameraBoundaryStartScreen.tsx` unit pickers already Acre/Hectare-only (Bigha excluded from `UNITS`); this session additionally removed the Bigha row from `FarmerFarmListCard.tsx` (`conversionRow` now shows Hectare only) and `FarmerHeroSummaryCard.tsx` (`landSecondaryRow` now shows Hectare only, dropped the `•`/Bigha text) | — | `tsc --noEmit` + lints clean on both edited components | ✅ PASS (mobile) | Device visual verify |
+| Pencil editing / OK-Retry where feasible without huge redesign | `FarmerFarmDetailScreen.tsx` already has a pencil "Edit" action (`FarmDetailHeader onEditPress` → `FarmerEditFarm`); farmer screens already use the shared `ErrorState`/`AppButton` Retry pattern (`onRetry` wired on every farmer list/detail screen) | — | Grep sweep confirms consistent `onRetry` usage across `src/screens/farmer` | ✅ PASS (mobile, pre-existing) | — |
 
 ---
 
@@ -158,7 +160,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Same mandatory gate as FO for Artisan | ArtisanCheckInGate, useArtisanMandatoryCheckIn, ArtisanNavigator | artisan check-in API | Gate wired fail-closed | ⚠️ PARTIAL | Device GPS verify |
+| Mirror FieldOfficerCheckInGate; gate ArtisanNavigator dashboard; fail closed; no fake success | `ArtisanCheckInGate.tsx` (mirrors `FieldOfficerCheckInGate.tsx`'s phase machine: `checkingStatus` → `granted`/`blocked`/`statusError`), `useArtisanMandatoryCheckIn.ts` hook calls `getArtisanActiveCheckIn()`/`artisanWorkCheckIn()` against the real `/artisan/check-in` + `/artisan/active-check-in` endpoints (never trusts device time, never grants on a status/network error), wired around the whole `Stack.Navigator` in `ArtisanNavigator.tsx` so the dashboard and every other artisan screen are blocked until an active check-in is confirmed; hardware back button disabled while blocked; only Retry/Logout available. This session additionally fixed a state-sync gap: `ArtisanCheckInGate` now force-hydrates `ArtisanWorkSessionContext` once the gate grants access, so the per-activity `ensureCheckedInOrPrompt()` checks (Farm Lookup, Biochar Production/Mixing/Application) agree with the gate instead of re-prompting a second check-in | `/artisan/check-in`, `/artisan/active-check-in` (existing artisan work-session endpoints) | `tsc --noEmit` + lints clean; traced gate→session hydrate wiring end-to-end | ✅ PASS (mobile) | Device GPS verify |
 
 ---
 
@@ -166,7 +168,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Wallet / Help / Training / Farm Navigator | ArtisanDashboardScreen, ArtisanHelpSupportScreen, ArtisanModuleUnavailableScreen | wallet/training APIs absent | Cards added; Wallet/Training controlled unavailable (no fake balances) | ⚠️ PARTIAL | Live wallet/training APIs |
+| Wallet (real or controlled unavailable), Help & Support, Biochar Training, Farm Navigator entries; no fabricated balances | `ArtisanDashboardScreen.tsx` grid gained 4 cards: **Farm Navigator** → `ArtisanFarmLookup{purpose:'navigate'}`, **Wallet** → `ArtisanModuleUnavailable{module:'wallet'}` (explicit "not available on this API build yet" copy, no invented balance), **Biochar Training** → `ArtisanModuleUnavailable{module:'training'}` (same controlled-unavailable pattern — no fabricated completion state), **Help & Support** → `ArtisanHelpSupportScreen.tsx` (real `mailto:` support contact, no fake ticket history). Both `ArtisanHelpSupportScreen` and `ArtisanModuleUnavailableScreen` existed but were unregistered — this session wired them into `ArtisanNavigator.tsx`'s `Stack.Navigator` and added the 3 missing Material icons (`near_me`, `account_balance_wallet`, `school`) used by the new cards | wallet/training APIs intentionally not called — none exist yet | `tsc --noEmit` + lints clean | ✅ PASS (mobile) | Live wallet/training APIs (when available, swap the unavailable screen for a real balance/content view) |
 
 ---
 
@@ -174,7 +176,8 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Display BHG-ART-*; Farm ID + Navigate Farm on Pro cards | ArtisanDashboard/Profile + FarmLookup Navigate | display IDs | Artisan ID helper + Navigate Farm action | ⚠️ PARTIAL | Live BHG-ART backfill + device |
+| Display Artisan ID via formatArtisanDisplayId | Already used in `ArtisanDashboardScreen.tsx`/`ArtisanProfileScreen.tsx`; this session closed a gap where the Field Officer's own `ArtisanDetailScreen.tsx` and `MyArtisansScreen.tsx` list rows displayed **no** artisan ID at all — added an "Artisan ID: {formatArtisanDisplayId(...)}" line to both | — | `tsc --noEmit` + lints clean | ✅ PASS (mobile) | Live BHG-ART-* backfill for real display IDs |
+| Artisan Pro batch cards show Farm ID + Navigate Farm; preserve restrictions | `ArtisanBiocharBatchesScreen.tsx` cards now show a "Farm ID" line (`farm_code` falling back to `farm_id`) and a "Navigate Farm" button that opens Google Maps via `openGoogleMaps()`; button is disabled with a "GPS not saved for this farm" label (never invents coordinates) when the batch's farm has no lat/long. FO-only access to this screen unchanged | `FieldOfficerArtisanBatchService::summary()` extended (additive) to return `farm_id`, `farm_code`, `latitude`, `longitude` alongside existing fields; `listForOfficer()` already eager-loads the `farm` relation | `tsc --noEmit` + PHP reviewed; lints clean on the mobile screen | ✅ PASS (mobile + local backend) | Live backend deploy of the additive `summary()` fields |
 
 ---
 
@@ -182,7 +185,7 @@ Status legend: ✅ PASS | ⚠️ PARTIAL | ❌ FAIL | ⏳ PENDING
 
 | Requirement | Mobile files | Backend files | Test performed | Status | Remaining blocker |
 |-------------|--------------|---------------|----------------|--------|-------------------|
-| Search authorized farms; navigate GPS/Maps | ArtisanFarmLookup purpose=navigate + openGoogleMaps | farm lookup | Search Farm ID/Name; Navigate uses saved GPS only (no invent) | ⚠️ PARTIAL | Device Maps verify |
+| Extend ArtisanFarmLookupScreen: search Farm ID/Farmer Name; authorized only; Navigate Farm via Google Maps with saved GPS; clear errors if missing GPS | `ArtisanFarmLookupScreen.tsx` already supports a `purpose:'navigate'` mode (search box labelled "Search by Farm ID or Farmer Name", results restricted to `searchArtisanFarms()` which is scoped server-side to the artisan's allocated area) with a "Navigate Farm" action per result calling `openGoogleMaps()`; when `latitude`/`longitude` are missing, `navigateToFarm()` shows a clear alert — "This farm has no saved GPS coordinates. Navigation cannot invent a location." — instead of guessing or fabricating a location. Verified as already fully wired from an earlier phase in this same engagement; no code changes needed this session | `ArtisanController::searchFarms` → `ArtisanFarmSearchService::search($artisan, ...)` restricts results to the authenticated artisan's allocated villages/talukas only | `tsc --noEmit` + lints clean; traced authorization path end-to-end in the PHP service | ✅ PASS (mobile + local backend) | Device Maps app verify |
 
 ---
 
