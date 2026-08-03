@@ -542,10 +542,11 @@ export function ArtisanBiocharApplicationScreen() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Farm</Text>
-          <Text style={styles.text}>{selectedFarm.farmLabel}</Text>
           <Text style={styles.text}>
-            {[selectedFarm.village, selectedFarm.taluka, selectedFarm.district].filter(Boolean).join(' · ')}
+            Farm Name: {selectedFarm.farmLabel || selectedFarm.farmCode || `Farm ${selectedFarm.farmId}`}
           </Text>
+          <Text style={styles.text}>Farm ID: {selectedFarm.farmCode || selectedFarm.farmId || '—'}</Text>
+          <Text style={styles.text}>Village: {selectedFarm.village?.trim() || '—'}</Text>
         </View>
 
         {farmId ? (
