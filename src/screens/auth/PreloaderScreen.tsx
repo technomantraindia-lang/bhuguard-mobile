@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import * as SplashScreenNative from 'expo-splash-screen';
 
 import { syncApiClientBaseUrl } from '../../api/client';
 import { routeAfterPreloader } from '../../auth/startup/AuthStartupController';
@@ -9,6 +8,7 @@ import { ANIMATED_SPLASH_BG } from '../../components/AnimatedLogoSplash';
 import { safeNavigationReset } from '../../navigation/safeNavigationReset';
 import type { RootStackParamList } from '../../navigation/types';
 import { bootstrapApiBaseUrl } from '../../storage/apiConfigStorage';
+import { hideNativeSplashOnce } from '../../utils/splashHideGuard';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Preloader'>;
 
@@ -20,7 +20,7 @@ export function PreloaderScreen({ navigation }: Props) {
   const finishedRef = useRef(false);
 
   useEffect(() => {
-    void SplashScreenNative.hideAsync().catch(() => undefined);
+    void hideNativeSplashOnce();
   }, []);
 
   useEffect(() => {
@@ -33,6 +33,8 @@ export function PreloaderScreen({ navigation }: Props) {
       }
 
       finishedRef.current = true;
+      // Always clear native splash before leaving Preloader (API failure / timeout safe).
+      await hideNativeSplashOnce();
 
       const elapsed = Date.now() - startedAt;
       const remaining = POST_LOGO_HOLD_MS - elapsed;
@@ -64,12 +66,26 @@ export function PreloaderScreen({ navigation }: Props) {
         }
       }
 
-      const next = await routeAfterPreloader();
-      await navigateOnce(next.name);
+      try {
+        const next = await routeAfterPreloader();
+        await navigateOnce(next.name);
+      } catch (error) {
+        if (__DEV__) {
+          console.warn('[Bhuguard] routeAfterPreloader failed:', error);
+        }
+        await navigateOnce('LanguageSelection');
+      }
     };
 
     const maxTimer = setTimeout(() => {
-      void navigateOnce('LanguageSelection');
+      void (async () => {
+        try {
+          const next = await routeAfterPreloader();
+          await navigateOnce(next.name);
+        } catch {
+          await navigateOnce('LanguageSelection');
+        }
+      })();
     }, MAX_BOOTSTRAP_MS);
 
     void bootstrap().finally(() => clearTimeout(maxTimer));

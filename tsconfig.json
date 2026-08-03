@@ -5,6 +5,15 @@
   },
   "exclude": [
     "_migration_backup_eas_apk_20260724_180617",
-    "_migration_backup_maplibre_20260724_152519"
+    "_migration_backup_maplibre_20260724_152519",
+    "_ubuntu_sync_stage",
+    "dist",
+    "dist-maplibre-check",
+    "node_modules",
+    ".expo",
+    ".metro-tmp",
+    "android/app/build",
+    "android/build",
+    "BHUGUARD_OFFLINE_DELIVERY"
   ]
 }

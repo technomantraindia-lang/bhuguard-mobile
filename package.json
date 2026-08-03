@@ -72,7 +72,8 @@
     "build:eas:local:android:preview": "powershell -ExecutionPolicy Bypass -File ./scripts/build-eas-local.ps1 -Platform android -Profile preview",
     "build:eas:local:ios": "powershell -ExecutionPolicy Bypass -File ./scripts/build-eas-local.ps1 -Platform ios -Profile production",
     "prebuild:demo": "powershell -ExecutionPolicy Bypass -File ./scripts/prebuild-demo.ps1",
-    "generate:icons": "python ./scripts/generate-app-icons.py"
+    "generate:icons": "python ./scripts/generate-app-icons.py",
+    "ensure:splash": "node ./scripts/ensure-solid-android-splash.js"
   },
   "private": true
 }
