@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -17,7 +17,7 @@ import {
 } from '../../../components/onboarding/OnboardingConsentControls';
 import { LiveEvidenceCaptureCard } from '../../../components/evidence/LiveEvidenceCaptureCard';
 import { ONBOARDING_NEXT_LABELS } from '../../../constants/onboardingSteps';
-import type { FileAsset } from '../../../context/OnboardingContext';
+import type { FileAsset, OnboardingDraft } from '../../../context/OnboardingContext';
 import { useOnboarding } from '../../../context/OnboardingContext';
 import { useLiveEvidenceCapture } from '../../../hooks/useLiveEvidenceCapture';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
@@ -27,12 +27,18 @@ import {
   isDemoConsentOtpEnabled,
   isDemoConsentOtpMatch,
 } from '../../../utils/demoConsentOtp';
-import { formatFarmDisplayCode, formatFarmerDisplayCode } from '../../../utils/entityId';
+import { formatFarmDisplayCode, formatFarmerDisplayCode, isValidEntityId } from '../../../utils/entityId';
 import { validateConsent } from '../../../utils/onboardingValidation';
 import { sanitizeOnboardingApiError } from '../../../utils/assignmentErrorMessage';
 import { safeNetInfoIsConnected } from '../../../utils/safeNetInfo';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
+
+type EligibilityItem = {
+  key: string;
+  label: string;
+  ok: boolean;
+};
 
 function toAsset(uri: string, name: string, mimeType: string, size?: number): FileAsset {
   return { uri, name, mimeType, size };
@@ -44,6 +50,76 @@ function maskMobile(mobile: string): string {
     return mobile;
   }
   return `+91 ******${digits.slice(-4)}`;
+}
+
+function isUsableEvidenceFile(file: FileAsset | null | undefined): boolean {
+  return Boolean(file?.uri?.trim() && file?.name?.trim());
+}
+
+function countAgreementEvidence(draft: OnboardingDraft): number {
+  const seen = new Set<string>();
+  let count = 0;
+
+  for (const file of [...draft.onboarding_evidences, ...draft.consent_documents, draft.consent_form]) {
+    if (!isUsableEvidenceFile(file) || !file) {
+      continue;
+    }
+    const key = `${file.uri}::${file.name}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    count += 1;
+  }
+
+  return count;
+}
+
+function buildConsentEligibility(draft: OnboardingDraft): EligibilityItem[] {
+  const evidenceCount = countAgreementEvidence(draft);
+
+  return [
+    {
+      key: 'data_usage',
+      label: 'Data Usage Consent',
+      ok: draft.data_usage_consent === true,
+    },
+    {
+      key: 'carbon_rights',
+      label: 'Carbon Rights Consent',
+      ok: draft.carbon_rights_consent === true,
+    },
+    {
+      key: 'project_participation',
+      label: 'Project Participation Consent',
+      ok: draft.project_participation_consent === true,
+    },
+    {
+      key: 'has_read',
+      label: 'Farmer Has Read Agreement',
+      ok: draft.farmer_signature_confirmed === true,
+    },
+    {
+      key: 'otp',
+      label: 'Agreement OTP verified',
+      ok: draft.agreement_otp_verified === true && Boolean(draft.agreement_verification_token.trim()),
+    },
+    {
+      key: 'evidence',
+      label: 'Agreement evidence added',
+      ok: evidenceCount >= 1,
+    },
+    {
+      key: 'farmer_name',
+      label: 'Farmer Name present',
+      ok: Boolean(draft.farmer_name?.trim()),
+    },
+    {
+      key: 'farm_name',
+      label: 'Farm Name present',
+      ok: Boolean(draft.farm_name?.trim()),
+    },
+  ];
 }
 
 export function FarmerConsentScreen() {
@@ -58,9 +134,49 @@ export function FarmerConsentScreen() {
   const [maskedMobile, setMaskedMobile] = useState(maskMobile(draft.mobile));
   const [resendAfter, setResendAfter] = useState(0);
   const verifyingRef = useRef(false);
+  const hydratedIdsRef = useRef(false);
   const evidenceCapture = useLiveEvidenceCapture({ defaultName: 'agreement-evidence.jpg', allowsEditing: false });
   const demoConsentOtpEnabled = isDemoConsentOtpEnabled();
   const demoConsentOtpCode = getDemoConsentOtpCode();
+
+  // Refresh Farmer/Farm IDs from navigation params after land/farm creation (never blocks Continue).
+  useEffect(() => {
+    if (hydratedIdsRef.current) {
+      return;
+    }
+
+    const params = route.params;
+    if (!params) {
+      return;
+    }
+
+    const patch: Partial<OnboardingDraft> = {};
+
+    if (isValidEntityId(params.farmerId) && !isValidEntityId(draft.farmer_id)) {
+      patch.farmer_id = Number(params.farmerId);
+    }
+    if (isValidEntityId(params.farmId) && !isValidEntityId(draft.farm_id)) {
+      patch.farm_id = Number(params.farmId);
+    }
+    if (params.farmerName?.trim() && !draft.farmer_name.trim()) {
+      patch.farmer_name = params.farmerName.trim();
+    }
+    if (params.farmName?.trim() && !draft.farm_name.trim()) {
+      patch.farm_name = params.farmName.trim();
+    }
+    if (params.farmerCode?.trim() && !draft.farmer_code.trim()) {
+      patch.farmer_code = params.farmerCode.trim();
+    }
+    if (params.farmCode?.trim() && !draft.farm_code.trim()) {
+      patch.farm_code = params.farmCode.trim();
+    }
+
+    if (Object.keys(patch).length > 0) {
+      updateDraft(patch);
+    }
+
+    hydratedIdsRef.current = true;
+  }, [draft.farm_code, draft.farm_id, draft.farm_name, draft.farmer_code, draft.farmer_id, draft.farmer_name, route.params, updateDraft]);
 
   useEffect(() => {
     if (resendAfter <= 0) {
@@ -233,22 +349,32 @@ export function FarmerConsentScreen() {
     }
   };
 
+  const eligibility = useMemo(() => buildConsentEligibility(draft), [draft]);
+  const canContinue = eligibility.every((item) => item.ok);
+  const consentValidationError = validateConsent(draft);
+
   const next = () => {
-    const validationError = validateConsent(draft);
-    if (validationError) {
-      setError(validationError);
+    if (!canContinue) {
+      const missing = eligibility.filter((item) => !item.ok).map((item) => item.label);
+      setError(missing.length ? `Complete: ${missing.join(', ')}.` : 'Complete all consent requirements.');
+      return;
+    }
+
+    // Keep validateConsent as the authoritative consent-step gate (no MPIN/password).
+    if (consentValidationError) {
+      setError(consentValidationError);
       return;
     }
     setError(null);
 
     if (route.params?.returnTo === 'OnboardingBoundaryStart') {
       navigation.navigate('OnboardingBoundaryStart', {
-        farmerId: route.params.farmerId,
-        farmId: route.params.farmId,
-        farmerName: route.params.farmerName,
-        farmerCode: route.params.farmerCode,
-        farmName: route.params.farmName,
-        farmCode: route.params.farmCode,
+        farmerId: route.params.farmerId ?? draft.farmer_id ?? undefined,
+        farmId: route.params.farmId ?? draft.farm_id ?? undefined,
+        farmerName: route.params.farmerName ?? draft.farmer_name,
+        farmerCode: route.params.farmerCode ?? draft.farmer_code,
+        farmName: route.params.farmName ?? draft.farm_name,
+        farmCode: route.params.farmCode ?? draft.farm_code,
         village: route.params.village,
         mappingStatus: route.params.mappingStatus,
       });
@@ -260,6 +386,7 @@ export function FarmerConsentScreen() {
 
   const displayError = error ?? evidenceCapture.error;
   const otpReady = /^\d{6}$/.test(otp);
+  const evidenceCount = countAgreementEvidence(draft);
 
   const farmerName = draft.farmer_name?.trim() || '—';
   const farmName = draft.farm_name?.trim() || '—';
@@ -268,12 +395,27 @@ export function FarmerConsentScreen() {
     draft.farmer_display_id || draft.farmer_code,
   );
   const farmIdLabel = formatFarmDisplayCode(draft.farm_id, draft.farm_code);
-  const identityReady =
-    Boolean(draft.farmer_name?.trim())
-    && Boolean(draft.farm_name?.trim())
-    && Boolean(draft.farm_id)
-    && farmIdLabel !== '—'
-    && farmIdLabel !== 'Loading…';
+  const idsPresent = isValidEntityId(draft.farmer_id) && isValidEntityId(draft.farm_id);
+
+  const devSummary =
+    typeof __DEV__ !== 'undefined' && __DEV__ ? (
+      <View style={styles.devSummary} accessibilityLabel="Consent eligibility checklist">
+        <Text style={styles.devSummaryTitle}>Eligibility (dev)</Text>
+        {eligibility.map((item) => (
+          <Text key={item.key} style={item.ok ? styles.devOk : styles.devMissing}>
+            {item.ok ? '✅' : '❌'} {item.label}
+          </Text>
+        ))}
+        <Text style={idsPresent ? styles.devOk : styles.devHint}>
+          {idsPresent ? '✅' : 'ℹ️'} Farmer/Farm IDs {idsPresent ? 'present' : 'optional until land/farm create'}
+          {` (${farmerIdLabel} / ${farmIdLabel})`}
+        </Text>
+        <Text style={evidenceCapture.gpsCaptured ? styles.devOk : styles.devHint}>
+          {evidenceCapture.gpsCaptured ? '✅' : 'ℹ️'} Live evidence GPS
+          {evidenceCapture.gpsCaptured ? ' on capture card' : ' (not required for Continue; draft land GPS separate)'}
+        </Text>
+      </View>
+    ) : null;
 
   return (
     <OnboardingConsentLayout
@@ -282,7 +424,8 @@ export function FarmerConsentScreen() {
       onNext={next}
       nextLabel={ONBOARDING_NEXT_LABELS[5]}
       footerError={displayError}
-      nextDisabled={!draft.agreement_otp_verified || !identityReady}
+      aboveNext={devSummary}
+      nextDisabled={!canContinue || verifying || sending}
     >
       <View style={styles.identityCard}>
         <Text style={styles.identityTitle}>Registration Summary</Text>
@@ -290,9 +433,9 @@ export function FarmerConsentScreen() {
         <Text style={styles.identityLine}>Farmer Name: {farmerName}</Text>
         <Text style={styles.identityLine}>Farm ID: {farmIdLabel}</Text>
         <Text style={styles.identityLine}>Farm Name: {farmName}</Text>
-        {!identityReady ? (
+        {!draft.farmer_name.trim() || !draft.farm_name.trim() ? (
           <Text style={styles.identityWarning}>
-            Farmer and Farm details must be created on Land Registration before consent.
+            Farmer Name and Farm Name are required before Final Review.
           </Text>
         ) : null}
       </View>
@@ -327,6 +470,7 @@ export function FarmerConsentScreen() {
         error={evidenceCapture.error}
         onOpenCamera={() => void captureEvidence()}
         onRetake={() => void captureEvidence()}
+        onRetryGeocode={() => void evidenceCapture.retryGeocode()}
       />
       <Pressable style={styles.uploadButton} onPress={() => void captureEvidence()}>
         <Text style={styles.uploadButtonText}>Add Another Evidence</Text>
@@ -334,7 +478,7 @@ export function FarmerConsentScreen() {
       <Pressable style={styles.uploadButton} onPress={() => void uploadEvidence()}>
         <Text style={styles.uploadButtonText}>Upload Image</Text>
       </Pressable>
-      <Text style={styles.documentsLabel}>Evidence ({draft.onboarding_evidences.length})</Text>
+      <Text style={styles.documentsLabel}>Evidence ({evidenceCount})</Text>
       {draft.onboarding_evidences.map((document, index) => (
         <View key={`${document.uri}-${index}`} style={styles.documentRow}>
           <Text style={styles.documentName} numberOfLines={1}>
@@ -349,13 +493,21 @@ export function FarmerConsentScreen() {
       <OnboardingSignatureCheckbox
         label="Farmer Has Read Agreement"
         checked={draft.farmer_signature_confirmed}
-        onToggle={() =>
+        onToggle={() => {
+          const nextChecked = !draft.farmer_signature_confirmed;
+          if (nextChecked) {
+            // Checking must not wipe an already-verified OTP.
+            updateDraft({ farmer_signature_confirmed: true });
+            return;
+          }
           updateDraft({
-            farmer_signature_confirmed: !draft.farmer_signature_confirmed,
+            farmer_signature_confirmed: false,
             agreement_otp_verified: false,
             agreement_verification_token: '',
-          })
-        }
+            agreement_verified_at: '',
+            agreement_verified_mobile: '',
+          });
+        }}
       />
 
       {draft.farmer_signature_confirmed ? (
@@ -492,4 +644,35 @@ const styles = StyleSheet.create({
   verifyButtonText: { color: dashboardTheme.onPrimary, fontWeight: '700' },
   verified: { color: '#047857', fontWeight: '700' },
   disabled: { opacity: 0.6 },
+  devSummary: {
+    borderWidth: 1,
+    borderColor: dashboardTheme.outlineVariant,
+    borderRadius: 10,
+    backgroundColor: dashboardTheme.surfaceLow,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 2,
+  },
+  devSummaryTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: dashboardTheme.onSurface,
+    marginBottom: 4,
+  },
+  devOk: {
+    fontSize: 12,
+    color: '#047857',
+    fontWeight: '600',
+  },
+  devMissing: {
+    fontSize: 12,
+    color: '#B91C1C',
+    fontWeight: '700',
+  },
+  devHint: {
+    fontSize: 12,
+    color: dashboardTheme.onSurfaceVariant,
+    fontWeight: '600',
+    marginTop: 2,
+  },
 });

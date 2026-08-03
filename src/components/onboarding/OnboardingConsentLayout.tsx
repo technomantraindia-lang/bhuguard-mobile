@@ -16,6 +16,8 @@ interface OnboardingConsentLayoutProps {
   onNext: () => void;
   nextLabel: string;
   footerError?: string | null;
+  /** Sticky footer content rendered directly above the Continue button. */
+  aboveNext?: ReactNode;
   nextLoading?: boolean;
   nextDisabled?: boolean;
 }
@@ -28,6 +30,7 @@ export function OnboardingConsentLayout({
   onNext,
   nextLabel,
   footerError = null,
+  aboveNext = null,
   nextLoading = false,
   nextDisabled = false,
 }: OnboardingConsentLayoutProps) {
@@ -92,6 +95,7 @@ export function OnboardingConsentLayout({
 
           <View style={[styles.footer, dashboardShadow]}>
             {footerError ? <Text style={styles.footerError}>{footerError}</Text> : null}
+            {aboveNext}
             <Pressable
               style={({ pressed }) => [
                 styles.nextButton,
