@@ -46,6 +46,8 @@ export interface BiocharProductionLocalDraft {
   talukaName: string;
   districtName: string;
   stateName: string;
+  /** Farm id used for resume CTA when draft key farm segment is 0. */
+  farmId?: number | null;
   feedstockQuantity: string;
   feedstockUnit: string;
   feedstockType: string;
@@ -149,7 +151,9 @@ export async function findIncompleteBiocharProductionDraft(params: {
         apiMode: params.apiMode,
         userId: params.userId ?? null,
         farmerId: Number.isFinite(farmerId) && farmerId > 0 ? farmerId : draft.selectedFarmerId ?? null,
-        farmId: Number.isFinite(farmId) && farmId > 0 ? farmId : null,
+        farmId: Number.isFinite(farmId) && farmId > 0
+          ? farmId
+          : (draft.farmId != null && draft.farmId > 0 ? draft.farmId : null),
         batchId: batchId != null && Number.isFinite(batchId) && batchId > 0 ? batchId : null,
         batchCode: draft.batchCode ?? '',
         savedAt: draft.savedAt,

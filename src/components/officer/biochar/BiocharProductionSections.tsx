@@ -402,7 +402,7 @@ export function InitialDataSection({
             <Text style={styles.gpsWarningText}>{gpsError}</Text>
             <Pressable style={styles.recaptureButton} onPress={onRecaptureGps}>
               <BhuguardMaterialIcon name="location_on" size={18} color={officerTheme.primaryContainer} />
-              <Text style={styles.recaptureButtonText}>Retry</Text>
+              <Text style={styles.recaptureButtonText}>Retry GPS</Text>
             </Pressable>
           </View>
         ) : null}
@@ -410,6 +410,10 @@ export function InitialDataSection({
 
       <Text style={styles.fieldLabel}>Village Name</Text>
       <TextInput style={styles.input} value={villageName} onChangeText={onVillageNameChange} placeholder="Village name" />
+      <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Address</Text>
+      <Text style={styles.mapPreviewText}>
+        {[villageName, talukaName, districtName, stateName].filter((part) => part?.trim()).join(', ') || 'Captured after GPS'}
+      </Text>
       <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Taluka Name</Text>
       <TextInput style={styles.input} value={talukaName} onChangeText={onTalukaNameChange} placeholder="Taluka name" />
       <Text style={[styles.fieldLabel, styles.fieldSpacing]}>District Name</Text>

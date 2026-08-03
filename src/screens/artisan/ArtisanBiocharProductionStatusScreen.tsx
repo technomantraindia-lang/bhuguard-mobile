@@ -265,6 +265,9 @@ export function ArtisanBiocharProductionStatusScreen() {
         <Pressable style={styles.primaryButton} onPress={goNewBatch}>
           <Text style={styles.primaryButtonText}>Add New Biochar Production Batch</Text>
         </Pressable>
+        <Text style={styles.helper}>
+          Starts a completely new Batch ID. Unfinished work remains available from Complete the Process.
+        </Text>
 
         <Pressable style={styles.secondaryButton} onPress={goViewBatch}>
           <Text style={styles.secondaryButtonText}>View Batch</Text>

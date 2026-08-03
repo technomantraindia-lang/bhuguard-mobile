@@ -41,6 +41,7 @@ import {
   isValidMoistureReadingValue,
   moistureReadingValidationError,
 } from '../../../utils/moistureReadingValidation';
+import { classifyArtisanGpsAccuracy } from '../../../utils/artisanGpsAccuracy';
 
 import { BhuguardMaterialIcon } from '../../shared/BhuguardMaterialIcon';
 
@@ -129,7 +130,14 @@ interface ArtisanBiocharProcessFormContentProps {
   processCompletedAt?: string | null;
 
   /** Reports whether every required step item is complete, so the caller can gate the Submit button. */
-  onValidationChange?: (isComplete: boolean, missingItems: string[]) => void;
+  onValidationChange?: (
+    isComplete: boolean,
+    missingItems: string[],
+    firstIncompleteStep?: ArtisanBiocharWorkflowStepKey | null,
+  ) => void;
+
+  /** When this token changes, jump to the first incomplete step. */
+  focusIncompleteToken?: number;
 
 }
 
@@ -315,6 +323,27 @@ function isMoistureReadingLocallyComplete(reading: BiocharForm['moistureReadings
   );
 }
 
+function mapMissingItemToStep(item: string): ArtisanBiocharWorkflowStepKey {
+  if (item.startsWith('Moisture Reading 1')) return 'moisture_1';
+  if (item.startsWith('Moisture Reading 2')) return 'moisture_2';
+  if (item.startsWith('Moisture Reading 3')) return 'moisture_3';
+  if (item.startsWith('Moisture Reading 4')) return 'moisture_4';
+  if (item.startsWith('Moisture Reading 5')) return 'moisture_5';
+  if (item.includes('Feedstock Photo')) return 'feedstock_photo';
+  if (item.includes('Feedstock')) return 'feedstock_details';
+  if (item.includes('Start Pyrolysis') || item.includes('Pyrolysis Start')) return 'start_pyrolysis';
+  if (item.includes('Mid Stage') || item.includes('Mid-Process')) return 'mid_pyrolysis';
+  if (item.includes('Final Stage') || item.includes('End-Process')) return 'end_pyrolysis';
+  if (item.includes('Quenching')) return 'quenching';
+  if (item.includes('Unloaded') || item.includes('Unloading')) return 'unloaded';
+  if (item.includes('Completion') || item.includes('Duration') || item.includes('chronological')) {
+    return 'production_finish_time';
+  }
+  if (item.includes('Sample Photo')) return 'char_sample';
+  if (item.includes('Process Data')) return 'char_sample';
+  return 'farm_batch_context';
+}
+
 function moistureStepKeyToSequence(key: ArtisanBiocharWorkflowStepKey): number | null {
   const match = /^moisture_(\d)$/.exec(key);
   if (!match) {
@@ -358,6 +387,8 @@ export function ArtisanBiocharProcessFormContent({
   processCompletedAt = null,
 
   onValidationChange,
+
+  focusIncompleteToken = 0,
 
 }: ArtisanBiocharProcessFormContentProps) {
 
@@ -403,7 +434,13 @@ export function ArtisanBiocharProcessFormContent({
 
     const hasFarmer = Boolean(form.selectedFarmerId);
 
-    const hasGps = form.latitude != null && form.longitude != null && form.accuracyM != null;
+    const hasGps =
+      form.latitude != null
+      && form.longitude != null
+      && form.accuracyM != null
+      && classifyArtisanGpsAccuracy(form.accuracyM) !== 'poor'
+      && Boolean((form.villageName || '').trim())
+      && form.villageName !== '-';
 
     const hasFeedstock =
 
@@ -558,6 +595,13 @@ export function ArtisanBiocharProcessFormContent({
     if (!form.selectedUnitId && !isValidArtisanKilnId(form.kilnId)) missing.push('Kiln ID (BHG-###)');
 
     if (form.latitude == null || form.longitude == null) missing.push('GPS Captured Location');
+    else if (form.accuracyM != null && classifyArtisanGpsAccuracy(form.accuracyM) === 'poor') {
+      missing.push('GPS accuracy too low — Retry GPS');
+    }
+
+    if (!(form.villageName || '').trim() || form.villageName === '-') {
+      missing.push('Village (from GPS address)');
+    }
 
     if (!form.feedstockQuantity.trim()) missing.push('Feedstock Quantity');
 
@@ -592,6 +636,16 @@ export function ArtisanBiocharProcessFormContent({
 
     if (!processCompletedAt) missing.push('Completion Time');
 
+    if (batchStartedAt && processCompletedAt) {
+      const startMs = Date.parse(batchStartedAt);
+      const endMs = Date.parse(processCompletedAt);
+      if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) {
+        missing.push('Completion must be after Batch Start Time (chronological order)');
+      } else if (endMs === startMs) {
+        missing.push('Process duration must be greater than zero');
+      }
+    }
+
     if (!form.temperature.trim()) missing.push('Process Data temperature');
 
     if (!form.residenceTime.trim()) missing.push('Process Data residence time');
@@ -604,10 +658,21 @@ export function ArtisanBiocharProcessFormContent({
 
   }, [batchStartedAt, form, processCompletedAt]);
 
-  useEffect(() => {
-    onValidationChange?.(missingItems.length === 0, missingItems);
-  }, [missingItems, onValidationChange]);
+  const firstIncompleteStep = useMemo(
+    () => (missingItems.length > 0 ? mapMissingItemToStep(missingItems[0]) : null),
+    [missingItems],
+  );
 
+  useEffect(() => {
+    onValidationChange?.(missingItems.length === 0, missingItems, firstIncompleteStep);
+  }, [firstIncompleteStep, missingItems, onValidationChange]);
+
+  useEffect(() => {
+    if (!focusIncompleteToken || !firstIncompleteStep) {
+      return;
+    }
+    setActiveStep(firstIncompleteStep);
+  }, [focusIncompleteToken, firstIncompleteStep]);
 
 
   const previewEvidence =
@@ -1338,15 +1403,18 @@ export function ArtisanBiocharProcessFormContent({
 
                   <View style={styles.missingBox}>
 
-                    <Text style={styles.missingTitle}>Cannot submit. Complete the following:</Text>
+                    <Text style={styles.missingTitle}>Cannot submit. Tap an item to jump to that step:</Text>
 
                     {missingItems.map((item) => (
 
-                      <Text key={item} style={styles.missingItem}>
-
-                        • {item}
-
-                      </Text>
+                      <Pressable
+                        key={item}
+                        onPress={() => setActiveStep(mapMissingItemToStep(item))}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Go to incomplete step: ${item}`}
+                      >
+                        <Text style={styles.missingItem}>• {item}</Text>
+                      </Pressable>
 
                     ))}
 

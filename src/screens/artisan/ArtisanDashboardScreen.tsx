@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -471,15 +472,22 @@ export function ArtisanDashboardScreen() {
           </View>
         ) : null}
 
-        {incompleteDraft && incompleteDraft.farmId ? (
+        {incompleteDraft && (incompleteDraft.farmId || incompleteDraft.farmerId) ? (
           <Pressable
             style={styles.resumeCard}
             onPress={() => {
               if (!ensureCheckedInOrPrompt()) {
                 return;
               }
+              if (!incompleteDraft.farmId) {
+                Alert.alert(
+                  'Resume unavailable',
+                  'This unfinished batch is missing a Farm ID. Open Biochar Production from farm lookup and continue the same farmer/farm.',
+                );
+                return;
+              }
               navigation.navigate('ArtisanBiocharProduction', {
-                farmId: incompleteDraft.farmId as number,
+                farmId: incompleteDraft.farmId,
                 farmerId: incompleteDraft.farmerId ?? undefined,
                 batchId: incompleteDraft.batchId ?? undefined,
               });

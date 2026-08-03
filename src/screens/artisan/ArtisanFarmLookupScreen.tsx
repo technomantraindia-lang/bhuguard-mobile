@@ -23,6 +23,8 @@ import { NoAssignmentState } from '../../components/location/NoAssignmentState';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { useArtisanWorkSession } from '../../context/ArtisanWorkSessionContext';
 import type { ArtisanStackParamList } from '../../navigation/types';
+import { findIncompleteBiocharProductionDraft } from '../../storage/biocharProductionDraftStorage';
+import { getAuthUser } from '../../utils/authStorage';
 import { colors, spacing } from '../../theme';
 import { groupFarmSearchResultsByFarmer, labelFarmsForFarmer } from '../../utils/farmDisplayLabel';
 import { openGoogleMaps } from '../../utils/farmMapHelpers';
@@ -66,7 +68,7 @@ function purposeCopy(purpose: LookupPurpose): {
     case 'production':
       return {
         title: 'Biochar Production',
-        helper: 'Select a farm in your assigned area to start or continue a Biochar Production batch.',
+        helper: 'Select a farm to start a new Batch or resume unfinished work from Complete the Process.',
         sectionTitle: 'Select a farm for production',
       };
     case 'mixing':
@@ -253,7 +255,58 @@ export function ArtisanFarmLookupScreen() {
     if (!ensureCheckedInOrPrompt()) {
       return;
     }
-    navigation.navigate('ArtisanBiocharProduction', selection);
+
+    void (async () => {
+      try {
+        const user = await getAuthUser();
+        const incomplete = await findIncompleteBiocharProductionDraft({
+          apiMode: 'artisan',
+          userId: user?.id ?? null,
+        });
+
+        if (
+          incomplete
+          && incomplete.farmId
+          && incomplete.farmId !== selection.farmId
+        ) {
+          Alert.alert(
+            'Unfinished batch in progress',
+            incomplete.batchCode?.trim()
+              ? `Batch ${incomplete.batchCode} is still incomplete on another farm. Resume that batch first, or continue only after it is submitted.`
+              : 'You already have an unfinished Biochar Production batch on another farm. Resume it from Complete the Process before starting a new Batch.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Resume unfinished',
+                onPress: () => {
+                  navigation.navigate('ArtisanBiocharProduction', {
+                    farmId: incomplete.farmId as number,
+                    farmerId: incomplete.farmerId ?? undefined,
+                    batchId: incomplete.batchId ?? undefined,
+                  });
+                },
+              },
+            ],
+          );
+          return;
+        }
+
+        if (incomplete && incomplete.farmId === selection.farmId) {
+          navigation.navigate('ArtisanBiocharProduction', {
+            ...selection,
+            batchId: incomplete.batchId ?? undefined,
+          });
+          return;
+        }
+
+        navigation.navigate('ArtisanBiocharProduction', {
+          ...selection,
+          forceNewBatch: true,
+        });
+      } catch {
+        navigation.navigate('ArtisanBiocharProduction', selection);
+      }
+    })();
   };
 
   const openMixing = (selection: ArtisanFarmSelectionParams) => {

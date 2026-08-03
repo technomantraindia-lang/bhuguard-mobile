@@ -9,7 +9,7 @@ import { resolveValidatedCaptureLocation } from './livePhotoLocation';
 import { captureHighAccuracyGps } from './officerGpsCapture';
 
 export const BIOCHAR_POOR_ACCURACY_MESSAGE =
-  'GPS accuracy is too low (over 100 m). Move outdoors, wait a few seconds, then try again.';
+  'GPS accuracy is too low (over 30 m). Move outdoors, wait a few seconds, then tap Retry GPS.';
 
 export interface BiocharGpsCaptureResult {
   latitude: number;
@@ -24,6 +24,8 @@ export interface BiocharGpsCaptureResult {
   district: string;
   state: string;
   locationResolved: boolean;
+  /** Single-line address built from reverse-geocode parts. */
+  address: string;
 }
 
 export function biocharGpsAccuracyLabel(tier: ArtisanGpsAccuracyTier): string {
@@ -34,6 +36,10 @@ export async function captureBiocharGps(): Promise<BiocharGpsCaptureResult> {
   const position = await captureHighAccuracyGps();
   const validated = await resolveValidatedCaptureLocation(position.latitude, position.longitude);
   const accuracyTier = classifyArtisanGpsAccuracy(position.accuracyM);
+  const address = [validated.village, validated.taluka, validated.district, validated.state]
+    .map((part) => part.trim())
+    .filter((part) => part && part !== '-')
+    .join(', ');
 
   return {
     latitude: position.latitude,
@@ -48,6 +54,7 @@ export async function captureBiocharGps(): Promise<BiocharGpsCaptureResult> {
     district: validated.district,
     state: validated.state,
     locationResolved: validated.resolved,
+    address,
   };
 }
 

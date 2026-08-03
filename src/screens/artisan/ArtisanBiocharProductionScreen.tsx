@@ -187,9 +187,15 @@ export function ArtisanBiocharProductionScreen() {
   const [farmOptions, setFarmOptions] = useState<ArtisanFarmOption[]>([]);
 
   const [isFormComplete, setIsFormComplete] = useState(false);
+  const [missingChecklist, setMissingChecklist] = useState<string[]>([]);
+  const [focusIncompleteToken, setFocusIncompleteToken] = useState(0);
 
-  const handleValidationChange = useCallback((complete: boolean) => {
+  const handleValidationChange = useCallback((
+    complete: boolean,
+    missingItems: string[] = [],
+  ) => {
     setIsFormComplete(complete);
+    setMissingChecklist(missingItems);
   }, []);
 
   const readOnly =
@@ -559,17 +565,12 @@ export function ArtisanBiocharProductionScreen() {
   const handleSubmit = async () => {
 
     if (!isFormComplete) {
-
-      Alert.alert(
-
-        'Incomplete process',
-
-        'Complete every required step (see the checklist in Final Review) before submitting.',
-
-      );
-
+      const detail = missingChecklist.length > 0
+        ? `Missing: ${missingChecklist[0]}${missingChecklist.length > 1 ? ` (+${missingChecklist.length - 1} more)` : ''}`
+        : 'Complete every required step before submitting.';
+      Alert.alert('Incomplete process', detail);
+      setFocusIncompleteToken((token) => token + 1);
       return;
-
     }
 
 
@@ -811,6 +812,7 @@ export function ArtisanBiocharProductionScreen() {
           processCompletedAt={form.processCompletedAt}
 
           onValidationChange={handleValidationChange}
+          focusIncompleteToken={focusIncompleteToken}
 
           headerSlot={
 

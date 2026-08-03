@@ -107,6 +107,14 @@ export interface OfflineSubmitFormSnapshot {
     photo?: BiocharEvidenceAsset;
   }>;
   evidence: Partial<Record<BiocharEvidenceKey, BiocharEvidenceAsset>>;
+  /** Phase 19 — audit only; never authoritative. */
+  device_utc?: string;
+  server_utc?: string;
+  clock_skew_ms?: number | null;
+  device_time_suspicious?: boolean;
+  time_sync_source?: string | null;
+  time_detection_at?: string;
+  activity_context?: string;
 }
 
 const REQUIRED_EVIDENCE: Array<{ key: BiocharEvidenceKey; label: string }> = [
@@ -128,6 +136,18 @@ export function validateOfflineProductionSnapshot(form: OfflineSubmitFormSnapsho
   if (!form.batchCode.trim()) missing.push('Batch ID');
   if (!form.kilnId.trim() && !form.selectedUnitId) missing.push('Kiln ID / Pyrolysis Unit');
   if (form.latitude == null || form.longitude == null) missing.push('GPS location');
+  if (form.accuracyM != null && Number(form.accuracyM) > 30) {
+    missing.push('GPS accuracy too low — Retry GPS');
+  }
+  if (form.batchStartedAt && form.processCompletedAt) {
+    const startMs = Date.parse(form.batchStartedAt);
+    const endMs = Date.parse(form.processCompletedAt);
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) {
+      missing.push('Completion must be after Batch Start Time');
+    } else if (endMs === startMs) {
+      missing.push('Process duration must be greater than zero');
+    }
+  }
   if (!form.feedstockQuantity.trim() || Number(form.feedstockQuantity) <= 0) {
     missing.push('Feedstock Quantity');
   }

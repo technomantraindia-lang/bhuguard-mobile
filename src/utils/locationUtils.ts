@@ -259,8 +259,14 @@ async function captureCurrentLocationDetailed(
 
   try {
     const lastKnown = await Location.getLastKnownPositionAsync();
+    const maxAgeMs = 60_000;
 
-    if (lastKnown && isValidCoordinates(lastKnown.coords.latitude, lastKnown.coords.longitude)) {
+    if (
+      lastKnown
+      && isValidCoordinates(lastKnown.coords.latitude, lastKnown.coords.longitude)
+      && Number.isFinite(lastKnown.timestamp)
+      && Date.now() - lastKnown.timestamp <= maxAgeMs
+    ) {
       best = mapPosition(lastKnown);
     }
   } catch {

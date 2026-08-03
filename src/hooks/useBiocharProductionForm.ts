@@ -71,6 +71,7 @@ import {
   captureBiocharGps,
   biocharGpsAccuracyLabel,
   showBiocharPoorAccuracyWarning,
+  BIOCHAR_POOR_ACCURACY_MESSAGE,
 } from '../utils/biocharGpsCapture';
 import type { ArtisanGpsAccuracyTier } from '../utils/artisanGpsAccuracy';
 import { classifyArtisanGpsAccuracy } from '../utils/artisanGpsAccuracy';
@@ -105,7 +106,7 @@ import { syncPendingBiocharProductions } from '../services/biocharProductionSync
 import { createSubmissionUuid } from '../utils/offlineBiocharEvidenceStorage';
 import { isTransportUnreachableError } from '../utils/networkTransport';
 import { safeNetInfoIsConnected } from '../utils/safeNetInfo';
-import { shouldBlockOfflineTimestampSubmit } from '../services/serverTimeSync';
+import { shouldBlockOfflineTimestampSubmit, buildTimeAuditMetadata } from '../services/serverTimeSync';
 
 export type BiocharSubmitResult =
   | string
@@ -937,6 +938,7 @@ export function useBiocharProductionForm({
       talukaName,
       districtName,
       stateName,
+      farmId: resolvedFarmId ?? farmId ?? null,
       feedstockQuantity,
       feedstockUnit,
       feedstockType,
@@ -967,6 +969,7 @@ export function useBiocharProductionForm({
     endTime,
     evidence,
     farmerName,
+    farmId,
     feedstockQuantity,
     feedstockType,
     feedstockUnit,
@@ -984,6 +987,7 @@ export function useBiocharProductionForm({
     productionRecordCode,
     quenchingTime,
     residenceTime,
+    resolvedFarmId,
     selectedFarmerId,
     selectedUnitId,
     startTime,
@@ -1465,6 +1469,13 @@ export function useBiocharProductionForm({
 
     try {
       const capture = await captureBiocharGps();
+
+      if (capture.isPoorAccuracy) {
+        setGpsCaptureError(BIOCHAR_POOR_ACCURACY_MESSAGE);
+        showBiocharPoorAccuracyWarning();
+        return;
+      }
+
       const capturedAt = capture.capturedAt;
       const capturedDate = new Date(capturedAt);
 
@@ -1487,12 +1498,8 @@ export function useBiocharProductionForm({
         setGpsCaptureError(null);
       } else {
         setGpsCaptureError(
-          'GPS captured but address lookup failed. You can enter the address manually or tap Retry.',
+          'GPS captured but address lookup failed. You can enter the address manually or tap Retry GPS.',
         );
-      }
-
-      if (capture.isPoorAccuracy) {
-        showBiocharPoorAccuracyWarning();
       }
     } catch (gpsError) {
       const message = getApiErrorMessage(gpsError, 'Unable to capture GPS location.');
@@ -3116,6 +3123,8 @@ export function useBiocharProductionForm({
           );
         }
 
+        const timeAudit = buildTimeAuditMetadata('biochar_production_submit');
+
         const formSnapshot: OfflineSubmitFormSnapshot = {
           batchId,
           batchCode,
@@ -3153,7 +3162,8 @@ export function useBiocharProductionForm({
           pyrolysisDurationSeconds,
           quenchingStartedAt,
           moistureReadings,
-          evidence,
+          evidence: { ...evidence },
+          ...timeAudit,
         };
 
         const missing = validateOfflineProductionSnapshot(formSnapshot);
