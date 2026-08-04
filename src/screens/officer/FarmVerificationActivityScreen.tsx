@@ -240,6 +240,7 @@ export function FarmVerificationActivityScreen() {
   const actionScrollTokenRef = useRef<string | null>(null);
   const actionLockRef = useRef(false);
   const mountedRef = useRef(true);
+  const returnToReviewLockRef = useRef(false);
 
   const [workflowState, setWorkflowState] = useState<FarmActivityWorkflowState>('not_started');
   const [failedSection, setFailedSection] = useState<(typeof SECTION_KEYS)[number] | null>(null);
@@ -606,11 +607,18 @@ export function FarmVerificationActivityScreen() {
     // Phase 10.12: Farm Activity launched from Review & Submit must return to the
     // Review screen (still in this same stack) instead of resetting to a dashboard.
     if (returnToReview) {
+      if (returnToReviewLockRef.current) {
+        return;
+      }
+      returnToReviewLockRef.current = true;
       navigation.navigate('FarmerOnboardingReview');
+      setTimeout(() => {
+        returnToReviewLockRef.current = false;
+      }, 600);
       return;
     }
     const routeNames = navigation.getState()?.routeNames ?? [];
-    if (routeNames.includes('ArtisanDashboard')) {
+    if (routeNames.includes('ArtisanDashboard' as never)) {
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
@@ -629,11 +637,18 @@ export function FarmVerificationActivityScreen() {
 
   const goToFarmActivities = useCallback(() => {
     if (returnToReview) {
+      if (returnToReviewLockRef.current) {
+        return;
+      }
+      returnToReviewLockRef.current = true;
       navigation.navigate('FarmerOnboardingReview');
+      setTimeout(() => {
+        returnToReviewLockRef.current = false;
+      }, 600);
       return;
     }
     const routeNames = navigation.getState()?.routeNames ?? [];
-    if (routeNames.includes('ArtisanDashboard')) {
+    if (routeNames.includes('ArtisanDashboard' as never)) {
       navigation.dispatch(
         CommonActions.reset({
           index: 1,

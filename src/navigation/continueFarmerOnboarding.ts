@@ -51,10 +51,31 @@ export function continueFarmerOnboardingAfterLandMapping(
     ...params,
     source: 'farmer-onboarding' as const,
   };
+  const onboardingBoundaryRoute = {
+    name: 'OnboardingBoundaryStart',
+    params: {
+      farmerId: params.farmerId,
+      farmId: params.farmId,
+      farmerName: params.farmerName,
+      farmName: params.farmName,
+      farmCode: params.farmCode,
+      farmerCode: params.farmerCode,
+      village: params.village,
+      mappingStatus: params.mappingStatus,
+    },
+  };
+  const targetRoute = {
+    name: route,
+    params: screenParams,
+  };
+  const nestedOnboardingRoutes =
+    route === 'FarmerConsent'
+      ? [onboardingBoundaryRoute, targetRoute]
+      : [targetRoute];
 
   navigation.dispatch(
     CommonActions.reset({
-      index: 1,
+      index: nestedOnboardingRoutes.length,
       routes: [
         home === 'ArtisanDashboard'
           ? { name: 'ArtisanDashboard' }
@@ -65,10 +86,7 @@ export function continueFarmerOnboardingAfterLandMapping(
                 routes: [{ name: 'Home' }],
               },
             },
-        {
-          name: route,
-          params: screenParams,
-        },
+        ...nestedOnboardingRoutes,
       ],
     }),
   );

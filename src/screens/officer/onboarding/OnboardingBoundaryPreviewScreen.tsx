@@ -10,6 +10,7 @@ import { useBoundaryCapture } from '../../../context/BoundaryCaptureContext';
 import { useOnboarding } from '../../../context/OnboardingContext';
 import { updateFieldOfficerFarmMapping } from '../../../api/fieldOfficerApi';
 import { getApiErrorMessage } from '../../../api/authApi';
+import { continueFarmerOnboardingAfterLandMapping } from '../../../navigation/continueFarmerOnboarding';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
 import { boundingBoxDimensions } from '../../../utils/boundaryBox';
@@ -47,7 +48,7 @@ export function OnboardingBoundaryPreviewScreen() {
   const navigation = useNavigation<Nav>();
   const { height: windowHeight } = useWindowDimensions();
   const boundary = useBoundaryCapture();
-  const { draft, updateDraft } = useOnboarding();
+  const { draft, result, updateDraft } = useOnboarding();
   const [saving, setSaving] = useState(false);
   const [mapStyleMode, setMapStyleMode] = useState<MapTilerStyleMode>('satellite');
   const [fitRequest, setFitRequest] = useState(0);
@@ -111,8 +112,29 @@ export function OnboardingBoundaryPreviewScreen() {
           verification_status: 'pending_review',
           boundary_points: boundary.points,
         });
+        const mappedDraft = {
+          ...draft,
+          boundary_points: boundary.points,
+          boundary_unit: boundary.unit,
+          boundary_capture_method: boundary.captureMethod,
+          boundary_mapping_status: 'mapped' as const,
+          boundary_verification_status: 'pending_review',
+          gps_latitude: center ? String(center.latitude) : draft.gps_latitude,
+          gps_longitude: center ? String(center.longitude) : draft.gps_longitude,
+          gps_accuracy: boundary.currentAccuracy != null ? String(boundary.currentAccuracy) : draft.gps_accuracy,
+          gps_captured_at: new Date().toISOString(),
+        };
+        updateDraft(mappedDraft);
         Alert.alert('Farm mapping completed', 'The farm boundary has been saved.');
-        navigation.navigate('OnboardedFarmerView', { farmerId: boundary.farmerId });
+        continueFarmerOnboardingAfterLandMapping(navigation, mappedDraft, result, {
+          farmerId: boundary.farmerId,
+          farmId: boundary.farmId,
+          farmerName: boundary.farmerName,
+          farmName: boundary.farmName || undefined,
+          farmCode: boundary.farmCode || undefined,
+          village: draft.village_name || undefined,
+          mappingStatus: 'completed',
+        });
       } catch (err) {
         Alert.alert('Mapping could not be saved', getApiErrorMessage(err, 'Please try again.'));
       } finally {

@@ -6,6 +6,7 @@ import * as DocumentPicker from 'expo-document-picker';
 
 import { AppCard } from '../../../components/AppCard';
 import { LiveEvidenceCaptureCard } from '../../../components/evidence/LiveEvidenceCaptureCard';
+import { ONBOARDING_NEXT_LABELS } from '../../../constants/onboardingSteps';
 import type { FileAsset } from '../../../context/OnboardingContext';
 import { useOnboarding } from '../../../context/OnboardingContext';
 import { useLiveEvidenceCapture } from '../../../hooks/useLiveEvidenceCapture';
@@ -107,15 +108,16 @@ export function FarmerProofUploadScreen() {
     }
     setError(null);
     updateDraft({ documents_step_completed: true });
-    navigation.navigate('FarmerConsent');
+    navigation.navigate('OnboardingBoundaryStart');
   };
 
   return (
     <OnboardingFormScreen
-      stepCurrent={4}
+      stepCurrent={6}
       title="Documents"
       subtitle="Capture or upload supporting evidence in order."
       onNext={next}
+      nextLabel={ONBOARDING_NEXT_LABELS[6]}
       footerError={displayError}
     >
       <AppCard

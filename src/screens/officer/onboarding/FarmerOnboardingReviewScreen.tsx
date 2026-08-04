@@ -274,11 +274,11 @@ export function FarmerOnboardingReviewScreen() {
 
   return (
     <OnboardingFormScreen
-      stepCurrent={6}
+      stepCurrent={9}
       title="Final Review & Submit"
       subtitle="Confirm all farmer details before submitting the registration."
       onNext={submit}
-      nextLabel={ONBOARDING_NEXT_LABELS[6] ?? 'Submit Registration'}
+      nextLabel={ONBOARDING_NEXT_LABELS[9] ?? 'Submit Registration'}
       nextLoading={loading}
       nextDisabled={!submitEligibility.canSubmit || loading}
       footerError={error}

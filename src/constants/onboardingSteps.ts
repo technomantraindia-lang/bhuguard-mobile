@@ -8,23 +8,27 @@ import {
   validateLandDetails,
 } from '../utils/onboardingValidation';
 
-export const ONBOARDING_STEP_TOTAL = 6;
+export const ONBOARDING_STEP_TOTAL = 9;
 
 export type FarmerOnboardingStepKey =
   | 'basic_details'
-  | 'location_data'
-  | 'consent_legal'
-  | 'land_registration'
+  | 'address_location_details'
+  | 'service_interest'
+  | 'existing_agri_bio_waste'
+  | 'farm_land_details'
   | 'documents'
+  | 'farm_mapping'
+  | 'consent_legal'
   | 'final_review_submit';
 
 export type FarmerOnboardingRoute = keyof Pick<
   FieldOfficerStackParamList,
   | 'FarmerBasicDetails'
   | 'FarmerGpsCapture'
-  | 'FarmerConsent'
   | 'FarmerLandDetails'
   | 'FarmerProofUpload'
+  | 'OnboardingBoundaryStart'
+  | 'FarmerConsent'
   | 'FarmerOnboardingReview'
 >;
 
@@ -44,12 +48,15 @@ export type OnboardingStepDisplayTone = 'completed' | 'current' | 'pending';
 /** Single source of truth for overview + resume navigation. */
 export const ONBOARDING_STEPS: FarmerOnboardingStep[] = [
   { id: 1, key: 'basic_details', label: 'Basic Details', title: 'Basic Details', icon: 'person', route: 'FarmerBasicDetails' },
-  { id: 2, key: 'location_data', label: 'Location Data', title: 'Location Data', icon: 'share_location', route: 'FarmerGpsCapture' },
-  { id: 3, key: 'land_registration', label: 'Land Registration', title: 'Land Registration', icon: 'landscape', route: 'FarmerLandDetails' },
-  { id: 4, key: 'documents', label: 'Documents', title: 'Documents', icon: 'folder', route: 'FarmerProofUpload' },
-  { id: 5, key: 'consent_legal', label: 'Consent & Legal', title: 'Consent & Legal', icon: 'consent', route: 'FarmerConsent' },
+  { id: 2, key: 'address_location_details', label: 'Address / Location Details', title: 'Address / Location Details', icon: 'share_location', route: 'FarmerGpsCapture' },
+  { id: 3, key: 'service_interest', label: 'Service Interest', title: 'Service Interest', icon: 'landscape', route: 'FarmerLandDetails' },
+  { id: 4, key: 'existing_agri_bio_waste', label: 'Existing Agri Bio-Waste', title: 'Existing Agri Bio-Waste', icon: 'landscape', route: 'FarmerLandDetails' },
+  { id: 5, key: 'farm_land_details', label: 'Farm / Land Details', title: 'Farm / Land Details', icon: 'landscape', route: 'FarmerLandDetails' },
+  { id: 6, key: 'documents', label: 'Documents and Evidence', title: 'Documents and Evidence', icon: 'folder', route: 'FarmerProofUpload' },
+  { id: 7, key: 'farm_mapping', label: 'Farm Mapping', title: 'Farm Mapping', icon: 'share_location', route: 'OnboardingBoundaryStart' },
+  { id: 8, key: 'consent_legal', label: 'Consent & Legal', title: 'Consent & Legal', icon: 'consent', route: 'FarmerConsent' },
   {
-    id: 6,
+    id: 9,
     key: 'final_review_submit',
     label: 'Final Review & Submit',
     title: 'Final Review & Submit',
@@ -60,11 +67,14 @@ export const ONBOARDING_STEPS: FarmerOnboardingStep[] = [
 
 export const ONBOARDING_NEXT_LABELS: Record<number, string> = {
   1: 'Continue to Location Data',
-  2: 'Continue to Land Registration',
-  3: 'Continue to Documents',
-  4: 'Continue to Consent & Legal',
-  5: 'Continue to Final Review & Submit',
-  6: 'Submit Registration',
+  2: 'Continue to Service Interest',
+  3: 'Continue to Existing Agri Bio-Waste',
+  4: 'Continue to Farm / Land Details',
+  5: 'Continue to Documents and Evidence',
+  6: 'Continue to Farm Mapping',
+  7: 'Continue to Consent & Legal',
+  8: 'Continue to Final Review & Submit',
+  9: 'Submit Registration',
 };
 
 function isMappingStatusAllowedForLand(draft: OnboardingDraft): boolean {
@@ -118,14 +128,22 @@ export function isFarmerOnboardingStepCompleted(
   switch (key) {
     case 'basic_details':
       return validateBasicDetails(draft) === null;
-    case 'location_data':
+    case 'address_location_details':
       return validateAddress(draft) === null;
-    case 'consent_legal':
-      return validateConsent(draft) === null;
-    case 'land_registration':
+    case 'service_interest':
+      return draft.service_interests.includes('Biochar');
+    case 'existing_agri_bio_waste':
+      return draft.existing_farming_practice.trim().length > 0;
+    case 'farm_land_details':
       return isLandRegistrationComplete(draft);
     case 'documents':
       return isDocumentsStepCompleted(draft);
+    case 'farm_mapping':
+      return draft.boundary_mapping_status === 'mapped'
+        || draft.boundary_mapping_status === 'pending_review'
+        || draft.boundary_mapping_status === 'pending';
+    case 'consent_legal':
+      return validateConsent(draft) === null;
     case 'final_review_submit':
       return result != null;
     default:
@@ -144,7 +162,11 @@ export function getFarmerOnboardingStepDisplayTone(
   result: OnboardingResult | null,
   currentKey: FarmerOnboardingStepKey | null,
 ): OnboardingStepDisplayTone {
-  if (key === 'land_registration' && getLandRegistrationStatusLabel(draft) === 'Mapping Pending') {
+  if (key === 'farm_mapping' && draft.boundary_mapping_status === 'pending') {
+    return key === currentKey ? 'current' : 'pending';
+  }
+
+  if (key === 'farm_land_details' && getLandRegistrationStatusLabel(draft) === 'Mapping Pending') {
     return key === currentKey ? 'current' : 'pending';
   }
 
@@ -164,11 +186,14 @@ export function getFarmerOnboardingStepStatusLabel(
   draft: OnboardingDraft,
   tone: OnboardingStepDisplayTone,
 ): string {
-  if (key === 'land_registration') {
+  if (key === 'farm_land_details') {
     const landLabel = getLandRegistrationStatusLabel(draft);
     if (landLabel === 'Mapping Pending') {
       return 'Mapping Pending';
     }
+  }
+  if (key === 'farm_mapping' && draft.boundary_mapping_status === 'pending') {
+    return 'Mapping Pending';
   }
 
   if (tone === 'completed') {

@@ -31,7 +31,6 @@ type GateState =
   | { kind: 'ready'; ids: EnsuredOnboardingIds }
   | { kind: 'missing_profile'; message: string }
   | { kind: 'missing_farm'; message: string }
-  | { kind: 'missing_consent'; message: string }
   | { kind: 'network_error'; message: string };
 
 function buildCaptureParams(ids: EnsuredOnboardingIds, village?: string, mappingStatus?: 'pending' | 'completed') {
@@ -294,37 +293,6 @@ export function OnboardingBoundaryStartScreen() {
     );
   }
 
-  if (gate.kind === 'missing_consent') {
-    return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <BoundaryFlowHeader
-          title="Map Land Boundary"
-          subtitle="Consent required"
-          onBack={() => navigation.goBack()}
-        />
-        <View style={styles.content}>
-          <Text style={styles.errorText}>{gate.message}</Text>
-          <Pressable
-            style={styles.primaryButton}
-            onPress={() =>
-              navigation.navigate('FarmerConsent', {
-                returnTo: 'OnboardingBoundaryStart',
-                farmerName: draft.farmer_name || undefined,
-                village: draft.village_name || undefined,
-                mappingStatus: 'pending',
-              })
-            }
-          >
-            <Text style={styles.primaryButtonText}>Complete Consent</Text>
-          </Pressable>
-          <Pressable style={styles.outlineButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.outlineButtonText}>Go Back</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   if (gate.kind === 'network_error') {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
@@ -444,6 +412,10 @@ export function OnboardingBoundaryStartScreen() {
             <Text style={styles.primaryButtonText}>
               {nextAfterMapping?.key === 'documents'
                 ? 'Continue to Documents'
+                : nextAfterMapping?.key === 'farm_mapping'
+                  ? 'Continue to Farm Mapping'
+                  : nextAfterMapping?.key === 'consent_legal'
+                    ? 'Continue to Consent & Legal'
                 : nextAfterMapping?.key === 'final_review_submit'
                   ? 'Continue to Final Review'
                   : 'Continue Onboarding'}

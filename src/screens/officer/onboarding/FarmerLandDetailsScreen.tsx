@@ -259,11 +259,11 @@ export function FarmerLandDetailsScreen() {
 
   return (
     <OnboardingFormScreen
-      stepCurrent={3}
+      stepCurrent={5}
       title="Land Registration"
       subtitle="Farm, crop, and boundary mapping details."
       onNext={next}
-      nextLabel={ONBOARDING_NEXT_LABELS[4]}
+      nextLabel={ONBOARDING_NEXT_LABELS[5]}
     >
       <FormField
         label="Land survey number / Khasra Number *"

@@ -134,6 +134,7 @@ export function FarmerConsentScreen() {
   const [maskedMobile, setMaskedMobile] = useState(maskMobile(draft.mobile));
   const [resendAfter, setResendAfter] = useState(0);
   const verifyingRef = useRef(false);
+  const navigatingRef = useRef(false);
   const hydratedIdsRef = useRef(false);
   const evidenceCapture = useLiveEvidenceCapture({ defaultName: 'agreement-evidence.jpg', allowsEditing: false });
   const demoConsentOtpEnabled = isDemoConsentOtpEnabled();
@@ -354,6 +355,10 @@ export function FarmerConsentScreen() {
   const consentValidationError = validateConsent(draft);
 
   const next = () => {
+    if (navigatingRef.current) {
+      return;
+    }
+
     if (!canContinue) {
       const missing = eligibility.filter((item) => !item.ok).map((item) => item.label);
       setError(missing.length ? `Complete: ${missing.join(', ')}.` : 'Complete all consent requirements.');
@@ -368,6 +373,7 @@ export function FarmerConsentScreen() {
     setError(null);
 
     if (route.params?.returnTo === 'OnboardingBoundaryStart') {
+      navigatingRef.current = true;
       navigation.navigate('OnboardingBoundaryStart', {
         farmerId: route.params.farmerId ?? draft.farmer_id ?? undefined,
         farmId: route.params.farmId ?? draft.farm_id ?? undefined,
@@ -378,10 +384,17 @@ export function FarmerConsentScreen() {
         village: route.params.village,
         mappingStatus: route.params.mappingStatus,
       });
+      setTimeout(() => {
+        navigatingRef.current = false;
+      }, 600);
       return;
     }
 
+    navigatingRef.current = true;
     navigation.navigate('FarmerOnboardingReview');
+    setTimeout(() => {
+      navigatingRef.current = false;
+    }, 600);
   };
 
   const displayError = error ?? evidenceCapture.error;
@@ -398,10 +411,10 @@ export function FarmerConsentScreen() {
 
   return (
     <OnboardingConsentLayout
-      stepCurrent={5}
-      progressLabel="Step 5: Consent & Legal"
+      stepCurrent={8}
+      progressLabel="Step 8: Consent & Legal"
       onNext={next}
-      nextLabel={ONBOARDING_NEXT_LABELS[5]}
+      nextLabel={ONBOARDING_NEXT_LABELS[8]}
       footerError={displayError}
       nextDisabled={!canContinue || verifying || sending}
     >

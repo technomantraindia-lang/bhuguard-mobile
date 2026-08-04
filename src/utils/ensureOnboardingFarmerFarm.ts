@@ -5,7 +5,6 @@ import { pickString, type ApiRecord } from './apiHelpers';
 import { sanitizeMappingApiError, sanitizeOnboardingApiError } from './assignmentErrorMessage';
 import { isValidEntityId, toPositiveEntityId } from './entityId';
 import {
-  validateConsent,
   validateFarmerProfileStep1,
   validateLandDetails,
 } from './onboardingValidation';
@@ -23,7 +22,6 @@ export type EnsureOnboardingFarmerFarmResult =
   | { status: 'ready'; ids: EnsuredOnboardingIds }
   | { status: 'missing_profile'; message: string }
   | { status: 'missing_farm'; message: string }
-  | { status: 'missing_consent'; message: string }
   | { status: 'network_error'; message: string };
 
 function readEnsuredFromDraft(draft: OnboardingDraft): EnsuredOnboardingIds | null {
@@ -162,14 +160,6 @@ export async function ensureOnboardingFarmerFarm(
   const profileError = validateFarmerProfileStep1(draft);
   if (profileError) {
     return { status: 'missing_profile', message: profileError };
-  }
-
-  const consentError = validateConsent(draft);
-  if (consentError) {
-    return {
-      status: 'missing_consent',
-      message: 'Project Participation Consent must be completed before Farm Mapping.',
-    };
   }
 
   try {

@@ -1,4 +1,5 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { buildOnboardingNotes } from '../utils/onboardingNotes';
 import { DEFAULT_FIELD_OFFICER_SERVICE_INTERESTS } from '../constants/fieldOfficerOnboarding';
@@ -197,10 +198,47 @@ interface OnboardingContextValue {
 }
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
+const ONBOARDING_DRAFT_STORAGE_KEY = '@bhuguard/onboarding-draft-v1';
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState<OnboardingDraft>(defaultDraft);
   const [result, setResult] = useState<OnboardingResult | null>(null);
+  const hydratedRef = useRef(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const hydrate = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(ONBOARDING_DRAFT_STORAGE_KEY);
+        if (!raw || !mounted) {
+          return;
+        }
+        const parsed = JSON.parse(raw) as { draft?: Partial<OnboardingDraft>; result?: OnboardingResult | null };
+        if (parsed.draft && typeof parsed.draft === 'object') {
+          setDraft((prev) => ({ ...prev, ...parsed.draft }));
+        }
+        if (parsed.result !== undefined) {
+          setResult(parsed.result);
+        }
+      } catch {
+        // Ignore invalid cache; fresh draft will be used.
+      } finally {
+        hydratedRef.current = true;
+      }
+    };
+    void hydrate();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hydratedRef.current) {
+      return;
+    }
+    const payload = JSON.stringify({ draft, result });
+    void AsyncStorage.setItem(ONBOARDING_DRAFT_STORAGE_KEY, payload);
+  }, [draft, result]);
 
   const value = useMemo<OnboardingContextValue>(
     () => ({
@@ -211,6 +249,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       resetDraft: () => {
         setDraft(defaultDraft);
         setResult(null);
+        void AsyncStorage.removeItem(ONBOARDING_DRAFT_STORAGE_KEY);
       },
       toFormData: () => {
         const formData = new FormData();
