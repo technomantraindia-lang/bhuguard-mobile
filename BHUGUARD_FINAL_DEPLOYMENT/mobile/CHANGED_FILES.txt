@@ -1,0 +1,20 @@
+Mobile changed files (latest remaining phase commit 12b6c50):
+- BHUGUARD_REMAINING_REQUIREMENTS.md
+- IMPLEMENTATION_PROGRESS.md
+- android splashscreen_logo.png (all densities)
+- src/api/artisanApi.ts
+- src/components/officer/biochar/BiocharProductionSections.tsx
+- src/context/ArtisanWorkSessionContext.tsx
+- src/i18n/locales/{en,hi,gu}.json
+- src/screens/artisan/ArtisanFarmLookupScreen.tsx
+- src/screens/artisan/ArtisanLoginScreen.tsx
+- src/screens/auth/FarmerLoginOptionsScreen.tsx
+- src/screens/auth/FieldOfficerLoginScreen.tsx
+- src/screens/auth/PasswordLoginScreen.tsx
+- src/screens/auth/PatternLoginScreen.tsx
+- src/screens/shared/SettingsScreen.tsx
+- src/utils/biocharProductionHelpers.ts
+- src/utils/finishMobileLogin.ts
+
+Branch: office-rebuild-client-changes-2026-08
+Commit: 12b6c50

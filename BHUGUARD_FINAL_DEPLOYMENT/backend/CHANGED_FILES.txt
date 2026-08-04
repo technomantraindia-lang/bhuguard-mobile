@@ -1,0 +1,14 @@
+Backend changed files for this completion pass:
+- app/Http/Controllers/Api/FieldOfficerController.php (EvidenceIngestionService import)
+
+Prior branch backend commits already include Pattern auth, display IDs, ownership_other_detail, artisan dashboard fields, FO farmer update APIs.
+
+Additive migrations (also copied to migrations/):
+- 2026_08_03_050414_add_pattern_auth_fields_to_users_table.php
+- 2026_08_03_103000_add_farmer_and_artisan_display_ids.php
+- 2026_08_03_112957_add_ownership_other_detail_to_farms_table.php
+
+.env.example keys (set values on server; do not commit secrets):
+- DEMO_OTP_ENABLED=false
+- DEMO_OTP_CODE=
+- DEMO_OTP_ALLOWED_MOBILES=
