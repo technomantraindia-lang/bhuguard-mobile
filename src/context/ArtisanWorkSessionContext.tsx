@@ -33,6 +33,11 @@ import type { ApiRecord } from '../utils/apiHelpers';
 import { calculateDistanceInMeters } from '../utils/locationUtils';
 import { captureHighAccuracyGps, requestGpsPermission } from '../utils/officerGpsCapture';
 import { safeNetInfoAddEventListener, safeNetInfoIsConnected } from '../utils/safeNetInfo';
+import {
+  buildTimeAuditMetadata,
+  getServerSyncedNowIso,
+  shouldBlockOfflineTimestampSubmit,
+} from '../services/serverTimeSync';
 
 export type ArtisanWorkSessionStatusKey =
   | 'not_checked_in'
@@ -590,7 +595,7 @@ export function ArtisanWorkSessionProvider({ children }: { children: ReactNode }
         accuracy: accuracy ?? undefined,
         gps_accuracy: accuracy ?? undefined,
         activity_stage: extras?.activity_stage ?? 'live_location_update',
-        captured_at: extras?.captured_at ?? new Date().toISOString(),
+        captured_at: extras?.captured_at ?? getServerSyncedNowIso(),
         farmer_id: extras?.farmer_id,
         farm_id: extras?.farm_id,
         batch_id: extras?.batch_id,
@@ -709,7 +714,7 @@ export function ArtisanWorkSessionProvider({ children }: { children: ReactNode }
         latitude: gps.latitude,
         longitude: gps.longitude,
         accuracyM: gps.accuracyM ?? null,
-        capturedAt: new Date().toISOString(),
+        capturedAt: getServerSyncedNowIso(),
       });
       setGpsPreviewError(null);
     } catch {
@@ -803,10 +808,17 @@ export function ArtisanWorkSessionProvider({ children }: { children: ReactNode }
         latitude: gps.latitude,
         longitude: gps.longitude,
         accuracyM: gps.accuracyM ?? null,
-        capturedAt: new Date().toISOString(),
+        capturedAt: getServerSyncedNowIso(),
       });
       setGpsPreviewError(null);
       const triad = await resolveVillageTriad(gps.latitude, gps.longitude);
+
+      const isOnline = await safeNetInfoIsConnected();
+      if (shouldBlockOfflineTimestampSubmit(isOnline)) {
+        throw new Error(
+          'Cannot check in offline without a recent server time sync. Reconnect, retry time sync, and try again.',
+        );
+      }
 
       const payload: ArtisanWorkCheckInPayload = {
         latitude: gps.latitude,
@@ -820,7 +832,11 @@ export function ArtisanWorkSessionProvider({ children }: { children: ReactNode }
         taluka_name: triad.taluka_name,
         village_name: triad.village_name,
         activity_context: 'artisan_check_in',
-        device_timestamp: new Date().toISOString(),
+        ...buildTimeAuditMetadata('artisan_work_session_check_in', {
+          latitude: gps.latitude,
+          longitude: gps.longitude,
+          accuracyM: gps.accuracyM,
+        }),
       };
 
       const result = await artisanWorkCheckIn(payload);
@@ -881,12 +897,23 @@ export function ArtisanWorkSessionProvider({ children }: { children: ReactNode }
       }
 
       const gps = await captureHighAccuracyGps();
+      const isOnlineForCheckout = await safeNetInfoIsConnected();
+      if (shouldBlockOfflineTimestampSubmit(isOnlineForCheckout)) {
+        throw new Error(
+          'Cannot check out offline without a recent server time sync. Reconnect, retry time sync, and try again.',
+        );
+      }
+
       const payload = {
         latitude: gps.latitude,
         longitude: gps.longitude,
         accuracy: gps.accuracyM,
         gps_accuracy: gps.accuracyM,
-        device_timestamp: new Date().toISOString(),
+        ...buildTimeAuditMetadata('artisan_work_session_check_out', {
+          latitude: gps.latitude,
+          longitude: gps.longitude,
+          accuracyM: gps.accuracyM,
+        }),
       };
 
       try {

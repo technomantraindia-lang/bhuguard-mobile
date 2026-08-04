@@ -4,7 +4,6 @@ import { AppButton } from '../../components/AppButton';
 import { AppCard } from '../../components/AppCard';
 import { LanguageCardList } from '../../components/auth/LanguageCard';
 import { ScreenHeader } from '../../components/ScreenHeader';
-import { APP_VARIANT } from '../../config/env';
 import { useTranslation } from '../../i18n/I18nContext';
 import type { AppLanguage } from '../../i18n/types';
 import { useLogout } from '../../hooks/useLogout';
@@ -19,7 +18,7 @@ interface SettingsScreenProps {
 export function SettingsScreen({ title, subtitle }: SettingsScreenProps) {
   const logout = useLogout();
   const { t, language, setLanguage } = useTranslation();
-  const showApiServerSettings = __DEV__ || APP_VARIANT !== 'production';
+  const showApiServerSettings = __DEV__;
 
   const languageOptions: Array<{ language: AppLanguage; title: string; glyph: string }> = [
     {

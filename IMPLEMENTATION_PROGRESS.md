@@ -273,6 +273,17 @@ Closed audit PARTIAL/NOT items where code could be completed without live deploy
 
 Still blocked: live ERP deploy; standalone release APK; full device matrix (no adb device attached this run).
 
+### Gap-closure pass (2026-08-04) — remaining FAIL/PARTIAL code fixes
+
+- **Farmer auth:** Login options are Pattern + OTP + Biometric only (MPIN/password cards removed). `finishMobileLogin` never routes farmers to `CreateMpin`. Pattern unsupported no longer falls back to MPIN.
+- **Artisan work session:** check-in/out/live location use `buildTimeAuditMetadata` + `getServerSyncedNowIso` (no authoritative device wall-clock).
+- **Assigned kilns:** removed `DEFAULT_ARTISAN_KILN_ID`; FO `ProductionUnitSection` is assigned-picker only (no free-text).
+- **Mixing:** Search UI hidden for `purpose:'mixing'` (same hierarchy as Application).
+- **Dev diagnostics:** ApiServerSettings gated to `__DEV__` only.
+- **Splash:** transparent `splashscreen_logo.png` densities to avoid centre artwork before JS preloader.
+- **Audit matrix:** `BHUGUARD_REMAINING_REQUIREMENTS.md` created.
+- Tests: backend Otp(41)+Pattern(1)+ArtisanDashboardPhase14(2)+ArtisanWorkSession(8) passed. No adb device.
+
 ## Final delivery
 
 | Requirement | Status | Remaining blocker |

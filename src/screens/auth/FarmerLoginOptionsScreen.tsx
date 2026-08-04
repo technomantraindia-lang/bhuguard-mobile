@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { getApiErrorMessage, loginBiometricToken } from '../../api/authApi';
+import { getApiErrorMessage, loginBiometricToken, requestForgotMpinOtp } from '../../api/authApi';
 import { LoginOptionCard } from '../../components/auth/LoginOptionCard';
 import { BhuguardLogo } from '../../components/shared/BhuguardLogo';
 import { LOGO_SIZES } from '../../constants/branding';
-import { APP_VARIANT } from '../../config/env';
 import { useTranslation } from '../../i18n/I18nContext';
 import type { RootStackParamList } from '../../navigation/types';
 import { getBiometricLoginEnabled } from '../../storage/biometricPreference';
@@ -18,15 +17,24 @@ import { finishMobileLogin } from '../../utils/finishMobileLogin';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'FarmerLoginOptions'>;
 
+function normalizeMobile(value: string): string {
+  return value.replace(/\D/g, '').slice(-10);
+}
+
 export function FarmerLoginOptionsScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const [biometricReady, setBiometricReady] = useState(false);
   const [biometricLoading, setBiometricLoading] = useState(false);
+  const [patternMobile, setPatternMobile] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   useEffect(() => {
     void (async () => {
       const [profile, enabled] = await Promise.all([getMpinProfile(), getBiometricLoginEnabled()]);
       setBiometricReady(Boolean(profile?.mobile) && enabled);
+      if (profile?.mobile) {
+        setPatternMobile(profile.mobile);
+      }
     })();
   }, []);
 
@@ -80,6 +88,42 @@ export function FarmerLoginOptionsScreen({ navigation }: Props) {
     }
   };
 
+  const handlePatternLogin = () => {
+    const mobile = normalizeMobile(patternMobile);
+    if (mobile.length < 10) {
+      Alert.alert(t('farmerLogin.patternOption'), t('farmerLogin.patternMobileRequired'));
+      return;
+    }
+
+    navigation.navigate('PatternLogin', { mobile, mode: 'login' });
+  };
+
+  const handleForgotPattern = async () => {
+    const mobile = normalizeMobile(patternMobile);
+    if (mobile.length < 10) {
+      Alert.alert(t('pattern.forgot'), t('farmerLogin.patternMobileRequired'));
+      return;
+    }
+
+    if (forgotLoading) {
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      await requestForgotMpinOtp(mobile);
+      navigation.navigate('OtpVerification', {
+        mobile,
+        purpose: 'forgot_pattern',
+        flowOrigin: 'auth',
+      });
+    } catch (error) {
+      Alert.alert(t('errors.loginFailed'), getApiErrorMessage(error, t('errors.loginFailed')));
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -94,17 +138,22 @@ export function FarmerLoginOptionsScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.list}>
-          <LoginOptionCard
-            icon="person"
-            title={t('farmerLogin.passwordOption')}
-            description={t('farmerLogin.passwordDescription')}
-            onPress={() => navigation.navigate('PasswordLogin', { role: 'farmer' })}
+          <Text style={styles.label}>{t('farmerLogin.patternMobileLabel')}</Text>
+          <TextInput
+            style={styles.input}
+            value={patternMobile}
+            onChangeText={setPatternMobile}
+            keyboardType="phone-pad"
+            placeholder={t('farmerLogin.patternMobilePlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            maxLength={15}
+            autoCorrect={false}
           />
           <LoginOptionCard
             icon="lock"
-            title={t('farmerLogin.mpinOption')}
-            description={t('farmerLogin.mpinDescription')}
-            onPress={() => navigation.navigate('MpinLogin', { role: 'farmer' })}
+            title={t('farmerLogin.patternOption')}
+            description={t('farmerLogin.patternDescription')}
+            onPress={handlePatternLogin}
           />
           <LoginOptionCard
             icon="description"
@@ -127,13 +176,13 @@ export function FarmerLoginOptionsScreen({ navigation }: Props) {
           <Text style={styles.infoText}>{t('farmerLogin.noRegistration')}</Text>
         </View>
 
-        <Pressable onPress={() => navigation.navigate('MpinLogin', { role: 'farmer' })}>
-          <Text style={styles.link}>{t('farmerLogin.forgotMpin')}</Text>
+        <Pressable disabled={forgotLoading} onPress={() => void handleForgotPattern()}>
+          <Text style={styles.link}>{forgotLoading ? t('common.loading') : t('pattern.forgot')}</Text>
         </Pressable>
         <Pressable onPress={() => navigation.navigate('ForgotPassword')}>
           <Text style={styles.link}>{t('farmerLogin.contactSupport')}</Text>
         </Pressable>
-        {__DEV__ || APP_VARIANT !== 'production' ? (
+        {__DEV__ ? (
           <Pressable onPress={() => navigation.navigate('ApiServerSettings')}>
             <Text style={styles.link}>{t('apiServer.openSettings')}</Text>
           </Pressable>
@@ -180,6 +229,21 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 12,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#D7E5DB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: colors.text,
+    backgroundColor: '#FFFFFF',
   },
   infoBox: {
     borderRadius: 14,

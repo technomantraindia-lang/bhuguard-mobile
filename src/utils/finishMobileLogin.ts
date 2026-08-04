@@ -22,7 +22,7 @@ interface FinishLoginMessages {
 }
 
 export interface FinishMobileLoginOptions extends CompleteMobileLoginOptions {
-  /** After OTP, require MPIN setup / biometric offer before dashboard. */
+  /** After OTP, continue Pattern/MPIN setup / biometric offer before dashboard. */
   continueSetupChain?: boolean;
 }
 
@@ -79,19 +79,24 @@ export async function finishMobileLogin(
     const role = (user?.user_type ?? '').toLowerCase();
     const isFarmer = role.includes('farmer');
 
-    if (isFarmer && patternSupported && patternSetupRequired) {
-      navigation.navigate('SetPattern', { mobile, mode: 'setup' });
-      return true;
-    }
+    // Farmers use Pattern only (historical MPIN may remain on the server but is not set here).
+    if (isFarmer) {
+      if (!hasPattern) {
+        navigation.navigate('SetPattern', { mobile, mode: 'setup' });
+        return true;
+      }
 
-    if (isFarmer && patternSupported && hasPattern) {
-      // Pattern already set — continue to biometric offer / dashboard chain.
       navigation.navigate('BiometricSetup', { mobile, name });
       return true;
     }
 
+    if (patternSupported && patternSetupRequired) {
+      navigation.navigate('SetPattern', { mobile, mode: 'setup' });
+      return true;
+    }
+
     if (!hasMpin) {
-      // Keep Mobile → OTP under CreateMpin so back does not crash on an empty stack.
+      // Non-farmer roles may still complete first-login MPIN when Pattern is unavailable.
       navigation.navigate('CreateMpin', {
         mobile,
         mode: 'setup',

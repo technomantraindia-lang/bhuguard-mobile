@@ -88,12 +88,8 @@ export function PatternLoginScreen({ navigation, route }: Props) {
         );
       } catch (err) {
         if (err instanceof PatternUnsupportedError) {
+          // Do not fall back to MPIN for Pattern failures — farmers recover via OTP / Forgot Pattern.
           setError(t('pattern.unsupported'));
-          navigation.navigate('MpinLogin', {
-            mobile,
-            name,
-            mode,
-          });
         } else if (err instanceof PatternLockedError) {
           setError(err.message || t('pattern.locked'));
         } else {

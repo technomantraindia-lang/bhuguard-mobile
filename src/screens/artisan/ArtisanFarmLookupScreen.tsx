@@ -540,20 +540,14 @@ export function ArtisanFarmLookupScreen() {
             <View style={styles.headerBlock}>
               <Text style={styles.helper}>{copy.helper}</Text>
 
-              {purpose === 'application' ? null : (
+              {purpose === 'application' || purpose === 'mixing' ? null : (
                 <>
                   <Text style={styles.label}>
-                    {purpose === 'mixing'
-                      ? 'Search by Farmer Name, Farmer ID, or Farm ID'
-                      : 'Search by Farm ID or Farmer Name'}
+                    {'Search by Farm ID or Farmer Name'}
                   </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder={
-                      purpose === 'mixing'
-                        ? 'Farmer Name, Farmer ID, or Farm ID'
-                        : 'Search by Farm ID or Farmer Name'
-                    }
+                    placeholder={'Search by Farm ID or Farmer Name'}
                     value={query}
                     onChangeText={setQuery}
                     autoCapitalize="none"
@@ -572,7 +566,7 @@ export function ArtisanFarmLookupScreen() {
                 <NoAssignmentState message={error} onRefresh={() => void loadLocations()} refreshing={loadingLocations} />
               ) : talukas.length === 0 && villages.length === 0 ? (
                 <NoAssignmentState onRefresh={() => void loadLocations()} refreshing={loadingLocations} />
-              ) : purpose === 'application' ? null : (
+              ) : purpose === 'application' || purpose === 'mixing' ? null : (
                 <>
                   <FormSelect
                     label="Taluka"
@@ -597,7 +591,7 @@ export function ArtisanFarmLookupScreen() {
                 </>
               )}
 
-              {purpose === 'application' ? null : (
+              {purpose === 'application' || purpose === 'mixing' ? null : (
                 <Pressable style={[styles.searchButton, searching && styles.buttonDisabled]} disabled={searching} onPress={() => void runSearch()}>
                   <Text style={styles.searchButtonText}>{searching ? 'Searching…' : 'Search'}</Text>
                 </Pressable>

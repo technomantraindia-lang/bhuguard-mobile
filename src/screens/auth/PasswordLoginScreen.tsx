@@ -17,7 +17,6 @@ import { AuthField } from '../../components/auth/AuthField';
 import { BhuguardLogo } from '../../components/shared/BhuguardLogo';
 import { LOGO_SIZES } from '../../constants/branding';
 import { getDemoLoginForRole, type AppLoginRole } from '../../config/authRoles';
-import { APP_VARIANT } from '../../config/env';
 import { useTranslation } from '../../i18n/I18nContext';
 import type { RootStackParamList } from '../../navigation/types';
 import { colors, spacing } from '../../theme';
@@ -183,13 +182,13 @@ export function PasswordLoginScreen({ navigation, route }: Props) {
           {errorMessage ? (
             <Pressable
               onPress={() => {
-                if (__DEV__ || APP_VARIANT !== 'production') {
+                if (__DEV__) {
                   navigation.navigate('ApiServerSettings');
                 }
               }}
             >
               <Text style={styles.error}>{errorMessage}</Text>
-              {errorMessage.includes('Cannot reach API') && (__DEV__ || APP_VARIANT !== 'production') ? (
+              {errorMessage.includes('Cannot reach API') && __DEV__ ? (
                 <Text style={styles.serverLink}>{t('apiServer.openSettings')} →</Text>
               ) : null}
             </Pressable>
@@ -205,7 +204,7 @@ export function PasswordLoginScreen({ navigation, route }: Props) {
             </Text>
           </Pressable>
 
-          {__DEV__ || APP_VARIANT !== 'production' ? (
+          {__DEV__ ? (
             <Pressable onPress={() => navigation.navigate('ApiServerSettings')} style={styles.serverSettingsLink}>
               <Text style={styles.serverSettingsText}>{t('apiServer.openSettings')}</Text>
             </Pressable>

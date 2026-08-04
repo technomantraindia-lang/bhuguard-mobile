@@ -19,8 +19,7 @@ import {
   calculateYieldPercent,
   formatCoordinate,
   formatProductionDuration,
-  ARTISAN_KILN_PREFIX,
-  DEFAULT_ARTISAN_KILN_ID,
+  ASSIGNED_KILN_REQUIRED_MESSAGE,
   type ProductionUnitOption,
 } from '../../../utils/biocharProductionHelpers';
 import { formatActivityDisplayDate } from '../../../utils/activityDateHelpers';
@@ -452,31 +451,30 @@ export function ProductionUnitSection({
   onRecaptureGps,
 }: ProductionUnitSectionProps) {
   const [pickerOpen, setPickerOpen] = React.useState(false);
+  const selectedLabel =
+    units.find((unit) => unit.kilnId === kilnId || unit.label === kilnId)?.label ||
+    (kilnId.trim() ? kilnId.trim() : '');
 
   return (
     <Card>
       <SectionTitle icon="eco" title="Production Unit" />
-      <Text style={styles.fieldLabel}>Kiln ID</Text>
-      <View style={styles.kilnInputRow}>
-        <TextInput
-          style={[styles.input, styles.kilnInput]}
-          value={kilnId}
-          onChangeText={onKilnIdChange}
-          placeholder="Enter Kiln ID"
-          placeholderTextColor={officerTheme.outline}
-          autoCapitalize="characters"
-          autoCorrect={false}
-        />
-        {units.length > 0 ? (
+      <Text style={styles.fieldLabel}>Assigned Kiln</Text>
+      {units.length === 0 ? (
+        <Text style={styles.errorText}>{ASSIGNED_KILN_REQUIRED_MESSAGE}</Text>
+      ) : (
+        <>
           <Pressable
-            style={styles.kilnSuggestButton}
+            style={styles.input}
             onPress={() => setPickerOpen(true)}
-            accessibilityLabel="Choose kiln from list"
+            accessibilityLabel="Choose assigned kiln"
           >
-            <BhuguardMaterialIcon name="menu" size={20} color={officerTheme.primaryContainer} />
+            <Text style={selectedLabel ? styles.modalOptionText : styles.helperText}>
+              {selectedLabel || 'Select assigned kiln'}
+            </Text>
           </Pressable>
-        ) : null}
-      </View>
+          {!selectedLabel ? <Text style={styles.errorText}>{ASSIGNED_KILN_REQUIRED_MESSAGE}</Text> : null}
+        </>
+      )}
 
       <Text style={styles.fieldLabel}>Operator Name</Text>
       <TextInput
@@ -520,7 +518,7 @@ export function ProductionUnitSection({
       <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setPickerOpen(false)}>
           <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>Select Kiln</Text>
+            <Text style={styles.modalTitle}>Select Assigned Kiln</Text>
             <ScrollView>
               {units.map((unit) => (
                 <Pressable
