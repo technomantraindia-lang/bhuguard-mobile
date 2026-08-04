@@ -28,6 +28,7 @@ import {
   flushArtisanWorkSessionQueue,
 } from '../storage/artisanWorkSessionQueue';
 import { loadBiocharProductionDraft } from '../storage/biocharProductionDraftStorage';
+import { invalidateCheckInGate } from '../utils/checkInGateEvents';
 import type { ArtisanAllocatedVillage } from '../types/artisanFarmSearch';
 import type { ApiRecord } from '../utils/apiHelpers';
 import { calculateDistanceInMeters } from '../utils/locationUtils';
@@ -931,6 +932,7 @@ export function ArtisanWorkSessionProvider({ children }: { children: ReactNode }
         stopForegroundWatcher();
         lastSentRef.current = null;
         succeeded = true;
+        invalidateCheckInGate();
         return true;
       } catch (err) {
         if (isNetworkFailure(err)) {

@@ -11,6 +11,7 @@ import {
 import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
 import { pickString, type ApiRecord } from '../../utils/apiHelpers';
+import { invalidateCheckInGate } from '../../utils/checkInGateEvents';
 
 export function FieldOfficerLiveCheckInCard() {
   const [loading, setLoading] = useState(true);
@@ -69,7 +70,8 @@ export function FieldOfficerLiveCheckInCard() {
       const gps = await captureGps();
       await fieldOfficerLiveCheckOut(gps);
       await load();
-      Alert.alert('Checked out', 'Your field session has been closed.');
+      invalidateCheckInGate();
+      Alert.alert('Checked out', 'Your field session has been closed. Check in again to continue.');
     } catch (error) {
       Alert.alert('Check-out failed', getApiErrorMessage(error, 'Unable to check out.'));
     } finally {

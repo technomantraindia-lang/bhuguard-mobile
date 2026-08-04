@@ -1,32 +1,50 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
-import { artisanWorkCheckIn, getArtisanActiveCheckIn } from '../api/artisanApi';
+import { artisanWorkCheckIn, getArtisanActiveCheckIn, getArtisanAllocatedLocations } from '../api/artisanApi';
 import {
   buildTimeAuditMetadata,
   shouldBlockOfflineTimestampSubmit,
 } from '../services/serverTimeSync';
 import { safeNetInfoIsConnected } from '../utils/safeNetInfo';
 import { captureHighAccuracyGps } from '../utils/officerGpsCapture';
-import { resolveValidatedCaptureLocation } from '../utils/livePhotoLocation';
-import type { ApiRecord } from '../utils/apiHelpers';
+import { resolveAssignedVillageForCheckIn } from '../utils/resolveAssignedVillageForCheckIn';
+import { subscribeCheckInGateInvalidation } from '../utils/checkInGateEvents';
+import { normalizeAssignedArea, type ApiRecord } from '../utils/apiHelpers';
+import { getAuthUser } from '../utils/authStorage';
+import { getRoleDisplayName } from '../utils/roleDisplay';
+import type { AuthUser } from '../types/auth';
 
 export type ArtisanMandatoryCheckInPhase = 'checkingStatus' | 'granted' | 'blocked' | 'statusError';
+export type ArtisanMandatoryCheckInStage = 'idle' | 'locating' | 'submitting';
 
 export function useArtisanMandatoryCheckIn() {
   const [phase, setPhase] = useState<ArtisanMandatoryCheckInPhase>('checkingStatus');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [stage, setStage] = useState<ArtisanMandatoryCheckInStage>('idle');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [assignedAreaSummary, setAssignedAreaSummary] = useState<string | null>(null);
   const submitLockRef = useRef(false);
   const grantedRef = useRef(false);
   const requestRef = useRef(0);
 
-  const checkStatus = useCallback(() => {
+  useEffect(() => {
+    void getAuthUser().then((authUser) => {
+      setUser(authUser);
+    });
+  }, []);
+
+  const checkStatus = useCallback((options?: { silent?: boolean }) => {
     const requestId = requestRef.current + 1;
     requestRef.current = requestId;
-    setPhase('checkingStatus');
-    setStatusMessage(null);
+    const silent = options?.silent === true && grantedRef.current;
+
+    if (!silent) {
+      setPhase('checkingStatus');
+      setStatusMessage(null);
+    }
 
     void (async () => {
       try {
@@ -41,12 +59,14 @@ export function useArtisanMandatoryCheckIn() {
           grantedRef.current = true;
           setPhase('granted');
         } else {
+          grantedRef.current = false;
           setPhase('blocked');
         }
       } catch (error) {
         if (requestRef.current !== requestId) {
           return;
         }
+        grantedRef.current = false;
         setStatusMessage(error instanceof Error ? error.message : 'Unable to verify check-in status.');
         setPhase('statusError');
       }
@@ -59,11 +79,18 @@ export function useArtisanMandatoryCheckIn() {
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
-      if (next === 'active' && !grantedRef.current) {
-        checkStatus();
+      if (next === 'active') {
+        checkStatus({ silent: grantedRef.current });
       }
     });
     return () => sub.remove();
+  }, [checkStatus]);
+
+  useEffect(() => {
+    return subscribeCheckInGateInvalidation(() => {
+      grantedRef.current = false;
+      checkStatus();
+    });
   }, [checkStatus]);
 
   const submitCheckIn = useCallback(async () => {
@@ -73,8 +100,12 @@ export function useArtisanMandatoryCheckIn() {
     submitLockRef.current = true;
     setSubmitting(true);
     setSubmitError(null);
+    setStage('locating');
     try {
       const isOnline = await safeNetInfoIsConnected();
+      if (!isOnline) {
+        throw new Error('No internet connection. Reconnect and tap Retry — offline check-in is not allowed.');
+      }
       if (shouldBlockOfflineTimestampSubmit(isOnline)) {
         throw new Error(
           'Cannot check in offline without a recent server time sync. Reconnect, retry time sync, and try again.',
@@ -82,32 +113,33 @@ export function useArtisanMandatoryCheckIn() {
       }
 
       const gps = await captureHighAccuracyGps({ targetAccuracyM: 30, maxAttempts: 4, timeoutMs: 25000 });
-      const resolved = await resolveValidatedCaptureLocation(gps.latitude, gps.longitude);
+      setStage('submitting');
 
-      if (!resolved?.resolved || !resolved.villageId || !resolved.talukaId || !resolved.districtId) {
-        throw new Error('Unable to resolve Village / Taluka / District for check-in. Retry with better GPS.');
-      }
+      const allocated = normalizeAssignedArea(await getArtisanAllocatedLocations());
+      const triad = await resolveAssignedVillageForCheckIn(gps.latitude, gps.longitude, allocated);
+      setAssignedAreaSummary(triad.assignedSummary);
 
       await artisanWorkCheckIn({
         latitude: gps.latitude,
         longitude: gps.longitude,
         accuracy: gps.accuracyM,
         gps_accuracy: gps.accuracyM,
-        district_id: Number(resolved.districtId),
-        taluka_id: Number(resolved.talukaId),
-        village_id: Number(resolved.villageId),
-        district_name: resolved.district ?? null,
-        taluka_name: resolved.taluka ?? null,
-        village_name: resolved.village ?? null,
-        state_name: resolved.state ?? null,
+        district_id: triad.district_id,
+        taluka_id: triad.taluka_id,
+        village_id: triad.village_id,
+        district_name: triad.district_name ?? null,
+        taluka_name: triad.taluka_name ?? null,
+        village_name: triad.village_name ?? null,
+        state_name: triad.state_name ?? null,
         ...buildTimeAuditMetadata('artisan_check_in', {
           latitude: gps.latitude,
           longitude: gps.longitude,
           accuracyM: gps.accuracyM,
         }),
       });
-      grantedRef.current = true;
-      setPhase('granted');
+
+      grantedRef.current = false;
+      checkStatus();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to complete check-in.';
       if (/already checked in/i.test(message)) {
@@ -116,17 +148,41 @@ export function useArtisanMandatoryCheckIn() {
         setSubmitError(message);
       }
     } finally {
+      setStage('idle');
       setSubmitting(false);
       submitLockRef.current = false;
     }
   }, [checkStatus]);
 
-  return {
-    phase,
-    statusMessage,
-    submitting,
-    submitError,
-    checkStatus,
-    submitCheckIn,
-  };
+  return useMemo(
+    () => ({
+      phase,
+      statusMessage,
+      stage,
+      submitting,
+      submitError,
+      roleTitle: getRoleDisplayName('artisan'),
+      userName: user?.name?.trim() || user?.artisan_profile?.name?.trim() || 'Artisan Pro',
+      userId:
+        user?.artisan_profile?.artisan_code != null
+          ? String(user.artisan_profile.artisan_code)
+          : user?.id != null
+            ? String(user.id)
+            : '—',
+      assignedAreaSummary,
+      checkStatus,
+      submitCheckIn,
+    }),
+    [
+      phase,
+      statusMessage,
+      stage,
+      submitting,
+      submitError,
+      user,
+      assignedAreaSummary,
+      checkStatus,
+      submitCheckIn,
+    ],
+  );
 }

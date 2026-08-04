@@ -1,34 +1,24 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
-import { fieldOfficerLiveCheckIn, getFieldOfficerCheckInStatus } from '../api/fieldOfficerApi';
+import { fieldOfficerLiveCheckIn, getFieldOfficerAllocatedLocations, getFieldOfficerCheckInStatus } from '../api/fieldOfficerApi';
 import {
   buildTimeAuditMetadata,
   shouldBlockOfflineTimestampSubmit,
 } from '../services/serverTimeSync';
 import { safeNetInfoIsConnected } from '../utils/safeNetInfo';
 import { captureHighAccuracyGps } from '../utils/officerGpsCapture';
-import { resolveValidatedCaptureLocation } from '../utils/livePhotoLocation';
-import type { ApiRecord } from '../utils/apiHelpers';
+import { resolveAssignedVillageForCheckIn } from '../utils/resolveAssignedVillageForCheckIn';
+import { subscribeCheckInGateInvalidation } from '../utils/checkInGateEvents';
+import { normalizeAssignedArea, type ApiRecord } from '../utils/apiHelpers';
+import { getAuthUser } from '../utils/authStorage';
+import { getRoleDisplayName } from '../utils/roleDisplay';
+import type { AuthUser } from '../types/auth';
 
 export type MandatoryCheckInPhase = 'checkingStatus' | 'granted' | 'blocked' | 'statusError';
 export type MandatoryCheckInStage = 'idle' | 'locating' | 'submitting';
 
-const ADDRESS_RESOLVE_TIMEOUT_MS = 8000;
 const ALREADY_CHECKED_IN_PATTERN = /already checked in/i;
-
-async function resolveLocationSafely(latitude: number, longitude: number) {
-  try {
-    return await Promise.race([
-      resolveValidatedCaptureLocation(latitude, longitude),
-      new Promise<null>((resolve) => {
-        setTimeout(() => resolve(null), ADDRESS_RESOLVE_TIMEOUT_MS);
-      }),
-    ]);
-  } catch {
-    return null;
-  }
-}
 
 export interface UseFieldOfficerMandatoryCheckInResult {
   phase: MandatoryCheckInPhase;
@@ -36,7 +26,11 @@ export interface UseFieldOfficerMandatoryCheckInResult {
   stage: MandatoryCheckInStage;
   submitting: boolean;
   submitError: string | null;
-  checkStatus: () => void;
+  roleTitle: string;
+  userName: string;
+  userId: string;
+  assignedAreaSummary: string | null;
+  checkStatus: (options?: { silent?: boolean }) => void;
   submitCheckIn: () => Promise<void>;
 }
 
@@ -51,16 +45,28 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
   const [stage, setStage] = useState<MandatoryCheckInStage>('idle');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [assignedAreaSummary, setAssignedAreaSummary] = useState<string | null>(null);
 
   const statusRequestRef = useRef(0);
   const submitLockRef = useRef(false);
   const grantedRef = useRef(false);
 
-  const checkStatus = useCallback(() => {
+  useEffect(() => {
+    void getAuthUser().then((authUser) => {
+      setUser(authUser);
+    });
+  }, []);
+
+  const checkStatus = useCallback((options?: { silent?: boolean }) => {
     const requestId = statusRequestRef.current + 1;
     statusRequestRef.current = requestId;
-    setPhase('checkingStatus');
-    setStatusMessage(null);
+    const silent = options?.silent === true && grantedRef.current;
+
+    if (!silent) {
+      setPhase('checkingStatus');
+      setStatusMessage(null);
+    }
 
     void (async () => {
       try {
@@ -77,6 +83,7 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
           grantedRef.current = true;
           setPhase('granted');
         } else {
+          grantedRef.current = false;
           setPhase('blocked');
         }
       } catch (error) {
@@ -85,6 +92,7 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
         }
 
         // Fail closed: never grant dashboard access when status cannot be verified.
+        grantedRef.current = false;
         setStatusMessage(
           error instanceof Error ? error.message : 'Unable to verify your check-in status. Please try again.',
         );
@@ -99,12 +107,19 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (next: AppStateStatus) => {
-      if (next === 'active' && !grantedRef.current) {
-        checkStatus();
+      if (next === 'active') {
+        checkStatus({ silent: grantedRef.current });
       }
     });
 
     return () => subscription.remove();
+  }, [checkStatus]);
+
+  useEffect(() => {
+    return subscribeCheckInGateInvalidation(() => {
+      grantedRef.current = false;
+      checkStatus();
+    });
   }, [checkStatus]);
 
   const submitCheckIn = useCallback(async () => {
@@ -119,6 +134,9 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
 
     try {
       const isOnline = await safeNetInfoIsConnected();
+      if (!isOnline) {
+        throw new Error('No internet connection. Reconnect and tap Retry — offline check-in is not allowed.');
+      }
       if (shouldBlockOfflineTimestampSubmit(isOnline)) {
         throw new Error(
           'Cannot check in offline without a recent server time sync. Reconnect, retry time sync, and try again.',
@@ -129,13 +147,21 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
 
       setStage('submitting');
 
-      const resolvedLocation = await resolveLocationSafely(gps.latitude, gps.longitude);
+      const allocated = normalizeAssignedArea(await getFieldOfficerAllocatedLocations());
+      const triad = await resolveAssignedVillageForCheckIn(gps.latitude, gps.longitude, allocated);
+      setAssignedAreaSummary(triad.assignedSummary);
 
       const payload: ApiRecord = {
         latitude: gps.latitude,
         longitude: gps.longitude,
         accuracy: gps.accuracyM,
         gps_accuracy: gps.accuracyM,
+        village_id: triad.village_id,
+        taluka_id: triad.taluka_id,
+        district_id: triad.district_id,
+        village_name: triad.village_name,
+        taluka_name: triad.taluka_name,
+        district_name: triad.district_name,
         ...buildTimeAuditMetadata('field_officer_check_in', {
           latitude: gps.latitude,
           longitude: gps.longitude,
@@ -147,23 +173,12 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
         payload.altitude = gps.altitude;
       }
 
-      if (resolvedLocation?.resolved) {
-        if (resolvedLocation.villageId) {
-          payload.village_id = resolvedLocation.villageId;
-        }
-        if (resolvedLocation.talukaId) {
-          payload.taluka_id = resolvedLocation.talukaId;
-        }
-        if (resolvedLocation.districtId) {
-          payload.district_id = resolvedLocation.districtId;
-        }
-      }
-
       // Server sets check_in_time authoritatively; the device never supplies it.
       await fieldOfficerLiveCheckIn(payload);
 
-      grantedRef.current = true;
-      setPhase('granted');
+      // Re-verify server state before unlocking dashboard (no fake local grant).
+      grantedRef.current = false;
+      checkStatus();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to complete check-in. Please try again.';
 
@@ -180,13 +195,30 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
     }
   }, [checkStatus]);
 
-  return {
-    phase,
-    statusMessage,
-    stage,
-    submitting,
-    submitError,
-    checkStatus,
-    submitCheckIn,
-  };
+  return useMemo(
+    () => ({
+      phase,
+      statusMessage,
+      stage,
+      submitting,
+      submitError,
+      roleTitle: getRoleDisplayName('field_officer'),
+      userName: user?.name?.trim() || 'Field Officer',
+      userId: user?.id != null ? String(user.id) : '—',
+      assignedAreaSummary,
+      checkStatus,
+      submitCheckIn,
+    }),
+    [
+      phase,
+      statusMessage,
+      stage,
+      submitting,
+      submitError,
+      user,
+      assignedAreaSummary,
+      checkStatus,
+      submitCheckIn,
+    ],
+  );
 }

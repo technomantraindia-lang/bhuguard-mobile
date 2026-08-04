@@ -84,7 +84,7 @@ function assertScreenComponent(name: string, component: unknown): void {
 
 assertScreenComponent('FieldOfficerProfile', FieldOfficerProfileScreen);
 assertScreenComponent('FieldOfficerProfileSection', FieldOfficerProfileSectionScreen);
-assertScreenComponent('FieldOfficerTabs', FieldOfficerCheckInGate);
+assertScreenComponent('FieldOfficerTabs', OfficerTabNavigator);
 assertScreenComponent('SupportThreads', OfficerSupportThreadsRoute);
 assertScreenComponent('ChatbotSupport', OfficerChatbotSupportRoute);
 assertScreenComponent('SupportChat', SupportChatScreenRoute);
@@ -93,8 +93,9 @@ export function OfficerNavigator() {
   return (
     <OnboardingProvider>
       <BoundaryCaptureProvider>
+      <FieldOfficerCheckInGate>
       <Stack.Navigator initialRouteName="FieldOfficerTabs" layout={({ children }) => <RoleAppLayout>{children}</RoleAppLayout>} screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="FieldOfficerTabs" component={FieldOfficerCheckInGate} />
+        <Stack.Screen name="FieldOfficerTabs" component={OfficerTabNavigator} />
         <Stack.Screen name="StitchScreen" component={StitchScreenRoute} />
         <Stack.Screen name="FieldOfficerProfile" component={FieldOfficerProfileScreen} />
         <Stack.Screen name="FieldOfficerProfileSection" component={FieldOfficerProfileSectionScreen} />
@@ -243,6 +244,7 @@ export function OfficerNavigator() {
         <Stack.Screen name="CreateSupportThread" component={CreateSupportThreadScreen} />
         <Stack.Screen name="SupportChat" component={SupportChatScreenRoute} />
       </Stack.Navigator>
+      </FieldOfficerCheckInGate>
       </BoundaryCaptureProvider>
     </OnboardingProvider>
   );

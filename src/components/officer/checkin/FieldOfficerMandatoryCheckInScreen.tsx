@@ -19,12 +19,16 @@ interface FieldOfficerMandatoryCheckInScreenProps {
   stage: MandatoryCheckInStage;
   submitting: boolean;
   submitError: string | null;
+  roleTitle: string;
+  userName: string;
+  userId: string;
+  assignedAreaSummary: string | null;
   onRetryStatus: () => void;
   onSubmitCheckIn: () => void;
 }
 
 /**
- * Mandatory gate rendered instead of the FO tab navigator until an active
+ * Mandatory gate rendered instead of the FO app shell until an active
  * duty check-in session exists on the server. Cannot be dismissed via back
  * navigation — only Retry or Logout are available, and the dashboard is
  * never revealed on a network/server failure (no fake success).
@@ -35,6 +39,10 @@ export function FieldOfficerMandatoryCheckInScreen({
   stage,
   submitting,
   submitError,
+  roleTitle,
+  userName,
+  userId,
+  assignedAreaSummary,
   onRetryStatus,
   onSubmitCheckIn,
 }: FieldOfficerMandatoryCheckInScreenProps) {
@@ -80,10 +88,24 @@ export function FieldOfficerMandatoryCheckInScreen({
           <BhuguardMaterialIcon name="share_location" size={40} color={officerTheme.onPrimary} filled />
         </View>
 
+        <Text style={styles.roleTitle}>{roleTitle}</Text>
         <Text style={styles.title}>{t('officer.checkIn.title')}</Text>
         <Text style={styles.subtitle}>{t('officer.checkIn.subtitle')}</Text>
 
         <View style={[styles.card, officerCardShadow]}>
+          <View style={styles.identityBlock}>
+            <Text style={styles.identityLabel}>Name</Text>
+            <Text style={styles.identityValue}>{userName}</Text>
+            <Text style={styles.identityLabel}>User ID</Text>
+            <Text style={styles.identityValue}>{userId}</Text>
+            {assignedAreaSummary ? (
+              <>
+                <Text style={styles.identityLabel}>Assigned area</Text>
+                <Text style={styles.identityValue}>{assignedAreaSummary}</Text>
+              </>
+            ) : null}
+          </View>
+
           {isStatusError ? (
             <View style={styles.banner}>
               <BhuguardMaterialIcon name="cloud_off" size={18} color={officerTheme.error} />
@@ -134,15 +156,13 @@ export function FieldOfficerMandatoryCheckInScreen({
             disabled={submitting}
           />
 
-          {isStatusError ? (
-            <AppButton
-              label={t('common.retry')}
-              variant="secondary"
-              onPress={onRetryStatus}
-              disabled={submitting}
-              style={styles.retryButton}
-            />
-          ) : null}
+          <AppButton
+            label={t('common.retry')}
+            variant="secondary"
+            onPress={onRetryStatus}
+            disabled={submitting}
+            style={styles.retryButton}
+          />
 
           <AppButton
             label={t('common.logout')}
@@ -179,6 +199,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 4,
   },
+  roleTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    color: officerTheme.primary,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
   title: {
     fontSize: 22,
     fontWeight: '700',
@@ -200,6 +228,22 @@ const styles = StyleSheet.create({
     borderColor: officerTheme.outlineVariant,
     padding: 20,
     gap: 12,
+  },
+  identityBlock: {
+    gap: 2,
+    marginBottom: 4,
+  },
+  identityLabel: {
+    marginTop: 6,
+    fontSize: 11,
+    fontWeight: '600',
+    color: officerTheme.onSurfaceVariant,
+    textTransform: 'uppercase',
+  },
+  identityValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: officerTheme.onSurface,
   },
   banner: {
     flexDirection: 'row',

@@ -1,16 +1,22 @@
-import { OfficerTabNavigator } from '../../../navigation/OfficerTabNavigator';
+import type { ReactNode } from 'react';
+
 import { useFieldOfficerMandatoryCheckIn } from '../../../hooks/useFieldOfficerMandatoryCheckIn';
 import { FieldOfficerMandatoryCheckInScreen } from './FieldOfficerMandatoryCheckInScreen';
 
+type Props = {
+  children: ReactNode;
+};
+
 /**
- * Blocks access to the FO tab navigator until an active duty check-in
+ * Blocks the entire Field Officer app shell until an active duty check-in
  * session is confirmed with the server. Fail-closed on status errors.
+ * Children (dashboard + stack routes) never mount while blocked.
  */
-export function FieldOfficerCheckInGate() {
+export function FieldOfficerCheckInGate({ children }: Props) {
   const checkIn = useFieldOfficerMandatoryCheckIn();
 
   if (checkIn.phase === 'granted') {
-    return <OfficerTabNavigator />;
+    return <>{children}</>;
   }
 
   return (
@@ -20,7 +26,11 @@ export function FieldOfficerCheckInGate() {
       stage={checkIn.stage}
       submitting={checkIn.submitting}
       submitError={checkIn.submitError}
-      onRetryStatus={checkIn.checkStatus}
+      roleTitle={checkIn.roleTitle}
+      userName={checkIn.userName}
+      userId={checkIn.userId}
+      assignedAreaSummary={checkIn.assignedAreaSummary}
+      onRetryStatus={() => checkIn.checkStatus()}
       onSubmitCheckIn={() => {
         void checkIn.submitCheckIn();
       }}
