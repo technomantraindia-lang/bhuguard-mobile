@@ -61,18 +61,35 @@ export const LOCAL_API_BASE_URL = normalizeApiUrl(
  * Development uses EXPO_PUBLIC_API_URL (or LAN default) — never silent production fallback.
  * Production builds fall back to live ERP when EXPO_PUBLIC_API_URL is missing/invalid.
  */
+function isLanOrLoopbackApiUrl(raw: string): boolean {
+  try {
+    const host = new URL(raw.replace(/\/api\/?$/, '') || raw).hostname.toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '10.0.2.2') {
+      return true;
+    }
+    if (/^192\.168\./.test(host) || /^10\./.test(host)) {
+      return true;
+    }
+    return /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+  } catch {
+    return false;
+  }
+}
+
 export function resolveBuildApiBaseUrl(): string {
   const fromEnv = process.env.EXPO_PUBLIC_API_URL?.trim();
+  const productionBuild = APP_VARIANT === 'production' || APP_VARIANT === 'demo';
 
   if (
     fromEnv &&
     !isPlaceholderApiUrl(fromEnv) &&
-    !isTryCloudflareTunnelUrl(fromEnv)
+    !isTryCloudflareTunnelUrl(fromEnv) &&
+    !(productionBuild && isLanOrLoopbackApiUrl(fromEnv))
   ) {
     return normalizeApiUrl(fromEnv);
   }
 
-  if (isDevelopmentApiVariant()) {
+  if (isDevelopmentApiVariant() && !productionBuild) {
     const local =
       process.env.EXPO_PUBLIC_DEV_LOCAL_API_URL?.trim() || DEFAULT_DEV_LOCAL_API_BASE_URL;
 

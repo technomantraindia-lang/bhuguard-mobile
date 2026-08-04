@@ -161,6 +161,22 @@ export async function getApiBaseUrl(): Promise<string> {
 
 export async function saveApiBaseUrl(input: string): Promise<string> {
   const normalized = normalizeApiBaseUrl(input);
+
+  // Production / demo builds must never persist LAN / tunnel overrides.
+  if (!isDevelopmentApiVariant()) {
+    const live = PRODUCTION_API_BASE_URL;
+    if (
+      isPlaceholderApiUrl(normalized) ||
+      isTryCloudflareTunnelUrl(normalized) ||
+      isLocalNetworkApiUrl(normalized) ||
+      !isLiveProductionApiUrl(normalized)
+    ) {
+      cachedApiBaseUrl = live;
+      await AsyncStorage.setItem(API_BASE_URL_KEY, live);
+      return live;
+    }
+  }
+
   cachedApiBaseUrl = normalized;
   await AsyncStorage.setItem(API_BASE_URL_KEY, normalized);
   return normalized;
