@@ -109,7 +109,7 @@ export const FRAUD_MARQUEE_STRIP_HEIGHT = STRIP_HEIGHT;
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: '#3A120F',
+    backgroundColor: '#0B3D2E',
     zIndex: 50,
   },
   strip: {
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     left: 0,
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFE8E4',
+    color: '#FFFFFF',
     letterSpacing: 0.2,
     paddingHorizontal: 12,
   },

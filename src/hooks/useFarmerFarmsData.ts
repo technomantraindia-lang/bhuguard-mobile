@@ -47,6 +47,10 @@ export function useFarmerFarmsData() {
           .map((farm) => ({
             ...farm,
             farmerName: farm.farmerName || profileName,
+            farmerDisplayId: farm.farmerDisplayId || formatFarmerDisplayId({
+              farmer_display_id: profile.farmer_display_id ?? authRecord.farmer_display_id,
+              farmer_code: profile.farmer_code ?? authRecord.farmer_code,
+            }),
           })),
       );
     } catch (err) {

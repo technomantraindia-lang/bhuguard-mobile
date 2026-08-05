@@ -1,16 +1,11 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-
 import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
 import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 import type { FarmerFarmViewModel } from '../../utils/farmMapHelpers';
 
 interface FarmerFarmListCardProps {
   farm: FarmerFarmViewModel;
-  onViewDetails: () => void;
   onViewActivities: () => void;
-  onCompleteMapping: () => void;
-  onViewFarm: () => void;
-  onOpenMap: () => void;
 }
 
 function StatusBadge({
@@ -38,14 +33,7 @@ function StatusBadge({
   );
 }
 
-export function FarmerFarmListCard({
-  farm,
-  onViewDetails,
-  onViewActivities,
-  onCompleteMapping,
-  onViewFarm,
-  onOpenMap,
-}: FarmerFarmListCardProps) {
+export function FarmerFarmListCard({ farm, onViewActivities }: FarmerFarmListCardProps) {
   const verificationLabel =
     farm.verificationBadge === 'verified'
       ? 'Verified'
@@ -58,7 +46,7 @@ export function FarmerFarmListCard({
 
   return (
     <View style={[styles.card, dashboardShadow]}>
-      <Pressable style={styles.headerPress} onPress={onViewDetails}>
+      <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
           <Text style={styles.fieldLabel}>Farm Name</Text>
           <Text style={styles.name}>{farm.name}</Text>
@@ -82,37 +70,21 @@ export function FarmerFarmListCard({
             icon={farm.mappingBadge === 'mapped' ? 'map' : 'location_on'}
           />
         </View>
-      </Pressable>
+      </View>
 
-      <Pressable style={styles.metrics} onPress={onOpenMap}>
+      <View style={styles.metrics}>
         <View style={styles.metricItem}>
           <Text style={styles.metricLabel}>Acre</Text>
-          <Text style={styles.metricValue}>{farm.areaLabel}</Text>
+          <Text style={styles.metricValue}>{farm.areaDisplay.acres}</Text>
         </View>
         <View style={styles.metricItem}>
           <Text style={styles.metricLabel}>Hectare</Text>
-          <Text style={styles.metricValue}>{farm.hectareLabel}</Text>
+          <Text style={styles.metricValue}>{farm.areaDisplay.hectares}</Text>
         </View>
         <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>Boundary</Text>
-          <Text style={styles.metricValue}>{farm.boundaryMapped ? 'Mapped' : 'Pending'}</Text>
+          <Text style={styles.metricLabel}>Square Meter</Text>
+          <Text style={styles.metricValue}>{farm.areaDisplay.squareMeters}</Text>
         </View>
-      </Pressable>
-
-      <View style={styles.actions}>
-        <Pressable style={({ pressed }) => [styles.outlineButton, pressed && styles.pressed]} onPress={onViewDetails}>
-          <Text style={styles.outlineButtonText}>View Details</Text>
-        </Pressable>
-
-        {farm.boundaryMapped ? (
-          <Pressable style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]} onPress={onViewFarm}>
-            <Text style={styles.secondaryButtonText}>View Farm</Text>
-          </Pressable>
-        ) : (
-          <Pressable style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]} onPress={onCompleteMapping}>
-            <Text style={styles.primaryButtonText}>Complete Farm Mapping</Text>
-          </Pressable>
-        )}
       </View>
 
       <Pressable style={({ pressed }) => [styles.activityButton, pressed && styles.pressed]} onPress={onViewActivities}>
@@ -131,7 +103,7 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 12,
   },
-  headerPress: {
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
@@ -203,52 +175,10 @@ const styles = StyleSheet.create({
     color: dashboardTheme.outline,
   },
   metricValue: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '500',
     color: dashboardTheme.onSurface,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  outlineButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: dashboardTheme.outlineVariant,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-    backgroundColor: dashboardTheme.surfaceLowest,
-  },
-  outlineButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: dashboardTheme.primary,
-  },
-  secondaryButton: {
-    flex: 1,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-    backgroundColor: dashboardTheme.surfaceLow,
-  },
-  secondaryButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: dashboardTheme.primaryContainer,
-  },
-  primaryButton: {
-    flex: 1,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-    backgroundColor: dashboardTheme.primaryContainer,
-  },
-  primaryButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: dashboardTheme.onPrimary,
   },
   activityButton: {
     borderRadius: 8,

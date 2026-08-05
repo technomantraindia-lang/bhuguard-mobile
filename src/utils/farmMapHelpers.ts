@@ -2,6 +2,15 @@ import { Linking, Platform } from 'react-native';
 
 import type { ApiRecord } from './apiHelpers';
 import { pickString } from './apiHelpers';
+import {
+  convertFarmAreaFromRecord,
+  formatFarmAreaAcre,
+  formatFarmAreaDisplay,
+  type FarmAreaDisplayLabels,
+  type FarmAreaTriple,
+} from './farmAreaUnits';
+import { resolveFarmIdentityLabelCoordinate } from './farmIdentityMapLabel';
+import type { LatLng } from './farmSatelliteMap';
 
 export interface FarmCoordinates {
   latitude: number;
@@ -16,10 +25,13 @@ export interface FarmerFarmViewModel {
   name: string;
   code: string;
   farmerName: string;
+  farmerDisplayId: string;
   village: string;
   areaLabel: string;
   hectareLabel: string;
-  bighaLabel: string;
+  squareMeterLabel: string;
+  areaDisplay: FarmAreaDisplayLabels;
+  areaTriple: FarmAreaTriple | null;
   cropLabel: string;
   soilLabel: string;
   verificationBadge: FarmVerificationBadge;
@@ -40,6 +52,51 @@ function parseNumber(value: unknown): number | null {
   return parsed;
 }
 
+function parsePolygonPoint(point: unknown): LatLng | null {
+  if (!point || typeof point !== 'object') {
+    if (Array.isArray(point) && point.length >= 2) {
+      const latitude = parseNumber(point[0]);
+      const longitude = parseNumber(point[1]);
+
+      if (latitude === null || longitude === null) {
+        return null;
+      }
+
+      if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+        return null;
+      }
+
+      return { latitude, longitude };
+    }
+
+    return null;
+  }
+
+  const record = point as Record<string, unknown>;
+  const latitude = parseNumber(record.latitude ?? record.lat);
+  const longitude = parseNumber(record.longitude ?? record.lng ?? record.lon);
+
+  if (latitude === null || longitude === null) {
+    return null;
+  }
+
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return null;
+  }
+
+  return { latitude, longitude };
+}
+
+export function parseStoredFarmPolygon(farm: ApiRecord): LatLng[] {
+  const raw = farm.gps_polygon;
+
+  if (!Array.isArray(raw) || raw.length < 3) {
+    return [];
+  }
+
+  return raw.map(parsePolygonPoint).filter((point): point is LatLng => point !== null);
+}
+
 export function getFarmCoordinates(farm: ApiRecord): FarmCoordinates | null {
   const lat = parseNumber(farm.gps_latitude ?? farm.latitude);
   const lng = parseNumber(farm.gps_longitude ?? farm.longitude);
@@ -55,6 +112,16 @@ export function getFarmCoordinates(farm: ApiRecord): FarmCoordinates | null {
   return { latitude: lat, longitude: lng };
 }
 
+export function resolveFarmMapCoordinate(farm: ApiRecord): FarmCoordinates | null {
+  const polygon = parseStoredFarmPolygon(farm);
+  const farmGps = getFarmCoordinates(farm);
+
+  return resolveFarmIdentityLabelCoordinate({
+    polygon,
+    farmGps,
+  });
+}
+
 export function isFarmMapped(farm: ApiRecord): boolean {
   if (farm.boundary_mapped === true) {
     return true;
@@ -66,9 +133,9 @@ export function isFarmMapped(farm: ApiRecord): boolean {
     return true;
   }
 
-  const status = pickString(farm, 'boundary_status').toLowerCase();
+  const status = pickString(farm, 'boundary_status', 'mapping_status').toLowerCase();
 
-  return ['mapped', 'verified'].includes(status);
+  return ['mapped', 'verified', 'completed'].includes(status);
 }
 
 export function getFarmVerificationBadge(farm: ApiRecord): FarmVerificationBadge {
@@ -85,35 +152,17 @@ export function getFarmVerificationBadge(farm: ApiRecord): FarmVerificationBadge
   return 'pending';
 }
 
-export function getFarmAreaLabel(farm: ApiRecord): string {
-  const area = parseNumber(farm.land_area ?? farm.area_acres);
-
-  if (area === null || area <= 0) {
-    return '—';
-  }
-
-  const unitRaw = pickString(farm, 'land_area_unit', 'area_unit').toLowerCase();
-  // Phase 12.3 — Farmer mobile UI shows Acre / Hectare only. Convert Bigha for display.
-  let displayArea = area;
-  let unitLabel = 'Acres';
-
-  if (unitRaw.includes('hect')) {
-    unitLabel = 'Hectares';
-  } else if (unitRaw.includes('bigha')) {
-    displayArea = area / 1.613;
-    unitLabel = 'Acres';
-  } else {
-    unitLabel = 'Acres';
-  }
-
-  const formatted = displayArea % 1 === 0 ? displayArea.toFixed(0) : displayArea.toFixed(2);
-  return `${formatted} ${unitLabel}`;
+export function getFarmAreaTriple(farm: ApiRecord): FarmAreaTriple | null {
+  return convertFarmAreaFromRecord(farm as Record<string, unknown>);
 }
 
-// Never fabricate a local farm code (e.g. "BG-FARM-000") — Farm ID is either
-// the server-issued farm_code or the existing numeric farm id, per Phase 6/12.
+export function getFarmAreaLabel(farm: ApiRecord): string {
+  return formatFarmAreaAcre(getFarmAreaTriple(farm));
+}
+
 export function getFarmCode(farm: ApiRecord): string {
   const display = pickString(farm, 'farm_display_id', 'display_id');
+
   if (display !== '-') {
     return display;
   }
@@ -139,12 +188,10 @@ export function getFarmLocationLabel(farm: ApiRecord): string {
 }
 
 export function mapFarmRecord(farm: ApiRecord): FarmerFarmViewModel {
-  const coordinates = getFarmCoordinates(farm);
+  const coordinates = resolveFarmMapCoordinate(farm);
   const mapped = isFarmMapped(farm);
-  const acres = Number(farm.area_acres ?? farm.land_area ?? 0);
-  const hectares = Number(farm.area_hectares ?? (acres ? acres * 0.404686 : 0));
-  // Keep bigha calc for stored conversion only — never shown in Farmer UI.
-  const bigha = acres ? acres * 1.613 : 0;
+  const areaTriple = getFarmAreaTriple(farm);
+  const areaDisplay = formatFarmAreaDisplay(areaTriple);
 
   return {
     id: Number(farm.id),
@@ -154,10 +201,16 @@ export function mapFarmRecord(farm: ApiRecord): FarmerFarmViewModel {
       pickString(farm, 'farmer_name', 'farmerName', 'owner_name') !== '-'
         ? pickString(farm, 'farmer_name', 'farmerName', 'owner_name')
         : '',
+    farmerDisplayId:
+      pickString(farm, 'farmer_display_id', 'farmer_id', 'farmer_code') !== '-'
+        ? pickString(farm, 'farmer_display_id', 'farmer_id', 'farmer_code')
+        : '',
     village: pickString(farm, 'village') !== '-' ? pickString(farm, 'village') : '—',
-    areaLabel: getFarmAreaLabel(farm),
-    hectareLabel: hectares > 0 ? `${hectares.toFixed(2)} Hectare` : '—',
-    bighaLabel: '', // Hidden from Farmer mobile UI (Phase 12.3).
+    areaLabel: areaDisplay.acres,
+    hectareLabel: areaDisplay.hectares,
+    squareMeterLabel: areaDisplay.squareMeters,
+    areaDisplay,
+    areaTriple,
     cropLabel: pickString(farm, 'crop_type', 'current_crop') !== '-' ? pickString(farm, 'crop_type', 'current_crop') : '—',
     soilLabel: pickString(farm, 'soil_type') !== '-' ? pickString(farm, 'soil_type') : '—',
     verificationBadge: getFarmVerificationBadge(farm),
@@ -224,8 +277,7 @@ export async function openGoogleMaps(coordinates: FarmCoordinates, label?: strin
 }
 
 export function buildFarmSummary(farms: FarmerFarmViewModel[]) {
-  let totalLand = 0;
-  let landUnit = 'Acres';
+  let totalAcres = 0;
   let verifiedCount = 0;
   let pendingCount = 0;
 
@@ -236,17 +288,14 @@ export function buildFarmSummary(farms: FarmerFarmViewModel[]) {
       pendingCount += 1;
     }
 
-    const match = farm.areaLabel.match(/^([\d.]+)\s+(.+)$/);
-
-    if (match) {
-      totalLand += Number(match[1]);
-      landUnit = match[2];
+    if (farm.areaTriple) {
+      totalAcres += farm.areaTriple.acres;
     }
   }
 
   return {
     totalFarms: farms.length,
-    totalLandLabel: totalLand > 0 ? `${totalLand % 1 === 0 ? totalLand.toFixed(0) : totalLand.toFixed(1)} ${landUnit}` : '—',
+    totalLandLabel: totalAcres > 0 ? formatFarmAreaAcre({ acres: totalAcres, hectares: totalAcres * 0.4047, squareMeters: totalAcres * 4046.86 }) : '—',
     verifiedCount,
     pendingCount,
   };

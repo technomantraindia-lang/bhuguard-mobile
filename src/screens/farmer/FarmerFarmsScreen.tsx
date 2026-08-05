@@ -24,10 +24,10 @@ import { FarmerFarmsMapOverview } from '../../components/farmer/FarmerFarmsMapOv
 import { FarmerFarmsSummaryCard } from '../../components/farmer/FarmerFarmsSummaryCard';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
 import { useFarmerFarmsData } from '../../hooks/useFarmerFarmsData';
-import { useFabBottomOffset, useScrollBottomPadding } from '../../hooks/useTabBarLayout';
+import { useScrollBottomPadding } from '../../hooks/useTabBarLayout';
 import { useUnreadNotificationCount } from '../../hooks/useUnreadNotificationCount';
 import type { FarmerStackParamList, FarmerTabParamList } from '../../navigation/types';
-import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTheme';
+import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 import { openGoogleMaps } from '../../utils/farmMapHelpers';
 
 type Nav = CompositeNavigationProp<
@@ -49,7 +49,6 @@ export function FarmerFarmsScreen() {
   const {
     farms,
     allFarms,
-    farmerName,
     farmerDisplayId,
     summary,
     loading,
@@ -61,26 +60,12 @@ export function FarmerFarmsScreen() {
     reload,
   } = useFarmerFarmsData();
   const scrollBottomPadding = useScrollBottomPadding(24);
-  const fabBottom = useFabBottomOffset();
 
   useFocusEffect(
     useCallback(() => {
       void reload();
     }, [reload]),
   );
-
-  const mappedCoordinates = useMemo(
-    () => allFarms.map((farm) => farm.coordinates).filter((point) => point !== null),
-    [allFarms],
-  );
-
-  const farmerDisplayName = useMemo(() => {
-    return (
-      farmerName
-      || allFarms.find((farm) => farm.farmerName)?.farmerName
-      || ''
-    );
-  }, [allFarms, farmerName]);
 
   const openFirstMappedFarm = async () => {
     const first = allFarms.find((farm) => farm.coordinates);
@@ -131,9 +116,7 @@ export function FarmerFarmsScreen() {
             />
 
             <FarmerFarmsMapOverview
-              coordinates={mappedCoordinates}
               farms={allFarms}
-              farmerName={farmerDisplayName}
               farmerDisplayId={farmerDisplayId}
               onOpenMaps={openFirstMappedFarm}
             />
@@ -168,39 +151,7 @@ export function FarmerFarmsScreen() {
         renderItem={({ item }) => (
           <FarmerFarmListCard
             farm={item}
-            onViewDetails={() => navigation.navigate('FarmerFarmDetail', { farmId: item.id })}
             onViewActivities={() => navigation.navigate('Activities')}
-            onCompleteMapping={() => navigation.navigate('FarmBoundaryStart', { farmId: item.id })}
-            onViewFarm={() =>
-              navigation.navigate('FarmerFarmBoundaryView', {
-                farmId: item.id,
-                farmerName: farmerDisplayName || item.farmerName,
-                farmName: item.name,
-                farmCode: item.code,
-                village: item.village,
-                areaLabel: item.areaLabel,
-              })
-            }
-            onOpenMap={async () => {
-              if (item.boundaryMapped) {
-                navigation.navigate('FarmerFarmBoundaryView', {
-                  farmId: item.id,
-                  farmerName: farmerDisplayName || item.farmerName,
-                  farmName: item.name,
-                  farmCode: item.code,
-                  village: item.village,
-                  areaLabel: item.areaLabel,
-                });
-                return;
-              }
-
-              if (item.coordinates) {
-                await openGoogleMaps(item.coordinates, item.name);
-                return;
-              }
-
-              navigation.navigate('FarmBoundaryStart', { farmId: item.id });
-            }}
           />
         )}
         ListEmptyComponent={

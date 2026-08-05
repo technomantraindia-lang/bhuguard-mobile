@@ -72,16 +72,10 @@ export function FarmerMyActivitiesScreen() {
       || dueLabel.toLowerCase().includes('overdue');
 
     return (
-      <Pressable
+      <View
         key={String(id)}
         style={styles.recordCard}
-        onPress={() =>
-          navigation.navigate('FarmerFarmActivity', {
-            activityId: id,
-            farmId: Number(record.farm_id) || undefined,
-          })
-        }
-        accessibilityRole="button"
+        accessibilityRole="text"
       >
         <View style={styles.recordHeader}>
           <Text style={styles.recordTitle}>Farm Activity</Text>
@@ -106,7 +100,7 @@ export function FarmerMyActivitiesScreen() {
           {formatLocalizedDate(photoUploadDate || nextFarmPhotoUploadDate, language)}
         </Text>
         <Text style={styles.recordHint}>View only — Field Officer completes visits</Text>
-      </Pressable>
+      </View>
     );
   };
 
