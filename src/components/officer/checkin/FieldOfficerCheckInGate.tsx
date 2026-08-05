@@ -30,9 +30,13 @@ export function FieldOfficerCheckInGate({ children }: Props) {
       userName={checkIn.userName}
       userId={checkIn.userId}
       assignedAreaSummary={checkIn.assignedAreaSummary}
+      assignedAreasDetail={checkIn.assignedAreasDetail}
       onRetryStatus={() => checkIn.checkStatus()}
       onSubmitCheckIn={() => {
         void checkIn.submitCheckIn();
+      }}
+      onRefreshAssignments={() => {
+        void checkIn.refreshAssignments();
       }}
     />
   );

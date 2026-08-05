@@ -1,5 +1,15 @@
-import { useEffect } from 'react';
-import { ActivityIndicator, Alert, BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  BackHandler,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { AppButton } from '../../AppButton';
 import { OfficerScreenChrome } from '../OfficerScreenChrome';
@@ -7,24 +17,28 @@ import { BhuguardMaterialIcon } from '../../shared/BhuguardMaterialIcon';
 import type {
   MandatoryCheckInPhase,
   MandatoryCheckInStage,
+  MandatoryCheckInSubmitError,
 } from '../../../hooks/useFieldOfficerMandatoryCheckIn';
 import { useLogout } from '../../../hooks/useLogout';
 import { useServerTimeSync } from '../../../hooks/useServerTimeSync';
 import { useTranslation } from '../../../i18n/I18nContext';
 import { officerCardShadow, officerTheme } from '../../../theme/officerDashboardTheme';
+import type { AssignedLocationsPayload } from '../../../types/assignedLocations';
 
 interface FieldOfficerMandatoryCheckInScreenProps {
   phase: MandatoryCheckInPhase;
   statusMessage: string | null;
   stage: MandatoryCheckInStage;
   submitting: boolean;
-  submitError: string | null;
+  submitError: MandatoryCheckInSubmitError | null;
   roleTitle: string;
   userName: string;
   userId: string;
   assignedAreaSummary: string | null;
+  assignedAreasDetail: AssignedLocationsPayload | null;
   onRetryStatus: () => void;
   onSubmitCheckIn: () => void;
+  onRefreshAssignments: () => void;
 }
 
 /**
@@ -43,12 +57,15 @@ export function FieldOfficerMandatoryCheckInScreen({
   userName,
   userId,
   assignedAreaSummary,
+  assignedAreasDetail,
   onRetryStatus,
   onSubmitCheckIn,
+  onRefreshAssignments,
 }: FieldOfficerMandatoryCheckInScreenProps) {
   const { t } = useTranslation();
   const logout = useLogout();
   const serverTime = useServerTimeSync();
+  const [areasVisible, setAreasVisible] = useState(false);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => true);
@@ -61,6 +78,20 @@ export function FieldOfficerMandatoryCheckInScreen({
       { text: t('common.logout'), style: 'destructive', onPress: () => void logout() },
     ]);
   };
+
+  const currentLocationLine = useMemo(() => {
+    const current = submitError?.currentLocation;
+    if (!current) {
+      return null;
+    }
+    const parts = [
+      current.locality ? `Locality: ${current.locality}` : null,
+      current.village ? `Village: ${current.village}` : null,
+      current.taluka ? `Taluka: ${current.taluka}` : null,
+      current.district ? `District: ${current.district}` : null,
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(' · ') : null;
+  }, [submitError?.currentLocation]);
 
   if (phase === 'checkingStatus') {
     return (
@@ -77,9 +108,11 @@ export function FieldOfficerMandatoryCheckInScreen({
   const stageLabel =
     stage === 'locating'
       ? t('officer.checkIn.stageLocating')
-      : stage === 'submitting'
-        ? t('officer.checkIn.stageSubmitting')
-        : null;
+      : stage === 'refreshingAssignments'
+        ? 'Refreshing assignments…'
+        : stage === 'submitting'
+          ? t('officer.checkIn.stageSubmitting')
+          : null;
 
   return (
     <OfficerScreenChrome>
@@ -116,7 +149,15 @@ export function FieldOfficerMandatoryCheckInScreen({
           {submitError ? (
             <View style={styles.banner}>
               <BhuguardMaterialIcon name="cloud_off" size={18} color={officerTheme.error} />
-              <Text style={styles.bannerText}>{submitError}</Text>
+              <View style={styles.bannerCopy}>
+                <Text style={styles.bannerText}>{submitError.message}</Text>
+                {currentLocationLine ? (
+                  <Text style={styles.bannerMeta}>Current location: {currentLocationLine}</Text>
+                ) : null}
+                {submitError.assignedSummary ? (
+                  <Text style={styles.bannerMeta}>Assigned: {submitError.assignedSummary}</Text>
+                ) : null}
+              </View>
             </View>
           ) : null}
 
@@ -157,9 +198,31 @@ export function FieldOfficerMandatoryCheckInScreen({
           />
 
           <AppButton
-            label={t('common.retry')}
+            label={
+              isStatusError
+                ? t('common.retry')
+                : submitError?.code === 'POOR_GPS'
+                  ? 'Retry GPS'
+                  : t('common.retry')
+            }
             variant="secondary"
-            onPress={onRetryStatus}
+            onPress={isStatusError ? onRetryStatus : onSubmitCheckIn}
+            disabled={submitting}
+            style={styles.retryButton}
+          />
+
+          <AppButton
+            label="Refresh Assignments"
+            variant="secondary"
+            onPress={() => void onRefreshAssignments()}
+            disabled={submitting}
+            style={styles.retryButton}
+          />
+
+          <AppButton
+            label="View Assigned Areas"
+            variant="ghost"
+            onPress={() => setAreasVisible(true)}
             disabled={submitting}
             style={styles.retryButton}
           />
@@ -173,6 +236,54 @@ export function FieldOfficerMandatoryCheckInScreen({
           />
         </View>
       </ScrollView>
+
+      <Modal visible={areasVisible} animationType="slide" transparent onRequestClose={() => setAreasVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Assigned Areas</Text>
+            <ScrollView style={styles.modalScroll}>
+              {(assignedAreasDetail?.districts ?? []).length > 0 ? (
+                <>
+                  <Text style={styles.modalSection}>Districts</Text>
+                  {(assignedAreasDetail?.districts ?? []).map((district) => (
+                    <Text key={`d-${district.id}`} style={styles.modalItem}>
+                      {district.name}
+                    </Text>
+                  ))}
+                </>
+              ) : null}
+              {(assignedAreasDetail?.talukas ?? []).length > 0 ? (
+                <>
+                  <Text style={styles.modalSection}>Talukas</Text>
+                  {(assignedAreasDetail?.talukas ?? []).map((taluka) => (
+                    <Text key={`t-${taluka.id}`} style={styles.modalItem}>
+                      {taluka.name}
+                    </Text>
+                  ))}
+                </>
+              ) : null}
+              {(assignedAreasDetail?.villages ?? []).length > 0 ? (
+                <>
+                  <Text style={styles.modalSection}>
+                    Villages ({assignedAreasDetail?.villages?.length ?? 0})
+                  </Text>
+                  {(assignedAreasDetail?.villages ?? []).map((village) => (
+                    <Text key={`v-${village.id}`} style={styles.modalItem}>
+                      {village.name}
+                      {village.taluka_name ? ` · ${village.taluka_name}` : ''}
+                    </Text>
+                  ))}
+                </>
+              ) : (
+                <Text style={styles.modalItem}>No assigned villages on file.</Text>
+              )}
+            </ScrollView>
+            <Pressable style={styles.modalClose} onPress={() => setAreasVisible(false)}>
+              <Text style={styles.modalCloseText}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </OfficerScreenChrome>
   );
 }
@@ -247,13 +358,15 @@ const styles = StyleSheet.create({
   },
   banner: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 8,
     backgroundColor: officerTheme.errorContainer,
     borderRadius: 12,
     padding: 10,
   },
+  bannerCopy: { flex: 1, gap: 4 },
   bannerText: { flex: 1, fontSize: 13, lineHeight: 18, color: officerTheme.onErrorContainer },
+  bannerMeta: { fontSize: 12, lineHeight: 16, color: officerTheme.onErrorContainer },
   skewBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -270,4 +383,34 @@ const styles = StyleSheet.create({
   helperText: { fontSize: 12, lineHeight: 17, color: officerTheme.onSurfaceVariant, textAlign: 'center' },
   retryButton: { marginTop: 2 },
   logoutButton: { marginTop: 2 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    maxHeight: '70%',
+    backgroundColor: officerTheme.surfaceLowest,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    padding: 20,
+    gap: 12,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: officerTheme.onSurface },
+  modalScroll: { maxHeight: 360 },
+  modalSection: {
+    marginTop: 10,
+    marginBottom: 4,
+    fontSize: 12,
+    fontWeight: '700',
+    color: officerTheme.onSurfaceVariant,
+    textTransform: 'uppercase',
+  },
+  modalItem: { fontSize: 13, lineHeight: 18, color: officerTheme.onSurface, paddingVertical: 2 },
+  modalClose: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  modalCloseText: { fontSize: 14, fontWeight: '700', color: officerTheme.primary },
 });
