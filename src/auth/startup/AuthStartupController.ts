@@ -87,17 +87,23 @@ async function userHasUnlockCredential(user: AuthUser): Promise<boolean> {
   return userHasMpin(user);
 }
 
+function isPatternPreferredRole(role: string | undefined | null): boolean {
+  const roleLower = String(role ?? '').toLowerCase();
+
+  return (
+    roleLower.includes('farmer')
+    || roleLower.includes('field_officer')
+    || roleLower.includes('artisan')
+  );
+}
+
 function unlockRouteForUser(user: AuthUser): StartupRoute {
   const role = (resolveUserRole(user) ?? user.user_type) as string;
   const mobile = normalizeMobile(user.mobile);
-  const roleLower = String(role).toLowerCase();
-  const isFarmer = roleLower.includes('farmer');
-  const usePattern =
-    isFarmer
-    && Boolean(user.pattern_supported || user.has_pattern)
-    && Boolean(user.has_pattern);
+  const preferPattern = isPatternPreferredRole(role)
+    || Boolean(user.pattern_supported || user.has_pattern || user.pattern_setup_required);
 
-  if (usePattern) {
+  if (preferPattern && user.has_pattern) {
     return {
       name: 'PatternLogin',
       params: {
@@ -109,12 +115,22 @@ function unlockRouteForUser(user: AuthUser): StartupRoute {
     };
   }
 
+  if (preferPattern && !user.has_pattern) {
+    return {
+      name: 'SetPattern',
+      params: {
+        mobile,
+        mode: 'setup',
+      },
+    };
+  }
+
   return {
-    name: 'MpinLogin',
+    name: 'PatternLogin',
     params: {
       mobile,
       name: user.name,
-      role: role as RootStackParamList['MpinLogin']['role'],
+      role: role as RootStackParamList['PatternLogin']['role'],
       mode: 'unlock',
     },
   };
@@ -122,9 +138,8 @@ function unlockRouteForUser(user: AuthUser): StartupRoute {
 
 function setupMpinRouteForUser(user: AuthUser): StartupRoute {
   const role = (resolveUserRole(user) ?? user.user_type) as string;
-  const isFarmer = String(role).toLowerCase().includes('farmer');
 
-  if (isFarmer && (user.pattern_supported || user.pattern_setup_required)) {
+  if (isPatternPreferredRole(role) || user.pattern_supported || user.pattern_setup_required) {
     return {
       name: 'SetPattern',
       params: {

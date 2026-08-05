@@ -97,9 +97,9 @@ export function FieldOfficerLoginScreen({ navigation }: Props) {
           />
           <LoginOptionCard
             icon="lock"
-            title={t('fieldOfficerLogin.mpinOption')}
-            description={t('mpinLogin.instruction')}
-            onPress={() => navigation.navigate('MpinLogin', { role: 'field_officer' })}
+            title={t('fieldOfficerLogin.patternOption')}
+            description={t('pattern.useSavedPattern')}
+            onPress={() => navigation.navigate('PatternLogin', { role: 'field_officer' })}
           />
           <LoginOptionCard
             icon="verified"

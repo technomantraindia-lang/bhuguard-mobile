@@ -79,8 +79,14 @@ export async function finishMobileLogin(
     const role = (user?.user_type ?? '').toLowerCase();
     const isFarmer = role.includes('farmer');
 
-    // Farmers use Pattern only (historical MPIN may remain on the server but is not set here).
-    if (isFarmer) {
+    // Mobile field roles use Pattern (FO / Artisan / Farmer). Do not force MPIN setup.
+    if (
+      isFarmer
+      || role.includes('field_officer')
+      || role.includes('artisan')
+      || patternSupported
+      || patternSetupRequired
+    ) {
       if (!hasPattern) {
         navigation.navigate('SetPattern', { mobile, mode: 'setup' });
         return true;
@@ -90,13 +96,7 @@ export async function finishMobileLogin(
       return true;
     }
 
-    if (patternSupported && patternSetupRequired) {
-      navigation.navigate('SetPattern', { mobile, mode: 'setup' });
-      return true;
-    }
-
     if (!hasMpin) {
-      // Non-farmer roles may still complete first-login MPIN when Pattern is unavailable.
       navigation.navigate('CreateMpin', {
         mobile,
         mode: 'setup',

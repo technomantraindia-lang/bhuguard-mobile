@@ -42,6 +42,7 @@ export type BhuguardIconName =
   | 'badge'
   | 'search'
   | 'note_add'
+  | 'fingerprint'
   | 'lock'
   | 'description'
   | 'water_drop'
@@ -295,6 +296,11 @@ function iconPath(name: BhuguardIconName, filled: boolean): { d: string; fill?: 
     case 'note_add':
       return {
         d: 'M14 2H6c-1.1 0-2 .9-2 2v16l8-3 8 3V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H5v-2h4V5h2v4h4v2z',
+        fill: true,
+      };
+    case 'fingerprint':
+      return {
+        d: 'M17.81 4.47c-.8 0-1.45.6-1.45 1.4v.1c0 .8.65 1.4 1.45 1.4s1.45-.6 1.45-1.4v-.1c0-.8-.65-1.4-1.45-1.4zm-11.6 0c-.8 0-1.45.6-1.45 1.4v.1c0 .8.65 1.4 1.45 1.4S7.66 6.77 7.66 5.97v-.1c0-.8-.65-1.4-1.45-1.4zM12 1C8.14 1 5 4.14 5 8v1.5c0 .28.22.5.5.5s.5-.22.5-.5V8c0-3.31 2.69-6 6-6s6 2.69 6 6v4c0 .55-.45 1-1 1s-1-.45-1-1v-1.5c0-.28-.22-.5-.5-.5s-.5.22-.5.5V12c0 1.1.9 2 2 2s2-.9 2-2V8c0-3.86-3.14-7-7-7zm0 6c-1.1 0-2 .9-2 2v8c0 2.21 1.79 4 4 4s4-1.79 4-4v-1.5c0-.28-.22-.5-.5-.5s-.5.22-.5.5V17c0 1.1-.9 2-2 2s-2-.9-2-2v-8c0-.55.45-1 1-1s1 .45 1 1v4.5c0 .28.22.5.5.5s.5-.22.5-.5V9c0-1.1-.9-2-2-2z',
         fill: true,
       };
     case 'lock':

@@ -97,9 +97,9 @@ export function ArtisanLoginScreen({ navigation }: Props) {
           />
           <LoginOptionCard
             icon="lock"
-            title={t('artisanLogin.mpinOption')}
-            description={t('mpinLogin.instruction')}
-            onPress={() => navigation.navigate('MpinLogin', { role: 'artisan' })}
+            title={t('artisanLogin.patternOption')}
+            description={t('pattern.useSavedPattern')}
+            onPress={() => navigation.navigate('PatternLogin', { role: 'artisan' })}
           />
           <LoginOptionCard
             icon="verified"
