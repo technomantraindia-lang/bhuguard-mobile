@@ -188,6 +188,14 @@ export function validateDocuments(draft: OnboardingDraft): string | null {
     return 'Add the Ownership Document before continuing.';
   }
 
+  if (draft.farmer_documents.length < 1) {
+    return 'Add at least one Farm Photo before continuing.';
+  }
+
+  if (!draft.farmer_with_farm_photo) {
+    return 'Capture the Farmer with Farm Photo before continuing.';
+  }
+
   return null;
 }
 

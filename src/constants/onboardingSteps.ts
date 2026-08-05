@@ -87,20 +87,11 @@ function isLandRegistrationComplete(draft: OnboardingDraft): boolean {
 }
 
 /**
- * Documents are complete only when ownership is known and:
- * - owned → at least one proof/document is saved
- * - other ownership → user explicitly continued past the Documents step
+ * Documents are complete when required evidence is present
+ * (ownership when owned, at least one farm photo, farmer-with-farm photo).
  */
 function isDocumentsStepCompleted(draft: OnboardingDraft): boolean {
-  if (validateDocuments(draft) !== null) {
-    return false;
-  }
-
-  if (draft.ownership_type === 'owned') {
-    return Boolean(draft.proof_of_land_ownership) || draft.farmer_documents.length >= 1;
-  }
-
-  return draft.documents_step_completed === true;
+  return validateDocuments(draft) === null;
 }
 
 /** Overview label for the Land Registration row (Mapping Pending when skipped). */

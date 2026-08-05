@@ -24,7 +24,15 @@ interface LiveEvidenceCaptureCardProps {
   onRejectPending?: () => void;
   onUpload?: () => void;
   uploadLabel?: string;
+  /** Show upload action before capture (e.g. ownership document). */
   showUploadButton?: boolean;
+  /** Remove the captured photo from the same card (no duplicate capture button). */
+  onRemove?: () => void;
+  removeLabel?: string;
+  title?: string;
+  subtitle?: string;
+  captureLabel?: string;
+  emptyPlaceholderText?: string;
   hideInlinePreview?: boolean;
   readOnly?: boolean;
   onOpenPreview?: (uri: string) => void;
@@ -44,6 +52,12 @@ export function LiveEvidenceCaptureCard({
   onUpload,
   uploadLabel = 'Upload Evidence',
   showUploadButton = false,
+  onRemove,
+  removeLabel = 'Remove Photo',
+  title = 'Capture Live Evidence',
+  subtitle = 'Take a real-time photo from camera',
+  captureLabel = 'Open Camera',
+  emptyPlaceholderText = 'No live photo captured yet',
   hideInlinePreview = false,
   readOnly = false,
   onOpenPreview,
@@ -59,15 +73,14 @@ export function LiveEvidenceCaptureCard({
       || displayEvidence.village === '-'
       || displayEvidence.village === '—');
 
-
   return (
     <View style={styles.wrap}>
       <View style={styles.card}>
         <View style={styles.headerRow}>
-          <Text style={styles.emoji}>📷</Text>
+          <BhuguardMaterialIcon name="photo_camera" size={28} color={colors.primary} />
           <View style={styles.headerCopy}>
-            <Text style={styles.title}>Capture Live Evidence</Text>
-            <Text style={styles.subtitle}>Take a real-time photo from camera</Text>
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.subtitle}>{subtitle}</Text>
           </View>
         </View>
 
@@ -113,7 +126,7 @@ export function LiveEvidenceCaptureCard({
         ) : !displayEvidence ? (
           <View style={styles.placeholder}>
             <BhuguardMaterialIcon name="photo_camera" size={36} color={colors.textMuted} />
-            <Text style={styles.placeholderText}>No live photo captured yet</Text>
+            <Text style={styles.placeholderText}>{emptyPlaceholderText}</Text>
           </View>
         ) : null}
 
@@ -138,12 +151,23 @@ export function LiveEvidenceCaptureCard({
                 />
               </>
             ) : !evidence ? (
-              <AppButton
-                label={capturing ? 'Processing…' : 'Open Camera'}
-                onPress={onOpenCamera}
-                loading={capturing}
-                disabled={busy}
-              />
+              <>
+                <AppButton
+                  label={capturing ? 'Processing…' : captureLabel}
+                  onPress={onOpenCamera}
+                  loading={capturing}
+                  disabled={busy}
+                />
+                {showUploadButton && onUpload ? (
+                  <AppButton
+                    label={uploading ? 'Uploading…' : uploadLabel}
+                    onPress={onUpload}
+                    variant="secondary"
+                    loading={uploading}
+                    disabled={busy}
+                  />
+                ) : null}
+              </>
             ) : (
               <>
                 <AppButton
@@ -153,20 +177,20 @@ export function LiveEvidenceCaptureCard({
                   loading={capturing}
                   disabled={busy}
                 />
+                {onRemove ? (
+                  <AppButton
+                    label={removeLabel}
+                    onPress={onRemove}
+                    variant="danger"
+                    disabled={busy}
+                  />
+                ) : null}
                 {villageUnresolved && onRetryGeocode ? (
                   <AppButton
                     label={capturing ? 'Looking up…' : 'Retry location'}
                     onPress={onRetryGeocode}
                     variant="secondary"
                     loading={capturing}
-                    disabled={busy}
-                  />
-                ) : null}
-                {showUploadButton && onUpload ? (
-                  <AppButton
-                    label={uploading ? 'Uploading…' : uploadLabel}
-                    onPress={onUpload}
-                    loading={uploading}
                     disabled={busy}
                   />
                 ) : null}
@@ -193,12 +217,11 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  emoji: { fontSize: 28 },
   headerCopy: { flex: 1, gap: 2 },
   title: { fontSize: 17, fontWeight: '700', color: colors.text },
   subtitle: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
   placeholder: {
-    height: 160,
+    height: 140,
     borderRadius: 12,
     borderWidth: 1,
     borderStyle: 'dashed',

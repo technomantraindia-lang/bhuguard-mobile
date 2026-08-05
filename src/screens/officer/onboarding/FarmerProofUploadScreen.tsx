@@ -1,10 +1,9 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as DocumentPicker from 'expo-document-picker';
 
-import { AppCard } from '../../../components/AppCard';
 import { LiveEvidenceCaptureCard } from '../../../components/evidence/LiveEvidenceCaptureCard';
 import { ONBOARDING_NEXT_LABELS } from '../../../constants/onboardingSteps';
 import type { FileAsset } from '../../../context/OnboardingContext';
@@ -34,9 +33,13 @@ function formatFileSize(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function isImageAsset(asset: FileAsset): boolean {
+  return asset.mimeType.startsWith('image/') || /\.(jpe?g|png|webp)$/i.test(asset.name);
+}
+
 /**
- * Evidence order is fixed per Phase 10.4: (1) Ownership Document, (2) Farm Photos
- * (multi), (3) Farmer with Farm Photo. Do not reorder these sections.
+ * Evidence order is fixed: (1) Ownership Document, (2) Farm Photos (multi),
+ * (3) Farmer with Farm Photo. One capture card per evidence type — no duplicate actions.
  */
 export function FarmerProofUploadScreen() {
   const navigation = useNavigation<Nav>();
@@ -46,6 +49,8 @@ export function FarmerProofUploadScreen() {
   const ownershipCapture = useLiveEvidenceCapture({ defaultName: 'ownership-document.jpg', allowsEditing: false });
   const farmPhotoCapture = useLiveEvidenceCapture({ defaultName: 'farm-photo.jpg', allowsEditing: false });
   const farmerWithFarmCapture = useLiveEvidenceCapture({ defaultName: 'farmer-with-farm.jpg', allowsEditing: false });
+
+  const canContinue = useMemo(() => validateDocuments(draft) === null, [draft]);
 
   const captureOwnershipDocument = async () => {
     setError(null);
@@ -70,9 +75,15 @@ export function FarmerProofUploadScreen() {
       setError('Selected document is empty or unreadable.');
       return;
     }
+    ownershipCapture.clearEvidence();
     updateDraft({
       proof_of_land_ownership: toAsset(asset.uri, asset.name, asset.mimeType ?? 'application/octet-stream', asset.size),
     });
+  };
+
+  const removeOwnershipDocument = () => {
+    ownershipCapture.clearEvidence();
+    updateDraft({ proof_of_land_ownership: null });
   };
 
   const addFarmPhoto = async () => {
@@ -82,6 +93,7 @@ export function FarmerProofUploadScreen() {
       updateDraft({
         farmer_documents: [...draft.farmer_documents, toAsset(captured.uri, captured.name, captured.type)],
       });
+      farmPhotoCapture.clearEvidence();
     }
   };
 
@@ -97,7 +109,16 @@ export function FarmerProofUploadScreen() {
     }
   };
 
+  const removeFarmerWithFarm = () => {
+    farmerWithFarmCapture.clearEvidence();
+    updateDraft({ farmer_with_farm_photo: null });
+  };
+
   const displayError = error ?? ownershipCapture.error ?? farmPhotoCapture.error ?? farmerWithFarmCapture.error;
+  const uploadedOwnership =
+    draft.proof_of_land_ownership && !ownershipCapture.evidence
+      ? draft.proof_of_land_ownership
+      : null;
   const farmerWithFarmPhoto = draft.farmer_with_farm_photo;
 
   const next = () => {
@@ -114,67 +135,63 @@ export function FarmerProofUploadScreen() {
   return (
     <OnboardingFormScreen
       stepCurrent={6}
-      title="Documents"
-      subtitle="Capture or upload supporting evidence in order."
+      title="Documents & Evidence"
+      subtitle="Capture supporting evidence in order."
       onNext={next}
       nextLabel={ONBOARDING_NEXT_LABELS[6]}
+      nextDisabled={!canContinue}
       footerError={displayError}
     >
-      <AppCard
-        title="1. Ownership Document"
-        subtitle={draft.proof_of_land_ownership ? draft.proof_of_land_ownership.name : 'Required proof of land ownership'}
-      />
-      <LiveEvidenceCaptureCard
-        evidence={ownershipCapture.evidence}
-        capturing={ownershipCapture.capturing}
-        error={ownershipCapture.error}
-        onOpenCamera={() => void captureOwnershipDocument()}
-        onRetake={() => void captureOwnershipDocument()}
-      />
-      <Pressable style={styles.button} onPress={() => void captureOwnershipDocument()}>
-        <Text style={styles.buttonText}>Capture Ownership Document</Text>
-      </Pressable>
-      <Pressable style={styles.button} onPress={() => void uploadOwnershipDocument()}>
-        <Text style={styles.buttonText}>Upload Ownership Document</Text>
-      </Pressable>
-      {draft.proof_of_land_ownership ? (
-        <View style={styles.row}>
-          <View style={styles.copy}>
-            <Text style={styles.name} numberOfLines={1}>
-              {draft.proof_of_land_ownership.name}
-            </Text>
-            <Text style={styles.meta}>
-              {draft.proof_of_land_ownership.mimeType}
-              {draft.proof_of_land_ownership.size ? ` · ${formatFileSize(draft.proof_of_land_ownership.size)}` : ''}
-            </Text>
+      <Text style={styles.sectionTitle}>1. Ownership Document</Text>
+      {uploadedOwnership ? (
+        <View style={styles.uploadedCard}>
+          {isImageAsset(uploadedOwnership) ? (
+            <Image source={{ uri: uploadedOwnership.uri }} style={styles.uploadedPreview} resizeMode="contain" />
+          ) : null}
+          <Text style={styles.uploadedName} numberOfLines={2}>
+            {uploadedOwnership.name}
+          </Text>
+          <Text style={styles.uploadedMeta}>
+            {uploadedOwnership.mimeType}
+            {uploadedOwnership.size ? ` · ${formatFileSize(uploadedOwnership.size)}` : ''}
+          </Text>
+          <View style={styles.uploadedActions}>
+            <Pressable style={styles.secondaryAction} onPress={() => void captureOwnershipDocument()}>
+              <Text style={styles.secondaryActionText}>Capture Ownership Document</Text>
+            </Pressable>
+            <Pressable onPress={removeOwnershipDocument}>
+              <Text style={styles.remove}>Remove Photo</Text>
+            </Pressable>
           </View>
-          <Pressable onPress={() => updateDraft({ proof_of_land_ownership: null })}>
-            <Text style={styles.remove}>Remove</Text>
-          </Pressable>
         </View>
-      ) : null}
+      ) : (
+        <LiveEvidenceCaptureCard
+          title="Capture Ownership Document"
+          subtitle="Take a real-time photo of the ownership document"
+          captureLabel="Capture Ownership Document"
+          emptyPlaceholderText="No ownership document captured yet"
+          evidence={ownershipCapture.evidence}
+          capturing={ownershipCapture.capturing}
+          error={ownershipCapture.error}
+          onOpenCamera={() => void captureOwnershipDocument()}
+          onRetake={() => void captureOwnershipDocument()}
+          onRemove={removeOwnershipDocument}
+          showUploadButton
+          uploadLabel="Upload Ownership Document"
+          onUpload={() => void uploadOwnershipDocument()}
+        />
+      )}
 
-      <AppCard title="2. Farm Photos" subtitle={`${draft.farmer_documents.length} photo(s) added`} />
-      <LiveEvidenceCaptureCard
-        evidence={farmPhotoCapture.evidence}
-        capturing={farmPhotoCapture.capturing}
-        error={farmPhotoCapture.error}
-        onOpenCamera={() => void addFarmPhoto()}
-        onRetake={() => void addFarmPhoto()}
-      />
-      <Pressable style={styles.button} onPress={() => void addFarmPhoto()}>
-        <Text style={styles.buttonText}>Add Farm Photo</Text>
-      </Pressable>
-
+      <Text style={styles.sectionTitle}>2. Farm Photos</Text>
       {draft.farmer_documents.map((document, index) => (
-        <View key={`${document.uri}-${index}`} style={styles.row}>
-          <View style={styles.copy}>
-            <Text style={styles.name} numberOfLines={1}>
+        <View key={`${document.uri}-${index}`} style={styles.farmPhotoCard}>
+          {isImageAsset(document) ? (
+            <Image source={{ uri: document.uri }} style={styles.farmPhotoPreview} resizeMode="contain" />
+          ) : null}
+          <View style={styles.farmPhotoCopy}>
+            <Text style={styles.farmPhotoTitle}>Farm Photo {index + 1}</Text>
+            <Text style={styles.uploadedMeta} numberOfLines={1}>
               {document.name}
-            </Text>
-            <Text style={styles.meta}>
-              {document.mimeType}
-              {document.size ? ` · ${formatFileSize(document.size)}` : ''}
             </Text>
           </View>
           <Pressable onPress={() => removeFarmPhoto(index)}>
@@ -182,50 +199,103 @@ export function FarmerProofUploadScreen() {
           </Pressable>
         </View>
       ))}
-
-      <AppCard
-        title="3. Farmer with Farm Photo"
-        subtitle={farmerWithFarmPhoto ? farmerWithFarmPhoto.name : 'Farmer standing on the farm (photo evidence)'}
-      />
       <LiveEvidenceCaptureCard
-        evidence={farmerWithFarmCapture.evidence}
-        capturing={farmerWithFarmCapture.capturing}
-        error={farmerWithFarmCapture.error}
-        onOpenCamera={() => void captureFarmerWithFarm()}
-        onRetake={() => void captureFarmerWithFarm()}
+        title="Capture Farm Photo"
+        subtitle="Take a real-time photo of the farm"
+        captureLabel={draft.farmer_documents.length > 0 ? 'Add Another Farm Photo' : 'Capture Farm Photo'}
+        emptyPlaceholderText="No farm photo captured yet"
+        evidence={farmPhotoCapture.evidence}
+        capturing={farmPhotoCapture.capturing}
+        error={farmPhotoCapture.error}
+        onOpenCamera={() => void addFarmPhoto()}
+        onRetake={() => void addFarmPhoto()}
       />
-      <Pressable style={styles.button} onPress={() => void captureFarmerWithFarm()}>
-        <Text style={styles.buttonText}>Capture Farmer with Farm Photo</Text>
-      </Pressable>
-      {farmerWithFarmPhoto ? (
-        <Pressable onPress={() => updateDraft({ farmer_with_farm_photo: null })}>
-          <Text style={styles.remove}>Remove photo</Text>
-        </Pressable>
-      ) : null}
+
+      <Text style={styles.sectionTitle}>3. Farmer with Farm Photo</Text>
+      {farmerWithFarmPhoto && !farmerWithFarmCapture.evidence ? (
+        <View style={styles.uploadedCard}>
+          {isImageAsset(farmerWithFarmPhoto) ? (
+            <Image source={{ uri: farmerWithFarmPhoto.uri }} style={styles.uploadedPreview} resizeMode="contain" />
+          ) : null}
+          <Text style={styles.uploadedName} numberOfLines={2}>
+            {farmerWithFarmPhoto.name}
+          </Text>
+          <View style={styles.uploadedActions}>
+            <Pressable style={styles.secondaryAction} onPress={() => void captureFarmerWithFarm()}>
+              <Text style={styles.secondaryActionText}>Retake Photo</Text>
+            </Pressable>
+            <Pressable onPress={removeFarmerWithFarm}>
+              <Text style={styles.remove}>Remove Photo</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <LiveEvidenceCaptureCard
+          title="Capture Farmer with Farm Photo"
+          subtitle="Take a real-time photo of the farmer at the farm"
+          captureLabel="Capture Farmer with Farm Photo"
+          emptyPlaceholderText="No farmer with farm photo captured yet"
+          evidence={farmerWithFarmCapture.evidence}
+          capturing={farmerWithFarmCapture.capturing}
+          error={farmerWithFarmCapture.error}
+          onOpenCamera={() => void captureFarmerWithFarm()}
+          onRetake={() => void captureFarmerWithFarm()}
+          onRemove={removeFarmerWithFarm}
+        />
+      )}
     </OnboardingFormScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
+  sectionTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  uploadedCard: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    gap: 10,
+  },
+  uploadedPreview: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+  },
+  uploadedName: { color: colors.text, fontWeight: '600' },
+  uploadedMeta: { color: colors.textMuted, fontSize: 12 },
+  uploadedActions: { gap: 10, marginTop: 4 },
+  secondaryAction: {
     borderWidth: 1,
     borderColor: colors.primary,
     borderRadius: 10,
     padding: 12,
     alignItems: 'center',
   },
-  buttonText: { color: colors.primary, fontWeight: '700' },
-  row: {
+  secondaryActionText: { color: colors.primary, fontWeight: '700' },
+  farmPhotoCard: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    backgroundColor: colors.card,
   },
-  copy: { flex: 1, gap: 2 },
-  name: { color: colors.text, fontWeight: '600' },
-  meta: { color: colors.textMuted, fontSize: 12 },
+  farmPhotoPreview: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    backgroundColor: colors.background,
+  },
+  farmPhotoCopy: { flex: 1, gap: 2 },
+  farmPhotoTitle: { color: colors.text, fontWeight: '700' },
   remove: { color: '#B91C1C', fontWeight: '700' },
 });
