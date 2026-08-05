@@ -1178,7 +1178,13 @@ export function useBiocharProductionForm({
           applyBatch(batch);
         } else if (!initialSubmissionUuid) {
           applySelectionPrefill();
-          // Do not soft-fill BHG-001 — leave kiln empty until assigned/selected/typed.
+          // Artisan Pro: when exactly one Production Unit / Kiln is assigned,
+          // preselect it so users can immediately review the kiln step.
+          if (!viewOnly && mappedUnits.length === 1) {
+            const unit = mappedUnits[0];
+            setSelectedUnitId(unit.id);
+            setKilnId(unit.kilnId || unit.label);
+          }
         }
 
         if (viewOnly || initialSubmissionUuid) {
@@ -3021,7 +3027,7 @@ export function useBiocharProductionForm({
         throw new Error(
           kilnId.trim()
             ? kilnIdValidationError(kilnId, 'artisan') || 'Enter a valid Kiln ID (BHG-###) or select an existing Pyrolysis Unit.'
-            : 'No kiln assigned. Enter a valid Kiln ID (BHG-###) or select an existing Pyrolysis Unit before submitting.',
+            : 'No kiln is assigned to your account. Please contact Admin or your Field Officer.',
         );
       }
 

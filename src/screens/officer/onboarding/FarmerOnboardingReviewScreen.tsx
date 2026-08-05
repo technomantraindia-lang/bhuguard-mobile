@@ -160,6 +160,11 @@ export function FarmerOnboardingReviewScreen() {
       return;
     }
 
+    if (draftAlreadyHasFarmerFarm(draft) && !draft.agreement_verification_token.trim()) {
+      setError('Verify the Farmer Agreement OTP before submitting registration.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -187,23 +192,27 @@ export function FarmerOnboardingReviewScreen() {
               latitude: Number(draft.gps_latitude),
               longitude: Number(draft.gps_longitude),
             };
-          await updateFieldOfficerFarmMapping(farmerId, farmId, {
-            farm_id: farmId,
-            declared_area: draft.land_area,
-            declared_unit: draft.land_area_unit,
-            unit: draft.boundary_unit,
-            capture_method: draft.boundary_capture_method,
-            mapping_status: 'mapped',
-            verification_status: draft.boundary_verification_status || 'pending_review',
-            boundary_points: draft.boundary_points,
-            center_latitude: Number.isFinite(center.latitude) ? center.latitude : draft.boundary_points[0]?.latitude,
-            center_longitude: Number.isFinite(center.longitude) ? center.longitude : draft.boundary_points[0]?.longitude,
-            gps_accuracy_average: draft.gps_accuracy ? Number(draft.gps_accuracy) : undefined,
-          });
+          try {
+            await updateFieldOfficerFarmMapping(farmerId, farmId, {
+              farm_id: farmId,
+              declared_area: draft.land_area,
+              declared_unit: draft.land_area_unit,
+              unit: draft.boundary_unit,
+              capture_method: draft.boundary_capture_method,
+              mapping_status: 'mapped',
+              verification_status: draft.boundary_verification_status || 'pending_review',
+              boundary_points: draft.boundary_points,
+              center_latitude: Number.isFinite(center.latitude) ? center.latitude : draft.boundary_points[0]?.latitude,
+              center_longitude: Number.isFinite(center.longitude) ? center.longitude : draft.boundary_points[0]?.longitude,
+              gps_accuracy_average: draft.gps_accuracy ? Number(draft.gps_accuracy) : undefined,
+            });
+          } catch (mappingError) {
+            logSafeApiFailure(mappingError, 'farmer-onboarding-mapping-sync');
+            // Mapping already saved during boundary step — continue finalize with existing server mapping.
+          }
         }
 
         const finalizeForm = toFinalizeFormData();
-        finalizeForm.append('farm_id', String(farmId));
         const finalized = await finalizePreparedFarmerOnboarding(farmerId, finalizeForm);
         farmerName = String(finalized.farmer_name ?? draft.farmer_name);
         mobile = String(finalized.mobile ?? draft.mobile);

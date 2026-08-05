@@ -1313,9 +1313,9 @@ export function ArtisanBiocharProcessFormContent({
 
                 <Text style={styles.reviewLine}>Farm: {selectedFarmLabel}</Text>
 
-                <Text style={styles.reviewLine}>Farm ID: {farmCode || form.resolvedFarmCode || '—'}</Text>
+                <Text style={styles.reviewLine}>Farm ID: {farmCode || form.resolvedFarmCode || 'ID Pending'}</Text>
 
-                <Text style={styles.reviewLine}>Farmer ID: {farmerCode || form.selectedFarmerId || '—'}</Text>
+                <Text style={styles.reviewLine}>Farmer ID: {farmerCode || 'ID Pending'}</Text>
 
                 <Text style={styles.reviewLine}>Kiln ID: {form.kilnId || '—'}</Text>
 

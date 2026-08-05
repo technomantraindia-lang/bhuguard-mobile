@@ -118,6 +118,9 @@ apiClient.interceptors.response.use(
     logDevResponse(error.response?.status, error.config?.url);
     logSafeApiFailure(error);
 
+    const rejectMapped = (message: string): Promise<never> =>
+      Promise.reject(Object.assign(new Error(message), { cause: error }));
+
     if (error.response?.status === 401) {
       // Avoid racing navigation/storage clears while an intentional logout is in progress.
       if (!isLoggingOut()) {
@@ -128,58 +131,64 @@ apiClient.interceptors.response.use(
         }
       }
 
-      return Promise.reject(new Error(extractApiErrorMessage(error, 'Your session has expired. Please log in again.')));
+      return rejectMapped(extractApiErrorMessage(error, 'Your session has expired. Please log in again.'));
     }
 
     // Timeouts must be classified before generic "no response" network handling.
     if (isTimeoutError(error)) {
-      return Promise.reject(
-        new Error(extractApiErrorMessage(error, 'The request took too long. Please try again with a stronger connection.')),
+      return rejectMapped(
+        extractApiErrorMessage(error, 'The request took too long. Please try again with a stronger connection.'),
       );
     }
 
-    if (isNetworkError(error)) {
+    // Only true transport failures (no HTTP response) use the unreachable copy.
+    if (error.response == null && isNetworkError(error)) {
       const baseUrl = getCachedApiBaseUrl() || API_BASE_URL;
-      return Promise.reject(new Error(formatApiUnreachableMessage(baseUrl)));
+      return rejectMapped(formatApiUnreachableMessage(baseUrl));
     }
 
     if (error.response?.status === 403) {
-      return Promise.reject(new Error(extractApiErrorMessage(error, 'You do not have permission to perform this action.')));
+      return rejectMapped(extractApiErrorMessage(error, 'You are not authorized to submit this registration.'));
     }
 
     if (error.response?.status === 404) {
-      return Promise.reject(
-        new Error(extractApiErrorMessage(error, 'The requested registration service was not found. Please try again later.')),
+      return rejectMapped(
+        extractApiErrorMessage(error, 'Registration record not found. Please restart onboarding or contact support.'),
       );
     }
 
     if (error.response?.status === 409) {
-      return Promise.reject(
-        new Error(extractApiErrorMessage(error, 'This Farmer registration has already been submitted.')),
+      return rejectMapped(
+        extractApiErrorMessage(error, 'This Farmer registration has already been submitted.'),
       );
     }
 
     if (error.response?.status === 422) {
-      return Promise.reject(new Error(extractApiErrorMessage(error, 'Please review the highlighted required fields.')));
+      return rejectMapped(extractApiErrorMessage(error, 'Please review the highlighted required fields.'));
     }
 
     if (error.response?.status === 429) {
-      return Promise.reject(new Error(extractApiErrorMessage(error, 'Too many requests. Please wait a moment and try again.')));
+      return rejectMapped(extractApiErrorMessage(error, 'Too many requests. Please wait a moment and try again.'));
     }
 
     if ((error.response?.status ?? 0) >= 500) {
-      return Promise.reject(
-        new Error(extractApiErrorMessage(error, 'Registration could not be completed. Please try again.')),
+      return rejectMapped(
+        extractApiErrorMessage(error, 'Registration could not be completed. Please try again.'),
       );
     }
 
     if (error.response?.status === 413) {
-      return Promise.reject(
-        new Error(extractApiErrorMessage(error, 'Upload is too large. Please retry with fewer or smaller photos.')),
+      return rejectMapped(
+        extractApiErrorMessage(error, 'Upload is too large. Please retry with fewer or smaller photos.'),
       );
     }
 
-    return Promise.reject(new Error(extractApiErrorMessage(error)));
+    // Any other HTTP status still must not become "Unable to connect".
+    if (error.response != null) {
+      return rejectMapped(extractApiErrorMessage(error, 'Registration could not be completed. Please try again.'));
+    }
+
+    return rejectMapped(extractApiErrorMessage(error));
   },
 );
 

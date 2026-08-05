@@ -53,9 +53,7 @@ import { startBiocharProductionSyncListeners } from '../../services/biocharProdu
 
 import { getAuthUser } from '../../utils/authStorage';
 
-import { formatFarmerDisplayId } from '../../utils/displayIds';
-
-import { formatFarmDisplayLabel } from '../../utils/farmDisplayLabel';
+import { formatFarmDisplayId, formatFarmerDisplayId } from '../../utils/displayIds';
 
 import { getServerSyncedNowIso } from '../../services/serverTimeSync';
 
@@ -73,18 +71,19 @@ function buildFarmOptions(records: ArtisanFarmSearchRecord[], farmerId: number):
 
   const farmerFarms = records.filter((record) => record.farmer_id === farmerId);
 
-  return farmerFarms.map((farm, index) => ({
-
+  return farmerFarms.map((farm) => ({
     id: farm.farm_id,
-
-    label: formatFarmDisplayLabel(
-
-      { village: farm.village, farm_name: farm.farm_name },
-
-      index,
-
-    ),
-
+    label: [
+      farm.farm_name?.trim() || null,
+      formatFarmDisplayId({
+        farm_display_id: farm.farm_display_id ?? farm.display_id ?? null,
+        farm_code: farm.farm_code ?? null,
+        farm_id: farm.farm_id,
+        display_id: farm.display_id ?? null,
+      }),
+    ]
+      .filter(Boolean)
+      .join(' · '),
   }));
 
 }
@@ -285,7 +284,14 @@ export function ArtisanBiocharProductionScreen() {
 
               params?.farmLabel ||
 
-              formatFarmDisplayLabel({ village: params?.village, farm_name: params?.farmCode }, 0),
+              (params?.farmCode
+                ? formatFarmDisplayId({
+                    farm_display_id: params?.farmCode ?? null,
+                    farm_code: params?.farmCode ?? null,
+                    farm_id: routeFarmId,
+                    display_id: params?.farmCode ?? null,
+                  })
+                : 'Farm'),
 
           },
 

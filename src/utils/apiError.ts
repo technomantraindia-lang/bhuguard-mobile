@@ -16,19 +16,43 @@ export function isApiNotFound(error: unknown): boolean {
 }
 
 /**
- * True only for real transport failures (no HTTP response).
- * Timeouts are handled separately — they must not use the "unable to connect" copy.
+ * True only for real transport failures with no HTTP response:
+ * DNS failure, connection refused, offline, ERR_NETWORK without a response.
+ * Timeouts are handled separately.
  */
 export function isNetworkError(error: unknown): boolean {
   if (axios.isAxiosError(error)) {
+    // Any HTTP response means the server was reachable — never call this a network outage.
+    if (error.response != null) {
+      return false;
+    }
+
     if (isTimeoutError(error)) {
       return false;
     }
 
-    return error.code === 'ERR_NETWORK' || (error.response == null && error.code !== 'ECONNABORTED');
+    const code = error.code ?? '';
+    return (
+      code === 'ERR_NETWORK'
+      || code === 'ENOTFOUND'
+      || code === 'ECONNREFUSED'
+      || code === 'EAI_AGAIN'
+      || error.response == null
+    );
   }
 
-  return error instanceof Error && /network request failed|failed to fetch|net::err_/i.test(error.message);
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  // Plain Error already mapped by the client interceptor — detect prior unreachable copy only.
+  if (error.message === NETWORK_UNREACHABLE_MESSAGE) {
+    return true;
+  }
+
+  return /network request failed|failed to fetch|net::err_|could not resolve host|connection refused|enotfound|econnrefused/i.test(
+    error.message,
+  );
 }
 
 export function isUnauthorizedError(error: unknown): boolean {
@@ -60,7 +84,13 @@ function firstValidationFieldNames(errors: Record<string, string[] | string> | u
 }
 
 export function logSafeApiFailure(error: unknown, context?: string): void {
-  if (!axios.isAxiosError(error)) {
+  const axiosError = axios.isAxiosError(error)
+    ? error
+    : error instanceof Error && axios.isAxiosError((error as Error & { cause?: unknown }).cause)
+      ? ((error as Error & { cause: AxiosError }).cause)
+      : null;
+
+  if (!axiosError) {
     if (__DEV__ && error instanceof Error) {
       console.log('[API failure]', {
         context: context ?? null,
@@ -73,7 +103,7 @@ export function logSafeApiFailure(error: unknown, context?: string): void {
     return;
   }
 
-  const data = error.response?.data as ApiErrorResponse | unknown;
+  const data = axiosError.response?.data as ApiErrorResponse | unknown;
   const fieldNames = firstValidationFieldNames(
     (data as ApiErrorResponse | undefined)?.errors as Record<string, string[] | string> | undefined,
   );
@@ -83,10 +113,9 @@ export function logSafeApiFailure(error: unknown, context?: string): void {
       ? (data as ApiErrorResponse).message
       : undefined;
 
-  // Temporary finalize-onboarding debug: always print status/body/headers before generic mapping.
   const isFinalize =
-    typeof error.config?.url === 'string'
-    && error.config.url.includes('finalize-onboarding');
+    typeof axiosError.config?.url === 'string'
+    && axiosError.config.url.includes('finalize-onboarding');
 
   if (__DEV__ || isFinalize) {
     let responseBody: unknown = data ?? null;
@@ -102,23 +131,39 @@ export function logSafeApiFailure(error: unknown, context?: string): void {
 
     console.log('[API failure debug]', {
       context: context ?? null,
-      statusCode: error.response?.status ?? null,
+      statusCode: axiosError.response?.status ?? null,
       responseBody,
-      responseHeaders: error.response?.headers ?? null,
-      errorBody: error.message ?? null,
-      code: error.code ?? null,
-      endpoint: error.config?.url ?? null,
-      method: error.config?.method?.toUpperCase() ?? null,
+      responseHeaders: axiosError.response?.headers ?? null,
+      errorBody: axiosError.message ?? null,
+      code: axiosError.code ?? null,
+      endpoint: axiosError.config?.url ?? null,
+      method: axiosError.config?.method?.toUpperCase() ?? null,
       message: safeMessage ?? null,
       validation_fields: fieldNames,
     });
   }
 }
 
+function firstValidationMessage(errors: ApiErrorResponse['errors'] | undefined): string | null {
+  if (!errors) {
+    return null;
+  }
+
+  const firstError = Object.values(errors).flat()[0];
+  return typeof firstError === 'string' && firstError.trim() ? firstError : null;
+}
+
 export function extractApiErrorMessage(error: unknown, fallback = 'Request failed.'): string {
-  if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    const status = error.response?.status;
-    const data = error.response?.data;
+  // Prefer original Axios error when the interceptor wrapped it as Error(message, { cause }).
+  const axiosError = axios.isAxiosError(error)
+    ? error
+    : error instanceof Error && axios.isAxiosError((error as Error & { cause?: unknown }).cause)
+      ? ((error as Error & { cause: AxiosError<ApiErrorResponse> }).cause)
+      : null;
+
+  if (axiosError) {
+    const status = axiosError.response?.status;
+    const data = axiosError.response?.data;
 
     if (status === 401) {
       return 'Your session has expired. Please log in again.';
@@ -128,11 +173,11 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
       if (typeof data?.message === 'string' && data.message.trim() && !looksLikeHtml(data.message)) {
         return data.message;
       }
-      return 'You do not have permission to perform this action.';
+      return 'You are not authorized to submit this registration.';
     }
 
     if (status === 404) {
-      return 'The requested registration service was not found. Please try again later.';
+      return 'Registration record not found. Please restart onboarding or contact support.';
     }
 
     if (status === 409) {
@@ -143,11 +188,9 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
     }
 
     if (status === 422) {
-      if (data?.errors) {
-        const firstError = Object.values(data.errors).flat()[0];
-        if (typeof firstError === 'string' && firstError.trim()) {
-          return firstError;
-        }
+      const fieldMessage = firstValidationMessage(data?.errors);
+      if (fieldMessage) {
+        return fieldMessage;
       }
       if (typeof data?.message === 'string' && data.message.trim() && !looksLikeHtml(data.message)) {
         return data.message;
@@ -160,9 +203,6 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
     }
 
     if ((status ?? 0) >= 500) {
-      if (typeof data?.message === 'string' && data.message.trim() && !looksLikeHtml(data.message)) {
-        return data.message;
-      }
       return 'Registration could not be completed. Please try again.';
     }
 
@@ -181,22 +221,36 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
     }
 
     if (data?.errors) {
-      const firstError = Object.values(data.errors).flat()[0];
-      if (firstError) {
-        return firstError;
+      const fieldMessage = firstValidationMessage(data.errors);
+      if (fieldMessage) {
+        return fieldMessage;
       }
     }
 
-    if (isTimeoutError(error)) {
+    if (isTimeoutError(axiosError)) {
       return 'The request took too long. Please try again with a stronger connection.';
     }
 
-    if (error.message && !looksLikeHtml(error.message) && !/request failed with status code/i.test(error.message)) {
-      return error.message;
+    // HTTP response present but unmapped — never fall through to "Unable to connect".
+    if (status != null) {
+      return fallback;
+    }
+
+    if (isNetworkError(axiosError)) {
+      return NETWORK_UNREACHABLE_MESSAGE;
+    }
+
+    if (
+      axiosError.message
+      && !looksLikeHtml(axiosError.message)
+      && !/request failed with status code/i.test(axiosError.message)
+    ) {
+      return axiosError.message;
     }
   }
 
   if (error instanceof Error && error.message && !looksLikeHtml(error.message)) {
+    // Interceptor may have already mapped HTTP → plain Error(message).
     return error.message;
   }
 
@@ -208,8 +262,10 @@ export const PENDING_API_MESSAGE =
 
 export const NETWORK_ERROR_MESSAGE = 'Internet connection is unavailable.';
 
+export const NETWORK_UNREACHABLE_MESSAGE = 'Unable to connect to the Bhuguard server.';
+
 export function formatApiUnreachableMessage(_baseUrl: string): string {
-  return 'Unable to connect to the Bhuguard server.';
+  return NETWORK_UNREACHABLE_MESSAGE;
 }
 
 export const EMPTY_DATA_MESSAGE =

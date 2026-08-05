@@ -39,7 +39,7 @@ export const KILN_ID_FORMAT_MESSAGE =
 export const ARTISAN_KILN_PREFIX = 'BHG-';
 export const ARTISAN_KILN_PATTERN = /^BHG-\d{3}$/;
 export const ARTISAN_KILN_FORMAT_MESSAGE = 'Kiln ID must match format BHG-001 (BHG- followed by 3 digits).';
-export const ASSIGNED_KILN_REQUIRED_MESSAGE = 'Select an assigned kiln. Free-text kiln entry is not allowed.';
+export const ASSIGNED_KILN_REQUIRED_MESSAGE = 'No kiln is assigned to your account. Please contact Admin or your Field Officer.';
 
 export function normalizeKilnId(value: string): string {
   return value.trim().toUpperCase();

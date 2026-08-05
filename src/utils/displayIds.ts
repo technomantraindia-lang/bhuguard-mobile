@@ -1,7 +1,7 @@
 /**
  * Phase 6 — Business display IDs.
  *
- * Server-issued display IDs (BHG-KISHAN-* / BHG-FRM-* / BHG-ART-*) are the ONLY source of truth.
+ * Server-issued display IDs (BHG-KISHAN-* / BHG-FARM-* / BHG-ART-*) are the ONLY source of truth.
  * These helpers must NEVER fabricate a display ID locally. When the server has not
  * yet returned a display ID, show "ID Pending".
  */
@@ -26,10 +26,13 @@ export const DISPLAY_ID_LOADING = 'Loading…';
 export const DISPLAY_ID_PENDING = 'ID Pending';
 export const DISPLAY_ID_UNAVAILABLE = 'ID Pending';
 
-const FARMER_DISPLAY_PATTERN = /^BHG-KISHAN-\d{2,}$/i;
-const FARM_DISPLAY_PATTERN = /^BHG-FRM-\d{2,}$/i;
-const LEGACY_FARM_CODE_PATTERN = /^BHG-FARM-\d+/i;
-const ARTISAN_DISPLAY_PATTERN = /^BHG-ART-\d{2,}$/i;
+const FARMER_DISPLAY_PATTERN = /^BHG-KISHAN-(0[1-9]|[1-9]\d*)$/i;
+/** Canonical Farm ID: BHG-FARM-01 / BHG-FARM-15 (approved). */
+const FARM_DISPLAY_PATTERN = /^BHG-FARM-(0[1-9]|[1-9]\d*)$/i;
+/** Zero-padded lookup codes and legacy BHG-FRM-* — never invent; only show if already server-issued. */
+const LEGACY_FARM_CODE_PATTERN = /^BHG-FARM-0+\d+$/i;
+const LEGACY_FRM_PATTERN = /^BHG-FRM-\d+/i;
+const ARTISAN_DISPLAY_PATTERN = /^BHG-ART-(0[1-9]|[1-9]\d*)$/i;
 
 function cleanId(value: unknown): string | null {
   if (typeof value !== 'string' && typeof value !== 'number') {
@@ -64,7 +67,39 @@ function firstCleanId(record: DisplayIdRecord, keys: string[]): string | null {
   return null;
 }
 
-function preferCanonical(value: string | null, pattern: RegExp, legacyFallback?: string | null): string {
+/**
+ * Normalize zero-padded / legacy farm codes to BHG-FARM-N when digits are present.
+ * Does not invent IDs from numeric PKs.
+ */
+function canonicalizeFarmDisplayCandidate(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  if (FARM_DISPLAY_PATTERN.test(value)) {
+    return value;
+  }
+
+  const match = value.match(/^(?:BHG-FARM-|BHG-FRM-)0*([1-9]\d*)$/i);
+  if (!match) {
+    return null;
+  }
+
+  const sequence = Number(match[1]);
+  if (!Number.isFinite(sequence) || sequence < 1) {
+    return null;
+  }
+
+  const suffix = sequence < 10 ? `0${sequence}` : String(sequence);
+  return `BHG-FARM-${suffix}`;
+}
+
+function preferCanonical(
+  value: string | null,
+  pattern: RegExp,
+  legacyFallback?: string | null,
+  options?: { farm?: boolean },
+): string {
   if (value && pattern.test(value)) {
     return value;
   }
@@ -73,17 +108,27 @@ function preferCanonical(value: string | null, pattern: RegExp, legacyFallback?:
     return legacyFallback;
   }
 
-  // Never surface legacy BHG-FARM-* or raw numeric PKs as Farm/Farmer display IDs.
-  if (value && LEGACY_FARM_CODE_PATTERN.test(value)) {
+  if (options?.farm) {
+    const fromPreferred = canonicalizeFarmDisplayCandidate(value);
+    if (fromPreferred && pattern.test(fromPreferred)) {
+      return fromPreferred;
+    }
+    const fromLegacy = canonicalizeFarmDisplayCandidate(legacyFallback ?? null);
+    if (fromLegacy && pattern.test(fromLegacy)) {
+      return fromLegacy;
+    }
+  }
+
+  // Never surface raw numeric PKs or unresolved legacy-only tokens as display IDs.
+  if (value && (LEGACY_FARM_CODE_PATTERN.test(value) || LEGACY_FRM_PATTERN.test(value))) {
     return DISPLAY_ID_PENDING;
   }
 
-  if (legacyFallback && LEGACY_FARM_CODE_PATTERN.test(legacyFallback)) {
+  if (legacyFallback && (LEGACY_FARM_CODE_PATTERN.test(legacyFallback) || LEGACY_FRM_PATTERN.test(legacyFallback))) {
     return DISPLAY_ID_PENDING;
   }
 
-  if (value && !/^\d+$/.test(value) && !LEGACY_FARM_CODE_PATTERN.test(value)) {
-    // Prefer any non-numeric server code over inventing a display ID — except legacy farm codes.
+  if (value && !/^\d+$/.test(value)) {
     if (pattern === FARM_DISPLAY_PATTERN && !FARM_DISPLAY_PATTERN.test(value)) {
       return DISPLAY_ID_PENDING;
     }
@@ -120,8 +165,8 @@ export function formatFarmerDisplayId(record: DisplayIdRecord): string {
 }
 
 /**
- * Resolves the farm-facing ID. Prefers server `farm_display_id` / `display_id`.
- * Never fabricates BHG-FRM-* from numeric farm id.
+ * Resolves the farm-facing ID. Prefers server `farm_display_id`.
+ * Canonical format: BHG-FARM-XX. Never fabricates from numeric farm id alone.
  */
 export function formatFarmDisplayId(record: DisplayIdRecord): string {
   if (record === null || record === undefined) {
@@ -138,7 +183,7 @@ export function formatFarmDisplayId(record: DisplayIdRecord): string {
   ]);
   const legacy = firstCleanId(record, ['farm_code', 'farmCode']);
 
-  return preferCanonical(preferred, FARM_DISPLAY_PATTERN, legacy);
+  return preferCanonical(preferred, FARM_DISPLAY_PATTERN, legacy, { farm: true });
 }
 
 /**

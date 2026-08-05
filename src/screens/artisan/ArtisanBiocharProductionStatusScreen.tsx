@@ -246,8 +246,8 @@ export function ArtisanBiocharProductionStatusScreen() {
           ) : null}
           {row?.last_error ? <Text style={styles.error}>{row.last_error}</Text> : null}
           <Text style={styles.summary}>Batch ID: {payload?.batch_code ?? route.params.batchCode ?? '—'}</Text>
-          <Text style={styles.summary}>Farmer ID: {payload?.farmer_id ?? route.params.farmerId ?? '—'}</Text>
-          <Text style={styles.summary}>Farm ID: {payload?.farm_id ?? route.params.farmId ?? '—'}</Text>
+          <Text style={styles.summary}>Farmer ID: {route.params.farmerCode ?? 'ID Pending'}</Text>
+          <Text style={styles.summary}>Farm ID: {route.params.farmCode ?? 'ID Pending'}</Text>
           <Text style={styles.summary}>Kiln ID: {payload?.kiln_id ?? '—'}</Text>
           <Text style={styles.summary}>
             Saved At: {row?.submitted_offline_at ?? route.params.savedAt ?? '—'}

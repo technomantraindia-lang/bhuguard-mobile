@@ -36,7 +36,9 @@ export function FarmerOnboardingSuccessScreen() {
   const farmerName = result?.farmer_name ?? 'Farmer';
   const mobile = result?.mobile ?? '-';
   const farmerCode = draft.farmer_display_id || draft.farmer_code || 'ID Pending';
-  const farmCode = draft.farm_display_id || (draft.farm_code?.startsWith('BHG-FRM-') ? draft.farm_code : null) || 'ID Pending';
+  const farmCode = draft.farm_display_id
+    || (draft.farm_code?.match(/^BHG-FARM-/i) ? draft.farm_code : null)
+    || 'ID Pending';
   const createdAt = formatDate(result?.onboarded_at);
   const routeNames = (navigation.getState()?.routeNames ?? []) as string[];
   const isArtisanStack = routeNames.includes('ArtisanDashboard');

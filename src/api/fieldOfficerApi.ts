@@ -354,7 +354,7 @@ export async function createFarmerOnboarding(formData: FormData): Promise<ApiRec
     '/field-officer/farmers',
     formData,
     {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      // Let React Native set multipart boundary — do not force Content-Type.
       timeout: ONBOARDING_MULTIPART_TIMEOUT_MS,
     },
   );
@@ -381,7 +381,7 @@ export async function finalizePreparedFarmerOnboarding(
     `/field-officer/farmers/${farmerId}/finalize-onboarding`,
     formData,
     {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      // Let React Native set multipart boundary — do not force Content-Type.
       timeout: ONBOARDING_MULTIPART_TIMEOUT_MS,
     },
   );

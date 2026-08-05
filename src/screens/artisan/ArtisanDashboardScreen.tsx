@@ -802,7 +802,7 @@ export function ArtisanDashboardScreen() {
                       : `Batch #${batchId}`}
                   </Text>
                   <Text style={styles.recentMeta}>
-                    Farm Name: {farmLabel} · Farm ID: {pickString(batch, 'farm_code') !== '-' ? pickString(batch, 'farm_code') : farmId || '—'}
+                    Farm Name: {farmLabel} · Farm ID: {pickString(batch, 'farm_code') !== '-' ? pickString(batch, 'farm_code') : 'ID Pending'}
                   </Text>
                   <Text style={styles.recentMeta}>
                     Farmer Name: {farmerLabel} · Status: {status !== '-' ? status : '—'}
