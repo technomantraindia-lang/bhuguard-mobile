@@ -15,10 +15,13 @@ export interface ArtisanAllocatedVillage {
 export interface ArtisanFarmSearchRecord {
   farmer_id: number;
   farmer_code?: string | null;
+  farmer_display_id?: string | null;
   farmer_name?: string | null;
   farmer_mobile?: string | null;
   farm_id: number;
   farm_code?: string | null;
+  farm_display_id?: string | null;
+  display_id?: string | null;
   farm_name?: string | null;
   village?: string | null;
   taluka?: string | null;

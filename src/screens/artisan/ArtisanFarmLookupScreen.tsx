@@ -26,6 +26,7 @@ import type { ArtisanStackParamList } from '../../navigation/types';
 import { findIncompleteBiocharProductionDraft } from '../../storage/biocharProductionDraftStorage';
 import { getAuthUser } from '../../utils/authStorage';
 import { colors, spacing } from '../../theme';
+import { formatFarmDisplayId, formatFarmerDisplayId } from '../../utils/displayIds';
 import { groupFarmSearchResultsByFarmer, labelFarmsForFarmer } from '../../utils/farmDisplayLabel';
 import { getFarmCoordinates, openGoogleMaps } from '../../utils/farmMapHelpers';
 import type {
@@ -508,7 +509,7 @@ export function ArtisanFarmLookupScreen() {
           </Text>
           {selectedFarmerFarms.map((farm) => {
             const farmName = farm.farm_name?.trim() || farm.displayLabel || `Farm ${farm.farm_id}`;
-            const farmId = farm.farm_code?.trim() || String(farm.farm_id);
+            const farmId = formatFarmDisplayId(farm);
             const village = farm.village?.trim() || '—';
 
             return (
@@ -563,12 +564,12 @@ export function ArtisanFarmLookupScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{item.farmer_name ?? 'Farmer'}</Text>
         <Text style={styles.cardMeta}>
-          Farmer ID: {item.farmer_code ?? item.farmer_id}
+          Farmer ID: {formatFarmerDisplayId(item)}
         </Text>
         <Text style={styles.cardMeta}>
           Farm Name: {labeled?.displayLabel ?? item.farm_name ?? `Farm ${item.farm_id}`}
         </Text>
-        <Text style={styles.cardMeta}>Farm ID: {item.farm_code ?? item.farm_id}</Text>
+        <Text style={styles.cardMeta}>Farm ID: {formatFarmDisplayId(item)}</Text>
         <Text style={styles.cardMeta}>Village: {item.village?.trim() || '—'}</Text>
         {item.area_acre != null ? <Text style={styles.cardMeta}>Area: {item.area_acre} acre</Text> : null}
         {item.biochar_status ? <Text style={styles.cardStatus}>Biochar: {item.biochar_status}</Text> : null}

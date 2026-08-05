@@ -1,3 +1,9 @@
+import {
+  DISPLAY_ID_PENDING,
+  formatFarmDisplayId,
+  formatFarmerDisplayId,
+} from './displayIds';
+
 const PLACEHOLDER_IDS = new Set([
   'onboarding',
   'pending',
@@ -59,28 +65,26 @@ export function toPositiveEntityId(value: unknown): number | null {
 }
 
 /**
- * NEVER fabricates a display ID locally (see src/utils/displayIds.ts). Shows the
- * legacy farmer_code when present, else a safe placeholder — the numeric internal
- * farmerId is not a business-facing code and must not be reformatted as one.
+ * NEVER fabricates a display ID locally. Prefer server display ID helpers.
  */
 export function formatFarmerDisplayCode(farmerId: number | null | undefined, farmerCode?: string | null): string {
-  const code = farmerCode?.trim();
-  if (code && !PLACEHOLDER_IDS.has(code.toLowerCase())) {
-    return code;
-  }
-
-  return '—';
+  return formatFarmerDisplayId({
+    farmer_display_id: farmerCode,
+    farmer_code: farmerCode,
+    id: farmerId ?? undefined,
+  });
 }
 
 export function formatFarmDisplayCode(farmId: number | null | undefined, farmCode?: string | null): string {
-  const code = farmCode?.trim();
-  if (code && !PLACEHOLDER_IDS.has(code.toLowerCase())) {
-    return code;
+  const formatted = formatFarmDisplayId({
+    farm_display_id: farmCode,
+    farm_code: farmCode,
+    id: farmId ?? undefined,
+  });
+
+  if (formatted !== DISPLAY_ID_PENDING && formatted !== 'Loading…') {
+    return formatted;
   }
 
-  if (isValidEntityId(farmId)) {
-    return String(farmId);
-  }
-
-  return '—';
+  return DISPLAY_ID_PENDING;
 }
