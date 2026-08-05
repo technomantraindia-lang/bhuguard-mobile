@@ -56,7 +56,7 @@ function resultToGate(result: EnsureOnboardingFarmerFarmResult): GateState {
 export function OnboardingBoundaryStartScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<ScreenRoute>();
-  const { draft, result, updateDraft, toFormData } = useOnboarding();
+  const { draft, result, updateDraft } = useOnboarding();
   const boundary = useBoundaryCapture();
   const [gate, setGate] = useState<GateState>({ kind: 'loading' });
   const [openingNativeMap, setOpeningNativeMap] = useState(false);
@@ -66,9 +66,7 @@ export function OnboardingBoundaryStartScreen() {
   const continuingRef = useRef(false);
 
   const draftRef = useRef(draft);
-  const toFormDataRef = useRef(toFormData);
   draftRef.current = draft;
-  toFormDataRef.current = toFormData;
   const ensuringRef = useRef(false);
 
   const applySession = useCallback(
@@ -130,7 +128,7 @@ export function OnboardingBoundaryStartScreen() {
         return;
       }
 
-      const result = await ensureOnboardingFarmerFarm(currentDraft, toFormDataRef.current);
+      const result = await ensureOnboardingFarmerFarm(currentDraft);
       const nextGate = resultToGate(result);
 
       if (nextGate.kind === 'ready') {

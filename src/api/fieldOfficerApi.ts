@@ -359,6 +359,30 @@ export async function createFarmerOnboarding(formData: FormData): Promise<ApiRec
   return response.data.data?.farmer ?? (response.data.data as unknown as ApiRecord);
 }
 
+/** Provisional farmer + farm for mapping before Consent. Does not require agreement token. */
+export async function prepareFarmerForMapping(payload: ApiRecord): Promise<ApiRecord> {
+  const response = await apiClient.post<ApiSuccessResponse<{ farmer: ApiRecord }>>(
+    '/field-officer/farmers/prepare-for-mapping',
+    payload,
+  );
+
+  return response.data.data?.farmer ?? (response.data.data as unknown as ApiRecord);
+}
+
+/** Finalize draft onboarding after Consent OTP. Requires agreement_verification_token. */
+export async function finalizePreparedFarmerOnboarding(
+  farmerId: number | string,
+  formData: FormData,
+): Promise<ApiRecord> {
+  const response = await apiClient.post<ApiSuccessResponse<{ farmer: ApiRecord }>>(
+    `/field-officer/farmers/${farmerId}/finalize-onboarding`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+
+  return response.data.data?.farmer ?? (response.data.data as unknown as ApiRecord);
+}
+
 /** Update FO-editable farmer profile fields when farmer_id already exists (Phase 10.11). */
 export async function updateFieldOfficerFarmer(
   farmerId: number | string,

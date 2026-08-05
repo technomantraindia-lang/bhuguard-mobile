@@ -96,7 +96,7 @@ const IRRIGATION_OPTIONS = [
 
 export function FarmerLandDetailsScreen() {
   const navigation = useNavigation<Nav>();
-  const { draft, result, updateDraft, toFormData } = useOnboarding();
+  const { draft, result, updateDraft } = useOnboarding();
   const [error, setError] = useState<string | null>(null);
   const continuingRef = useRef(false);
   const bioWasteParsed = useMemo(
@@ -125,7 +125,7 @@ export function FarmerLandDetailsScreen() {
     draftAfter: typeof draft,
     mappingStatus: 'pending' | 'completed',
   ) => {
-    const ensured = await ensureOnboardingFarmerFarm(draftAfter, toFormData);
+    const ensured = await ensureOnboardingFarmerFarm(draftAfter);
     if (ensured.status !== 'ready') {
       continuingRef.current = false;
       setError(ensured.message);

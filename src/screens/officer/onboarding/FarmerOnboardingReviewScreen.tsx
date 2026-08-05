@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { createFarmerOnboarding, updateFieldOfficerFarmMapping } from '../../../api/fieldOfficerApi';
+import { createFarmerOnboarding, finalizePreparedFarmerOnboarding, updateFieldOfficerFarmMapping } from '../../../api/fieldOfficerApi';
 import { getApiErrorMessage } from '../../../api/authApi';
 import { AppCard } from '../../../components/AppCard';
 import { OnboardingReviewPhoto } from '../../../components/onboarding/OnboardingReviewPhoto';
@@ -20,7 +20,6 @@ import {
 } from '../../../utils/landMappingHelpers';
 import { calculateTurfBoundaryMetrics, polygonCentroid } from '../../../utils/manualBoundaryGeometry';
 import { validateSubmit, getSubmitEligibility } from '../../../utils/onboardingValidation';
-import { persistFieldOfficerFarmerProfile } from '../../../utils/persistFieldOfficerFarmerProfile';
 import { OnboardingFormScreen } from './OnboardingFormScreen';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
@@ -179,19 +178,7 @@ export function FarmerOnboardingReviewScreen() {
       let landAreaUnit = draft.land_area_unit;
 
       if (draftAlreadyHasFarmerFarm(draft) && farmerId != null && farmId != null) {
-        // Farmer/farm already created during mapping gate. Persist profile edits + mapping refresh.
-        const updated = await persistFieldOfficerFarmerProfile(draft);
-        if (!updated) {
-          throw new Error('Unable to update farmer profile.');
-        }
-        farmerName = String(updated.farmer_name ?? draft.farmer_name);
-        mobile = String(updated.mobile ?? draft.mobile);
-        village = updated.village ? String(updated.village) : draft.village_name;
-        taluka = updated.taluka ? String(updated.taluka) : draft.taluka_name;
-        district = updated.district ? String(updated.district) : draft.district_name;
-        state = updated.state ? String(updated.state) : draft.state;
-        photoUrl = updated.photo_url ? String(updated.photo_url) : undefined;
-
+        // Farmer/farm were prepared during mapping (draft). Finalize with Consent OTP token.
         if (mappingCompleted) {
           const center =
             landMappingSummary.center
@@ -213,6 +200,21 @@ export function FarmerOnboardingReviewScreen() {
             gps_accuracy_average: draft.gps_accuracy ? Number(draft.gps_accuracy) : undefined,
           });
         }
+
+        const finalizeForm = toFormData();
+        finalizeForm.append('farm_id', String(farmId));
+        const finalized = await finalizePreparedFarmerOnboarding(farmerId, finalizeForm);
+        farmerName = String(finalized.farmer_name ?? draft.farmer_name);
+        mobile = String(finalized.mobile ?? draft.mobile);
+        village = finalized.village ? String(finalized.village) : draft.village_name;
+        taluka = finalized.taluka ? String(finalized.taluka) : draft.taluka_name;
+        district = finalized.district ? String(finalized.district) : draft.district_name;
+        state = finalized.state ? String(finalized.state) : draft.state;
+        onboardedAt = finalized.onboarded_at ? String(finalized.onboarded_at) : undefined;
+        photoUrl = finalized.photo_url ? String(finalized.photo_url) : undefined;
+        landSurvey = finalized.land_survey_number ? String(finalized.land_survey_number) : draft.land_survey_number;
+        landArea = finalized.land_area != null ? String(finalized.land_area) : draft.land_area;
+        landAreaUnit = finalized.land_area_unit ? String(finalized.land_area_unit) : draft.land_area_unit;
       } else {
         const farmer = await createFarmerOnboarding(toFormData());
         farmerId = toPositiveEntityId(farmer.farmer_id);

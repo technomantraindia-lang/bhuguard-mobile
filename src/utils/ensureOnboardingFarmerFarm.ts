@@ -1,4 +1,4 @@
-import { createFarmerOnboarding, createFieldOfficerFarmerFarm } from '../api/fieldOfficerApi';
+import { createFieldOfficerFarmerFarm, prepareFarmerForMapping } from '../api/fieldOfficerApi';
 import type { OnboardingDraft } from '../context/OnboardingContext';
 import { getApiErrorMessage } from '../api/authApi';
 import { pickString, type ApiRecord } from './apiHelpers';
@@ -114,14 +114,72 @@ function buildAdditionalFarmPayload(draft: OnboardingDraft): ApiRecord {
   };
 }
 
+/** JSON payload for provisional farmer/farm create (mapping before Consent). No agreement token. */
+export function buildPrepareForMappingPayload(draft: OnboardingDraft): ApiRecord {
+  const serviceInterests =
+    draft.service_interests.length > 0 ? draft.service_interests : ['Biochar'];
+  const projectInterest =
+    draft.project_interest.length > 0 ? draft.project_interest : ['Biochar'];
+
+  const payload: ApiRecord = {
+    farmer_name: draft.farmer_name.trim(),
+    mobile: draft.mobile.trim(),
+    state: draft.state.trim() || 'Gujarat',
+    district_id: Number(draft.district_id),
+    taluka_id: Number(draft.taluka_id),
+    village_id: Number(draft.village_id),
+    land_survey_number: draft.land_survey_number.trim(),
+    land_area: Number(draft.land_area),
+    land_area_unit: draft.land_area_unit.trim(),
+    ownership_type: draft.ownership_type.trim(),
+    soil_type: draft.soil_type.trim(),
+    irrigation_type: draft.irrigation_type.trim(),
+    service_interests: serviceInterests,
+    project_interest: projectInterest,
+  };
+
+  if (draft.email.trim()) {
+    payload.email = draft.email.trim();
+  }
+  if (draft.preferred_language.trim()) {
+    payload.preferred_language = draft.preferred_language.trim();
+  }
+  if (draft.pincode.trim()) {
+    payload.pincode = draft.pincode.trim();
+  }
+  if (draft.farm_name.trim()) {
+    payload.farm_name = draft.farm_name.trim();
+  }
+  if (draft.ownership_type.trim() === 'other' && draft.ownership_other_detail.trim()) {
+    payload.ownership_other_detail = draft.ownership_other_detail.trim();
+  }
+  if (draft.crop_type.trim()) {
+    payload.crop_type = draft.crop_type.trim();
+  }
+  if (draft.existing_farming_practice.trim()) {
+    payload.existing_farming_practice = draft.existing_farming_practice.trim();
+  }
+  if (draft.gps_latitude.trim()) {
+    payload.gps_latitude = Number(draft.gps_latitude);
+  }
+  if (draft.gps_longitude.trim()) {
+    payload.gps_longitude = Number(draft.gps_longitude);
+  }
+  if (draft.gps_accuracy.trim()) {
+    payload.gps_accuracy = Number(draft.gps_accuracy);
+  }
+
+  return payload;
+}
+
 /**
  * Ensures Farmer + Farm records exist before FO boundary mapping.
  * Idempotent when draft already holds valid IDs.
+ * Uses prepare-for-mapping (no agreement token) — not final onboarding submit.
  * When farmer_id exists but farm_id is cleared (Add New Farm), creates only a new Farm.
  */
 export async function ensureOnboardingFarmerFarm(
   draft: OnboardingDraft,
-  toFormData: () => FormData,
 ): Promise<EnsureOnboardingFarmerFarmResult> {
   const existing = readEnsuredFromDraft(draft);
   if (existing) {
@@ -163,7 +221,7 @@ export async function ensureOnboardingFarmerFarm(
   }
 
   try {
-    const farmer = await createFarmerOnboarding(toFormData());
+    const farmer = await prepareFarmerForMapping(buildPrepareForMappingPayload(draft));
     return { status: 'ready', ids: readEnsuredFromApi(farmer, draft) };
   } catch (error) {
     const raw = getApiErrorMessage(
