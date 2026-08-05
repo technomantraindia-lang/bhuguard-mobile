@@ -599,7 +599,7 @@ export function BatchDetailsSection({
           style={[styles.input, styles.flex1]}
           value={batchCode}
           onChangeText={onBatchCodeChange}
-          placeholder="BHG-FRM-000003-BCH-20260708-001"
+          placeholder="BHG-KISHAN-03-BCH-20260708-001"
           placeholderTextColor={officerTheme.outline}
           autoCapitalize="characters"
           autoCorrect={false}
