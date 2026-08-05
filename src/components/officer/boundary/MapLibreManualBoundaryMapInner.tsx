@@ -4,9 +4,7 @@ import type { BoundaryPoint } from '../../../utils/boundaryGeometry';
 import type { LatLng } from '../../../utils/farmSatelliteMap';
 import type { LngLat } from '../../../utils/lngLat';
 import type { ManualDrawingPhase } from '../../../utils/manualBoundaryVisuals';
-import {
-  type MapStyleMode,
-} from '../../../utils/foMapTiler';
+import { type MapStyleMode } from '../../../utils/foMapTiler';
 import type { MapTilerStyleMode } from '../../../utils/mapTilerConfig';
 import { FoBoundaryMap } from './FoBoundaryMap';
 import type { ManualBoundaryMapProps } from './MapLibreManualBoundaryMap';
@@ -31,6 +29,7 @@ export function MapLibreManualBoundaryMapInner(props: ManualBoundaryMapProps) {
     points,
     currentLocation = null,
     farmLocation = null,
+    farmIdentityLabel = null,
     phase,
     isValid,
     selectedPointId = null,
@@ -106,6 +105,7 @@ export function MapLibreManualBoundaryMapInner(props: ManualBoundaryMapProps) {
       mapStyleMode={toFoStyleMode(mapStyleMode)}
       currentLocation={currentLocation}
       farmLocation={farmLocation}
+      farmIdentityLabel={farmIdentityLabel}
       showUserLocation={showUserLocation}
       followGps={followGps}
       requestFitToPolygon={requestFitToPolygon}

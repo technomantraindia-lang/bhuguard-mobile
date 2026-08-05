@@ -11,8 +11,13 @@ import type { FarmerStackParamList } from '../../../navigation/types';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
 import { pickString, type ApiRecord } from '../../../utils/apiHelpers';
 import type { BoundaryPoint } from '../../../utils/boundaryGeometry';
-import { formatFarmerDisplayId } from '../../../utils/displayIds';
+import type { LatLng } from '../../../utils/farmSatelliteMap';
+import { formatFarmDisplayId, formatFarmerDisplayId } from '../../../utils/displayIds';
 import { getFarmCode } from '../../../utils/farmMapHelpers';
+import {
+  resolveFarmIdentityLabelCoordinate,
+  type FarmIdentityLabelData,
+} from '../../../utils/farmIdentityMapLabel';
 import { calculateTurfBoundaryMetrics } from '../../../utils/manualBoundaryGeometry';
 import { getAuthUser } from '../../../utils/authStorage';
 
@@ -132,6 +137,8 @@ export function FarmerFarmBoundaryViewScreen({ navigation, route }: Props) {
   const [declaredAreaLabel, setDeclaredAreaLabel] = useState<string | null>(
     route.params.areaLabel ?? null,
   );
+  const [farmGps, setFarmGps] = useState<LatLng | null>(null);
+  const [boundaryCenter, setBoundaryCenter] = useState<LatLng | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -168,6 +175,19 @@ export function FarmerFarmBoundaryViewScreen({ navigation, route }: Props) {
           farmer_display_id: profile.farmer_display_id ?? authRecord.farmer_display_id,
           farmer_code: profile.farmer_code ?? authRecord.farmer_code,
         });
+        const displayFarmId = formatFarmDisplayId({
+          farm_display_id: farmRecord.farm_display_id ?? farmRecord.display_id,
+          farm_code: farmRecord.farm_code,
+        });
+
+        const lat = readNumber(farmRecord, 'latitude', 'gps_latitude', 'farm_latitude');
+        const lng = readNumber(farmRecord, 'longitude', 'gps_longitude', 'farm_longitude');
+        const centerLat = mappingRecord
+          ? readNumber(mappingRecord, 'center_latitude')
+          : null;
+        const centerLng = mappingRecord
+          ? readNumber(mappingRecord, 'center_longitude')
+          : null;
 
         if (!cancelled) {
           setPoints(savedPoints);
@@ -177,7 +197,7 @@ export function FarmerFarmBoundaryViewScreen({ navigation, route }: Props) {
               ? pickString(farmRecord, 'farm_name', 'name')
               : `Farm ${farmId}`,
           );
-          setFarmIdLabel(getFarmCode(farmRecord));
+          setFarmIdLabel(displayFarmId !== 'ID Pending' ? displayFarmId : getFarmCode(farmRecord));
           setVillage(
             pickString(farmRecord, 'village') !== '-'
               ? pickString(farmRecord, 'village')
@@ -189,11 +209,19 @@ export function FarmerFarmBoundaryViewScreen({ navigation, route }: Props) {
               : '';
           setFarmerName(farmerName || authUser?.name || farmFarmerName || '—');
           setFarmerIdLabel(farmerIdLabel || displayFarmerId);
+          setFarmGps(lat != null && lng != null ? { latitude: lat, longitude: lng } : null);
+          setBoundaryCenter(
+            centerLat != null && centerLng != null
+              ? { latitude: centerLat, longitude: centerLng }
+              : null,
+          );
           const acres = Number(farmRecord.area_acres ?? farmRecord.land_area ?? 0);
           if (acres > 0) {
             setDeclaredAreaLabel(`${acres % 1 === 0 ? acres.toFixed(0) : acres.toFixed(2)} Acre`);
           }
-          if (savedPoints.length < 3) {
+          if (savedPoints.length < 3 && (lat == null || lng == null)) {
+            setError('Mapping unavailable for this farm.');
+          } else if (savedPoints.length < 3) {
             setError('This farm does not have a saved boundary yet.');
           }
         }
@@ -224,6 +252,25 @@ export function FarmerFarmBoundaryViewScreen({ navigation, route }: Props) {
     );
   }, [points]);
 
+  const farmIdentityLabel = useMemo((): FarmIdentityLabelData | null => {
+    const coordinate = resolveFarmIdentityLabelCoordinate({
+      polygon: points.map((point) => ({ latitude: point.latitude, longitude: point.longitude })),
+      farmGps,
+      center: boundaryCenter,
+    });
+    if (!coordinate) {
+      return null;
+    }
+
+    return {
+      coordinate,
+      farmName: farmName.trim() || 'Farm',
+      farmId: farmIdLabel.trim() || 'ID Pending',
+      farmerName: farmerName.trim() || 'Farmer',
+      farmerId: farmerIdLabel.trim() || 'ID Pending',
+    };
+  }, [boundaryCenter, farmGps, farmIdLabel, farmName, farmerIdLabel, farmerName, points]);
+
   const done = () => navigation.goBack();
 
   return (
@@ -239,7 +286,8 @@ export function FarmerFarmBoundaryViewScreen({ navigation, route }: Props) {
           <ManualBoundaryMap
             points={points}
             currentLocation={null}
-            farmLocation={null}
+            farmLocation={farmGps}
+            farmIdentityLabel={farmIdentityLabel}
             phase="completed"
             isValid={points.length >= 3}
             requestFitToPolygon={fitRequest}
@@ -257,9 +305,9 @@ export function FarmerFarmBoundaryViewScreen({ navigation, route }: Props) {
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Farm Mapping Summary</Text>
-          <Line label="Farmer Name" value={farmerName} />
+          <Line label="Farmer" value={farmerName} />
           <Line label="Farmer ID" value={farmerIdLabel} />
-          <Line label="Farm Name" value={farmName} />
+          <Line label="Farm" value={farmName} />
           <Line label="Farm ID" value={farmIdLabel} />
           <Line label="Village" value={village} />
           {declaredAreaLabel ? <Line label="Declared Area" value={declaredAreaLabel} /> : null}

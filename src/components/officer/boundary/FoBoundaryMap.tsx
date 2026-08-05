@@ -22,6 +22,8 @@ import {
 } from '@maplibre/maplibre-react-native';
 
 import { EditableBoundaryVertices } from './EditableBoundaryVertices';
+import { FarmIdentityMapLabel } from './FarmIdentityMapLabel';
+import type { FarmIdentityLabelData } from '../../../utils/farmIdentityMapLabel';
 import {
   MAP_FALLBACK_CENTER,
   MAP_FALLBACK_ZOOM,
@@ -69,6 +71,8 @@ type Props = {
   currentLocation: LatLng | null;
   /** Farm GPS used when no saved boundary points exist yet. */
   farmLocation?: LatLng | null;
+  /** Optional selected-farm identity label (View Farm Mapping). */
+  farmIdentityLabel?: FarmIdentityLabelData | null;
   /** When false, hide the device GPS puck (read-only View Mapping / View Farm). */
   showUserLocation?: boolean;
   followGps: boolean;
@@ -113,6 +117,7 @@ export function FoBoundaryMap({
   mapStyleMode,
   currentLocation,
   farmLocation = null,
+  farmIdentityLabel = null,
   showUserLocation = true,
   followGps,
   requestFitToPolygon,
@@ -586,6 +591,8 @@ export function FoBoundaryMap({
                   onDragEnd={onVertexDragEnd}
                 />
               ) : null}
+
+              {farmIdentityLabel ? <FarmIdentityMapLabel label={farmIdentityLabel} /> : null}
             </>
           ) : null}
         </Map>

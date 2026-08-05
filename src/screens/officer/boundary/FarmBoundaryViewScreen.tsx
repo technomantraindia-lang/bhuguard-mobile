@@ -13,7 +13,16 @@ import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
 import { pickString, type ApiRecord } from '../../../utils/apiHelpers';
 import type { BoundaryPoint } from '../../../utils/boundaryGeometry';
-import { formatFarmDisplayCode, formatFarmerDisplayCode } from '../../../utils/entityId';
+import type { LatLng } from '../../../utils/farmSatelliteMap';
+import {
+  DISPLAY_ID_PENDING,
+  formatFarmDisplayId,
+  formatFarmerDisplayId,
+} from '../../../utils/displayIds';
+import {
+  resolveFarmIdentityLabelCoordinate,
+  type FarmIdentityLabelData,
+} from '../../../utils/farmIdentityMapLabel';
 import { calculateTurfBoundaryMetrics } from '../../../utils/manualBoundaryGeometry';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'FarmBoundaryView'>;
@@ -65,11 +74,8 @@ function mapApiPointsToBoundary(record: ApiRecord): BoundaryPoint[] {
 }
 
 /**
- * Read-only saved-boundary viewer (Phase 10.7/10.10). Shows only the selected
- * farm's polygon, fit to bounds, with names/IDs/area below the map. There is no
- * FO location marker, no editing affordance, and no other farms rendered — this
- * is achieved by passing `phase="completed"` and omitting all edit callbacks, so
- * MapLibre/FoBoundaryMap ignores taps and drag gestures entirely.
+ * Read-only saved-boundary viewer. Shows only the selected farm's polygon with
+ * a single identity label over the farm. No FO location marker, no editing.
  */
 export function FarmBoundaryViewScreen() {
   const navigation = useNavigation<Nav>();
@@ -80,6 +86,29 @@ export function FarmBoundaryViewScreen() {
   const [error, setError] = useState<string | null>(null);
   const [points, setPoints] = useState<BoundaryPoint[]>([]);
   const [fitRequest, setFitRequest] = useState(0);
+  const [farmerName, setFarmerName] = useState(params.farmerName || 'Farmer');
+  const [farmName, setFarmName] = useState(params.farmName || '');
+  const [village, setVillage] = useState(params.village || '');
+  const [farmerDisplayId, setFarmerDisplayId] = useState(
+    formatFarmerDisplayId({
+      farmer_display_id: params.farmerCode,
+      farmer_code: params.farmerCode,
+    }),
+  );
+  const [farmDisplayId, setFarmDisplayId] = useState(
+    formatFarmDisplayId({
+      farm_display_id: params.farmCode,
+      farm_code: params.farmCode,
+    }),
+  );
+  const [declaredAreaLabel, setDeclaredAreaLabel] = useState(
+    params.declaredArea
+      ? `${params.declaredArea}${params.declaredAreaUnit ? ` ${params.declaredAreaUnit}` : ''}`
+      : null,
+  );
+  const [mappedAreaLabel, setMappedAreaLabel] = useState<string | null>(null);
+  const [farmGps, setFarmGps] = useState<LatLng | null>(null);
+  const [boundaryCenter, setBoundaryCenter] = useState<LatLng | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,11 +118,83 @@ export function FarmBoundaryViewScreen() {
       setError(null);
       try {
         const payload = (await getFieldOfficerFarmMapping(params.farmerId, params.farmId)) as ApiRecord;
-        const savedPoints = mapApiPointsToBoundary(payload);
+        const mapping = ((payload.mapping as ApiRecord | undefined) ?? payload) as ApiRecord;
+        const savedPoints = mapApiPointsToBoundary(mapping);
+
+        const nextFarmerName =
+          pickString(payload, 'farmer_name') !== '-'
+            ? pickString(payload, 'farmer_name')
+            : params.farmerName || 'Farmer';
+        const nextFarmName =
+          pickString(payload, 'farm_name') !== '-'
+            ? pickString(payload, 'farm_name')
+            : params.farmName || '';
+        const nextVillage =
+          pickString(payload, 'village') !== '-'
+            ? pickString(payload, 'village')
+            : pickString(mapping, 'village') !== '-'
+              ? pickString(mapping, 'village')
+              : params.village || '';
+
+        const nextFarmerId = formatFarmerDisplayId({
+          farmer_display_id:
+            pickString(payload, 'farmer_display_id') !== '-'
+              ? pickString(payload, 'farmer_display_id')
+              : params.farmerCode,
+          farmer_code:
+            pickString(payload, 'farmer_code') !== '-'
+              ? pickString(payload, 'farmer_code')
+              : params.farmerCode,
+        });
+        const nextFarmId = formatFarmDisplayId({
+          farm_display_id:
+            pickString(payload, 'farm_display_id') !== '-'
+              ? pickString(payload, 'farm_display_id')
+              : params.farmCode,
+          farm_code:
+            pickString(payload, 'farm_code') !== '-'
+              ? pickString(payload, 'farm_code')
+              : params.farmCode,
+        });
+
+        const declaredArea = readNumber(payload, 'declared_area') ?? readNumber(mapping, 'declared_area');
+        const declaredUnit =
+          pickString(payload, 'declared_unit') !== '-'
+            ? pickString(payload, 'declared_unit')
+            : pickString(mapping, 'declared_unit');
+        const mappedArea = readNumber(payload, 'mapped_area', 'area_acre', 'area_acres')
+          ?? readNumber(mapping, 'area_acre', 'area_acres', 'actual_area_acre');
+
+        const lat = readNumber(payload, 'farm_latitude', 'gps_latitude', 'latitude');
+        const lng = readNumber(payload, 'farm_longitude', 'gps_longitude', 'longitude');
+        const centerLat = readNumber(payload, 'center_latitude') ?? readNumber(mapping, 'center_latitude');
+        const centerLng = readNumber(payload, 'center_longitude') ?? readNumber(mapping, 'center_longitude');
+
         if (!cancelled) {
           setPoints(savedPoints);
           setFitRequest((value) => value + 1);
-          if (savedPoints.length < 3) {
+          setFarmerName(nextFarmerName);
+          setFarmName(nextFarmName);
+          setVillage(nextVillage);
+          setFarmerDisplayId(nextFarmerId);
+          setFarmDisplayId(nextFarmId);
+          if (declaredArea != null) {
+            setDeclaredAreaLabel(
+              `${declaredArea}${declaredUnit && declaredUnit !== '-' ? ` ${declaredUnit}` : ''}`,
+            );
+          }
+          if (mappedArea != null) {
+            setMappedAreaLabel(`${mappedArea.toFixed(4)} acres`);
+          }
+          setFarmGps(lat != null && lng != null ? { latitude: lat, longitude: lng } : null);
+          setBoundaryCenter(
+            centerLat != null && centerLng != null
+              ? { latitude: centerLat, longitude: centerLng }
+              : null,
+          );
+          if (savedPoints.length < 3 && (lat == null || lng == null)) {
+            setError('Mapping unavailable for this farm.');
+          } else if (savedPoints.length < 3) {
             setError('This farm does not have a saved boundary yet.');
           }
         }
@@ -113,7 +214,7 @@ export function FarmBoundaryViewScreen() {
     return () => {
       cancelled = true;
     };
-  }, [params.farmerId, params.farmId]);
+  }, [params.farmCode, params.farmerCode, params.farmerId, params.farmId, params.farmName, params.farmerName, params.village]);
 
   const metrics = useMemo(() => {
     if (points.length < 3) {
@@ -124,19 +225,30 @@ export function FarmBoundaryViewScreen() {
     );
   }, [points]);
 
-  const farmerDisplayId = formatFarmerDisplayCode(params.farmerId, params.farmerCode);
-  const farmDisplayId = formatFarmDisplayCode(params.farmId, params.farmCode);
-  const declaredAreaLabel = params.declaredArea
-    ? `${params.declaredArea}${params.declaredAreaUnit ? ` ${params.declaredAreaUnit}` : ''}`
-    : null;
+  const farmIdentityLabel = useMemo((): FarmIdentityLabelData | null => {
+    const coordinate = resolveFarmIdentityLabelCoordinate({
+      polygon: points.map((point) => ({ latitude: point.latitude, longitude: point.longitude })),
+      farmGps,
+      center: boundaryCenter,
+    });
+    if (!coordinate) {
+      return null;
+    }
 
-  // Screen is always pushed from its origin (OnboardedFarmerView / Review) — a
-  // simple pop returns there without touching the onboarding stack (Phase 10.9).
+    return {
+      coordinate,
+      farmName: farmName.trim() || 'Farm',
+      farmId: farmDisplayId || DISPLAY_ID_PENDING,
+      farmerName: farmerName.trim() || 'Farmer',
+      farmerId: farmerDisplayId || DISPLAY_ID_PENDING,
+    };
+  }, [boundaryCenter, farmDisplayId, farmGps, farmName, farmerDisplayId, farmerName, points]);
+
   const done = () => navigation.goBack();
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <BoundaryFlowHeader title="View Farm Mapping" subtitle={params.farmName || params.farmerName} onBack={done} />
+      <BoundaryFlowHeader title="View Farm Mapping" subtitle={farmName || farmerName} onBack={done} />
 
       <View style={styles.mapWrap}>
         {loading ? (
@@ -147,7 +259,8 @@ export function FarmBoundaryViewScreen() {
           <ManualBoundaryMap
             points={points}
             currentLocation={null}
-            farmLocation={null}
+            farmLocation={farmGps}
+            farmIdentityLabel={farmIdentityLabel}
             phase="completed"
             isValid={points.length >= 3}
             requestFitToPolygon={fitRequest}
@@ -165,15 +278,18 @@ export function FarmBoundaryViewScreen() {
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Farm Mapping Summary</Text>
-          <Line label="Farmer" value={params.farmerName} />
+          <Line label="Farmer" value={farmerName} />
           <Line label="Farmer ID" value={farmerDisplayId} />
-          <Line label="Farm" value={params.farmName} />
+          <Line label="Farm" value={farmName} />
           <Line label="Farm ID" value={farmDisplayId} />
-          <Line label="Village" value={params.village} />
+          <Line label="Village" value={village} />
           {declaredAreaLabel ? <Line label="Declared Area" value={declaredAreaLabel} /> : null}
           <Line
             label="Mapped Area"
-            value={metrics ? `${metrics.areaAcre.toFixed(4)} acres` : points.length > 0 ? '—' : 'Not available'}
+            value={
+              mappedAreaLabel
+              ?? (metrics ? `${metrics.areaAcre.toFixed(4)} acres` : points.length > 0 ? '—' : 'Not available')
+            }
           />
           <Line label="Boundary Points" value={points.length > 0 ? String(points.length) : 'None'} />
         </View>

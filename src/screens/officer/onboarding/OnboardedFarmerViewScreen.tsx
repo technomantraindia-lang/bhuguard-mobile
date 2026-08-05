@@ -18,7 +18,7 @@ import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
 import { extractList, pickString, type ApiRecord } from '../../../utils/apiHelpers';
 import { beginAddNewFarmWithMapping } from '../../../utils/beginAddNewFarmFlow';
-import { formatFarmerDisplayId } from '../../../utils/displayIds';
+import { formatFarmDisplayId, formatFarmerDisplayId } from '../../../utils/displayIds';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'OnboardedFarmerView'>;
 type ScreenRoute = RouteProp<FieldOfficerStackParamList, 'OnboardedFarmerView'>;
@@ -120,12 +120,28 @@ export function OnboardedFarmerViewScreen() {
 
   const farmContext = useMemo(() => {
     const farmId = Number(primaryFarm?.id ?? 0) || undefined;
+    const farmerDisplay =
+      pickString(detail, 'farmer_display_id', 'farmerDisplayId') !== '-'
+        ? pickString(detail, 'farmer_display_id', 'farmerDisplayId')
+        : farmerCode !== '-'
+          ? farmerCode
+          : undefined;
+    const farmDisplay = primaryFarm
+      ? (
+        pickString(primaryFarm, 'farm_display_id', 'farmDisplayId', 'display_id') !== '-'
+          ? pickString(primaryFarm, 'farm_display_id', 'farmDisplayId', 'display_id')
+          : pickString(primaryFarm, 'farm_code', 'farmCode') !== '-'
+            ? pickString(primaryFarm, 'farm_code', 'farmCode')
+            : undefined
+      )
+      : undefined;
+
     return {
       farmerId: resolvedFarmerId,
-      farmerCode: farmerCode !== '-' ? farmerCode : undefined,
+      farmerCode: farmerDisplay,
       farmerName: farmerName !== '-' ? farmerName : undefined,
       farmId,
-      farmCode: primaryFarm ? pickString(primaryFarm, 'farm_code', 'farmCode') : undefined,
+      farmCode: farmDisplay,
       farmName: primaryFarm ? pickString(primaryFarm, 'farm_name', 'farmName') : undefined,
       village: String(detail?.village ?? primaryFarm?.village ?? result?.village ?? '') || undefined,
       taluka: String(detail?.taluka ?? primaryFarm?.taluka ?? result?.taluka ?? '') || undefined,
@@ -151,7 +167,10 @@ export function OnboardedFarmerViewScreen() {
                 <>
                   <Text style={styles.line}>Farm: {farmContext.farmName && farmContext.farmName !== '-' ? farmContext.farmName : '—'}</Text>
                   <Text style={styles.line}>
-                    Farm ID: {farmContext.farmCode && farmContext.farmCode !== '-' ? farmContext.farmCode : farmContext.farmId}
+                    Farm ID: {formatFarmDisplayId({
+                      farm_display_id: farmContext.farmCode,
+                      farm_code: farmContext.farmCode,
+                    })}
                   </Text>
                 </>
               ) : null}

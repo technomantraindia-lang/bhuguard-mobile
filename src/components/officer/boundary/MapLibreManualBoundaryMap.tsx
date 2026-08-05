@@ -2,6 +2,7 @@ import { type ComponentType, useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TurboModuleRegistry, View } from 'react-native';
 
 import type { BoundaryPoint } from '../../../utils/boundaryGeometry';
+import type { FarmIdentityLabelData } from '../../../utils/farmIdentityMapLabel';
 import type { LatLng } from '../../../utils/farmSatelliteMap';
 import type { LngLat } from '../../../utils/lngLat';
 import type { ManualDrawingPhase } from '../../../utils/manualBoundaryVisuals';
@@ -23,6 +24,8 @@ export interface ManualBoundaryMapProps {
   currentLocation?: LatLng | null;
   /** Optional farm GPS used for initial camera when no boundary points exist. */
   farmLocation?: LatLng | null;
+  /** Selected-farm identity label shown over the polygon on read-only View Mapping. */
+  farmIdentityLabel?: FarmIdentityLabelData | null;
   phase: ManualDrawingPhase;
   isValid: boolean;
   showPolygon?: boolean;
