@@ -76,8 +76,8 @@ export function ArtisanCheckInGate({ children }: Props) {
         <Text style={styles.roleTitle}>{checkIn.roleTitle}</Text>
         <Text style={styles.title}>Daily Check-in Required</Text>
         <Text style={styles.subtitle}>
-          Complete your Artisan Pro check-in before using the dashboard. Bhuguard uses high-accuracy GPS
-          and server time.
+          Complete your {checkIn.roleTitle} check-in before using the dashboard. Bhuguard uses high-accuracy
+          GPS and server time.
         </Text>
 
         <View style={[styles.card, officerCardShadow]}>
@@ -142,7 +142,7 @@ export function ArtisanCheckInGate({ children }: Props) {
             label="Logout"
             variant="ghost"
             onPress={() => {
-              Alert.alert('Log out?', 'You must check in to use the Artisan Pro app.', [
+              Alert.alert('Log out?', `You must check in to use the ${checkIn.roleTitle} app.`, [
                 { text: 'Cancel', style: 'cancel' },
                 { text: 'Logout', style: 'destructive', onPress: () => void logout() },
               ]);

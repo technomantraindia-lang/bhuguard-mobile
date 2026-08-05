@@ -20,7 +20,7 @@ export const PRODUCTION_API_BASE_URL = 'https://erp.bhuguard.com/api';
 export const DEMO_API_BASE_URL = PRODUCTION_API_BASE_URL;
 
 /** Default LAN Laravel API used during local Expo development. */
-export const DEFAULT_DEV_LOCAL_API_BASE_URL = 'http://192.168.1.11:8000/api';
+export const DEFAULT_DEV_LOCAL_API_BASE_URL = 'http://192.168.1.14:8000/api';
 
 export type AppVariant = 'development' | 'demo' | 'production';
 
@@ -80,6 +80,17 @@ export function resolveBuildApiBaseUrl(): string {
   const fromEnv = process.env.EXPO_PUBLIC_API_URL?.trim();
   const productionBuild = APP_VARIANT === 'production' || APP_VARIANT === 'demo';
 
+  // Development may use a temporary Cloudflare quick tunnel so phones on mobile
+  // data (or blocked LAN firewalls) can still reach the local Laravel API.
+  if (isDevelopmentApiVariant() && !productionBuild) {
+    const preferred =
+      (fromEnv && !isPlaceholderApiUrl(fromEnv) ? fromEnv : null) ||
+      process.env.EXPO_PUBLIC_DEV_LOCAL_API_URL?.trim() ||
+      DEFAULT_DEV_LOCAL_API_BASE_URL;
+
+    return normalizeApiUrl(preferred);
+  }
+
   if (
     fromEnv &&
     !isPlaceholderApiUrl(fromEnv) &&
@@ -87,13 +98,6 @@ export function resolveBuildApiBaseUrl(): string {
     !(productionBuild && isLanOrLoopbackApiUrl(fromEnv))
   ) {
     return normalizeApiUrl(fromEnv);
-  }
-
-  if (isDevelopmentApiVariant() && !productionBuild) {
-    const local =
-      process.env.EXPO_PUBLIC_DEV_LOCAL_API_URL?.trim() || DEFAULT_DEV_LOCAL_API_BASE_URL;
-
-    return normalizeApiUrl(local);
   }
 
   return PRODUCTION_API_BASE_URL;

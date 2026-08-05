@@ -60,6 +60,8 @@ export type PasswordLoginParams = {
   role: AppLoginRole;
 };
 
+export type ArtisanLoginParams = { role?: 'artisan' | 'artisan_pro' } | undefined;
+
 export type RootStackParamList = {
   Preloader: undefined;
   LanguageSelection: undefined;
@@ -78,10 +80,12 @@ export type RootStackParamList = {
   BiometricSetup: BiometricSetupParams | undefined;
   OtpVerification: OtpVerificationParams;
   ResetPassword: ResetPasswordParams;
-  ArtisanLogin: undefined;
+  ArtisanLogin: ArtisanLoginParams;
+  ArtisanProLogin: ArtisanLoginParams;
   FarmerApp: undefined;
   FieldOfficerApp: undefined;
   ArtisanApp: undefined;
+  ArtisanProApp: undefined;
   ApiHealthCheck: undefined;
 };
 

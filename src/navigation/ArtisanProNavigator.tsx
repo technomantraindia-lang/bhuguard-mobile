@@ -43,16 +43,19 @@ function safeScreen(
 }
 
 /**
- * True Artisan (`artisan` role) app shell. See `ArtisanProNavigator` for the
- * Artisan Pro (`artisan_pro`) copy — both share the same internal stack route
- * names and screen components, mounted as separate top-level routes
- * (`ArtisanApp` vs `ArtisanProApp`).
+ * Artisan Pro app shell — copied from `ArtisanNavigator` for the existing
+ * `artisan_pro` product users. Intentionally reuses the same internal stack
+ * route names (`ArtisanStackParamList`) and screen components as the true
+ * Artisan app: both navigators are mounted as separate top-level routes
+ * (`ArtisanApp` vs `ArtisanProApp`), so the shared route names never collide.
+ * Screens themselves read the signed-in user's actual role (`artisan` vs
+ * `artisan_pro`) to show role-correct titles/copy — see `getRoleDisplayName`.
  *
  * Lazy-load artisan screens with per-screen error isolation so one missing
- * native module cannot crash the whole Artisan app shell.
+ * native module cannot crash the whole Artisan Pro app shell.
  * FO onboarding / farm activity screens are reused (not duplicated).
  */
-export function ArtisanNavigator() {
+export function ArtisanProNavigator() {
   return (
     <ArtisanWorkSessionProvider>
       <OnboardingProvider>

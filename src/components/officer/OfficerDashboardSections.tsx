@@ -11,6 +11,7 @@ import {
 import { BhuguardMaterialIcon, type BhuguardIconName } from '../shared/BhuguardMaterialIcon';
 import { useTranslation } from '../../i18n/I18nContext';
 import { officerCardShadow, officerShadow, officerTheme } from '../../theme/officerDashboardTheme';
+import { formatFieldOfficerDisplayId } from '../../utils/displayIds';
 
 interface OfficerDashboardSectionsProps {
   dashboard: FieldOfficerDashboardViewModel;
@@ -47,7 +48,9 @@ export function OfficerSummaryCard({ dashboard }: { dashboard: FieldOfficerDashb
       <View style={styles.summaryRow}>
         <View style={styles.summaryLeft}>
           <Text style={styles.summaryName}>{dashboard.officerName}</Text>
-          <Text style={styles.summaryCode}>ID: {dashboard.officerCode}</Text>
+import { formatFieldOfficerDisplayId } from '../../utils/displayIds';
+...
+          <Text style={styles.summaryCode}>ID: {formatFieldOfficerDisplayId({ officer_code: dashboard.officerCode, field_officer_id: dashboard.officerCode })}</Text>
           <View style={styles.regionPill}>
             <BhuguardMaterialIcon name="location_on" size={14} color={officerTheme.onSecondaryFixedVariant} />
             <Text style={styles.regionText}>{dashboard.regionLabel}</Text>

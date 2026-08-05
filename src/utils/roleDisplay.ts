@@ -13,6 +13,8 @@ export function getRoleDisplayName(role: string | undefined | null): string {
     case 'field_officer':
       return 'Field Officer';
     case 'artisan':
+      return 'Artisan';
+    case 'artisan_pro':
       return 'Artisan Pro';
     case 'admin':
       return 'Admin';

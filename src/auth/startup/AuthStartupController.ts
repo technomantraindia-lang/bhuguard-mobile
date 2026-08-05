@@ -87,13 +87,15 @@ async function userHasUnlockCredential(user: AuthUser): Promise<boolean> {
   return userHasMpin(user);
 }
 
+/** Exact-match only — never `.includes('artisan')`, which would also match `artisan_pro`. */
 function isPatternPreferredRole(role: string | undefined | null): boolean {
   const roleLower = String(role ?? '').toLowerCase();
 
   return (
-    roleLower.includes('farmer')
-    || roleLower.includes('field_officer')
-    || roleLower.includes('artisan')
+    roleLower === 'farmer'
+    || roleLower === 'field_officer'
+    || roleLower === 'artisan'
+    || roleLower === 'artisan_pro'
   );
 }
 

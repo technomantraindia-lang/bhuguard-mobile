@@ -62,8 +62,18 @@ export async function completeMobileLogin({
     return { ok: false, code: 'farmer_profile_missing', message: 'Farmer profile is not linked to this account.' };
   }
 
-  if (resolvedRole === 'artisan' && !user.artisan_profile?.id) {
-    return { ok: false, code: 'unsupported_account', message: 'Artisan Pro profile is not linked to this account.' };
+  // Both true Artisan and Artisan Pro accounts carry the same `artisan_profile`
+  // relation from the backend — require it for either exact role, with a
+  // role-correct message.
+  if ((resolvedRole === 'artisan' || resolvedRole === 'artisan_pro') && !user.artisan_profile?.id) {
+    return {
+      ok: false,
+      code: 'unsupported_account',
+      message:
+        resolvedRole === 'artisan_pro'
+          ? 'Artisan Pro profile is not linked to this account.'
+          : 'Artisan profile is not linked to this account.',
+    };
   }
 
   const dashboardRoute = getDashboardRoute(resolvedRole);
@@ -75,7 +85,7 @@ export async function completeMobileLogin({
   await saveAuthSession(token, user, resolvedRole);
 
   // Never block or fail login if offline sync / native modules are unavailable.
-  if (resolvedRole === 'artisan' && user.artisan_profile?.id) {
+  if ((resolvedRole === 'artisan' || resolvedRole === 'artisan_pro') && user.artisan_profile?.id) {
     const artisanId = user.artisan_profile.id;
     void import('../services/biocharProductionSyncService')
       .then((sync) => {

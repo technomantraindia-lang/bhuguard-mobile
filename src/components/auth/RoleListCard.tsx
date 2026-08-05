@@ -26,7 +26,7 @@ function RoleIcon({ role }: { role: MobileLoginRole }) {
     );
   }
 
-  if (role === 'artisan') {
+  if (role === 'artisan' || role === 'artisan_pro') {
     return (
       <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
         <Path d="M12 3L4 9V21H20V9L12 3Z" stroke={tint} strokeWidth={1.8} strokeLinejoin="round" />

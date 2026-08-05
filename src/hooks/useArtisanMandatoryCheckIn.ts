@@ -12,6 +12,7 @@ import { resolveAssignedVillageForCheckIn } from '../utils/resolveAssignedVillag
 import { subscribeCheckInGateInvalidation } from '../utils/checkInGateEvents';
 import { normalizeAssignedArea, type ApiRecord } from '../utils/apiHelpers';
 import { getAuthUser } from '../utils/authStorage';
+import { resolveUserRole } from '../utils/authRole';
 import { getRoleDisplayName } from '../utils/roleDisplay';
 import { extractApiErrorMessage, logSafeApiFailure, NETWORK_UNREACHABLE_MESSAGE } from '../utils/apiError';
 import type { AuthUser } from '../types/auth';
@@ -191,8 +192,8 @@ export function useArtisanMandatoryCheckIn() {
       stage,
       submitting,
       submitError,
-      roleTitle: getRoleDisplayName('artisan'),
-      userName: user?.name?.trim() || user?.artisan_profile?.name?.trim() || 'Artisan Pro',
+      roleTitle: getRoleDisplayName(resolveUserRole(user) ?? user?.user_type ?? 'artisan'),
+      userName: user?.name?.trim() || user?.artisan_profile?.name?.trim() || getRoleDisplayName(resolveUserRole(user) ?? user?.user_type ?? 'artisan'),
       userId:
         user?.artisan_profile?.artisan_code != null
           ? String(user.artisan_profile.artisan_code)

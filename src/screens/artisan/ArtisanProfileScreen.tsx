@@ -15,11 +15,13 @@ import { useTranslation } from '../../i18n/I18nContext';
 import type { ArtisanStackParamList } from '../../navigation/types';
 import { setBiocharSyncArtisanId } from '../../services/biocharProductionSyncService';
 import { hasPendingOfflineSubmissions } from '../../storage/offlineBiocharProductionDb';
+import { resolveUserRole } from '../../utils/authRole';
 import { getAuthUser } from '../../utils/authStorage';
 import { artisanTheme } from '../../theme/artisanTheme';
 import { spacing } from '../../theme';
 import { pickString, type ApiRecord } from '../../utils/apiHelpers';
-import { formatArtisanDisplayId } from '../../utils/displayIds';
+import { formatArtisanProDisplayId } from '../../utils/displayIds';
+import { getRoleDisplayName } from '../../utils/roleDisplay';
 import { translateStatus } from '../../utils/translateStatus';
 
 type Nav = NativeStackNavigationProp<ArtisanStackParamList, 'ArtisanProfile'>;
@@ -72,15 +74,17 @@ export function ArtisanProfileScreen() {
   const [userRecord, setUserRecord] = useState<ApiRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [roleLabel, setRoleLabel] = useState('Artisan');
 
   const load = useCallback(async () => {
     setLoading(true);
 
     try {
-      const data = await getArtisanProfile();
+      const [data, authUser] = await Promise.all([getArtisanProfile(), getAuthUser()]);
       const payload = data as ApiRecord;
       setProfile((payload.artisan ?? payload) as ApiRecord);
       setUserRecord((payload.user as ApiRecord) ?? null);
+      setRoleLabel(getRoleDisplayName(resolveUserRole(authUser) ?? authUser?.user_type ?? 'artisan'));
     } finally {
       setLoading(false);
     }
@@ -149,8 +153,8 @@ export function ArtisanProfileScreen() {
       Alert.alert(
         hasPending ? 'Pending Biochar Uploads' : 'Logout',
         hasPending
-          ? 'You have Biochar Production records waiting to sync. They will remain safely stored on this device and will resume when you sign in again with the same Artisan Pro account.'
-          : 'Sign out from the Artisan Pro app?',
+          ? `You have Biochar Production records waiting to sync. They will remain safely stored on this device and will resume when you sign in again with the same ${roleLabel} account.`
+          : `Sign out from the ${roleLabel} app?`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -166,7 +170,7 @@ export function ArtisanProfileScreen() {
       if (__DEV__) {
         console.warn('[Bhuguard] Artisan logout confirmation failed:', error);
       }
-      Alert.alert('Logout', 'Sign out from the Artisan Pro app?', [
+      Alert.alert('Logout', `Sign out from the ${roleLabel} app?`, [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Logout',
@@ -180,7 +184,7 @@ export function ArtisanProfileScreen() {
   }, [loggingOut, performLogout]);
 
   const name = pickString(profile ?? {}, 'name');
-  const code = formatArtisanDisplayId(profile);
+  const code = formatArtisanProDisplayId(profile);
   const mobile = pickString(profile ?? {}, 'mobile');
   const status = pickString(profile ?? {}, 'status');
   const username = pickString(userRecord ?? {}, 'username', 'name');
@@ -211,7 +215,7 @@ export function ArtisanProfileScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <RoleEnvironmentalBackground />
       <ScreenHeader
-        title="Artisan Pro Profile"
+        title={`${roleLabel} Profile`}
         subtitle="Account & assigned area"
         showBrandLogo
         logoOnPress={() => navigation.navigate('ArtisanDashboard')}
@@ -220,10 +224,10 @@ export function ArtisanProfileScreen() {
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.heroCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initialsFromName(name !== '-' ? name : 'Artisan Pro')}</Text>
+            <Text style={styles.avatarText}>{initialsFromName(name !== '-' ? name : roleLabel)}</Text>
           </View>
           <View style={styles.heroCopy}>
-            <Text style={styles.heroName}>{name !== '-' ? name : 'Artisan Pro'}</Text>
+            <Text style={styles.heroName}>{name !== '-' ? name : roleLabel}</Text>
             <Text style={styles.heroCode}>{code !== '-' ? code : '—'}</Text>
             <View style={styles.badgeRow}>
               <View style={styles.activeBadge}>
@@ -232,7 +236,7 @@ export function ArtisanProfileScreen() {
                 </Text>
               </View>
               <View style={styles.roleBadge}>
-                <Text style={styles.roleBadgeText}>Artisan Pro</Text>
+                <Text style={styles.roleBadgeText}>{roleLabel}</Text>
               </View>
             </View>
           </View>

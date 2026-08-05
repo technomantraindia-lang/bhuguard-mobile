@@ -38,6 +38,8 @@ import {
 } from '../../../auth/startup/AuthStartupController';
 import { APP_VARIANT } from '../../../config/env';
 import { useTranslation } from '../../../i18n/I18nContext';
+import { getCachedApiBaseUrl } from '../../../storage/apiConfigStorage';
+import { NETWORK_UNREACHABLE_MESSAGE } from '../../../utils/apiError';
 import { safeAuthGoBack } from '../../../navigation/safeAuthBack';
 import type { RootStackParamList } from '../../../navigation/types';
 import { BhuguardLogo } from '../../shared/BhuguardLogo';
@@ -108,7 +110,8 @@ function LoginScreenComponent({ navigation }: Props) {
   const mapAuthError = useCallback(
     (err: unknown): string => {
       if (axios.isAxiosError(err) && !err.response) {
-        return t('mobileLogin.serverUnreachable');
+        const apiBase = getCachedApiBaseUrl();
+        return `${t('mobileLogin.serverUnreachable')}\n\nAPI: ${apiBase}`;
       }
 
       const message = getApiErrorMessage(err, t('mobileLogin.unableToContinue'));
@@ -123,6 +126,13 @@ function LoginScreenComponent({ navigation }: Props) {
         || normalized.includes('unregistered')
       ) {
         return t('mobileLogin.notRegistered');
+      }
+
+      if (
+        message === NETWORK_UNREACHABLE_MESSAGE
+        || /unable to connect to the bhuguard server/i.test(message)
+      ) {
+        return `${message}\n\nAPI: ${getCachedApiBaseUrl()}`;
       }
 
       return message;

@@ -3,6 +3,7 @@ import axios from 'axios';
 
 import { BUILD_API_BASE_URL } from '../config/apiDefaults';
 import {
+  DEFAULT_DEV_LOCAL_API_BASE_URL,
   isDevelopmentApiVariant,
   LOCAL_API_BASE_URL,
   PRODUCTION_API_BASE_URL,
@@ -16,6 +17,7 @@ import {
 import { formatApiUnreachableMessage } from '../utils/apiError';
 
 const API_BASE_URL_KEY = 'bhuguard_api_base_url';
+const DEFAULT_DEV_FALLBACK_API_BASE_URL = DEFAULT_DEV_LOCAL_API_BASE_URL;
 
 let cachedApiBaseUrl: string | null = null;
 
@@ -33,15 +35,16 @@ export function getDefaultApiBaseUrl(): string {
   const built = withApiSuffix(BUILD_API_BASE_URL || LOCAL_API_BASE_URL);
 
   if (isDevelopmentApiVariant()) {
-    if (
-      built &&
-      !isPlaceholderApiUrl(built) &&
-      !isTryCloudflareTunnelUrl(built)
-    ) {
+    if (built && !isPlaceholderApiUrl(built)) {
       return built;
     }
 
-    return withApiSuffix(LOCAL_API_BASE_URL) || 'http://192.168.1.11:8000/api';
+    const local = withApiSuffix(LOCAL_API_BASE_URL);
+    if (local && !isPlaceholderApiUrl(local)) {
+      return local;
+    }
+
+    return DEFAULT_DEV_FALLBACK_API_BASE_URL;
   }
 
   if (!built || isPlaceholderApiUrl(built) || !isLiveProductionApiUrl(built)) {
@@ -101,15 +104,30 @@ function shouldMigrateStoredApiUrl(stored: string): boolean {
   }
 
   if (isDevelopmentApiVariant()) {
-    // Keep intentional LAN overrides. Drop placeholders/tunnels and stale production
-    // values left over from when development incorrectly forced live ERP.
-    if (isPlaceholderApiUrl(stored) || isTryCloudflareTunnelUrl(stored)) {
+    // Drop placeholder example URLs and stale production ERP values.
+    if (isPlaceholderApiUrl(stored)) {
       return true;
     }
 
     const built = getDefaultApiBaseUrl();
+    const storedHost = getUrlHostname(stored);
+    const builtHost = getUrlHostname(built);
 
-    return isLiveProductionApiUrl(stored) && isLocalNetworkApiUrl(built);
+    // Prefer the current build default when:
+    // - phone still has a LAN IP but this build uses a Cloudflare tunnel / remote API
+    // - LAN IP changed (e.g. .11 → .14)
+    // - quick-tunnel hostname rotated
+    if (
+      storedHost &&
+      builtHost &&
+      storedHost !== builtHost &&
+      (isLocalNetworkApiUrl(stored) || isTryCloudflareTunnelUrl(stored)) &&
+      !isPlaceholderApiUrl(built)
+    ) {
+      return true;
+    }
+
+    return isLiveProductionApiUrl(stored) && !isLiveProductionApiUrl(built);
   }
 
   // Drop placeholders, tunnels, LAN, demo, and any non-live ERP override.

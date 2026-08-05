@@ -1,3 +1,12 @@
+/**
+ * TODO(artisan-pro-split): All endpoints below are hardcoded to the shared `/artisan/*`
+ * base path. The backend currently accepts both the `artisan` and `artisan_pro`
+ * UserType roles on these routes, so both apps (ArtisanNavigator / ArtisanProNavigator)
+ * can safely call this same module today. If the backend later splits Artisan Pro onto
+ * its own `/artisan-pro/*` routes, switch the base path here based on the signed-in
+ * user's exact role (`resolveUserRole(user) === 'artisan_pro'`) rather than changing
+ * call sites individually.
+ */
 import type { ApiSuccessResponse, AuthUser } from '../types/auth';
 import type { ArtisanAllocatedVillage, ArtisanFarmSearchRecord } from '../types/artisanFarmSearch';
 import type { AssignedLocationsPayload } from '../types/assignedLocations';

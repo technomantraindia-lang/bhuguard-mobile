@@ -40,11 +40,13 @@ import {
 import { artisanTheme } from '../../theme/artisanTheme';
 import { spacing } from '../../theme';
 import { pickString, type ApiRecord } from '../../utils/apiHelpers';
+import { resolveUserRole } from '../../utils/authRole';
 import { getAuthUser } from '../../utils/authStorage';
-import { formatArtisanDisplayId } from '../../utils/displayIds';
+import { formatArtisanProDisplayId } from '../../utils/displayIds';
 import { openGoogleMaps } from '../../utils/farmMapHelpers';
+import { getRoleDisplayName } from '../../utils/roleDisplay';
 
-function resolveArtisanDashboardError(err: unknown): string {
+function resolveArtisanDashboardError(err: unknown, roleLabel: string): string {
   const message = getApiErrorMessage(err, 'Dashboard data could not be loaded. Please retry.');
   const lower = message.toLowerCase();
 
@@ -56,7 +58,7 @@ function resolveArtisanDashboardError(err: unknown): string {
     lower.includes('artisan profile not found') ||
     lower.includes('session expired')
   ) {
-    return 'Your Artisan Pro access is not configured. Please contact Admin.';
+    return `Your ${roleLabel} access is not configured. Please contact Admin.`;
   }
 
   if (
@@ -168,6 +170,7 @@ export function ArtisanDashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [emptyNotice, setEmptyNotice] = useState(false);
+  const [roleLabel, setRoleLabel] = useState('Artisan');
   const hasLoadedRef = useRef(false);
   const dashboardLoadingRef = useRef(false);
   const lastDashboardLoadAtRef = useRef(0);
@@ -197,10 +200,13 @@ export function ArtisanDashboardScreen() {
     }
 
     setError(null);
+    let currentRoleLabel = roleLabel;
 
     try {
       const authUser = await getAuthUser();
       const artisanId = authUser?.artisan_profile?.id ?? null;
+      currentRoleLabel = getRoleDisplayName(resolveUserRole(authUser) ?? authUser?.user_type ?? 'artisan');
+      setRoleLabel(currentRoleLabel);
 
       if (!syncStartedRef.current) {
         syncStartedRef.current = true;
@@ -303,15 +309,15 @@ export function ArtisanDashboardScreen() {
           setDashboard(defaultArtisanDashboard);
         }
         setEmptyNotice(false);
-        setError(resolveArtisanDashboardError(err));
+        setError(resolveArtisanDashboardError(err, currentRoleLabel));
       } else if (hasLoadedRef.current) {
-        setError(resolveArtisanDashboardError(err));
+        setError(resolveArtisanDashboardError(err, currentRoleLabel));
       }
     } finally {
       dashboardLoadingRef.current = false;
       setLoading(false);
     }
-  }, []);
+  }, [roleLabel]);
 
   useFocusEffect(
     useCallback(() => {
@@ -332,11 +338,21 @@ export function ArtisanDashboardScreen() {
       return fromDashboard;
     }
 
-    return 'Artisan Pro';
-  }, [dashboard, profile]);
+    return roleLabel;
+  }, [dashboard, profile, roleLabel]);
 
-  const artisanCode = formatArtisanDisplayId({
+  const artisanCode = formatArtisanProDisplayId({
     ...(profile ?? {}),
+    artisan_pro_id:
+      (profile as ApiRecord | null)?.artisan_pro_id
+      ?? (profile as ApiRecord | null)?.artisan_pro_code
+      ?? dashboard?.artisan_pro_id
+      ?? dashboard?.artisan_pro_code
+      ?? undefined,
+    artisan_pro_code:
+      (profile as ApiRecord | null)?.artisan_pro_code
+      ?? dashboard?.artisan_pro_code
+      ?? undefined,
     artisan_display_id:
       (profile as ApiRecord | null)?.artisan_display_id
       ?? dashboard?.artisan_display_id
@@ -423,7 +439,7 @@ export function ArtisanDashboardScreen() {
   if (loading && !hasLoadedRef.current) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <LoadingState message="Loading Artisan Pro dashboard..." />
+        <LoadingState message={`Loading ${roleLabel} dashboard...`} />
       </SafeAreaView>
     );
   }
@@ -443,7 +459,7 @@ export function ArtisanDashboardScreen() {
           <BhuguardLogo size={LOGO_SIZES.dashboardHeader} animation="none" />
           <View style={styles.headerCopy}>
             <Text style={styles.headerTitle} numberOfLines={1}>
-              Artisan Pro Dashboard
+              {roleLabel} Dashboard
             </Text>
             <Text style={styles.headerSubtitle} numberOfLines={1}>
               Biochar Operations
@@ -468,7 +484,7 @@ export function ArtisanDashboardScreen() {
             style={styles.avatarButton}
             onPress={() => navigation.navigate('ArtisanProfile')}
             accessibilityRole="button"
-            accessibilityLabel="Open Artisan Pro profile"
+            accessibilityLabel={`Open ${roleLabel} profile`}
           >
             <Text style={styles.avatarText}>{initialsFromName(artisanName)}</Text>
           </Pressable>
@@ -544,7 +560,7 @@ export function ArtisanDashboardScreen() {
           <View style={styles.noticeCard}>
             <Text style={styles.noticeTitle}>No dashboard data available</Text>
             <Text style={styles.noticeBody}>
-              Showing empty values. You can still open Artisan Pro modules below.
+              Showing empty values. You can still open {roleLabel} modules below.
             </Text>
             <Pressable
               style={styles.noticeRetry}

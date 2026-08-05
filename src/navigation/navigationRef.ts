@@ -21,6 +21,7 @@ const AUTH_FLOW_ROUTES = new Set<keyof RootStackParamList | string>([
   'FarmerLoginOptions',
   'FieldOfficerLogin',
   'ArtisanLogin',
+  'ArtisanProLogin',
 ]);
 
 /**

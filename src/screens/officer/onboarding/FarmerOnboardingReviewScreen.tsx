@@ -21,7 +21,8 @@ import {
 import { calculateTurfBoundaryMetrics, polygonCentroid } from '../../../utils/manualBoundaryGeometry';
 import { validateSubmit, getSubmitEligibility } from '../../../utils/onboardingValidation';
 import { OnboardingFormScreen } from './OnboardingFormScreen';
-import { logSafeApiFailure } from '../../../utils/apiError';
+import { logSafeApiFailure, NETWORK_UNREACHABLE_MESSAGE } from '../../../utils/apiError';
+import { getCachedApiBaseUrl } from '../../../storage/apiConfigStorage';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
 
@@ -286,7 +287,18 @@ export function FarmerOnboardingReviewScreen() {
       navigation.navigate('FarmerOnboardingSuccess');
     } catch (err) {
       logSafeApiFailure(err, 'farmer-onboarding-submit');
-      setError(getApiErrorMessage(err, 'Onboarding failed. Check required fields and try again.'));
+      const baseMessage = getApiErrorMessage(err, 'Onboarding failed. Check required fields and try again.');
+      const apiBase = getCachedApiBaseUrl();
+      if (
+        baseMessage === NETWORK_UNREACHABLE_MESSAGE
+        || /unable to connect to the bhuguard server/i.test(baseMessage)
+      ) {
+        setError(
+          `${NETWORK_UNREACHABLE_MESSAGE}\n\nAPI: ${apiBase}\nOpen the gear icon → set https://brooklyn-usgs-receive-corn.trycloudflare.com → Test Connection → Save, then retry.`,
+        );
+      } else {
+        setError(baseMessage);
+      }
     } finally {
       setLoading(false);
     }

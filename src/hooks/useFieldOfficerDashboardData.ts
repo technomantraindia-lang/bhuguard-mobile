@@ -449,11 +449,24 @@ export function useFieldOfficerDashboardData(options?: { from?: string; to?: str
       const officerName =
         user?.name ?? pickString(dashboard, 'officer_name') ?? pickString(profileUser, 'name') ?? 'Field Officer';
 
-      const officerCode = pickString(fieldOfficer, 'officer_code') !== '-'
-        ? pickString(fieldOfficer, 'officer_code')
-        : pickString(dashboard, 'officer_code') !== '-'
-          ? pickString(dashboard, 'officer_code')
-          : '—';
+      const officerCodeRaw = pickString(fieldOfficer, 'field_officer_id') !== '-'
+        ? pickString(fieldOfficer, 'field_officer_id')
+        : pickString(fieldOfficer, 'officer_code') !== '-'
+          ? pickString(fieldOfficer, 'officer_code')
+          : pickString(dashboard, 'officer_code') !== '-'
+            ? pickString(dashboard, 'officer_code')
+            : null;
+      const officerCode = officerCodeRaw && /^BHG-FO-(0[1-9]|[1-9]\d*)$/i.test(officerCodeRaw)
+        ? officerCodeRaw.toUpperCase()
+        : officerCodeRaw && /^BHG-FO-0*([1-9]\d*)$/i.test(officerCodeRaw)
+          ? (() => {
+              const match = officerCodeRaw.match(/^BHG-FO-0*([1-9]\d*)$/i);
+              const sequence = Number(match?.[1] ?? 0);
+              return sequence >= 1
+                ? `BHG-FO-${sequence < 10 ? `0${sequence}` : sequence}`
+                : 'ID Pending';
+            })()
+          : 'ID Pending';
 
       const district =
         pickString(fieldOfficer, 'district') !== '-' ? pickString(fieldOfficer, 'district') : 'Assigned Region';

@@ -14,11 +14,21 @@ import { getMpinProfile } from '../../storage/authStorage';
 import { colors, spacing } from '../../theme';
 import { authenticateWithBiometrics, getOrCreateDeviceUuid } from '../../utils/biometricLogin';
 import { finishMobileLogin } from '../../utils/finishMobileLogin';
+import { getRoleDisplayName } from '../../utils/roleDisplay';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'ArtisanLogin'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'ArtisanLogin' | 'ArtisanProLogin'>;
 
-export function ArtisanLoginScreen({ navigation }: Props) {
+/**
+ * Single shared login screen for both `artisan` (true Artisan) and
+ * `artisan_pro` (Artisan Pro) roles, selected via the `role` route param
+ * (defaults to `artisan`). Registered twice in the navigator as `ArtisanLogin`
+ * and `ArtisanProLogin` with different `initialParams`.
+ */
+export function ArtisanLoginScreen({ navigation, route }: Props) {
   const { t } = useTranslation();
+  const role = route.params?.role ?? 'artisan';
+  const isPro = role === 'artisan_pro';
+  const roleLabel = getRoleDisplayName(role);
   const [biometricReady, setBiometricReady] = useState(false);
   const [biometricLoading, setBiometricLoading] = useState(false);
 
@@ -60,12 +70,12 @@ export function ArtisanLoginScreen({ navigation }: Props) {
 
       await finishMobileLogin(
         navigation,
-        { token: result.token, user: result.user, expectedRole: 'artisan' },
+        { token: result.token, user: result.user, expectedRole: role },
         {
           roleMismatch: t('mpinLogin.roleMismatch'),
           unsupportedAccount: t('errors.unsupportedAccount'),
           farmerProfileMissingTitle: t('farmerLogin.profileMissingTitle'),
-          farmerProfileMissingMessage: 'Artisan Pro profile is not linked to this account.',
+          farmerProfileMissingMessage: `${roleLabel} profile is not linked to this account.`,
         },
       );
     } catch (error) {
@@ -84,7 +94,7 @@ export function ArtisanLoginScreen({ navigation }: Props) {
 
         <View style={styles.header}>
           <BhuguardLogo size={LOGO_SIZES.login} />
-          <Text style={styles.title}>{t('artisanLogin.title')}</Text>
+          <Text style={styles.title}>{isPro ? t('artisanLogin.artisanProTitle') : t('artisanLogin.title')}</Text>
           <Text style={styles.subtitle}>{t('artisanLogin.subtitle')}</Text>
         </View>
 
@@ -93,13 +103,13 @@ export function ArtisanLoginScreen({ navigation }: Props) {
             icon="person"
             title={t('artisanLogin.passwordOption')}
             description={t('passwordLogin.subtitle')}
-            onPress={() => navigation.navigate('PasswordLogin', { role: 'artisan' })}
+            onPress={() => navigation.navigate('PasswordLogin', { role })}
           />
           <LoginOptionCard
             icon="lock"
             title={t('artisanLogin.patternOption')}
             description={t('pattern.useSavedPattern')}
-            onPress={() => navigation.navigate('PatternLogin', { role: 'artisan' })}
+            onPress={() => navigation.navigate('PatternLogin', { role })}
           />
           <LoginOptionCard
             icon="verified"

@@ -186,11 +186,13 @@ export function useFieldOfficerProfileData() {
       setData({
         officerName: user?.name ?? pickString(profileUser, 'name') ?? 'Field Officer',
         officerCode:
-          pickString(fieldOfficer, 'officer_code') !== '-'
-            ? pickString(fieldOfficer, 'officer_code')
-            : pickString(dashboard, 'officer_code') !== '-'
-              ? pickString(dashboard, 'officer_code')
-              : 'FO-00021',
+          pickString(fieldOfficer, 'field_officer_id') !== '-'
+            ? pickString(fieldOfficer, 'field_officer_id')
+            : pickString(fieldOfficer, 'officer_code') !== '-'
+              ? pickString(fieldOfficer, 'officer_code')
+              : pickString(dashboard, 'officer_code') !== '-'
+                ? pickString(dashboard, 'officer_code')
+                : 'ID Pending',
         roleLabel: designation !== '-' ? designation : 'Field Verification Officer',
         regionLabel: buildRegionLabel(fieldOfficer),
         statusLabel: formatStatusLabel(officerStatus !== '-' ? officerStatus : status),

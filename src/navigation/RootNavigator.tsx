@@ -53,6 +53,12 @@ export function RootNavigator() {
         />
         <Stack.Screen
           name="ArtisanLogin"
+          initialParams={{ role: 'artisan' }}
+          getComponent={() => require('../screens/artisan/ArtisanLoginScreen').ArtisanLoginScreen}
+        />
+        <Stack.Screen
+          name="ArtisanProLogin"
+          initialParams={{ role: 'artisan_pro' }}
           getComponent={() => require('../screens/artisan/ArtisanLoginScreen').ArtisanLoginScreen}
         />
         <Stack.Screen
@@ -142,6 +148,35 @@ export function RootNavigator() {
             } catch (error) {
               console.error('[Bhuguard] ArtisanNavigator load failed', error);
               return function ArtisanNavigatorFallback() {
+                return (
+                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+                    <Text style={{ fontWeight: '700', fontSize: 18, marginBottom: 8 }}>
+                      Artisan Pro app could not load
+                    </Text>
+                    <Text style={{ textAlign: 'center', color: '#555' }}>
+                      Restart the app. If this continues, rebuild the development client so NetInfo and
+                      SQLite native modules are included.
+                    </Text>
+                  </View>
+                );
+              };
+            }
+          }}
+        />
+        <Stack.Screen
+          name="ArtisanProApp"
+          getComponent={() => {
+            try {
+              const mod = require('./ArtisanProNavigator') as {
+                ArtisanProNavigator?: ComponentType;
+              };
+              if (typeof mod?.ArtisanProNavigator !== 'function') {
+                throw new Error('ArtisanProNavigator failed to load.');
+              }
+              return mod.ArtisanProNavigator;
+            } catch (error) {
+              console.error('[Bhuguard] ArtisanProNavigator load failed', error);
+              return function ArtisanProNavigatorFallback() {
                 return (
                   <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
                     <Text style={{ fontWeight: '700', fontSize: 18, marginBottom: 8 }}>

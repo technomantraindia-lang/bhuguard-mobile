@@ -65,9 +65,12 @@
     "fieldOfficerTitle": "ફીલ્ડ ઓફિસર",
     "fieldOfficerDescription": "ખેડૂત નોંધણી, ખેતર ચકાસણી, જમીન મેપિંગ અને રિપોર્ટ સબમિટ કરો",
     "fieldOfficerButton": "ફીલ્ડ ઓફિસર તરીકે ચાલુ રાખો",
-    "artisanTitle": "કારીગર Pro",
-    "artisanDescription": "ફાર્મ સાઇટ પર બાયોચાર ઉત્પાદન, ખેડૂત ઓનબોર્ડિંગ અને ફાર્મ પ્રવૃત્તિ",
-    "artisanButton": "કારીગર Pro તરીકે ચાલુ રાખો",
+    "artisanTitle": "કારીગર",
+    "artisanDescription": "ફાર્મ સાઇટ પર બાયોચાર ઉત્પાદન અને ફાર્મ પ્રવૃત્તિ",
+    "artisanButton": "કારીગર તરીકે ચાલુ રાખો",
+    "artisanProTitle": "કારીગર Pro",
+    "artisanProDescription": "ફાર્મ સાઇટ પર બાયોચાર ઉત્પાદન, ખેડૂત ઓનબોર્ડિંગ અને ફાર્મ પ્રવૃત્તિ",
+    "artisanProButton": "કારીગર Pro તરીકે ચાલુ રાખો",
     "farmerRegistrationNote": "ખેડૂત નોંધણી ફક્ત ફીલ્ડ ઓફિસર દ્વારા કરવામાં આવે છે."
   },
   "farmerLogin": {
@@ -109,7 +112,8 @@
     "signingIn": "લોગિન થઈ રહ્યું છે…"
   },
   "artisanLogin": {
-    "title": "કારીગર Pro લોગિન",
+    "title": "કારીગર લોગિન",
+    "artisanProTitle": "કારીગર Pro લોગિન",
     "subtitle": "બાયોચાર ઉત્પાદન, ઓનબોર્ડિંગ અને ફાર્મ પ્રવૃત્તિ ઍક્સેસ",
     "passwordOption": "યુઝરનેમ અને પાસવર્ડ",
     "mpinOption": "MPIN લોગિન",
@@ -119,7 +123,8 @@
   "passwordLogin": {
     "farmerTitle": "ખેડૂત લોગિન",
     "fieldOfficerTitle": "ફીલ્ડ ઓફિસર લોગિન",
-    "artisanTitle": "કારીગર Pro લોગિન",
+    "artisanTitle": "કારીગર લોગિન",
+    "artisanProTitle": "કારીગર Pro લોગિન",
     "subtitle": "તમારું યુઝરનેમ અને પાસવર્ડ દાખલ કરો",
     "usernameLabel": "યુઝરનેમ અથવા મોબાઇલ નંબર",
     "passwordLabel": "પાસવર્ડ",

@@ -1,4 +1,4 @@
-export type AppLoginRole = 'farmer' | 'field_officer' | 'artisan';
+export type AppLoginRole = 'farmer' | 'field_officer' | 'artisan' | 'artisan_pro';
 
 export interface RoleDefinition {
   id: AppLoginRole;
@@ -28,6 +28,13 @@ export const MOBILE_ROLES: RoleDefinition[] = [
     titleKey: 'role.artisanTitle',
     descriptionKey: 'role.artisanDescription',
     buttonKey: 'role.artisanButton',
+    demoLogin: '9876543214',
+  },
+  {
+    id: 'artisan_pro',
+    titleKey: 'role.artisanProTitle',
+    descriptionKey: 'role.artisanProDescription',
+    buttonKey: 'role.artisanProButton',
     demoLogin: '9876543213',
   },
 ];

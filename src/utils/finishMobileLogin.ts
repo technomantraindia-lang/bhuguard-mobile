@@ -77,13 +77,15 @@ export async function finishMobileLogin(
     const mobile = user?.mobile ?? options.user.mobile;
     const name = user?.name ?? options.user.name;
     const role = (user?.user_type ?? '').toLowerCase();
-    const isFarmer = role.includes('farmer');
+    const isFarmer = role === 'farmer';
 
-    // Mobile field roles use Pattern (FO / Artisan / Farmer). Do not force MPIN setup.
+    // Mobile field roles use Pattern (FO / Artisan / Artisan Pro / Farmer). Exact-match
+    // only — never `.includes('artisan')`, which would also match `artisan_pro`.
     if (
       isFarmer
-      || role.includes('field_officer')
-      || role.includes('artisan')
+      || role === 'field_officer'
+      || role === 'artisan'
+      || role === 'artisan_pro'
       || patternSupported
       || patternSetupRequired
     ) {

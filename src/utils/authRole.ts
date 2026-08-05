@@ -1,6 +1,6 @@
 import type { AuthUser } from '../types/auth';
 
-export type MobileAppRole = 'farmer' | 'field_officer' | 'artisan' | 'admin';
+export type MobileAppRole = 'farmer' | 'field_officer' | 'artisan' | 'artisan_pro' | 'admin';
 
 export const ADMIN_WEB_ONLY_MESSAGE = 'Admin access is available from web panel.';
 export const COMPANY_WEB_ONLY_MESSAGE = 'Company access is available from the web panel.';
@@ -57,6 +57,7 @@ export function isAdminRole(role: string | null | undefined): boolean {
   return role === 'admin';
 }
 
+/** Exact-match only — never use `.includes('artisan')`, it would also match `artisan_pro`. */
 export function isMobileAppRole(role: string | null | undefined): role is MobileAppRole {
-  return role === 'farmer' || role === 'field_officer' || role === 'artisan';
+  return role === 'farmer' || role === 'field_officer' || role === 'artisan' || role === 'artisan_pro';
 }

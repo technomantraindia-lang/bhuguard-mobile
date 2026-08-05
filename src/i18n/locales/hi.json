@@ -66,9 +66,12 @@
     "fieldOfficerTitle": "फील्ड ऑफिसर",
     "fieldOfficerDescription": "किसान पंजीकरण, खेत सत्यापन, भूमि मैपिंग और रिपोर्ट जमा करें",
     "fieldOfficerButton": "फील्ड ऑफिसर के रूप में जारी रखें",
-    "artisanTitle": "कारीगर Pro",
-    "artisanDescription": "फार्म साइट पर बायोचार उत्पादन, किसान ऑनबोर्डिंग और फार्म गतिविधि",
-    "artisanButton": "कारीगर Pro के रूप में जारी रखें",
+    "artisanTitle": "कारीगर",
+    "artisanDescription": "फार्म साइट पर बायोचार उत्पादन और फार्म गतिविधि",
+    "artisanButton": "कारीगर के रूप में जारी रखें",
+    "artisanProTitle": "कारीगर Pro",
+    "artisanProDescription": "फार्म साइट पर बायोचार उत्पादन, किसान ऑनबोर्डिंग और फार्म गतिविधि",
+    "artisanProButton": "कारीगर Pro के रूप में जारी रखें",
     "farmerRegistrationNote": "किसान पंजीकरण केवल फील्ड ऑफिसर द्वारा किया जाता है।"
   },
   "farmerLogin": {
@@ -110,7 +113,8 @@
     "signingIn": "लॉगिन हो रहा है…"
   },
   "artisanLogin": {
-    "title": "कारीगर Pro लॉगिन",
+    "title": "कारीगर लॉगिन",
+    "artisanProTitle": "कारीगर Pro लॉगिन",
     "subtitle": "बायोचार उत्पादन, ऑनबोर्डिंग और फार्म गतिविधि एक्सेस",
     "passwordOption": "यूज़रनेम और पासवर्ड",
     "mpinOption": "MPIN लॉगिन",
@@ -120,7 +124,8 @@
   "passwordLogin": {
     "farmerTitle": "किसान लॉगिन",
     "fieldOfficerTitle": "फील्ड ऑफिसर लॉगिन",
-    "artisanTitle": "कारीगर Pro लॉगिन",
+    "artisanTitle": "कारीगर लॉगिन",
+    "artisanProTitle": "कारीगर Pro लॉगिन",
     "subtitle": "अपना यूज़रनेम और पासवर्ड दर्ज करें",
     "usernameLabel": "यूज़रनेम या मोबाइल नंबर",
     "passwordLabel": "पासवर्ड",

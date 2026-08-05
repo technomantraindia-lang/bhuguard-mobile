@@ -70,16 +70,26 @@ function getTitleKey(role: AppLoginRole): string {
     return 'passwordLogin.artisanTitle';
   }
 
+  if (role === 'artisan_pro') {
+    return 'passwordLogin.artisanProTitle';
+  }
+
   return 'passwordLogin.fieldOfficerTitle';
 }
 
-function getBackRoute(role: AppLoginRole): 'FarmerLoginOptions' | 'FieldOfficerLogin' | 'ArtisanLogin' {
+function getBackRoute(
+  role: AppLoginRole,
+): 'FarmerLoginOptions' | 'FieldOfficerLogin' | 'ArtisanLogin' | 'ArtisanProLogin' {
   if (role === 'farmer') {
     return 'FarmerLoginOptions';
   }
 
   if (role === 'artisan') {
     return 'ArtisanLogin';
+  }
+
+  if (role === 'artisan_pro') {
+    return 'ArtisanProLogin';
   }
 
   return 'FieldOfficerLogin';

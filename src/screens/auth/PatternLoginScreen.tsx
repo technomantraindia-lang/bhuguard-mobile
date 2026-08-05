@@ -74,6 +74,8 @@ function roleDisplayLabel(
       return t('role.fieldOfficerTitle');
     case 'artisan':
       return t('role.artisanTitle') || getRoleDisplayName('artisan');
+    case 'artisan_pro':
+      return t('role.artisanProTitle') || getRoleDisplayName('artisan_pro');
     default:
       return getRoleDisplayName(role);
   }
