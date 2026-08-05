@@ -13,7 +13,6 @@ import {
   BiocharMixingLocationSection,
   BiocharMixingNotesSection,
 } from '../../components/biochar/BiocharMixingSections';
-import { LiveWorkCheckinCard } from '../../components/artisan/LiveWorkCheckinCard';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { ScreenHeader } from '../../components/ScreenHeader';
@@ -254,7 +253,6 @@ export function createBiocharMixingScreen<T extends MixingRouteParams>({
       <SafeAreaView style={styles.safe} edges={['top']}>
         <ScreenHeader title={title} />
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          {isArtisanMode ? <LiveWorkCheckinCard /> : null}
           <View style={styles.heroCard}>
             <Text style={styles.heroTitle}>Biochar Mixing</Text>
             <Text style={styles.heroMeta}>{form.heroMeta}</Text>

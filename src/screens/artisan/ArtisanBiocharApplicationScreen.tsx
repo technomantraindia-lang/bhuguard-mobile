@@ -15,7 +15,6 @@ import {
 import { getApiErrorMessage } from '../../api/authApi';
 import { AppButton } from '../../components/AppButton';
 import { EvidenceStampedImageFrame } from '../../components/evidence/EvidenceStampedImageFrame';
-import { LiveWorkCheckinCard } from '../../components/artisan/LiveWorkCheckinCard';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { useArtisanWorkSession } from '../../context/ArtisanWorkSessionContext';
 import type { ArtisanStackParamList } from '../../navigation/types';
@@ -552,7 +551,6 @@ export function ArtisanBiocharApplicationScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader title="Biochar Application" showBrandLogo={false} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <LiveWorkCheckinCard />
         <Text style={styles.sectionTitle}>Current date & time</Text>
         <Text style={styles.text}>{now.label}</Text>
 

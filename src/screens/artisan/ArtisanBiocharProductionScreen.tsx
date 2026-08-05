@@ -32,7 +32,6 @@ import { LoadingState } from '../../components/LoadingState';
 
 import { ScreenHeader } from '../../components/ScreenHeader';
 
-import { LiveWorkCheckinCard } from '../../components/artisan/LiveWorkCheckinCard';
 
 import { type BiocharEvidenceKey } from '../../constants/biocharProduction';
 
@@ -780,8 +779,6 @@ export function ArtisanBiocharProductionScreen() {
 
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
-        <LiveWorkCheckinCard />
 
         <ArtisanBiocharProcessFormContent
 
