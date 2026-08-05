@@ -13,6 +13,7 @@ import { subscribeCheckInGateInvalidation } from '../utils/checkInGateEvents';
 import { normalizeAssignedArea, type ApiRecord } from '../utils/apiHelpers';
 import { getAuthUser } from '../utils/authStorage';
 import { getRoleDisplayName } from '../utils/roleDisplay';
+import { extractApiErrorMessage, logSafeApiFailure, NETWORK_UNREACHABLE_MESSAGE } from '../utils/apiError';
 import type { AuthUser } from '../types/auth';
 
 export type ArtisanMandatoryCheckInPhase = 'checkingStatus' | 'granted' | 'blocked' | 'statusError';
@@ -104,7 +105,7 @@ export function useArtisanMandatoryCheckIn() {
     try {
       const isOnline = await safeNetInfoIsConnected();
       if (!isOnline) {
-        throw new Error('No internet connection. Reconnect and tap Retry — offline check-in is not allowed.');
+        throw new Error(NETWORK_UNREACHABLE_MESSAGE);
       }
       if (shouldBlockOfflineTimestampSubmit(isOnline)) {
         throw new Error(
@@ -113,17 +114,28 @@ export function useArtisanMandatoryCheckIn() {
       }
 
       const gps = await captureHighAccuracyGps({ targetAccuracyM: 30, maxAttempts: 4, timeoutMs: 25000 });
+      if (
+        !Number.isFinite(gps.latitude)
+        || !Number.isFinite(gps.longitude)
+        || gps.latitude < -90
+        || gps.latitude > 90
+        || gps.longitude < -180
+        || gps.longitude > 180
+      ) {
+        throw new Error('Location could not be verified. Move outdoors and retry.');
+      }
+
       setStage('submitting');
 
       const allocated = normalizeAssignedArea(await getArtisanAllocatedLocations());
       const triad = await resolveAssignedVillageForCheckIn(gps.latitude, gps.longitude, allocated);
       setAssignedAreaSummary(triad.assignedSummary);
 
-      await artisanWorkCheckIn({
+      const payload = {
         latitude: gps.latitude,
         longitude: gps.longitude,
-        accuracy: gps.accuracyM,
-        gps_accuracy: gps.accuracyM,
+        accuracy: gps.accuracyM ?? null,
+        gps_accuracy: gps.accuracyM ?? null,
         district_id: triad.district_id,
         taluka_id: triad.taluka_id,
         village_id: triad.village_id,
@@ -131,21 +143,39 @@ export function useArtisanMandatoryCheckIn() {
         taluka_name: triad.taluka_name ?? null,
         village_name: triad.village_name ?? null,
         state_name: triad.state_name ?? null,
+        activity_context: 'artisan_check_in',
         ...buildTimeAuditMetadata('artisan_check_in', {
           latitude: gps.latitude,
           longitude: gps.longitude,
           accuracyM: gps.accuracyM,
         }),
-      });
+      };
 
+      if (__DEV__) {
+        console.log('[Artisan check-in] submitting', {
+          endpoint: 'POST /artisan/check-in',
+          district_id: payload.district_id,
+          taluka_id: payload.taluka_id,
+          village_id: payload.village_id,
+          has_accuracy: payload.accuracy != null,
+          has_coords: Number.isFinite(payload.latitude) && Number.isFinite(payload.longitude),
+        });
+      }
+
+      await artisanWorkCheckIn(payload);
+
+      setSubmitError(null);
       grantedRef.current = false;
       checkStatus();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to complete check-in.';
-      if (/already checked in/i.test(message)) {
+      logSafeApiFailure(error, 'artisan_mandatory_check_in');
+      const message = extractApiErrorMessage(error, 'Check-in could not be completed. Please try again.');
+      if (/already checked in|active work session|active check-in resumed/i.test(message)) {
+        setSubmitError(null);
         checkStatus();
       } else {
         setSubmitError(message);
+        setPhase('blocked');
       }
     } finally {
       setStage('idle');

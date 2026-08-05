@@ -132,7 +132,9 @@ export function ArtisanCheckInGate({ children }: Props) {
           <AppButton
             label="Retry"
             variant="secondary"
-            onPress={() => checkIn.checkStatus()}
+            onPress={() => {
+              void checkIn.submitCheckIn();
+            }}
             disabled={checkIn.submitting}
             style={styles.gap}
           />

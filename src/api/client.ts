@@ -147,19 +147,49 @@ apiClient.interceptors.response.use(
       return rejectMapped(formatApiUnreachableMessage(baseUrl));
     }
 
+    const requestUrl = typeof error.config?.url === 'string' ? error.config.url : '';
+    const isArtisanCheckInRequest = /\/artisan\/(check-in|live-check-in)(\?|$)/i.test(requestUrl);
+    const isOnboardingRegistrationRequest =
+      /finalize-onboarding|farmer-onboarding|onboarding\/finalize/i.test(requestUrl);
+
+    const serverFailureFallback = isArtisanCheckInRequest
+      ? 'Check-in could not be completed. Please try again.'
+      : isOnboardingRegistrationRequest
+        ? 'Registration could not be completed. Please try again.'
+        : 'Request could not be completed. Please try again.';
+
     if (error.response?.status === 403) {
-      return rejectMapped(extractApiErrorMessage(error, 'You are not authorized to submit this registration.'));
+      return rejectMapped(
+        extractApiErrorMessage(
+          error,
+          isArtisanCheckInRequest
+            ? 'You are outside your assigned working area.'
+            : 'You are not authorized for this action.',
+        ),
+      );
     }
 
     if (error.response?.status === 404) {
       return rejectMapped(
-        extractApiErrorMessage(error, 'Registration record not found. Please restart onboarding or contact support.'),
+        extractApiErrorMessage(
+          error,
+          isOnboardingRegistrationRequest
+            ? 'Registration record not found. Please restart onboarding or contact support.'
+            : 'Requested resource was not found.',
+        ),
       );
     }
 
     if (error.response?.status === 409) {
       return rejectMapped(
-        extractApiErrorMessage(error, 'This Farmer registration has already been submitted.'),
+        extractApiErrorMessage(
+          error,
+          isArtisanCheckInRequest
+            ? 'You already have an active work session.'
+            : isOnboardingRegistrationRequest
+              ? 'This Farmer registration has already been submitted.'
+              : 'This request conflicts with an existing record.',
+        ),
       );
     }
 
@@ -172,9 +202,7 @@ apiClient.interceptors.response.use(
     }
 
     if ((error.response?.status ?? 0) >= 500) {
-      return rejectMapped(
-        extractApiErrorMessage(error, 'Registration could not be completed. Please try again.'),
-      );
+      return rejectMapped(extractApiErrorMessage(error, serverFailureFallback));
     }
 
     if (error.response?.status === 413) {
@@ -185,7 +213,7 @@ apiClient.interceptors.response.use(
 
     // Any other HTTP status still must not become "Unable to connect".
     if (error.response != null) {
-      return rejectMapped(extractApiErrorMessage(error, 'Registration could not be completed. Please try again.'));
+      return rejectMapped(extractApiErrorMessage(error, serverFailureFallback));
     }
 
     return rejectMapped(extractApiErrorMessage(error));

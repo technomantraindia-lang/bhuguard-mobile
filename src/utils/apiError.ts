@@ -173,18 +173,24 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
       if (typeof data?.message === 'string' && data.message.trim() && !looksLikeHtml(data.message)) {
         return data.message;
       }
-      return 'You are not authorized to submit this registration.';
+      return fallback === 'Request failed.'
+        ? 'You are outside your assigned working area.'
+        : fallback;
     }
 
     if (status === 404) {
-      return 'Registration record not found. Please restart onboarding or contact support.';
+      return fallback === 'Request failed.'
+        ? 'Requested resource was not found.'
+        : fallback;
     }
 
     if (status === 409) {
       if (typeof data?.message === 'string' && data.message.trim() && !looksLikeHtml(data.message)) {
         return data.message;
       }
-      return 'This Farmer registration has already been submitted.';
+      return fallback === 'Request failed.'
+        ? 'You already have an active work session.'
+        : fallback;
     }
 
     if (status === 422) {
@@ -203,7 +209,9 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
     }
 
     if ((status ?? 0) >= 500) {
-      return 'Registration could not be completed. Please try again.';
+      return fallback === 'Request failed.'
+        ? 'Request could not be completed. Please try again.'
+        : fallback;
     }
 
     if (status === 413) {
@@ -212,7 +220,7 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
 
     if (looksLikeHtml(data)) {
       return fallback === 'Request failed.'
-        ? 'Registration could not be completed. Please try again.'
+        ? 'Request could not be completed. Please try again.'
         : fallback;
     }
 
