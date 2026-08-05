@@ -77,8 +77,8 @@ export function FormMultiSelect({
       </Pressable>
       {selectedNames.length > 0 ? (
         <View style={styles.chips}>
-          {selectedNames.map((name) => (
-            <View key={name} style={styles.chip}>
+          {selectedNames.map((name, index) => (
+            <View key={`selected-${values[index] ?? name}-${index}`} style={styles.chip}>
               <Text style={styles.chipText}>{name}</Text>
             </View>
           ))}

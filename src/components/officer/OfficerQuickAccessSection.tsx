@@ -27,20 +27,17 @@ function OfficerQuickAccessRow({ icon, label, buttonLabel, onPress }: OfficerQui
 }
 
 interface OfficerQuickAccessSectionProps {
-  onGpsCheckIn: () => void;
   onProfile: () => void;
   onSupport: () => void;
 }
 
 export function OfficerQuickAccessSection({
-  onGpsCheckIn,
   onProfile,
   onSupport,
 }: OfficerQuickAccessSectionProps) {
   return (
     <View style={styles.wrap}>
       <Text style={styles.sectionTitle}>Quick Actions</Text>
-      <OfficerQuickAccessRow icon="share_location" label="GPS Check-in" buttonLabel="Start" onPress={onGpsCheckIn} />
       <OfficerQuickAccessRow icon="support_agent" label="Help / Chat Support" buttonLabel="Open Chat" onPress={onSupport} />
       <OfficerQuickAccessRow icon="person" label="Profile" buttonLabel="Open" onPress={onProfile} />
     </View>

@@ -15,6 +15,7 @@ import type { FieldOfficerStackParamList, FieldOfficerTabParamList } from '../..
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
 import { extractList, pickString, type ApiRecord } from '../../utils/apiHelpers';
 import { formatFarmerDisplayId } from '../../utils/displayIds';
+import { toPositiveEntityId } from '../../utils/entityId';
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<FieldOfficerTabParamList, 'Farmers'>,
@@ -109,7 +110,8 @@ export function FieldOfficerFarmersScreen() {
             <OfficerListState kind="empty" title="No farmers yet" message="Registered farmers will appear here." />
           ) : (
             farmers.map((farmer) => {
-              const farmerId = Number(farmer.farmer_id ?? farmer.id);
+              const farmerId = toPositiveEntityId(farmer.farmer_id ?? farmer.id);
+              const farmerDisplayId = formatFarmerDisplayId(farmer);
               const farmCount = Number(farmer.farm_count ?? farmer.farms_count ?? 0);
               const village = pickString(farmer, 'village');
               const taluka = pickString(farmer, 'taluka');
@@ -121,7 +123,7 @@ export function FieldOfficerFarmersScreen() {
 
               return (
                 <View
-                  key={`farmer-${farmerId}`}
+                  key={farmerId ? `farmer-${farmerId}` : `farmer-display-${farmerDisplayId}-${pickString(farmer, 'mobile')}`}
                   style={[styles.card, officerCardShadow, overdue && styles.cardOverdue]}
                 >
                   <View style={styles.cardHeader}>
@@ -133,7 +135,7 @@ export function FieldOfficerFarmersScreen() {
                     <View style={styles.headerCopy}>
                       <Text style={styles.name}>{pickString(farmer, 'name')}</Text>
                       <Text style={styles.idText}>
-                        Farmer ID: {formatFarmerDisplayId(farmer)}
+                        Farmer ID: {farmerDisplayId}
                       </Text>
                       {pickString(farmer, 'primary_farm_name', 'farm_name') !== '-' ? (
                         <Text style={styles.idText}>
@@ -164,7 +166,12 @@ export function FieldOfficerFarmersScreen() {
 
                   <Pressable
                     style={styles.dashboardButton}
-                    onPress={() => navigation.navigate('OnboardedFarmerView', { farmerId })}
+                    onPress={() =>
+                      navigation.navigate('OnboardedFarmerView', {
+                        farmerDbId: farmerId ?? undefined,
+                        farmerDisplayId,
+                      })
+                    }
                   >
                     <Text style={styles.dashboardButtonText}>Open Farmer Dashboard</Text>
                     <BhuguardMaterialIcon name="arrow_forward" size={16} color={officerTheme.onPrimary} />

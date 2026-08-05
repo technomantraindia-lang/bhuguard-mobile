@@ -18,7 +18,7 @@ interface PhoneInputProps extends Omit<TextInputProps, 'value' | 'onChangeText' 
 
 function PhoneIcon() {
   return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
       <Path
         d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1.1-.2 1.2.4 2.5.6 3.8.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.6.6 3.8.1.4 0 .8-.3 1.1L6.6 10.8z"
         fill="#0B4A2B"
@@ -30,7 +30,7 @@ function PhoneIcon() {
 function PhoneInputComponent({
   value,
   onChangeText,
-  placeholder = 'Enter your mobile number',
+  placeholder = 'Enter mobile number',
   invalid = false,
   fontsLoaded = false,
   editable = true,
@@ -69,7 +69,7 @@ function PhoneInputComponent({
         keyboardType="phone-pad"
         maxLength={10}
         placeholder={placeholder}
-        placeholderTextColor="rgba(80, 80, 80, 0.55)"
+        placeholderTextColor="#9A9A9A"
         editable={editable}
         selectionColor="#0B4A2B"
         textContentType="telephoneNumber"
@@ -84,22 +84,21 @@ export const PhoneInput = memo(PhoneInputComponent);
 
 const styles = StyleSheet.create({
   shell: {
-    minHeight: 62,
+    minHeight: 54,
     width: '100%',
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(185, 232, 90, 0.75)',
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 18,
-    gap: 10,
+    gap: 8,
   },
   shellFocused: {
-    borderColor: '#B9E85A',
+    backgroundColor: '#FFFFFF',
   },
   shellInvalid: {
-    borderColor: 'rgba(255, 157, 143, 0.95)',
+    borderWidth: 1,
+    borderColor: 'rgba(181, 59, 59, 0.85)',
   },
   iconWrap: {
     flexShrink: 0,
@@ -107,7 +106,7 @@ const styles = StyleSheet.create({
   prefix: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: '#111111',
     letterSpacing: 0.2,
   },
   prefixFont: {
@@ -117,12 +116,12 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    paddingVertical: 16,
+    fontWeight: '500',
+    color: '#111111',
+    paddingVertical: 14,
     includeFontPadding: false,
   },
   inputFont: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_500Medium',
   },
 });

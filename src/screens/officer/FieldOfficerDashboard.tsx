@@ -13,13 +13,12 @@ import { useUnreadNotificationCount } from '../../hooks/useUnreadNotificationCou
 import {
   OfficerEmergencyActions,
   OfficerArtisanApprovalPipeline,
+  OfficerFarmerOnboardingHero,
   OfficerGreetingSection,
   OfficerMapCoverage,
   OfficerPerformanceSection,
   OfficerQuickActionCards,
   OfficerRecentActivity,
-  OfficerStatsGrid,
-  OfficerSummaryCard,
   OfficerTodaysVisits,
 } from '../../components/officer/OfficerDashboardSections';
 import { OfficerListState } from '../../components/officer/OfficerListState';
@@ -74,23 +73,6 @@ export function FieldOfficerDashboard() {
     guardedNavigate(() => navigation.navigate('FieldOfficerFarmActivityStart'));
   };
 
-  const primaryAssignmentId = data?.visits.find((visit) => visit.assignmentId)?.assignmentId;
-
-  const openPrimaryAssignment = (onReady: (assignmentId: number) => void) => {
-    if (primaryAssignmentId) {
-      onReady(primaryAssignmentId);
-      return;
-    }
-
-    navigation.navigate('Visits');
-  };
-
-  const handleGpsCheckIn = () => {
-    guardedNavigate(() => {
-      openPrimaryAssignment((assignmentId) => navigation.navigate('VisitCheckIn', { assignmentId }));
-    });
-  };
-
   if (loading && !data) {
     return (
       <OfficerScreenChrome edges={['top']}>
@@ -135,15 +117,16 @@ export function FieldOfficerDashboard() {
       >
         <OfficerGreetingSection greeting={dashboard.greeting} officerName={dashboard.officerName} />
         <FieldOfficerLiveCheckInCard />
+        <OfficerFarmerOnboardingHero onOpenFarmerOnboarding={handleOnboardFarmer} />
         <OfficerBiocharSummaryCards
           assignedFarmersCount={dashboard.assignedFarmersCount}
           dueBiocharCount={dashboard.dueBiocharCount}
           overdueFarmersCount={dashboard.overdueFarmersCount}
           myArtisansCount={dashboard.myArtisansCount}
+          activeCheckinsCount={dashboard.activeCheckinsCount}
+          totalVisitsCount={dashboard.totalVisitsCount}
           artisanBiocharBatchesCount={dashboard.artisanBiocharBatchesCount}
         />
-        <OfficerSummaryCard dashboard={dashboard} />
-        <OfficerStatsGrid dashboard={dashboard} />
         <OfficerQuickActionCards
           onOpenMyFarmers={() => guardedNavigate(() => navigation.navigate('Farmers'))}
           onOpenFarmActivity={openFarmActivity}
@@ -190,7 +173,6 @@ export function FieldOfficerDashboard() {
         />
 
         <OfficerQuickAccessSection
-          onGpsCheckIn={handleGpsCheckIn}
           onProfile={() => guardedNavigate(() => navigation.navigate('FieldOfficerProfile'))}
           onSupport={() =>
             guardedNavigate(() =>

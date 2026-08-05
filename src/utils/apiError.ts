@@ -60,24 +60,59 @@ function firstValidationFieldNames(errors: Record<string, string[] | string> | u
 }
 
 export function logSafeApiFailure(error: unknown, context?: string): void {
-  if (!__DEV__ || !axios.isAxiosError(error)) {
+  if (!axios.isAxiosError(error)) {
+    if (__DEV__ && error instanceof Error) {
+      console.log('[API failure]', {
+        context: context ?? null,
+        statusCode: null,
+        responseBody: null,
+        responseHeaders: null,
+        errorBody: error.message,
+      });
+    }
     return;
   }
 
-  const data = error.response?.data as ApiErrorResponse | undefined;
-  const fieldNames = firstValidationFieldNames(data?.errors as Record<string, string[] | string> | undefined);
+  const data = error.response?.data as ApiErrorResponse | unknown;
+  const fieldNames = firstValidationFieldNames(
+    (data as ApiErrorResponse | undefined)?.errors as Record<string, string[] | string> | undefined,
+  );
   const safeMessage =
-    typeof data?.message === 'string' && !looksLikeHtml(data.message) ? data.message : undefined;
+    typeof (data as ApiErrorResponse | undefined)?.message === 'string'
+    && !looksLikeHtml((data as ApiErrorResponse).message)
+      ? (data as ApiErrorResponse).message
+      : undefined;
 
-  console.log('[API failure]', {
-    context: context ?? null,
-    endpoint: error.config?.url ?? null,
-    method: error.config?.method?.toUpperCase() ?? null,
-    status: error.response?.status ?? null,
-    code: error.code ?? null,
-    message: safeMessage ?? null,
-    validation_fields: fieldNames,
-  });
+  // Temporary finalize-onboarding debug: always print status/body/headers before generic mapping.
+  const isFinalize =
+    typeof error.config?.url === 'string'
+    && error.config.url.includes('finalize-onboarding');
+
+  if (__DEV__ || isFinalize) {
+    let responseBody: unknown = data ?? null;
+    try {
+      if (typeof data === 'string' && data.length > 2000) {
+        responseBody = `${data.slice(0, 2000)}…`;
+      } else if (data && typeof data === 'object') {
+        responseBody = JSON.parse(JSON.stringify(data));
+      }
+    } catch {
+      responseBody = '[unserializable]';
+    }
+
+    console.log('[API failure debug]', {
+      context: context ?? null,
+      statusCode: error.response?.status ?? null,
+      responseBody,
+      responseHeaders: error.response?.headers ?? null,
+      errorBody: error.message ?? null,
+      code: error.code ?? null,
+      endpoint: error.config?.url ?? null,
+      method: error.config?.method?.toUpperCase() ?? null,
+      message: safeMessage ?? null,
+      validation_fields: fieldNames,
+    });
+  }
 }
 
 export function extractApiErrorMessage(error: unknown, fallback = 'Request failed.'): string {
@@ -125,7 +160,14 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
     }
 
     if ((status ?? 0) >= 500) {
+      if (typeof data?.message === 'string' && data.message.trim() && !looksLikeHtml(data.message)) {
+        return data.message;
+      }
       return 'Registration could not be completed. Please try again.';
+    }
+
+    if (status === 413) {
+      return 'Upload is too large. Please retry with fewer or smaller photos.';
     }
 
     if (looksLikeHtml(data)) {

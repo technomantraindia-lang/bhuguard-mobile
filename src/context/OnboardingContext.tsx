@@ -197,6 +197,8 @@ interface OnboardingContextValue {
   setResult: (result: OnboardingResult | null) => void;
   resetDraft: () => void;
   toFormData: () => FormData;
+  /** Lean multipart for POST finalize-onboarding (token, consents, evidence only). */
+  toFinalizeFormData: () => FormData;
 }
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
@@ -326,6 +328,41 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         ) {
           const mappingPayload = buildOnboardingBoundaryPayload(draft);
           formData.append('boundary_mapping', JSON.stringify(mappingPayload));
+        }
+
+        return formData;
+      },
+      toFinalizeFormData: () => {
+        const formData = new FormData();
+
+        appendScalar(formData, 'agreement_verification_token', draft.agreement_verification_token);
+        if (draft.farm_id != null) {
+          formData.append('farm_id', String(draft.farm_id));
+        }
+
+        formData.append('data_usage_consent', draft.data_usage_consent ? '1' : '0');
+        formData.append('carbon_rights_consent', draft.carbon_rights_consent ? '1' : '0');
+        formData.append('project_participation_consent', draft.project_participation_consent ? '1' : '0');
+
+        appendScalar(formData, 'gps_latitude', draft.gps_latitude);
+        appendScalar(formData, 'gps_longitude', draft.gps_longitude);
+        appendScalar(formData, 'gps_accuracy', draft.gps_accuracy);
+
+        appendFile(formData, 'consent_form', draft.consent_form);
+        draft.consent_documents.forEach((file) => appendFile(formData, 'consent_documents[]', file));
+        draft.onboarding_evidences.forEach((file) => appendFile(formData, 'legal_agreement_photos[]', file));
+        appendFile(formData, 'legal_agreement_photos[]', draft.farmer_with_farm_photo);
+        draft.farmer_documents.forEach((file) => appendFile(formData, 'documents[]', file));
+        appendFile(formData, 'proof_of_land_ownership', draft.proof_of_land_ownership);
+
+        const hasStampedImage = [
+          draft.proof_of_land_ownership,
+          draft.farmer_with_farm_photo,
+          ...draft.onboarding_evidences,
+        ].some((file) => file?.mimeType?.startsWith('image/'));
+
+        if (hasStampedImage) {
+          formData.append('client_pre_stamped', '1');
         }
 
         return formData;

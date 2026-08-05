@@ -17,6 +17,8 @@ import {
   artisanWorkCheckIn,
   artisanWorkCheckOut,
   artisanWorkLiveLocation,
+  artisanWorkSessionBackground,
+  artisanWorkSessionExpire,
   getArtisanActiveCheckIn,
   getArtisanAllocatedLocations,
   getArtisanDashboard,
@@ -105,6 +107,9 @@ const MOVEMENT_METERS = 20;
 const PERIODIC_MS = 50_000;
 const CHECK_IN_DEBOUNCE_MS = 1200;
 const DRAFT_PREFIX = 'bhuguard_biochar_production_draft:artisan:';
+
+const ARTISAN_SESSION_BACKGROUND_AT_KEY = 'bhuguard_artisan_session_backgrounded_at';
+const ARTISAN_SESSION_STALE_GRACE_MINUTES = 7;
 
 function normalizeName(value: string | null | undefined): string {
   return (value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -666,7 +671,10 @@ export function ArtisanWorkSessionProvider({ children }: { children: ReactNode }
         distanceInterval: MOVEMENT_METERS,
       },
       (position) => {
-        const active = statusKeyRef.current === 'checked_in' || statusKeyRef.current === 'location_stale';
+        const active =
+          statusKeyRef.current === 'checked_in' ||
+          statusKeyRef.current === 'location_stale' ||
+          statusKeyRef.current === 'out_of_zone';
         if (!active) {
           return;
         }
@@ -741,6 +749,29 @@ export function ArtisanWorkSessionProvider({ children }: { children: ReactNode }
     setError(null);
 
     try {
+      // If we were backgrounded for longer than the grace period, attempt a
+      // server-side session expiry (best-effort). This is only done when we
+      // have no local in-progress Biochar drafts.
+      const graceMs = ARTISAN_SESSION_STALE_GRACE_MINUTES * 60_000;
+      const bgRaw = await AsyncStorage.getItem(ARTISAN_SESSION_BACKGROUND_AT_KEY);
+      const bgAtMs = bgRaw != null ? Number(bgRaw) : NaN;
+      const hadBackground = Number.isFinite(bgAtMs);
+
+      if (hadBackground && Date.now() - bgAtMs > graceMs) {
+        const hasLocalDrafts = await hasIncompleteLocalArtisanProduction().catch(() => false);
+        if (!hasLocalDrafts) {
+          try {
+            await artisanWorkSessionExpire({ checkout_reason: 'app_background' });
+            await AsyncStorage.removeItem(ARTISAN_SESSION_BACKGROUND_AT_KEY);
+          } catch {
+            // Do not block hydration if expiry fails; retry on next resume.
+          }
+        }
+      } else if (hadBackground) {
+        // Brief backgrounding: clear the local timestamp so we don't expire later.
+        await AsyncStorage.removeItem(ARTISAN_SESSION_BACKGROUND_AT_KEY).catch(() => null);
+      }
+
       await flushArtisanWorkSessionQueue();
       const data = await getArtisanActiveCheckIn();
       const status = ((data as ApiRecord).check_in_status ?? data) as ApiRecord;
@@ -1002,6 +1033,30 @@ export function ArtisanWorkSessionProvider({ children }: { children: ReactNode }
       if (next === 'active') {
         // Throttled inside hydrate() — will no-op if recently loaded.
         void hydrate(false);
+        return;
+      }
+
+      // Background/inactive transitions can happen when the user opens
+      // camera/file picker/map; we record locally and only best-effort notify
+      // the server (never block app shutdown).
+      if (next === 'background' || next === 'inactive') {
+        void AsyncStorage.setItem(ARTISAN_SESSION_BACKGROUND_AT_KEY, String(Date.now())).catch(() => null);
+
+        const active = statusKeyRef.current === 'checked_in' || statusKeyRef.current === 'location_stale';
+        if (!active) {
+          return;
+        }
+
+        void (async () => {
+          // Preserve in-progress Biochar drafts by skipping server background marking
+          // when local drafts exist.
+          const hasLocalDrafts = await hasIncompleteLocalArtisanProduction().catch(() => false);
+          if (hasLocalDrafts) {
+            return;
+          }
+
+          await artisanWorkSessionBackground({ app_state: next });
+        })().catch(() => null);
       }
     };
 

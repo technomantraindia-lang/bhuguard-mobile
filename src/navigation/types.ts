@@ -480,7 +480,13 @@ export type FieldOfficerStackParamList = {
   FarmerProofUpload: undefined;
   FarmerOnboardingReview: undefined;
   FarmerOnboardingSuccess: undefined;
-  OnboardedFarmerView: { farmerId?: number } | undefined;
+  OnboardedFarmerView:
+    | {
+        farmerDbId?: number;
+        farmerId?: number;
+        farmerDisplayId?: string;
+      }
+    | undefined;
   BiocharAwareness: { farmerId: number };
   FieldOfficerCreateVisit: { farmerId?: number } | undefined;
   OfficerGpsValidation: {

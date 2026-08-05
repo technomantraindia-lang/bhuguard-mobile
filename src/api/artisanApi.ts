@@ -518,3 +518,15 @@ export async function artisanWorkCheckOut(payload: ArtisanWorkCheckOutPayload) {
     payload,
   );
 }
+
+export async function artisanWorkSessionBackground(payload: {
+  app_state: 'background' | 'inactive';
+}): Promise<void> {
+  await postApiData('/artisan/session/background', payload);
+}
+
+export async function artisanWorkSessionExpire(payload: {
+  checkout_reason: 'app_background' | 'app_closed' | 'stale_session_cleanup' | 'server_expiry';
+}): Promise<{ check_in_status?: ApiRecord; check_in?: ApiRecord | null }> {
+  return postApiData('/artisan/session/expire', payload);
+}

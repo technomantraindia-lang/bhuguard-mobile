@@ -19,6 +19,7 @@ import { colors } from '../../../theme/colors';
 import { extractList, pickString, type ApiRecord } from '../../../utils/apiHelpers';
 import { beginAddNewFarmWithMapping } from '../../../utils/beginAddNewFarmFlow';
 import { formatFarmDisplayId, formatFarmerDisplayId } from '../../../utils/displayIds';
+import { isForbiddenError, isUnauthorizedError } from '../../../utils/apiError';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'OnboardedFarmerView'>;
 type ScreenRoute = RouteProp<FieldOfficerStackParamList, 'OnboardedFarmerView'>;
@@ -41,12 +42,12 @@ export function OnboardedFarmerViewScreen() {
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<ApiRecord | null>(null);
 
-  const routeFarmerId = route.params?.farmerId;
-  const resolvedFarmerId = Number(routeFarmerId ?? result?.farmer_id ?? 0);
+  const resolvedFarmerId: number | null =
+    route.params?.farmerDbId ?? route.params?.farmerId ?? (result?.farmer_id ? Number(result.farmer_id) : null);
 
   const load = async () => {
     if (!resolvedFarmerId) {
-      setError('Farmer not found.');
+      setError(route.params?.farmerDisplayId ? `Farmer not found (${route.params.farmerDisplayId}).` : 'Farmer not found.');
       return;
     }
 
@@ -57,7 +58,14 @@ export function OnboardedFarmerViewScreen() {
       const data = await getFieldOfficerFarmerDetail(resolvedFarmerId);
       setDetail((data.farmer as ApiRecord) ?? null);
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to load farmer details.'));
+      if (isUnauthorizedError(err)) {
+        setError('Session expired. Please log in again.');
+      } else if (isForbiddenError(err)) {
+        setError('You are not authorized to view this farmer.');
+      } else {
+        const message = getApiErrorMessage(err, 'Failed to load farmer details.');
+        setError(message.includes('not found') ? 'Farmer not found.' : message);
+      }
     } finally {
       setLoading(false);
     }

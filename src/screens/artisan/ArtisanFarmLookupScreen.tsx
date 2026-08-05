@@ -17,7 +17,12 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
 import { getApiErrorMessage } from '../../api/authApi';
-import { getArtisanAllocatedLocations, lookupArtisanFarm, searchArtisanFarms } from '../../api/artisanApi';
+import {
+  getArtisanAllocatedLocations,
+  getArtisanBiocharApplicationEligibleBatches,
+  lookupArtisanFarm,
+  searchArtisanFarms,
+} from '../../api/artisanApi';
 import { FormSelect, type SelectOption } from '../../components/FormSelect';
 import { NoAssignmentState } from '../../components/location/NoAssignmentState';
 import { ScreenHeader } from '../../components/ScreenHeader';
@@ -51,10 +56,19 @@ function toSelection(
 
   return {
     farmId: record.farm_id,
-    farmCode: record.farm_code ?? undefined,
-    farmLabel: displayLabel ?? record.farm_code ?? record.farm_name ?? `Farm ${record.farm_id}`,
+    farmCode: formatFarmDisplayId({
+      farm_display_id: record.farm_display_id ?? record.display_id ?? null,
+      farm_code: record.farm_code ?? null,
+      farm_id: record.farm_id,
+      display_id: record.display_id ?? null,
+    }),
+    farmLabel: record.farm_name?.trim() ? record.farm_name : `Farm ${record.farm_id}`,
     farmerId: record.farmer_id,
-    farmerCode: record.farmer_code ?? undefined,
+    farmerCode: formatFarmerDisplayId({
+      farmer_display_id: record.farmer_display_id ?? null,
+      farmer_code: record.farmer_code ?? null,
+      farmer_id: record.farmer_id,
+    }),
     farmerName: record.farmer_name ?? undefined,
     village: record.village ?? undefined,
     taluka: record.taluka ?? undefined,
@@ -125,9 +139,12 @@ export function ArtisanFarmLookupScreen() {
   const [emptyMessage, setEmptyMessage] = useState<string | null>(null);
   const [selectedFarmerId, setSelectedFarmerId] = useState<number | null>(null);
   const [navigatingFarmId, setNavigatingFarmId] = useState<number | null>(null);
+  const [applicationEligibleMixingCounts, setApplicationEligibleMixingCounts] = useState<Record<number, number>>({});
+  const [loadingApplicationEligibleMixingCounts, setLoadingApplicationEligibleMixingCounts] = useState(false);
   const navigateInProgressRef = useRef(false);
   const searchInProgressRef = useRef(false);
   const initialSearchDoneRef = useRef(false);
+  const eligibleCountsFetchRef = useRef(0);
 
   const groupedByFarmer = useMemo(() => groupFarmSearchResultsByFarmer(results), [results]);
 
@@ -157,7 +174,11 @@ export function ArtisanFarmLookupScreen() {
       summaries.push({
         farmerId,
         farmerName: first.farmer_name ?? 'Farmer',
-        farmerCode: first.farmer_code ?? String(farmerId),
+        farmerCode: formatFarmerDisplayId({
+          farmer_display_id: first.farmer_display_id ?? null,
+          farmer_code: first.farmer_code ?? null,
+          farmer_id: first.farmer_id,
+        }),
         farmCount: farms.length,
         village: first.village ?? '',
       });
@@ -165,6 +186,52 @@ export function ArtisanFarmLookupScreen() {
 
     return summaries;
   }, [groupedByFarmer]);
+
+  useEffect(() => {
+    if (purpose !== 'application' || selectedFarmerId == null) {
+      setApplicationEligibleMixingCounts({});
+      return;
+    }
+
+    const farms = selectedFarmerFarms;
+    if (farms.length === 0) {
+      setApplicationEligibleMixingCounts({});
+      return;
+    }
+
+    const fetchId = ++eligibleCountsFetchRef.current;
+    setLoadingApplicationEligibleMixingCounts(true);
+
+    void (async () => {
+      try {
+        const results = await Promise.all(
+          farms.map(async (farm) => {
+            const response = (await getArtisanBiocharApplicationEligibleBatches(farm.farm_id)) as unknown as {
+              batches?: unknown;
+            };
+
+            const batches = Array.isArray(response?.batches) ? response.batches : [];
+            return [farm.farm_id, batches.length] as const;
+          }),
+        );
+
+        if (eligibleCountsFetchRef.current !== fetchId) {
+          return;
+        }
+
+        setApplicationEligibleMixingCounts(Object.fromEntries(results));
+      } catch {
+        if (eligibleCountsFetchRef.current !== fetchId) {
+          return;
+        }
+        setApplicationEligibleMixingCounts({});
+      } finally {
+        if (eligibleCountsFetchRef.current === fetchId) {
+          setLoadingApplicationEligibleMixingCounts(false);
+        }
+      }
+    })();
+  }, [eligibleCountsFetchRef, purpose, selectedFarmerId, selectedFarmerFarms]);
 
   const loadLocations = useCallback(async () => {
     setLoadingLocations(true);
@@ -364,12 +431,6 @@ export function ArtisanFarmLookupScreen() {
   const handleApplicationFarmerSelect = (farmerId: number) => {
     const farms = groupedByFarmer.get(farmerId) ?? [];
 
-    if (farms.length === 1) {
-      const [farm] = labelFarmsForFarmer(farms);
-      openApplication(toSelection(farm, farm.displayLabel));
-      return;
-    }
-
     setSelectedFarmerId(farmerId);
   };
 
@@ -490,7 +551,7 @@ export function ArtisanFarmLookupScreen() {
   const renderFarmerDrilldownResult = (kind: 'mixing' | 'application') => {
     const onFarmerSelect = kind === 'mixing' ? handleMixingFarmerSelect : handleApplicationFarmerSelect;
     const onFarmSelect = kind === 'mixing' ? handleMixingFarmSelect : handleApplicationFarmSelect;
-    const actionLabel = kind === 'mixing' ? 'Start Biochar Mixing' : 'Start Biochar Application';
+    const actionLabel = kind === 'mixing' ? 'Start Biochar Mixing' : 'Select Farm for Application';
     const multiFarmLabel = kind === 'mixing' ? 'Select Farm for Mixing' : 'Select Farm for Application';
 
     if (selectedFarmerId != null) {
@@ -504,20 +565,49 @@ export function ArtisanFarmLookupScreen() {
           <Text style={styles.sectionTitle}>
             Select farm for {farmer?.farmerName ?? 'farmer'}
           </Text>
-          <Text style={styles.helper}>
-            Farmer ID: {farmer?.farmerCode ?? selectedFarmerId}
-          </Text>
-          {selectedFarmerFarms.map((farm) => {
-            const farmName = farm.farm_name?.trim() || farm.displayLabel || `Farm ${farm.farm_id}`;
+          {kind === 'application' ? (
+            <>
+              <Text style={styles.helper}>Farmer Name: {farmer?.farmerName ?? '—'}</Text>
+              <Text style={styles.helper}>Farmer ID: {farmer?.farmerCode ?? 'ID Pending'}</Text>
+              <Text style={styles.helper}>Village: {farmer?.village || '—'}</Text>
+              <Text style={styles.helper}>Total Farms: {farmer?.farmCount ?? 0}</Text>
+            </>
+          ) : (
+            <Text style={styles.helper}>
+              Farmer ID: {farmer?.farmerCode ?? 'ID Pending'}
+            </Text>
+          )}
+
+          {selectedFarmerFarms.map((farm, index) => {
+            const farmName = farm.farm_name?.trim() || `Farm ${farm.farm_id}`;
             const farmId = formatFarmDisplayId(farm);
             const village = farm.village?.trim() || '—';
+            const area =
+              farm.area_acre != null
+                ? `${farm.area_acre} acre`
+                : farm.area_hectare != null
+                  ? `${farm.area_hectare} hectare`
+                  : null;
+            const mappingStatus = farm.mapping_status ?? null;
 
             return (
               <Pressable key={farm.farm_id} style={styles.card} onPress={() => onFarmSelect(farm)}>
-                <Text style={styles.cardTitle}>{farmName}</Text>
+                {kind === 'application' ? (
+                  <Text style={styles.cardTitle}>Farm {index + 1}</Text>
+                ) : (
+                  <Text style={styles.cardTitle}>{farmName}</Text>
+                )}
+
                 <Text style={styles.cardMeta}>Farm Name: {farmName}</Text>
                 <Text style={styles.cardMeta}>Farm ID: {farmId}</Text>
                 <Text style={styles.cardMeta}>Village: {village}</Text>
+                {area ? <Text style={styles.cardMeta}>Area: {area}</Text> : null}
+                {mappingStatus ? <Text style={styles.cardMeta}>Mapping: {mappingStatus}</Text> : null}
+                {kind === 'application' ? (
+                  <Text style={styles.cardMeta}>
+                    Eligible Mixing: {applicationEligibleMixingCounts[farm.farm_id] ?? '—'}
+                  </Text>
+                ) : null}
                 <View style={styles.cardActions}>
                   <Pressable style={styles.selectButton} onPress={() => onFarmSelect(farm)}>
                     <Text style={styles.selectButtonText}>{actionLabel}</Text>
@@ -534,14 +624,21 @@ export function ArtisanFarmLookupScreen() {
       <Pressable key={farmer.farmerId} style={styles.card} onPress={() => onFarmerSelect(farmer.farmerId)}>
         <Text style={styles.cardTitle}>{farmer.farmerName}</Text>
         <Text style={styles.cardMeta}>Farmer ID: {farmer.farmerCode}</Text>
-        <Text style={styles.cardMeta}>
-          {farmer.farmCount} farm{farmer.farmCount === 1 ? '' : 's'}
-          {farmer.village ? ` · ${farmer.village}` : ''}
-        </Text>
+        {kind === 'application' ? (
+          <>
+            <Text style={styles.cardMeta}>Village: {farmer.village || '—'}</Text>
+            <Text style={styles.cardMeta}>Total Farms: {farmer.farmCount}</Text>
+          </>
+        ) : (
+          <Text style={styles.cardMeta}>
+            {farmer.farmCount} farm{farmer.farmCount === 1 ? '' : 's'}
+            {farmer.village ? ` · ${farmer.village}` : ''}
+          </Text>
+        )}
         <View style={styles.cardActions}>
           <Pressable style={styles.selectButton} onPress={() => onFarmerSelect(farmer.farmerId)}>
             <Text style={styles.selectButtonText}>
-              {farmer.farmCount === 1 ? actionLabel : multiFarmLabel}
+              {kind === 'application' ? 'Select Farmer' : farmer.farmCount === 1 ? actionLabel : multiFarmLabel}
             </Text>
           </Pressable>
         </View>

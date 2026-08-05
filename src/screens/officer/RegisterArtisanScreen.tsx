@@ -140,7 +140,7 @@ export function RegisterArtisanScreen() {
     }
 
     if (workingAreaEntries.length === 0) {
-      Alert.alert('Working area required', 'Add at least one taluka and village to the artisan working area.');
+      Alert.alert('Working area required', 'Add at least one District, Taluka, and Village to the artisan working area.');
       return;
     }
 
@@ -160,11 +160,14 @@ export function RegisterArtisanScreen() {
     // Merged across every taluka the officer added — never a silent single-taluka replace.
     // working_taluka_id is a single-taluka filter on the backend, so it is only sent when
     // the working area is confined to one taluka; otherwise villages are authorized individually.
-    if (workingAreaEntries.length === 1) {
-      payload.append('working_taluka_id', String(workingAreaEntries[0].talukaId));
+    const uniqueDistrictIds = Array.from(new Set(workingAreaEntries.map((entry) => entry.districtId).filter((id) => id > 0)));
+    const uniqueTalukaIds = Array.from(new Set(workingAreaEntries.map((entry) => entry.talukaId).filter((id) => id > 0)));
+    if (uniqueTalukaIds.length === 1) {
+      payload.append('working_taluka_id', String(uniqueTalukaIds[0]));
     }
+    uniqueDistrictIds.forEach((id) => payload.append('working_district_ids[]', String(id)));
+    uniqueTalukaIds.forEach((id) => payload.append('working_taluka_ids[]', String(id)));
     workingAreaEntries.forEach((entry) => {
-      payload.append('working_taluka_ids[]', String(entry.talukaId));
       entry.villageIds.forEach((id) => payload.append('working_village_ids[]', String(id)));
     });
     appendFile(payload, 'profile_photo', profilePhoto);

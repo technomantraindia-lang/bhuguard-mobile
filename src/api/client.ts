@@ -85,7 +85,23 @@ apiClient.interceptors.request.use(
     }
 
     if (config.data instanceof FormData) {
-      delete config.headers['Content-Type'];
+      // AxiosHeaders: bracket delete is unreliable — clear so RN sets boundary.
+      const headers = config.headers as {
+        delete?: (key: string) => void;
+        set?: (key: string, value?: string) => void;
+      } & Record<string, unknown>;
+
+      if (typeof headers.delete === 'function') {
+        headers.delete('Content-Type');
+        headers.delete('content-type');
+      } else {
+        delete headers['Content-Type'];
+        delete headers['content-type'];
+      }
+
+      if (typeof headers.set === 'function') {
+        headers.set('Content-Type', undefined as unknown as string);
+      }
     }
 
     return config;
@@ -154,6 +170,12 @@ apiClient.interceptors.response.use(
     if ((error.response?.status ?? 0) >= 500) {
       return Promise.reject(
         new Error(extractApiErrorMessage(error, 'Registration could not be completed. Please try again.')),
+      );
+    }
+
+    if (error.response?.status === 413) {
+      return Promise.reject(
+        new Error(extractApiErrorMessage(error, 'Upload is too large. Please retry with fewer or smaller photos.')),
       );
     }
 

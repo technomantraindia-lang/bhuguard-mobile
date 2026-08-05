@@ -76,7 +76,7 @@ function reviewMappingStatusLabel(status: string, hasBoundary: boolean): string 
 
 export function FarmerOnboardingReviewScreen() {
   const navigation = useNavigation<Nav>();
-  const { draft, toFormData, setResult, updateDraft } = useOnboarding();
+  const { draft, toFormData, toFinalizeFormData, setResult, updateDraft } = useOnboarding();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -202,7 +202,7 @@ export function FarmerOnboardingReviewScreen() {
           });
         }
 
-        const finalizeForm = toFormData();
+        const finalizeForm = toFinalizeFormData();
         finalizeForm.append('farm_id', String(farmId));
         const finalized = await finalizePreparedFarmerOnboarding(farmerId, finalizeForm);
         farmerName = String(finalized.farmer_name ?? draft.farmer_name);

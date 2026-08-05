@@ -68,34 +68,33 @@ export function OfficerSummaryCard({ dashboard }: { dashboard: FieldOfficerDashb
   );
 }
 
-export function OfficerStatsGrid({ dashboard }: { dashboard: FieldOfficerDashboardViewModel }) {
-  const stats = [
-    {
-      label: 'Active Check-ins',
-      value: String(dashboard.activeCheckinsCount ?? dashboard.checkedInVisitsCount),
-      unit: 'Visits',
-      color: officerTheme.tertiary,
-    },
-    {
-      label: 'Total Visits',
-      value: String(dashboard.totalVisitsCount ?? dashboard.assignedVisitsCount),
-      unit: 'Visits',
-      color: officerTheme.primary,
-    },
-  ];
+export function OfficerStatsGrid(_props: { dashboard: FieldOfficerDashboardViewModel }) {
+  return null;
+}
 
+export function OfficerFarmerOnboardingHero({
+  onOpenFarmerOnboarding,
+}: {
+  onOpenFarmerOnboarding?: () => void;
+}) {
   return (
-    <View style={styles.statsGrid}>
-      {stats.map((stat) => (
-        <View key={stat.label} style={[styles.statCard, officerCardShadow]}>
-          <Text style={styles.statLabel}>{stat.label}</Text>
-          <View style={styles.statValueRow}>
-            <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
-            <Text style={styles.statUnit}>{stat.unit}</Text>
-          </View>
-        </View>
-      ))}
-    </View>
+    <Pressable
+      style={({ pressed }) => [styles.heroCard, officerCardShadow, pressed && styles.heroPressed]}
+      onPress={onOpenFarmerOnboarding}
+      accessibilityRole="button"
+      accessibilityLabel="Farmer Onboarding"
+    >
+      <View style={styles.heroIconWrap}>
+        <BhuguardMaterialIcon name="person_add" size={24} color="#FFFFFF" filled />
+      </View>
+      <View style={styles.heroCopy}>
+        <Text style={styles.heroTitle}>Farmer Onboarding</Text>
+        <Text style={styles.heroSubtitle}>
+          Register a Farmer, add Farm details, documents, mapping and consent.
+        </Text>
+      </View>
+      <BhuguardMaterialIcon name="arrow_forward" size={22} color="#FFFFFF" />
+    </Pressable>
   );
 }
 
@@ -105,7 +104,6 @@ type QuickActionKey =
   | 'inventory'
   | 'myArtisans'
   | 'artisanBiocharBatches'
-  | 'farmerOnboarding'
   | 'scheduleVisit';
 
 export function OfficerQuickActionCards({
@@ -134,13 +132,6 @@ export function OfficerQuickActionCards({
     onPress?: () => void;
     primary?: boolean;
   }> = [
-    {
-      key: 'farmerOnboarding',
-      title: t('officer.dashboard.quickActions.farmerOnboarding'),
-      icon: 'person_add',
-      onPress: onOpenFarmerOnboarding,
-      primary: true,
-    },
     {
       key: 'farmActivity',
       title: t('officer.dashboard.quickActions.myActivity'),
@@ -537,6 +528,45 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(191, 201, 190, 0.2)',
     marginBottom: 16,
   },
+  heroCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: officerTheme.primary,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: officerTheme.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+    gap: 12,
+    marginBottom: 16,
+  },
+  heroPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.99 }],
+  },
+  heroIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  heroTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  heroSubtitle: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    lineHeight: 17,
+    opacity: 0.94,
+  },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   summaryLeft: { flex: 1, gap: 4 },
   summaryRight: { alignItems: 'flex-end' },
@@ -576,24 +606,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 16,
-  },
-  statCard: {
-    width: '47%',
-    backgroundColor: officerTheme.surfaceLowest,
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(191, 201, 190, 0.1)',
-  },
-  statLabel: { fontSize: 12, fontWeight: '600', color: officerTheme.onSurfaceVariant, marginBottom: 4 },
-  statValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  statValue: { fontSize: 20, lineHeight: 28, fontWeight: '600' },
-  statUnit: { fontSize: 10, color: officerTheme.outline },
+  statsGrid: { marginBottom: 0 },
   section: { marginBottom: 16 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitleInline: { marginBottom: 0, flex: 1 },

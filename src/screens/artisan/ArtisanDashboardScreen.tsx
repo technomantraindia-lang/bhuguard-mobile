@@ -21,7 +21,6 @@ import {
 } from '../../api/artisanApi';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
-import { LiveWorkCheckinCard } from '../../components/artisan/LiveWorkCheckinCard';
 import { BhuguardLogo } from '../../components/shared/BhuguardLogo';
 import { BhuguardMaterialIcon, type BhuguardIconName } from '../../components/shared/BhuguardMaterialIcon';
 import { useArtisanWorkSession } from '../../context/ArtisanWorkSessionContext';
@@ -477,7 +476,7 @@ export function ArtisanDashboardScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <LiveWorkCheckinCard />
+        {/* Live Work Check-in card removed (session UI moved to full check-in flow). */}
 
         {error ? (
           <View style={styles.noticeCard}>
@@ -594,13 +593,7 @@ export function ArtisanDashboardScreen() {
         <View style={styles.grid}>
           <DashboardCard
             title="Biochar Production"
-            description={
-              incompleteDraft && incompleteDraft.farmId
-                ? 'Unfinished batch — use Continue Active Process above, or start a new one'
-                : kilnCount > 0
-                  ? 'Start or continue a process batch'
-                  : 'Blocked until a kiln is assigned'
-            }
+            description="Create and manage Biochar Production batches"
             icon="eco"
             accent={CARD_ACCENTS.production.accent}
             bubble={CARD_ACCENTS.production.bubble}
@@ -611,13 +604,6 @@ export function ArtisanDashboardScreen() {
               }
               if (!hasAssignment) {
                 Alert.alert('No working area', 'Ask Admin to assign your working area before production.');
-                return;
-              }
-              if (kilnCount <= 0) {
-                Alert.alert(
-                  'No kiln assigned',
-                  'Biochar Production requires an Admin/Field Officer kiln assignment (BHG-###).',
-                );
                 return;
               }
               navigation.navigate('ArtisanFarmLookup', { purpose: 'production' });

@@ -52,7 +52,10 @@ export function FarmerOnboardingSuccessScreen() {
   };
 
   const viewFarmer = () => {
-    navigation.navigate('OnboardedFarmerView');
+    navigation.navigate('OnboardedFarmerView', {
+      farmerDbId: result?.farmer_id ?? undefined,
+      farmerDisplayId: (draft.farmer_display_id || draft.farmer_code) ?? undefined,
+    });
   };
 
   const addNewFarm = () => {

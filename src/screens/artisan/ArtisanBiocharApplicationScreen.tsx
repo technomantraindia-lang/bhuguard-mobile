@@ -27,7 +27,6 @@ import { artisanTheme } from '../../theme/artisanTheme';
 import { spacing } from '../../theme';
 import { extractList, pickString, type ApiRecord } from '../../utils/apiHelpers';
 import { captureBiocharGps, showBiocharPoorAccuracyWarning } from '../../utils/biocharGpsCapture';
-import { formatFarmDisplayLabel } from '../../utils/farmDisplayLabel';
 import { captureLivePhotoEvidence } from '../../utils/liveEvidenceCapture';
 import { safeNetInfoIsConnected } from '../../utils/safeNetInfo';
 
@@ -156,7 +155,7 @@ export function ArtisanBiocharApplicationScreen() {
       farmLabel:
         route.params.farmLabel ??
         route.params.farmName ??
-        formatFarmDisplayLabel({ village: route.params.village }, 0),
+        (route.params.farmId ? `Farm ${route.params.farmId}` : '—'),
       village: route.params.village ?? null,
       taluka: route.params.taluka ?? null,
       district: route.params.district ?? null,
@@ -557,15 +556,15 @@ export function ArtisanBiocharApplicationScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Farmer</Text>
           <Text style={styles.text}>{selectedFarm.farmerName ?? 'Farmer'}</Text>
-          <Text style={styles.text}>Farmer ID: {selectedFarm.farmerCode ?? selectedFarm.farmerId}</Text>
+          <Text style={styles.text}>Farmer ID: {selectedFarm.farmerCode ?? 'ID Pending'}</Text>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Farm</Text>
           <Text style={styles.text}>
-            Farm Name: {selectedFarm.farmLabel || selectedFarm.farmCode || `Farm ${selectedFarm.farmId}`}
+            Farm Name: {selectedFarm.farmLabel || '—'}
           </Text>
-          <Text style={styles.text}>Farm ID: {selectedFarm.farmCode || selectedFarm.farmId || '—'}</Text>
+          <Text style={styles.text}>Farm ID: {selectedFarm.farmCode ?? 'ID Pending'}</Text>
           <Text style={styles.text}>Village: {selectedFarm.village?.trim() || '—'}</Text>
         </View>
 
