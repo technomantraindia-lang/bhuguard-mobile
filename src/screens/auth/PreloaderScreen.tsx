@@ -1,10 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, ImageBackground, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { syncApiClientBaseUrl } from '../../api/client';
 import { routeAfterPreloader } from '../../auth/startup/AuthStartupController';
 import { ANIMATED_SPLASH_BG } from '../../components/AnimatedLogoSplash';
+import { BHUGUARD_LOGO, LOGO_SIZES } from '../../constants/branding';
 import { safeNavigationReset } from '../../navigation/safeNavigationReset';
 import type { RootStackParamList } from '../../navigation/types';
 import { syncServerTime } from '../../services/serverTimeSync';
@@ -13,12 +16,22 @@ import { hideNativeSplashOnce } from '../../utils/splashHideGuard';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Preloader'>;
 
+const SPLASH_FARM_BG = require('../../../assets/splash-farm-bg.jpg');
+
 const MAX_BOOTSTRAP_MS = 4500;
-/** Animated logo splash already ran in App; keep Preloader brief. */
-const POST_LOGO_HOLD_MS = 120;
+/** Keep a brief centered logo while hydration finishes after the animated splash. */
+const POST_LOGO_HOLD_MS = 180;
 
 export function PreloaderScreen({ navigation }: Props) {
   const finishedRef = useRef(false);
+  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const logoSize = Math.min(
+    LOGO_SIZES.splash,
+    Math.round(width * 0.42),
+    Math.round((height - insets.top - insets.bottom) * 0.28),
+    160,
+  );
 
   useEffect(() => {
     void hideNativeSplashOnce();
@@ -34,7 +47,6 @@ export function PreloaderScreen({ navigation }: Props) {
       }
 
       finishedRef.current = true;
-      // Always clear native splash before leaving Preloader (API failure / timeout safe).
       await hideNativeSplashOnce();
 
       const elapsed = Date.now() - startedAt;
@@ -47,8 +59,6 @@ export function PreloaderScreen({ navigation }: Props) {
         return;
       }
 
-      // Skip opacity animation + native-driver teardown before the first stack
-      // reset — that combination races Fabric PreAllocateMountItem on Android.
       safeNavigationReset(navigation, { index: 0, routes: [{ name: route }] });
     };
 
@@ -67,7 +77,7 @@ export function PreloaderScreen({ navigation }: Props) {
         }
       }
 
-      // Best-effort, non-blocking — never delay startup on this.
+      // Best-effort — never block forever on optional APIs.
       void syncServerTime();
 
       try {
@@ -100,12 +110,60 @@ export function PreloaderScreen({ navigation }: Props) {
     };
   }, [navigation]);
 
-  return <View style={styles.root} />;
+  return (
+    <View style={styles.root} accessibilityLabel="Bhuguard preloader">
+      <ImageBackground
+        source={SPLASH_FARM_BG}
+        style={styles.background}
+        imageStyle={styles.backgroundImage}
+        resizeMode="cover"
+        accessibilityIgnoresInvertColors
+      >
+        <LinearGradient
+          colors={['rgba(3, 21, 13, 0.55)', 'rgba(3, 21, 13, 0.72)', 'rgba(3, 21, 13, 0.78)']}
+          locations={[0, 0.45, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        <View
+          style={[
+            styles.center,
+            {
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+            },
+          ]}
+        >
+          <Image
+            source={BHUGUARD_LOGO}
+            style={{ width: logoSize, height: logoSize }}
+            resizeMode="contain"
+            accessibilityLabel="Bhuguard logo"
+          />
+        </View>
+      </ImageBackground>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: ANIMATED_SPLASH_BG,
+  },
+  background: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  backgroundImage: {
+    width: '100%',
+    height: '100%',
+  },
+  center: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

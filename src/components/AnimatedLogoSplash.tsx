@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BHUGUARD_LOGO, LOGO_SIZES } from '../constants/branding';
 
@@ -29,15 +30,17 @@ type AnimatedLogoSplashProps = {
 
 /**
  * Premium farm-background logo splash using only React Native Animated.
- * Does not import react-native-reanimated or worklets.
+ * Logo stays exactly centered; never clipped by status bar / notch.
  */
 export default function AnimatedLogoSplash({ onFinish }: AnimatedLogoSplashProps) {
-  const { width } = useWindowDimensions();
-  const logoSize = Math.min(LOGO_SIZES.splash + 40, Math.round(width * 0.48), 220);
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const maxByWidth = Math.round(width * 0.42);
+  const maxByHeight = Math.round((height - insets.top - insets.bottom) * 0.28);
+  const logoSize = Math.min(LOGO_SIZES.splash, maxByWidth, maxByHeight, 160);
 
   const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.6)).current;
-  const translateY = useRef(new Animated.Value(14)).current;
+  const scale = useRef(new Animated.Value(0.72)).current;
   const glowOpacity = useRef(new Animated.Value(0)).current;
   const screenOpacity = useRef(new Animated.Value(1)).current;
   const onFinishRef = useRef(onFinish);
@@ -64,7 +67,6 @@ export default function AnimatedLogoSplash({ onFinish }: AnimatedLogoSplashProps
     const runReduced = () => {
       opacity.setValue(1);
       scale.setValue(1);
-      translateY.setValue(0);
       glowOpacity.setValue(0.4);
       reduceMotionTimer = setTimeout(() => {
         Animated.timing(screenOpacity, {
@@ -95,12 +97,6 @@ export default function AnimatedLogoSplash({ onFinish }: AnimatedLogoSplashProps
             easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
-          Animated.timing(translateY, {
-            toValue: 0,
-            duration: ENTRANCE_MS,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-          }),
           Animated.timing(glowOpacity, {
             toValue: 0.55,
             duration: ENTRANCE_MS,
@@ -111,7 +107,7 @@ export default function AnimatedLogoSplash({ onFinish }: AnimatedLogoSplashProps
         Animated.sequence([
           Animated.parallel([
             Animated.timing(scale, {
-              toValue: 1.045,
+              toValue: 1.04,
               duration: PULSE_HALF_MS,
               easing: Easing.inOut(Easing.ease),
               useNativeDriver: true,
@@ -198,13 +194,12 @@ export default function AnimatedLogoSplash({ onFinish }: AnimatedLogoSplashProps
       }
       opacity.stopAnimation();
       scale.stopAnimation();
-      translateY.stopAnimation();
       glowOpacity.stopAnimation();
       screenOpacity.stopAnimation();
     };
-  }, [glowOpacity, opacity, scale, screenOpacity, translateY]);
+  }, [glowOpacity, opacity, scale, screenOpacity]);
 
-  const glowSize = logoSize * 1.55;
+  const glowSize = logoSize * 1.45;
 
   return (
     <Animated.View
@@ -218,7 +213,6 @@ export default function AnimatedLogoSplash({ onFinish }: AnimatedLogoSplashProps
         resizeMode="cover"
         accessibilityIgnoresInvertColors
       >
-        {/* Brand-matched dark green overlay for logo contrast */}
         <LinearGradient
           colors={['rgba(3, 21, 13, 0.55)', 'rgba(3, 21, 13, 0.72)', 'rgba(3, 21, 13, 0.78)']}
           locations={[0, 0.45, 1]}
@@ -226,7 +220,16 @@ export default function AnimatedLogoSplash({ onFinish }: AnimatedLogoSplashProps
           pointerEvents="none"
         />
 
-        <View style={styles.center} pointerEvents="none">
+        <View
+          style={[
+            styles.center,
+            {
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+            },
+          ]}
+          pointerEvents="none"
+        >
           <Animated.View
             style={[
               styles.glow,
@@ -249,7 +252,7 @@ export default function AnimatedLogoSplash({ onFinish }: AnimatedLogoSplashProps
                 width: logoSize,
                 height: logoSize,
                 opacity,
-                transform: [{ translateY }, { scale }],
+                transform: [{ scale }],
               },
             ]}
             accessibilityLabel="Bhuguard logo"
@@ -262,7 +265,11 @@ export default function AnimatedLogoSplash({ onFinish }: AnimatedLogoSplashProps
 
 const styles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     backgroundColor: ANIMATED_SPLASH_BG,
     zIndex: 9999,
   },
@@ -278,6 +285,7 @@ const styles = StyleSheet.create({
   },
   center: {
     flex: 1,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },

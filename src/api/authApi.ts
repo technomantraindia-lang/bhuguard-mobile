@@ -1,11 +1,10 @@
-import axios from 'axios';
-
-import type { ApiErrorResponse, ApiSuccessResponse, AuthUser, LoginPasswordResult } from '../types/auth';
+import type { ApiSuccessResponse, AuthUser, LoginPasswordResult } from '../types/auth';
 import { resolveUserRole } from '../utils/authRole';
 import { Platform } from 'react-native';
 
 import { clearAuthStorage, saveAuthToken, saveAuthUser } from '../utils/authStorage';
 import { getOrCreateDeviceUuid } from '../utils/biometricLogin';
+import { extractApiErrorMessage } from '../utils/apiError';
 
 import { apiClient } from './client';
 
@@ -204,6 +203,42 @@ export async function loginBiometricToken(payload: {
   return { token, user, user_type: resolveUserRole(user) ?? user.user_type };
 }
 
+export async function resolveLoginRoute(mobile: string): Promise<{
+  user_exists: boolean;
+  pattern_configured: boolean;
+  next_step: 'pattern_login' | 'otp_then_pattern_setup' | string;
+  role?: string;
+  name?: string;
+  mobile?: string;
+  biometric_available?: boolean;
+  has_pattern?: boolean;
+  pattern_setup_required?: boolean;
+}> {
+  const device = await devicePayload();
+  const response = await apiClient.post<ApiSuccessResponse<Record<string, unknown>>>(
+    '/auth/login/resolve',
+    {
+      mobile: mobile.trim(),
+      device_uuid: device.device_uuid,
+      platform: device.platform,
+    },
+  );
+
+  const data = response.data.data ?? {};
+
+  return {
+    user_exists: Boolean(data.user_exists),
+    pattern_configured: Boolean(data.pattern_configured ?? data.has_pattern),
+    next_step: String(data.next_step ?? 'otp_then_pattern_setup'),
+    role: data.role ? String(data.role) : undefined,
+    name: data.name ? String(data.name) : undefined,
+    mobile: data.mobile ? String(data.mobile) : mobile.trim(),
+    biometric_available: Boolean(data.biometric_available),
+    has_pattern: Boolean(data.has_pattern ?? data.pattern_configured),
+    pattern_setup_required: Boolean(data.pattern_setup_required),
+  };
+}
+
 export async function requestLoginOtp(mobile: string) {
   const response = await apiClient.post<ApiSuccessResponse<Record<string, unknown>>>(
     '/auth/login/request-otp',
@@ -311,31 +346,7 @@ export async function resetMpin(mobile: string, mpin: string) {
 }
 
 export function getApiErrorMessage(error: unknown, fallback = 'Login failed. Please try again.'): string {
-  if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    const data = error.response?.data;
-
-    if (data?.message) {
-      return data.message;
-    }
-
-    if (data?.errors) {
-      const firstError = Object.values(data.errors).flat()[0];
-
-      if (firstError) {
-        return firstError;
-      }
-    }
-
-    if (error.message) {
-      return error.message;
-    }
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return fallback;
+  return extractApiErrorMessage(error, fallback);
 }
 
 /** @deprecated Use logout() */

@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   LayoutChangeEvent,
   PanResponder,
@@ -21,13 +21,13 @@ export type PatternLockPadProps = {
   onTooShort?: () => void;
   errorText?: string | null;
   hintText?: string | null;
+  /** Hide Reset/Retry row (preferred — parent owns Start Over). */
+  showActions?: boolean;
+  /** Remount/clear key from parent after confirm handoff. */
+  clearToken?: number;
 };
 
 type Point = { x: number; y: number };
-
-function indexFromCoord(col: number, row: number): number {
-  return row * CELL + col;
-}
 
 function cellCenter(index: number, size: number, pad: number): Point {
   const col = index % CELL;
@@ -69,16 +69,18 @@ function PatternLockPadComponent({
   onTooShort,
   errorText,
   hintText,
+  showActions = false,
+  clearToken = 0,
 }: PatternLockPadProps) {
-  const [size, setSize] = useState(280);
+  const [size, setSize] = useState(260);
   const [path, setPath] = useState<number[]>([]);
   const [finger, setFinger] = useState<Point | null>(null);
   const pathRef = useRef<number[]>([]);
   const completedRef = useRef(false);
 
-  const pad = size * 0.14;
-  const nodeRadius = Math.max(14, size * 0.055);
-  const hitRadius = nodeRadius * 1.85;
+  const pad = size * 0.18;
+  const nodeRadius = Math.max(9, Math.min(12, size * 0.038));
+  const hitRadius = nodeRadius * 2.4;
 
   const reset = useCallback(() => {
     pathRef.current = [];
@@ -87,6 +89,19 @@ function PatternLockPadComponent({
     setFinger(null);
     onCleared?.();
   }, [onCleared]);
+
+  const clearVisualOnly = useCallback(() => {
+    pathRef.current = [];
+    completedRef.current = false;
+    setPath([]);
+    setFinger(null);
+  }, []);
+
+  useEffect(() => {
+    if (clearToken > 0) {
+      clearVisualOnly();
+    }
+  }, [clearToken, clearVisualOnly]);
 
   const commitPoint = useCallback((index: number) => {
     const current = pathRef.current;
@@ -116,8 +131,13 @@ function PatternLockPadComponent({
       return;
     }
     completedRef.current = true;
-    onComplete(drawn.map(String).join(''));
-  }, [onComplete, onTooShort, reset]);
+    const sequence = drawn.map(String).join('');
+    onComplete(sequence);
+    // Auto-clear grid after a valid draw so Confirm / next attempt starts clean.
+    requestAnimationFrame(() => {
+      clearVisualOnly();
+    });
+  }, [clearVisualOnly, onComplete, onTooShort, reset]);
 
   const onLayout = useCallback((event: LayoutChangeEvent) => {
     const w = Math.floor(event.nativeEvent.layout.width);
@@ -201,7 +221,7 @@ function PatternLockPadComponent({
                     {
                       width: length,
                       left: a.x,
-                      top: a.y - 2,
+                      top: a.y - 1.5,
                       transform: [{ rotate: `${angle}deg` }],
                     },
                   ]}
@@ -223,7 +243,7 @@ function PatternLockPadComponent({
                 return {
                   width: length,
                   left: a.x,
-                  top: a.y - 2,
+                  top: a.y - 1.5,
                   transform: [{ rotate: `${angle}deg` }],
                   opacity: 0.55,
                 };
@@ -249,28 +269,24 @@ function PatternLockPadComponent({
                 },
                 selected ? styles.nodeSelected : null,
               ]}
-            />
+            >
+              {selected ? <View style={styles.nodeInner} /> : null}
+            </View>
           );
         })}
       </View>
-      <View style={styles.actions}>
-        <Text
-          style={styles.action}
-          onPress={disabled ? undefined : reset}
-          accessibilityRole="button"
-          accessibilityLabel="Reset pattern"
-        >
-          Reset
-        </Text>
-        <Text
-          style={styles.action}
-          onPress={disabled ? undefined : reset}
-          accessibilityRole="button"
-          accessibilityLabel="Retry pattern"
-        >
-          Retry
-        </Text>
-      </View>
+      {showActions ? (
+        <View style={styles.actions}>
+          <Text
+            style={styles.action}
+            onPress={disabled ? undefined : reset}
+            accessibilityRole="button"
+            accessibilityLabel="Reset pattern"
+          >
+            Reset
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -282,7 +298,7 @@ const styles = StyleSheet.create({
   wrap: {
     width: '100%',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   hint: {
     fontSize: 14,
@@ -298,24 +314,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   board: {
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(15,122,69,0.18)',
-    overflow: 'hidden',
+    backgroundColor: 'transparent',
+    overflow: 'visible',
   },
   node: {
     position: 'absolute',
-    backgroundColor: '#D7E8DB',
+    backgroundColor: 'rgba(215, 232, 219, 0.95)',
     borderWidth: 2,
     borderColor: '#0F7A45',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   nodeSelected: {
     backgroundColor: '#0F7A45',
+    borderColor: '#0F7A45',
+  },
+  nodeInner: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
   },
   line: {
     position: 'absolute',
-    height: 4,
+    height: 3,
     backgroundColor: '#0F7A45',
     borderRadius: 2,
     transformOrigin: 'left center',

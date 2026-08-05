@@ -24,10 +24,12 @@ import axios from 'axios';
 import { BackHandler } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import type { AppLoginRole } from '../../../config/authRoles';
 import {
   getApiErrorMessage,
   requestForgotMpinOtp,
   requestLoginOtp,
+  resolveLoginRoute,
 } from '../../../api/authApi';
 import {
   getValidatedColdStartUser,
@@ -218,6 +220,24 @@ function LoginScreenComponent({ navigation }: Props) {
         return;
       }
 
+      // Backend is authoritative: Pattern users skip OTP.
+      const decision = await resolveLoginRoute(mobile);
+      if (!mountedRef.current || navigatedRef.current) {
+        return;
+      }
+
+      if (decision.next_step === 'pattern_login' && decision.pattern_configured) {
+        navigatedRef.current = true;
+        setAuthStartupPhase('locked');
+        navigation.navigate('PatternLogin', {
+          mobile: decision.mobile ?? mobile,
+          name: decision.name,
+          role: (decision.role as AppLoginRole | undefined),
+          mode: 'login',
+        });
+        return;
+      }
+
       await requestLoginOtp(mobile);
       if (!mountedRef.current || navigatedRef.current) {
         return;
@@ -243,7 +263,7 @@ function LoginScreenComponent({ navigation }: Props) {
     }
   }, [mapAuthError, mobile, navigation, t]);
 
-  const forgotMpin = useCallback(async () => {
+  const forgotPattern = useCallback(async () => {
     if (!VALID_MOBILE.test(mobile)) {
       setTouched(true);
       setError(t('mobileLogin.invalidMobile'));
@@ -266,7 +286,7 @@ function LoginScreenComponent({ navigation }: Props) {
       setAuthStartupPhase('otp_verification');
       navigation.navigate('OtpVerification', {
         mobile,
-        purpose: 'forgot_mpin',
+        purpose: 'forgot_pattern',
         flowOrigin: 'auth',
       });
     } catch (err) {
@@ -315,7 +335,7 @@ function LoginScreenComponent({ navigation }: Props) {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <LoginBackground />
 
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -421,14 +441,14 @@ function LoginScreenComponent({ navigation }: Props) {
               </Pressable>
 
               <Pressable
-                onPress={() => void forgotMpin()}
+                onPress={() => void forgotPattern()}
                 disabled={loading}
                 style={styles.linkWrap}
                 accessibilityRole="link"
-                accessibilityLabel="Forgot MPIN?"
+                accessibilityLabel={t('pattern.forgot')}
               >
                 <Text style={[styles.link, fontsLoaded ? styles.fontSemiBold : null]}>
-                  Forgot MPIN?
+                  {t('pattern.forgot')}
                 </Text>
               </Pressable>
 
@@ -468,7 +488,7 @@ export const LoginScreen = memo(LoginScreenComponent);
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#F7FBFD',
+    backgroundColor: '#0B3B28',
   },
   safe: {
     flex: 1,
@@ -513,8 +533,11 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: '800',
     letterSpacing: 5.5,
-    color: COLORS.brand,
+    color: COLORS.white,
     textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   taglineRow: {
     marginTop: 10,
@@ -526,16 +549,19 @@ const styles = StyleSheet.create({
   taglineLine: {
     width: 34,
     height: StyleSheet.hairlineWidth * 2,
-    backgroundColor: COLORS.tagline,
-    opacity: 0.85,
+    backgroundColor: COLORS.lime,
+    opacity: 0.9,
   },
   tagline: {
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 1.4,
-    color: COLORS.tagline,
+    color: COLORS.white,
     textAlign: 'center',
     textTransform: 'uppercase',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   formBlock: {
     alignSelf: 'center',
@@ -548,6 +574,9 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     textAlign: 'center',
     marginBottom: 8,
+    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   subtitle: {
     fontSize: 14,

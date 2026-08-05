@@ -265,7 +265,7 @@ export function PatternLoginScreen({ navigation, route }: Props) {
         }
       }
 
-      const ready = Boolean(profile?.mobile || unlockMode) && biometricEnabled && hardwareOk;
+      const ready = Boolean(mobile || profile?.mobile || unlockMode) && biometricEnabled && hardwareOk;
       setBiometricReady(ready);
       setBiometricUnavailableHint(!hardwareOk || !biometricEnabled);
 
@@ -277,7 +277,7 @@ export function PatternLoginScreen({ navigation, route }: Props) {
 
     void loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unlockMode]);
+  }, [unlockMode, mobile]);
 
   const onComplete = useCallback(
     async (sequence: string) => {
