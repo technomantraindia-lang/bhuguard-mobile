@@ -1,5 +1,4 @@
 import {
-  DISPLAY_ID_PENDING,
   formatFarmDisplayId,
   formatFarmerDisplayId,
 } from './displayIds';
@@ -67,24 +66,26 @@ export function toPositiveEntityId(value: unknown): number | null {
 /**
  * NEVER fabricates a display ID locally. Prefer server display ID helpers.
  */
-export function formatFarmerDisplayCode(farmerId: number | null | undefined, farmerCode?: string | null): string {
+export function formatFarmerDisplayCode(
+  farmerId: number | null | undefined,
+  farmerCode?: string | null,
+  farmerDisplayId?: string | null,
+): string {
   return formatFarmerDisplayId({
-    farmer_display_id: farmerCode,
+    farmer_display_id: farmerDisplayId || farmerCode,
     farmer_code: farmerCode,
     id: farmerId ?? undefined,
   });
 }
 
-export function formatFarmDisplayCode(farmId: number | null | undefined, farmCode?: string | null): string {
-  const formatted = formatFarmDisplayId({
-    farm_display_id: farmCode,
+export function formatFarmDisplayCode(
+  farmId: number | null | undefined,
+  farmCode?: string | null,
+  farmDisplayId?: string | null,
+): string {
+  return formatFarmDisplayId({
+    farm_display_id: farmDisplayId || undefined,
     farm_code: farmCode,
     id: farmId ?? undefined,
   });
-
-  if (formatted !== DISPLAY_ID_PENDING && formatted !== 'Loading…') {
-    return formatted;
-  }
-
-  return DISPLAY_ID_PENDING;
 }

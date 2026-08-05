@@ -45,6 +45,7 @@ export async function beginAddNewFarmWithMapping(options: {
     farmer_id: farmerId,
     farm_id: null,
     farm_code: '',
+    farm_display_id: '',
     farm_name: defaultFarmName(farmerName, farmIndex),
     land_survey_number: '',
     land_area: '',

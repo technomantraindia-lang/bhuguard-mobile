@@ -36,6 +36,7 @@ export interface OnboardingDraft {
   farmer_code: string;
   farmer_display_id: string;
   farm_code: string;
+  farm_display_id: string;
   farm_name: string;
   farmer_name: string;
   mobile: string;
@@ -107,6 +108,7 @@ const defaultDraft: OnboardingDraft = {
   farmer_code: '',
   farmer_display_id: '',
   farm_code: '',
+  farm_display_id: '',
   farm_name: '',
   farmer_name: '',
   mobile: '',

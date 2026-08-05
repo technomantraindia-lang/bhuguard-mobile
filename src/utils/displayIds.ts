@@ -28,6 +28,7 @@ export const DISPLAY_ID_UNAVAILABLE = 'ID Pending';
 
 const FARMER_DISPLAY_PATTERN = /^BHG-KISHAN-\d{2,}$/i;
 const FARM_DISPLAY_PATTERN = /^BHG-FRM-\d{2,}$/i;
+const LEGACY_FARM_CODE_PATTERN = /^BHG-FARM-\d+/i;
 const ARTISAN_DISPLAY_PATTERN = /^BHG-ART-\d{2,}$/i;
 
 function cleanId(value: unknown): string | null {
@@ -72,9 +73,23 @@ function preferCanonical(value: string | null, pattern: RegExp, legacyFallback?:
     return legacyFallback;
   }
 
-  if (value && !/^\d+$/.test(value)) {
-    // Prefer any non-numeric server code over inventing a display ID.
-    return value;
+  // Never surface legacy BHG-FARM-* or raw numeric PKs as Farm/Farmer display IDs.
+  if (value && LEGACY_FARM_CODE_PATTERN.test(value)) {
+    return DISPLAY_ID_PENDING;
+  }
+
+  if (legacyFallback && LEGACY_FARM_CODE_PATTERN.test(legacyFallback)) {
+    return DISPLAY_ID_PENDING;
+  }
+
+  if (value && !/^\d+$/.test(value) && !LEGACY_FARM_CODE_PATTERN.test(value)) {
+    // Prefer any non-numeric server code over inventing a display ID — except legacy farm codes.
+    if (pattern === FARM_DISPLAY_PATTERN && !FARM_DISPLAY_PATTERN.test(value)) {
+      return DISPLAY_ID_PENDING;
+    }
+    if (pattern === FARMER_DISPLAY_PATTERN && !FARMER_DISPLAY_PATTERN.test(value)) {
+      return DISPLAY_ID_PENDING;
+    }
   }
 
   return DISPLAY_ID_PENDING;

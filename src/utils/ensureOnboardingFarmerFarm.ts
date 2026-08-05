@@ -13,7 +13,9 @@ export type EnsuredOnboardingIds = {
   farmerId: number;
   farmId: number;
   farmerCode: string | null;
+  farmerDisplayId: string | null;
   farmCode: string | null;
+  farmDisplayId: string | null;
   farmerName: string;
   farmName: string | null;
 };
@@ -36,7 +38,9 @@ function readEnsuredFromDraft(draft: OnboardingDraft): EnsuredOnboardingIds | nu
     farmerId,
     farmId,
     farmerCode: draft.farmer_code?.trim() || null,
+    farmerDisplayId: draft.farmer_display_id?.trim() || null,
     farmCode: draft.farm_code?.trim() || null,
+    farmDisplayId: draft.farm_display_id?.trim() || null,
     farmerName: draft.farmer_name.trim() || 'Farmer',
     farmName: draft.farm_name?.trim() || null,
   };
@@ -54,7 +58,15 @@ function readEnsuredFromApi(farmer: ApiRecord, draft: OnboardingDraft): EnsuredO
     farmerId,
     farmId,
     farmerCode: pickString(farmer, 'farmer_code') !== '-' ? pickString(farmer, 'farmer_code') : null,
+    farmerDisplayId:
+      pickString(farmer, 'farmer_display_id') !== '-'
+        ? pickString(farmer, 'farmer_display_id')
+        : null,
     farmCode: pickString(farmer, 'farm_code') !== '-' ? pickString(farmer, 'farm_code') : null,
+    farmDisplayId:
+      pickString(farmer, 'farm_display_id') !== '-'
+        ? pickString(farmer, 'farm_display_id')
+        : null,
     farmerName: String(farmer.farmer_name ?? draft.farmer_name).trim() || 'Farmer',
     farmName:
       pickString(farmer, 'farm_name') !== '-'
@@ -79,7 +91,12 @@ function readEnsuredFromAdditionalFarm(
     farmerId,
     farmId,
     farmerCode: draft.farmer_code?.trim() || null,
+    farmerDisplayId: draft.farmer_display_id?.trim() || null,
     farmCode: pickString(farm, 'farm_code') !== '-' ? pickString(farm, 'farm_code') : null,
+    farmDisplayId:
+      pickString(farm, 'farm_display_id') !== '-'
+        ? pickString(farm, 'farm_display_id')
+        : null,
     farmerName: draft.farmer_name.trim() || 'Farmer',
     farmName:
       pickString(farm, 'farm_name') !== '-'

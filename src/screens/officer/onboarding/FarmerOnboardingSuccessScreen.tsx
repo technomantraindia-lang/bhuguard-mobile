@@ -35,7 +35,8 @@ export function FarmerOnboardingSuccessScreen() {
 
   const farmerName = result?.farmer_name ?? 'Farmer';
   const mobile = result?.mobile ?? '-';
-  const farmerCode = draft.farmer_display_id || draft.farmer_code || '—';
+  const farmerCode = draft.farmer_display_id || draft.farmer_code || 'ID Pending';
+  const farmCode = draft.farm_display_id || (draft.farm_code?.startsWith('BHG-FRM-') ? draft.farm_code : null) || 'ID Pending';
   const createdAt = formatDate(result?.onboarded_at);
   const routeNames = (navigation.getState()?.routeNames ?? []) as string[];
   const isArtisanStack = routeNames.includes('ArtisanDashboard');
@@ -92,6 +93,7 @@ export function FarmerOnboardingSuccessScreen() {
             />
           </View>
           <Text style={styles.line}>Farmer ID: {farmerCode}</Text>
+          <Text style={styles.line}>Farm ID: {farmCode}</Text>
           {draft.farm_name ? <Text style={styles.line}>Farm: {draft.farm_name}</Text> : null}
           <Text style={styles.line}>Created: {createdAt}</Text>
           {result?.village ? <Text style={styles.line}>Village: {result.village}</Text> : null}

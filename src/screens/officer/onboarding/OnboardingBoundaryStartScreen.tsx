@@ -112,7 +112,9 @@ export function OnboardingBoundaryStartScreen() {
           farmerId: routeFarmerId,
           farmId: routeFarmId,
           farmerCode: route.params?.farmerCode?.trim() || currentDraft.farmer_code || null,
+          farmerDisplayId: currentDraft.farmer_display_id || null,
           farmCode: route.params?.farmCode?.trim() || currentDraft.farm_code || null,
+          farmDisplayId: currentDraft.farm_display_id || null,
           farmerName: route.params?.farmerName?.trim() || currentDraft.farmer_name || 'Farmer',
           farmName: route.params?.farmName?.trim() || currentDraft.farm_name || null,
         };
@@ -120,7 +122,9 @@ export function OnboardingBoundaryStartScreen() {
           farmer_id: ids.farmerId,
           farm_id: ids.farmId,
           farmer_code: ids.farmerCode ?? '',
+          farmer_display_id: ids.farmerDisplayId ?? '',
           farm_code: ids.farmCode ?? '',
+          farm_display_id: ids.farmDisplayId ?? '',
           farm_name: ids.farmName ?? '',
         });
         applySession(ids);
@@ -136,7 +140,9 @@ export function OnboardingBoundaryStartScreen() {
           farmer_id: nextGate.ids.farmerId,
           farm_id: nextGate.ids.farmId,
           farmer_code: nextGate.ids.farmerCode ?? '',
+          farmer_display_id: nextGate.ids.farmerDisplayId ?? '',
           farm_code: nextGate.ids.farmCode ?? '',
+          farm_display_id: nextGate.ids.farmDisplayId ?? '',
           farm_name: nextGate.ids.farmName ?? '',
         });
         applySession(nextGate.ids);

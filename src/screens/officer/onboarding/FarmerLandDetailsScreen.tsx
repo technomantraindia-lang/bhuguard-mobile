@@ -136,7 +136,9 @@ export function FarmerLandDetailsScreen() {
       farmer_id: ensured.ids.farmerId,
       farm_id: ensured.ids.farmId,
       farmer_code: ensured.ids.farmerCode ?? '',
+      farmer_display_id: ensured.ids.farmerDisplayId ?? '',
       farm_code: ensured.ids.farmCode ?? '',
+      farm_display_id: ensured.ids.farmDisplayId ?? '',
       farm_name: ensured.ids.farmName ?? draftAfter.farm_name,
     });
 
@@ -145,7 +147,9 @@ export function FarmerLandDetailsScreen() {
       farmer_id: ensured.ids.farmerId,
       farm_id: ensured.ids.farmId,
       farmer_code: ensured.ids.farmerCode ?? '',
+      farmer_display_id: ensured.ids.farmerDisplayId ?? '',
       farm_code: ensured.ids.farmCode ?? '',
+      farm_display_id: ensured.ids.farmDisplayId ?? '',
       farm_name: ensured.ids.farmName ?? draftAfter.farm_name,
     };
 

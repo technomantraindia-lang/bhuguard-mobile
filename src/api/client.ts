@@ -9,6 +9,7 @@ import {
   formatApiUnreachableMessage,
   isNetworkError,
   isTimeoutError,
+  logSafeApiFailure,
 } from '../utils/apiError';
 import { isLoggingOut } from '../utils/logoutGuard';
 
@@ -22,6 +23,9 @@ const PUBLIC_AUTH_PATHS = [
   '/auth/forgot-mpin/verify-otp',
   '/auth/register/request-otp',
 ];
+
+/** Multipart farmer onboarding can exceed the default 30s on slower networks. */
+export const ONBOARDING_MULTIPART_TIMEOUT_MS = 120000;
 
 function isPublicAuthRequest(url?: string): boolean {
   if (!url) {
@@ -96,6 +100,7 @@ apiClient.interceptors.response.use(
   },
   async (error: AxiosError) => {
     logDevResponse(error.response?.status, error.config?.url);
+    logSafeApiFailure(error);
 
     if (error.response?.status === 401) {
       // Avoid racing navigation/storage clears while an intentional logout is in progress.
@@ -110,15 +115,16 @@ apiClient.interceptors.response.use(
       return Promise.reject(new Error(extractApiErrorMessage(error, 'Your session has expired. Please log in again.')));
     }
 
+    // Timeouts must be classified before generic "no response" network handling.
+    if (isTimeoutError(error)) {
+      return Promise.reject(
+        new Error(extractApiErrorMessage(error, 'The request took too long. Please try again with a stronger connection.')),
+      );
+    }
+
     if (isNetworkError(error)) {
       const baseUrl = getCachedApiBaseUrl() || API_BASE_URL;
       return Promise.reject(new Error(formatApiUnreachableMessage(baseUrl)));
-    }
-
-    if (isTimeoutError(error)) {
-      return Promise.reject(
-        new Error(extractApiErrorMessage(error, 'Unable to connect to the Bhuguard server. Please try again.')),
-      );
     }
 
     if (error.response?.status === 403) {
@@ -126,11 +132,19 @@ apiClient.interceptors.response.use(
     }
 
     if (error.response?.status === 404) {
-      return Promise.reject(new Error(extractApiErrorMessage(error, 'The requested service is temporarily unavailable.')));
+      return Promise.reject(
+        new Error(extractApiErrorMessage(error, 'The requested registration service was not found. Please try again later.')),
+      );
+    }
+
+    if (error.response?.status === 409) {
+      return Promise.reject(
+        new Error(extractApiErrorMessage(error, 'This Farmer registration has already been submitted.')),
+      );
     }
 
     if (error.response?.status === 422) {
-      return Promise.reject(new Error(extractApiErrorMessage(error, 'Please check the entered information.')));
+      return Promise.reject(new Error(extractApiErrorMessage(error, 'Please review the highlighted required fields.')));
     }
 
     if (error.response?.status === 429) {
@@ -139,7 +153,7 @@ apiClient.interceptors.response.use(
 
     if ((error.response?.status ?? 0) >= 500) {
       return Promise.reject(
-        new Error(extractApiErrorMessage(error, 'The requested service is temporarily unavailable.')),
+        new Error(extractApiErrorMessage(error, 'Registration could not be completed. Please try again.')),
       );
     }
 

@@ -2,7 +2,7 @@ import type { AssignedFarmSearchRecord, AssignedLocationsPayload } from '../type
 import type { ApiSuccessResponse } from '../types/auth';
 import { fetchApiData, type ApiRecord } from '../utils/apiHelpers';
 
-import { apiClient } from './client';
+import { apiClient, ONBOARDING_MULTIPART_TIMEOUT_MS } from './client';
 import { postApiData, putApiData, putFormData, deleteApiData } from './postHelpers';
 
 export { getNotifications as getFieldOfficerNotifications, markNotificationRead, markAllNotificationsRead } from './notificationsApi';
@@ -353,7 +353,10 @@ export async function createFarmerOnboarding(formData: FormData): Promise<ApiRec
   const response = await apiClient.post<ApiSuccessResponse<{ farmer: ApiRecord }>>(
     '/field-officer/farmers',
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: ONBOARDING_MULTIPART_TIMEOUT_MS,
+    },
   );
 
   return response.data.data?.farmer ?? (response.data.data as unknown as ApiRecord);
@@ -377,7 +380,10 @@ export async function finalizePreparedFarmerOnboarding(
   const response = await apiClient.post<ApiSuccessResponse<{ farmer: ApiRecord }>>(
     `/field-officer/farmers/${farmerId}/finalize-onboarding`,
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: ONBOARDING_MULTIPART_TIMEOUT_MS,
+    },
   );
 
   return response.data.data?.farmer ?? (response.data.data as unknown as ApiRecord);

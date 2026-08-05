@@ -21,6 +21,7 @@ import {
 import { calculateTurfBoundaryMetrics, polygonCentroid } from '../../../utils/manualBoundaryGeometry';
 import { validateSubmit, getSubmitEligibility } from '../../../utils/onboardingValidation';
 import { OnboardingFormScreen } from './OnboardingFormScreen';
+import { logSafeApiFailure } from '../../../utils/apiError';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
 
@@ -215,6 +216,16 @@ export function FarmerOnboardingReviewScreen() {
         landSurvey = finalized.land_survey_number ? String(finalized.land_survey_number) : draft.land_survey_number;
         landArea = finalized.land_area != null ? String(finalized.land_area) : draft.land_area;
         landAreaUnit = finalized.land_area_unit ? String(finalized.land_area_unit) : draft.land_area_unit;
+        updateDraft({
+          farmer_code: finalized.farmer_code ? String(finalized.farmer_code) : draft.farmer_code,
+          farmer_display_id: finalized.farmer_display_id
+            ? String(finalized.farmer_display_id)
+            : draft.farmer_display_id,
+          farm_code: finalized.farm_code ? String(finalized.farm_code) : draft.farm_code,
+          farm_display_id: finalized.farm_display_id
+            ? String(finalized.farm_display_id)
+            : draft.farm_display_id,
+        });
       } else {
         const farmer = await createFarmerOnboarding(toFormData());
         farmerId = toPositiveEntityId(farmer.farmer_id);
@@ -243,6 +254,7 @@ export function FarmerOnboardingReviewScreen() {
           farmer_code: farmer.farmer_code ? String(farmer.farmer_code) : '',
           farmer_display_id: farmerDisplayId ? String(farmerDisplayId) : '',
           farm_code: farmer.farm_code ? String(farmer.farm_code) : '',
+          farm_display_id: farmer.farm_display_id ? String(farmer.farm_display_id) : '',
         });
       }
 
@@ -264,6 +276,7 @@ export function FarmerOnboardingReviewScreen() {
       setResult(result);
       navigation.navigate('FarmerOnboardingSuccess');
     } catch (err) {
+      logSafeApiFailure(err, 'farmer-onboarding-submit');
       setError(getApiErrorMessage(err, 'Onboarding failed. Check required fields and try again.'));
     } finally {
       setLoading(false);
@@ -285,7 +298,7 @@ export function FarmerOnboardingReviewScreen() {
       nextDisabled={!submitEligibility.canSubmit || loading}
       footerError={error}
     >
-      {__DEV__ ? (
+      {false && __DEV__ ? (
         <View style={styles.devDiagnostics}>
           <Text style={styles.devTitle}>DEV eligibility</Text>
           <Text style={styles.devLine}>Completed: {submitEligibility.completed.join(', ') || '—'}</Text>
@@ -296,9 +309,19 @@ export function FarmerOnboardingReviewScreen() {
       ) : null}
       <View style={styles.identityCard}>
         <Text style={styles.identityTitle}>Registration Summary</Text>
-        <Line label="Farmer ID" value={formatFarmerDisplayCode(draft.farmer_id, draft.farmer_display_id || draft.farmer_code)} />
+        <Line
+          label="Farmer ID"
+          value={formatFarmerDisplayCode(
+            draft.farmer_id,
+            draft.farmer_code,
+            draft.farmer_display_id,
+          )}
+        />
         <Line label="Farmer Name" value={draft.farmer_name} />
-        <Line label="Farm ID" value={formatFarmDisplayCode(draft.farm_id, draft.farm_code)} />
+        <Line
+          label="Farm ID"
+          value={formatFarmDisplayCode(draft.farm_id, draft.farm_code, draft.farm_display_id)}
+        />
         <Line label="Farm Name" value={draft.farm_name} />
       </View>
 
@@ -316,9 +339,16 @@ export function FarmerOnboardingReviewScreen() {
           <>
             <Line
               label="Farmer ID"
-              value={draft.farmer_display_id || draft.farmer_code || String(draft.farmer_id)}
+              value={formatFarmerDisplayCode(
+                draft.farmer_id,
+                draft.farmer_code,
+                draft.farmer_display_id,
+              )}
             />
-            <Line label="Farm ID" value={draft.farm_code || String(draft.farm_id)} />
+            <Line
+              label="Farm ID"
+              value={formatFarmDisplayCode(draft.farm_id, draft.farm_code, draft.farm_display_id)}
+            />
           </>
         ) : null}
       </ReviewSection>
