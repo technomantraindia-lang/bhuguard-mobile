@@ -27,8 +27,10 @@ export interface ArtisanFarmSearchRecord {
   area_acre?: number | null;
   area_hectare?: number | null;
   ownership_type?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
+  mapping_status?: 'completed' | 'pending' | string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  navigation_source?: 'boundary_centroid' | 'farm_gps' | 'mapped_location' | null;
   biochar_status?: string | null;
   last_biochar_date?: string | null;
   next_due_date?: string | null;
@@ -47,4 +49,6 @@ export interface ArtisanFarmSelectionParams {
   state?: string;
   latitude?: number;
   longitude?: number;
+  mappingStatus?: string;
+  navigationSource?: string | null;
 }

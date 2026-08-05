@@ -181,28 +181,43 @@ export function buildStaticMapUrl(coordinates: FarmCoordinates[], width = 640, h
 }
 
 export async function openGoogleMaps(coordinates: FarmCoordinates, label?: string): Promise<void> {
-  const query = label
-    ? `${coordinates.latitude},${coordinates.longitude} (${encodeURIComponent(label)})`
-    : `${coordinates.latitude},${coordinates.longitude}`;
+  const { latitude, longitude } = coordinates;
+  const encodedLabel = label ? encodeURIComponent(label) : '';
+  const labelSuffix = label ? `(${encodedLabel})` : '';
+  const query = `${latitude},${longitude}`;
 
-  const url = Platform.select({
-    ios: `comgooglemaps://?q=${query}&center=${coordinates.latitude},${coordinates.longitude}&zoom=16`,
-    android: `geo:${coordinates.latitude},${coordinates.longitude}?q=${coordinates.latitude},${coordinates.longitude}${label ? `(${encodeURIComponent(label)})` : ''}`,
-    default: `https://www.google.com/maps/search/?api=1&query=${coordinates.latitude},${coordinates.longitude}`,
-  });
+  const candidates: string[] = Platform.select({
+    android: [
+      `google.navigation:q=${query}${label ? `&title=${encodedLabel}` : ''}`,
+      `geo:${query}?q=${query}${labelSuffix}`,
+      `https://www.google.com/maps/dir/?api=1&destination=${query}`,
+      `https://www.google.com/maps/search/?api=1&query=${query}`,
+    ],
+    ios: [
+      `comgooglemaps://?daddr=${query}&directionsmode=driving`,
+      `maps://?daddr=${query}`,
+      `https://www.google.com/maps/dir/?api=1&destination=${query}`,
+      `https://www.google.com/maps/search/?api=1&query=${query}`,
+    ],
+    default: [
+      `https://www.google.com/maps/dir/?api=1&destination=${query}`,
+      `https://www.google.com/maps/search/?api=1&query=${query}`,
+    ],
+  }) ?? [`https://www.google.com/maps/search/?api=1&query=${query}`];
 
-  const webFallback = `https://www.google.com/maps/search/?api=1&query=${coordinates.latitude},${coordinates.longitude}`;
-
-  if (url) {
-    const canOpen = await Linking.canOpenURL(url);
-
-    if (canOpen) {
-      await Linking.openURL(url);
-      return;
+  for (const url of candidates) {
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+        return;
+      }
+    } catch {
+      // Try the next candidate.
     }
   }
 
-  await Linking.openURL(webFallback);
+  await Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
 }
 
 export function buildFarmSummary(farms: FarmerFarmViewModel[]) {

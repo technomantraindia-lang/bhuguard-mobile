@@ -17,7 +17,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
 import { getApiErrorMessage } from '../../api/authApi';
-import { getArtisanAllocatedLocations, searchArtisanFarms } from '../../api/artisanApi';
+import { getArtisanAllocatedLocations, lookupArtisanFarm, searchArtisanFarms } from '../../api/artisanApi';
 import { FormSelect, type SelectOption } from '../../components/FormSelect';
 import { NoAssignmentState } from '../../components/location/NoAssignmentState';
 import { ScreenHeader } from '../../components/ScreenHeader';
@@ -27,7 +27,7 @@ import { findIncompleteBiocharProductionDraft } from '../../storage/biocharProdu
 import { getAuthUser } from '../../utils/authStorage';
 import { colors, spacing } from '../../theme';
 import { groupFarmSearchResultsByFarmer, labelFarmsForFarmer } from '../../utils/farmDisplayLabel';
-import { openGoogleMaps } from '../../utils/farmMapHelpers';
+import { getFarmCoordinates, openGoogleMaps } from '../../utils/farmMapHelpers';
 import type {
   ArtisanAllocatedTaluka,
   ArtisanAllocatedVillage,
@@ -43,6 +43,11 @@ function toSelection(
   record: ArtisanFarmSearchRecord,
   displayLabel?: string,
 ): ArtisanFarmSelectionParams {
+  const coords = getFarmCoordinates({
+    latitude: record.latitude,
+    longitude: record.longitude,
+  });
+
   return {
     farmId: record.farm_id,
     farmCode: record.farm_code ?? undefined,
@@ -54,8 +59,10 @@ function toSelection(
     taluka: record.taluka ?? undefined,
     district: record.district ?? undefined,
     state: record.state ?? undefined,
-    latitude: record.latitude ?? undefined,
-    longitude: record.longitude ?? undefined,
+    latitude: coords?.latitude,
+    longitude: coords?.longitude,
+    mappingStatus: record.mapping_status ?? undefined,
+    navigationSource: record.navigation_source ?? null,
   };
 }
 
@@ -116,6 +123,8 @@ export function ArtisanFarmLookupScreen() {
   const [error, setError] = useState<string | null>(null);
   const [emptyMessage, setEmptyMessage] = useState<string | null>(null);
   const [selectedFarmerId, setSelectedFarmerId] = useState<number | null>(null);
+  const [navigatingFarmId, setNavigatingFarmId] = useState<number | null>(null);
+  const navigateInProgressRef = useRef(false);
   const searchInProgressRef = useRef(false);
   const initialSearchDoneRef = useRef(false);
 
@@ -372,26 +381,108 @@ export function ArtisanFarmLookupScreen() {
       return;
     }
 
-    if (
-      selection.latitude == null ||
-      selection.longitude == null ||
-      !Number.isFinite(selection.latitude) ||
-      !Number.isFinite(selection.longitude)
-    ) {
-      Alert.alert(
-        'Location unavailable',
-        'This farm has no saved GPS coordinates. Navigation cannot invent a location.',
-      );
+    if (navigateInProgressRef.current) {
       return;
     }
 
+    navigateInProgressRef.current = true;
+    setNavigatingFarmId(selection.farmId);
+
     try {
+      let latitude = selection.latitude;
+      let longitude = selection.longitude;
+      let mappingStatus = selection.mappingStatus;
+      let navigationSource = selection.navigationSource ?? null;
+
+      const hasValidCoords =
+        latitude != null &&
+        longitude != null &&
+        Number.isFinite(latitude) &&
+        Number.isFinite(longitude) &&
+        latitude >= -90 &&
+        latitude <= 90 &&
+        longitude >= -180 &&
+        longitude <= 180;
+
+      if (!hasValidCoords) {
+        try {
+          const lookup = await lookupArtisanFarm(selection.farmId);
+          const farmPayload = ((lookup as { farm?: Record<string, unknown> } | null)?.farm
+            ?? (lookup as Record<string, unknown> | null)
+            ?? {}) as Record<string, unknown>;
+          const refreshed = getFarmCoordinates(farmPayload);
+          latitude = refreshed?.latitude;
+          longitude = refreshed?.longitude;
+          mappingStatus =
+            typeof farmPayload?.mapping_status === 'string'
+              ? farmPayload.mapping_status
+              : mappingStatus;
+          navigationSource =
+            typeof farmPayload?.navigation_source === 'string'
+              ? farmPayload.navigation_source
+              : null;
+
+          if (refreshed) {
+            setResults((current) =>
+              current.map((record) =>
+                record.farm_id === selection.farmId
+                  ? {
+                      ...record,
+                      latitude: refreshed.latitude,
+                      longitude: refreshed.longitude,
+                      mapping_status: mappingStatus ?? record.mapping_status,
+                      navigation_source:
+                        (navigationSource as ArtisanFarmSearchRecord['navigation_source']) ??
+                        record.navigation_source,
+                    }
+                  : record,
+              ),
+            );
+          }
+        } catch (refreshError) {
+          Alert.alert('Unable to open maps', getApiErrorMessage(refreshError, 'Farm location could not be refreshed.'));
+          return;
+        }
+      }
+
+      if (
+        latitude == null ||
+        longitude == null ||
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude) ||
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180
+      ) {
+        const pending = (mappingStatus ?? '').toLowerCase() === 'pending';
+        Alert.alert(
+          pending ? 'Farm mapping pending' : 'Farm location is not available yet',
+          pending
+            ? 'This farm has no saved GPS coordinates yet. Complete Farm Mapping before navigation.'
+            : 'This farm has no saved GPS coordinates. Navigation cannot invent a location.',
+        );
+        return;
+      }
+
+      const destination = { latitude, longitude };
+
+      if (__DEV__) {
+        console.log(
+          `Farm navigation source: ${navigationSource ?? 'unknown'}`,
+          { farmId: selection.farmId, ...destination },
+        );
+      }
+
       await openGoogleMaps(
-        { latitude: selection.latitude, longitude: selection.longitude },
+        destination,
         selection.farmLabel ?? selection.farmCode ?? `Farm ${selection.farmId}`,
       );
     } catch {
       Alert.alert('Unable to open maps', 'Google Maps could not be opened on this device.');
+    } finally {
+      navigateInProgressRef.current = false;
+      setNavigatingFarmId(null);
     }
   };
 
@@ -486,12 +577,30 @@ export function ArtisanFarmLookupScreen() {
         <View style={styles.cardActions}>
           {showNavigate ? (
             <Pressable
-              style={purpose === 'navigate' ? styles.selectButton : styles.secondarySelectButton}
+              style={[
+                purpose === 'navigate' ? styles.selectButton : styles.secondarySelectButton,
+                (navigatingFarmId === item.farm_id ||
+                  ((item.mapping_status ?? '').toLowerCase() === 'pending' &&
+                    getFarmCoordinates({ latitude: item.latitude, longitude: item.longitude }) == null)) &&
+                  styles.disabledButton,
+              ]}
+              disabled={
+                navigatingFarmId === item.farm_id ||
+                ((item.mapping_status ?? '').toLowerCase() === 'pending' &&
+                  getFarmCoordinates({ latitude: item.latitude, longitude: item.longitude }) == null)
+              }
               onPress={() => void navigateToFarm(selection)}
             >
-              <Text style={purpose === 'navigate' ? styles.selectButtonText : styles.secondarySelectButtonText}>
-                Navigate Farm
-              </Text>
+              {navigatingFarmId === item.farm_id ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={purpose === 'navigate' ? styles.selectButtonText : styles.secondarySelectButtonText}>
+                  {(item.mapping_status ?? '').toLowerCase() === 'pending' &&
+                  getFarmCoordinates({ latitude: item.latitude, longitude: item.longitude }) == null
+                    ? 'Farm mapping pending'
+                    : 'Navigate Farm'}
+                </Text>
+              )}
             </Pressable>
           ) : null}
           {showProduction ? (
@@ -681,4 +790,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondarySelectButtonText: { color: colors.primaryDark, fontWeight: '700' },
+  disabledButton: {
+    opacity: 0.55,
+  },
 });
