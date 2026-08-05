@@ -11,8 +11,8 @@ export interface ProductionUnitOption {
 }
 
 export function mapProductionUnit(record: ApiRecord): ProductionUnitOption {
-  const kilnId = pickString(record, 'kiln_id', 'kilnId');
-  const label = pickString(record, 'label', 'name', 'unit_name', 'unitName');
+  const kilnId = pickString(record, 'kiln_id', 'kilnId', 'display_id', 'displayId');
+  const label = pickString(record, 'label', 'kiln_name', 'kilnName', 'name', 'unit_name', 'unitName');
   const kilnType = pickString(record, 'kiln_type', 'kilnType', 'type');
   const village = pickString(record, 'village');
   const status = pickString(record, 'status');
