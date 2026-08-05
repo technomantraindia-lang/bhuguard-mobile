@@ -472,7 +472,7 @@ export function ProductionUnitSection({
               {selectedLabel || 'Select assigned kiln'}
             </Text>
           </Pressable>
-          {!selectedLabel ? <Text style={styles.errorText}>{ASSIGNED_KILN_REQUIRED_MESSAGE}</Text> : null}
+          {!selectedLabel ? <Text style={styles.errorText}>Select an assigned kiln to continue.</Text> : null}
         </>
       )}
 

@@ -45,6 +45,7 @@ import {
   MOISTURE_READING_LT20_MESSAGE,
 } from '../utils/moistureReadingValidation';
 import {
+  ASSIGNED_KILN_REQUIRED_MESSAGE,
   currentBiocharTimeValue,
   isValidArtisanKilnId,
   kilnIdValidationError,
@@ -3026,8 +3027,9 @@ export function useBiocharProductionForm({
       if (isArtisanMode && !selectedUnitId && !isValidArtisanKilnId(kilnId)) {
         throw new Error(
           kilnId.trim()
-            ? kilnIdValidationError(kilnId, 'artisan') || 'Enter a valid Kiln ID (BHG-###) or select an existing Pyrolysis Unit.'
-            : 'No kiln is assigned to your account. Please contact Admin or your Field Officer.',
+            ? kilnIdValidationError(kilnId, 'artisan') ||
+                'Select an assigned Kiln before submitting.'
+            : ASSIGNED_KILN_REQUIRED_MESSAGE,
         );
       }
 

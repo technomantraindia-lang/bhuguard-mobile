@@ -590,7 +590,7 @@ export function ArtisanBiocharProcessFormContent({
 
     if (!form.batchCode.trim()) missing.push('Batch ID');
 
-    if (!form.selectedUnitId && !isValidArtisanKilnId(form.kilnId)) missing.push('Kiln ID (BHG-###)');
+    if (!form.selectedUnitId && !isValidArtisanKilnId(form.kilnId)) missing.push('Assigned Kiln');
 
     if (form.latitude == null || form.longitude == null) missing.push('GPS Captured Location');
     else if (form.accuracyM != null && classifyArtisanGpsAccuracy(form.accuracyM) === 'poor') {

@@ -12,8 +12,8 @@ export interface ProductionUnitOption {
 
 export function mapProductionUnit(record: ApiRecord): ProductionUnitOption {
   const kilnId = pickString(record, 'kiln_id', 'kilnId');
-  const label = pickString(record, 'label');
-  const kilnType = pickString(record, 'kiln_type', 'kilnType');
+  const label = pickString(record, 'label', 'name', 'unit_name', 'unitName');
+  const kilnType = pickString(record, 'kiln_type', 'kilnType', 'type');
   const village = pickString(record, 'village');
   const status = pickString(record, 'status');
 
@@ -37,9 +37,11 @@ export const KILN_ID_FORMAT_MESSAGE =
   'Kiln ID may only contain letters, numbers, and hyphens (max 50 characters).';
 
 export const ARTISAN_KILN_PREFIX = 'BHG-';
-export const ARTISAN_KILN_PATTERN = /^BHG-\d{3}$/;
-export const ARTISAN_KILN_FORMAT_MESSAGE = 'Kiln ID must match format BHG-001 (BHG- followed by 3 digits).';
-export const ASSIGNED_KILN_REQUIRED_MESSAGE = 'No kiln is assigned to your account. Please contact Admin or your Field Officer.';
+/** Legacy BHG-### or canonical BHG-KILN-XX (admin-assigned). */
+export const ARTISAN_KILN_PATTERN = /^(?:BHG-\d{3}|BHG-KILN-(?:0[1-9]|[1-9]\d+))$/;
+export const ARTISAN_KILN_FORMAT_MESSAGE =
+  'Kiln ID must match BHG-KILN-01 (or legacy BHG-001).';
+export const ASSIGNED_KILN_REQUIRED_MESSAGE = 'No Kiln is assigned. Please contact Admin.';
 
 export function normalizeKilnId(value: string): string {
   return value.trim().toUpperCase();
