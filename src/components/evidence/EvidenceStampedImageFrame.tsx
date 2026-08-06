@@ -12,7 +12,7 @@ import {
 
 import { colors } from '../../theme/colors';
 
-export const EVIDENCE_PREVIEW_MIN_HEIGHT = 320;
+export const EVIDENCE_PREVIEW_MIN_HEIGHT = 220;
 export const EVIDENCE_THUMBNAIL_MAX_HEIGHT = 140;
 export const EVIDENCE_PREVIEW_HINT = 'Tap image to view full evidence';
 

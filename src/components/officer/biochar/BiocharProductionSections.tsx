@@ -942,6 +942,7 @@ interface MoistureReadingsSectionProps {
   onChangeNotes: (key: string, value: string) => void;
   onCapturePhoto: (key: string) => void;
   onUploadPhoto: (key: string) => void;
+  onPreviewPhoto?: (key: string) => void;
   onCompleteStep?: () => void;
   onRetryFailed?: () => void;
 }
@@ -962,6 +963,7 @@ export function MoistureReadingsSection({
   onChangeNotes,
   onCapturePhoto,
   onUploadPhoto,
+  onPreviewPhoto,
   onCompleteStep,
   onRetryFailed,
 }: MoistureReadingsSectionProps) {
@@ -1077,6 +1079,8 @@ export function MoistureReadingsSection({
                     onChangeText={(value) => onChangeReading(reading.key, value)}
                     keyboardType="decimal-pad"
                     placeholder="e.g. 12.5"
+                    returnKeyType="done"
+                    blurOnSubmit
                     editable={!readOnly && !saving && unlocked}
                   />
                   {showInvalid || (valueError && reading.moistureReading.trim()) ? (
@@ -1102,11 +1106,31 @@ export function MoistureReadingsSection({
             ) : null}
             <Text style={[styles.fieldLabel, styles.fieldSpacing]}>Live Photo</Text>
             {reading.photo ? (
-              <EvidenceStampedImageFrame
-                uri={reading.photo.localUri || reading.photo.uri || reading.photo.remoteUrl || ''}
-                frameStyle={styles.singleEvidencePreview}
-                imageStyle={styles.singleEvidenceImage}
-              />
+              <View style={styles.singleEvidenceWrap}>
+                <EvidenceStampedImageFrame
+                  uri={reading.photo.localUri || reading.photo.uri || reading.photo.remoteUrl || ''}
+                  onPress={onPreviewPhoto ? () => onPreviewPhoto(reading.key) : undefined}
+                  minHeight={220}
+                  frameStyle={styles.singleEvidencePreview}
+                  imageStyle={styles.singleEvidenceImage}
+                />
+                {reading.photo.capturedAt ? (
+                  <Text style={styles.evidenceStatusText}>Captured · {reading.photo.capturedAt}</Text>
+                ) : (
+                  <Text style={styles.evidenceStatusText}>Photo captured</Text>
+                )}
+                {onPreviewPhoto ? (
+                  <Pressable
+                    style={styles.viewFullScreenButton}
+                    onPress={() => onPreviewPhoto(reading.key)}
+                    accessibilityRole="button"
+                    accessibilityLabel="View full screen"
+                  >
+                    <BhuguardMaterialIcon name="landscape" size={18} color={officerTheme.primaryContainer} />
+                    <Text style={styles.viewFullScreenButtonText}>View Full Screen</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             ) : null}
             {reading.error ? <Text style={styles.readingError}>{reading.error}</Text> : null}
             {!readOnly && unlocked ? (
@@ -1471,6 +1495,7 @@ export function BiocharEvidenceCaptureSection({
             <EvidenceStampedImageFrame
               uri={previewUri}
               onPress={() => onPreviewEvidence(slot.key)}
+              minHeight={220}
               frameStyle={styles.singleEvidencePreview}
               imageStyle={styles.singleEvidenceImage}
             />
@@ -1482,6 +1507,15 @@ export function BiocharEvidenceCaptureSection({
               </View>
             </Pressable>
           )}
+          <Pressable
+            style={styles.viewFullScreenButton}
+            onPress={() => onPreviewEvidence(slot.key)}
+            accessibilityRole="button"
+            accessibilityLabel="View full screen"
+          >
+            <BhuguardMaterialIcon name="landscape" size={18} color={officerTheme.primaryContainer} />
+            <Text style={styles.viewFullScreenButtonText}>View Full Screen</Text>
+          </Pressable>
           {!readOnly ? (
             <View style={styles.singleEvidenceActions}>
               <Pressable
@@ -1977,11 +2011,25 @@ const styles = StyleSheet.create({
   singleEvidencePreview: {
     width: '100%',
     alignSelf: 'stretch',
-    aspectRatio: 4 / 3,
+    minHeight: 220,
     borderRadius: 12,
     overflow: 'hidden',
+    backgroundColor: officerTheme.surfaceLow,
   },
-  singleEvidenceImage: { width: '100%', height: '100%', alignSelf: 'center' },
+  singleEvidenceImage: { width: '100%', minHeight: 220, alignSelf: 'center' },
+  viewFullScreenButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: officerTheme.primaryContainer,
+    backgroundColor: '#EAF7EF',
+    paddingVertical: 10,
+  },
+  viewFullScreenButtonText: { color: officerTheme.primaryContainer, fontWeight: '700', fontSize: 14 },
   videoPlaceholderLarge: {
     flex: 1,
     alignItems: 'center',
