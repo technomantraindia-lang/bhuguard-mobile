@@ -115,11 +115,6 @@ export function FieldOfficerLoginScreen({ navigation }: Props) {
         <Pressable onPress={() => navigation.navigate('ForgotPassword')}>
           <Text style={styles.link}>{t('passwordLogin.forgotPassword')}</Text>
         </Pressable>
-        {__DEV__ ? (
-          <Pressable onPress={() => navigation.navigate('ApiServerSettings')}>
-            <Text style={styles.link}>{t('apiServer.openSettings')}</Text>
-          </Pressable>
-        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

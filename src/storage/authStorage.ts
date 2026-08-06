@@ -1,14 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { AuthUser, UserType } from '../types/auth';
+import { resolveUserRole } from '../utils/authRole';
 import {
   clearAuthStorage,
   getAuthToken,
+  saveAuthSessionMeta,
   getAuthUser,
   getAuthUserType,
   saveAuthToken,
   saveAuthUser,
 } from '../utils/authStorage';
+import { getApiBaseUrl, getApiOrigin } from './apiConfigStorage';
 
 export {
   clearAuthStorage,
@@ -31,9 +34,16 @@ export async function saveAuthSession(
   user: AuthUser,
   userType: UserType,
 ): Promise<void> {
+  const apiOrigin = getApiOrigin(await getApiBaseUrl());
+  const role = String(resolveUserRole(user) ?? userType ?? user.user_type ?? '');
   await Promise.all([
     saveAuthToken(token),
     saveAuthUser({ ...user, user_type: userType }),
+    saveAuthSessionMeta({
+      apiOrigin,
+      userId: user.id,
+      role,
+    }),
     saveMpinProfile({ mobile: user.mobile, name: user.name }),
   ]);
 }

@@ -7,7 +7,7 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { useTranslation } from '../../i18n/I18nContext';
 import type { AppLanguage } from '../../i18n/types';
 import { useLogout } from '../../hooks/useLogout';
-import { navigateToApiHealthCheck, navigateToApiServerSettings } from '../../navigation/navigationRef';
+import { navigateToApiHealthCheck } from '../../navigation/navigationRef';
 import { colors } from '../../theme/colors';
 
 interface SettingsScreenProps {
@@ -18,7 +18,6 @@ interface SettingsScreenProps {
 export function SettingsScreen({ title, subtitle }: SettingsScreenProps) {
   const logout = useLogout();
   const { t, language, setLanguage } = useTranslation();
-  const showApiServerSettings = __DEV__;
 
   const languageOptions: Array<{ language: AppLanguage; title: string; glyph: string }> = [
     {
@@ -59,16 +58,6 @@ export function SettingsScreen({ title, subtitle }: SettingsScreenProps) {
           selectedLanguage={language}
           onSelect={(nextLanguage) => void handleLanguageChange(nextLanguage)}
         />
-
-        {showApiServerSettings ? (
-          <>
-            <AppCard title={t('apiServer.title')} subtitle={t('apiServer.settingsSubtitle')} />
-
-            <View style={styles.actions}>
-              <AppButton label={t('apiServer.openSettings')} onPress={navigateToApiServerSettings} variant="secondary" />
-            </View>
-          </>
-        ) : null}
 
         {__DEV__ ? (
           <>

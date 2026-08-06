@@ -76,12 +76,6 @@ export function navigateToLogin(): void {
   });
 }
 
-export function navigateToApiServerSettings(): void {
-  if (navigationRef.isReady()) {
-    navigationRef.navigate('ApiServerSettings');
-  }
-}
-
 export function navigateToApiHealthCheck(): void {
   if (__DEV__ && navigationRef.isReady()) {
     navigationRef.navigate('ApiHealthCheck');

@@ -189,20 +189,7 @@ export function PasswordLoginScreen({ navigation, route }: Props) {
             }
           />
 
-          {errorMessage ? (
-            <Pressable
-              onPress={() => {
-                if (__DEV__) {
-                  navigation.navigate('ApiServerSettings');
-                }
-              }}
-            >
-              <Text style={styles.error}>{errorMessage}</Text>
-              {errorMessage.includes('Cannot reach API') && __DEV__ ? (
-                <Text style={styles.serverLink}>{t('apiServer.openSettings')} →</Text>
-              ) : null}
-            </Pressable>
-          ) : null}
+          {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
 
           <Pressable
             style={[styles.signInButton, loading && styles.signInButtonDisabled]}
@@ -213,12 +200,6 @@ export function PasswordLoginScreen({ navigation, route }: Props) {
               {loading ? t('passwordLogin.signingIn') : t('passwordLogin.signIn')}
             </Text>
           </Pressable>
-
-          {__DEV__ ? (
-            <Pressable onPress={() => navigation.navigate('ApiServerSettings')} style={styles.serverSettingsLink}>
-              <Text style={styles.serverSettingsText}>{t('apiServer.openSettings')}</Text>
-            </Pressable>
-          ) : null}
 
           {role === 'farmer' ? (
             <View style={styles.infoBox}>
@@ -288,23 +269,6 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontSize: 14,
     lineHeight: 20,
-  },
-  serverLink: {
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 6,
-  },
-  serverSettingsLink: {
-    alignSelf: 'center',
-    marginTop: spacing.sm,
-    paddingVertical: 8,
-  },
-  serverSettingsText: {
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
   },
   signInButton: {
     marginTop: spacing.sm,

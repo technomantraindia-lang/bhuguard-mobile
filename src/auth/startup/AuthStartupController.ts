@@ -1,11 +1,12 @@
 import { getCurrentUser } from '../../api/authApi';
 import type { RootStackParamList } from '../../navigation/types';
+import { getApiBaseUrl, getApiOrigin } from '../../storage/apiConfigStorage';
 import { getMpinProfile } from '../../storage/authStorage';
 import { resolvePreferredLanguage } from '../../storage/languageStorage';
 import type { AuthUser } from '../../types/auth';
 import { isAdminRole, isCompanyRole, resolveUserRole } from '../../utils/authRole';
 import { getDashboardRoute, isMobileSupportedRole } from '../../utils/authRouting';
-import { clearAuthStorage, getAuthToken, saveAuthUser } from '../../utils/authStorage';
+import { clearAuthStorage, getAuthSessionMeta, getAuthToken, saveAuthUser } from '../../utils/authStorage';
 
 import {
   clearColdStartSessionGate,
@@ -166,9 +167,20 @@ function setupMpinRouteForUser(user: AuthUser): StartupRoute {
  * (No refresh-token API exists in this app.)
  */
 export async function validateTrustedSession(): Promise<AuthUser | null> {
-  const token = await getAuthToken();
+  const [token, sessionMeta, apiBaseUrl] = await Promise.all([
+    getAuthToken(),
+    getAuthSessionMeta(),
+    getApiBaseUrl(),
+  ]);
 
   if (!token) {
+    setValidatedColdStartUser(null);
+    return null;
+  }
+
+  const currentOrigin = getApiOrigin(apiBaseUrl);
+  if (sessionMeta?.apiOrigin && sessionMeta.apiOrigin !== currentOrigin) {
+    await clearAuthStorage();
     setValidatedColdStartUser(null);
     return null;
   }

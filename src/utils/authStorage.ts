@@ -11,6 +11,13 @@ import type { AuthUser } from '../types/auth';
 export const AUTH_TOKEN_KEY = 'bhuguard_token';
 export const AUTH_USER_KEY = 'bhuguard_user';
 export const AUTH_USER_TYPE_KEY = 'bhuguard_user_type';
+export const AUTH_SESSION_META_KEY = 'bhuguard_auth_session_meta';
+
+export interface AuthSessionMeta {
+  apiOrigin: string;
+  userId: number;
+  role: string;
+}
 
 export async function saveAuthToken(token: string): Promise<void> {
   await setSecureAuthToken(token);
@@ -53,6 +60,39 @@ export async function removeAuthUser(): Promise<void> {
   ]);
 }
 
+export async function saveAuthSessionMeta(meta: AuthSessionMeta): Promise<void> {
+  await AsyncStorage.setItem(AUTH_SESSION_META_KEY, JSON.stringify(meta));
+}
+
+export async function getAuthSessionMeta(): Promise<AuthSessionMeta | null> {
+  const raw = await AsyncStorage.getItem(AUTH_SESSION_META_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<AuthSessionMeta>;
+    if (
+      typeof parsed.apiOrigin !== 'string'
+      || typeof parsed.userId !== 'number'
+      || typeof parsed.role !== 'string'
+    ) {
+      return null;
+    }
+    return {
+      apiOrigin: parsed.apiOrigin,
+      userId: parsed.userId,
+      role: parsed.role,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function removeAuthSessionMeta(): Promise<void> {
+  await AsyncStorage.removeItem(AUTH_SESSION_META_KEY);
+}
+
 export async function clearAuthStorage(): Promise<void> {
   clearColdStartSessionGate();
 
@@ -60,6 +100,7 @@ export async function clearAuthStorage(): Promise<void> {
     clearSecureAuthToken(),
     AsyncStorage.removeItem(AUTH_USER_KEY),
     AsyncStorage.removeItem(AUTH_USER_TYPE_KEY),
+    AsyncStorage.removeItem(AUTH_SESSION_META_KEY),
   ]);
 }
 

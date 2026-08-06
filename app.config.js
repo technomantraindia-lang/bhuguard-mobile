@@ -1,12 +1,12 @@
 const appJson = require('./app.json');
 
 const PRODUCTION_API_URL = 'https://erp.bhuguard.com/api';
+const PRODUCTION_APP_URL = 'https://erp.bhuguard.com';
 const appVariant = process.env.EXPO_PUBLIC_APP_VARIANT ?? 'production';
 const isDevClient = appVariant === 'development';
 const appScheme = appJson.expo?.scheme ?? 'bhuguard';
-const rawApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim() || PRODUCTION_API_URL;
-const apiUrl = rawApiUrl.includes('yourdomain.com') ? PRODUCTION_API_URL : rawApiUrl;
-const appUrl = process.env.EXPO_PUBLIC_APP_URL?.trim() || 'https://erp.bhuguard.com';
+const apiUrl = PRODUCTION_API_URL;
+const appUrl = PRODUCTION_APP_URL;
 const mapTilerApiKey = process.env.EXPO_PUBLIC_MAPTILER_API_KEY?.trim() || '';
 const mapTilerKeyLooksReal =
   mapTilerApiKey.length >= 16

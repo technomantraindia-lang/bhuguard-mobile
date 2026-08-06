@@ -8,6 +8,8 @@ import { navigationRef } from './navigationRef';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const ENABLE_SERVER_DIAGNOSTICS =
+  __DEV__ && process.env.EXPO_PUBLIC_ENABLE_SERVER_DIAGNOSTICS === 'true';
 
 /** Android Fabric can crash on animated stack replace/reset (IllegalViewOperationException). */
 const androidSafeAnimation = Platform.OS === 'android' ? ('none' as const) : undefined;
@@ -39,10 +41,12 @@ export function RootNavigator() {
           name="RoleSelection"
           getComponent={() => require('../screens/auth/RoleSelectionScreen').RoleSelectionScreen}
         />
-        <Stack.Screen
-          name="ApiServerSettings"
-          getComponent={() => require('../screens/auth/ApiServerSettingsScreen').ApiServerSettingsScreen}
-        />
+        {ENABLE_SERVER_DIAGNOSTICS ? (
+          <Stack.Screen
+            name="ApiServerSettings"
+            getComponent={() => require('../screens/auth/ApiServerSettingsScreen').ApiServerSettingsScreen}
+          />
+        ) : null}
         <Stack.Screen
           name="FarmerLoginOptions"
           getComponent={() => require('../screens/auth/FarmerLoginOptionsScreen').FarmerLoginOptionsScreen}

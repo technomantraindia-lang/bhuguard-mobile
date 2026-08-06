@@ -294,7 +294,7 @@ export function FarmerOnboardingReviewScreen() {
         || /unable to connect to the bhuguard server/i.test(baseMessage)
       ) {
         setError(
-          `${NETWORK_UNREACHABLE_MESSAGE}\n\nAPI: ${apiBase}\nOpen the gear icon → set https://brooklyn-usgs-receive-corn.trycloudflare.com → Test Connection → Save, then retry.`,
+          `${NETWORK_UNREACHABLE_MESSAGE}\n\nAPI: ${apiBase}\nBhuguard uses the live ERP server only. Please check internet connectivity and retry.`,
         );
       } else {
         setError(baseMessage);

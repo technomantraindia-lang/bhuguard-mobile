@@ -1,14 +1,17 @@
 import type { ApiSuccessResponse, AuthUser, LoginPasswordResult } from '../types/auth';
 import { resolveUserRole } from '../utils/authRole';
 import { Platform } from 'react-native';
+import axios from 'axios';
 
-import { clearAuthStorage, saveAuthToken, saveAuthUser } from '../utils/authStorage';
+import { clearAuthStorage, saveAuthUser } from '../utils/authStorage';
+import { saveAuthSession } from '../storage/authStorage';
 import { getOrCreateDeviceUuid } from '../utils/biometricLogin';
 import { extractApiErrorMessage } from '../utils/apiError';
 
 import { apiClient } from './client';
 
 const DEVICE_NAME = 'expo-mobile';
+let loginResolveEndpointUnavailable = false;
 
 async function devicePayload() {
   return {
@@ -157,8 +160,8 @@ export async function logout(): Promise<void> {
 }
 
 export async function persistAuthSession(token: string, user: AuthUser): Promise<void> {
-  await saveAuthToken(token);
-  await saveAuthUser(user);
+  const role = resolveUserRole(user) ?? user.user_type;
+  await saveAuthSession(token, user, role);
 }
 
 export async function loginPassword(loginId: string, password: string): Promise<LoginPasswordResult> {
@@ -214,15 +217,43 @@ export async function resolveLoginRoute(mobile: string): Promise<{
   has_pattern?: boolean;
   pattern_setup_required?: boolean;
 }> {
-  const device = await devicePayload();
-  const response = await apiClient.post<ApiSuccessResponse<Record<string, unknown>>>(
-    '/auth/login/resolve',
-    {
+  if (loginResolveEndpointUnavailable) {
+    return {
+      user_exists: true,
+      pattern_configured: false,
+      next_step: 'otp_then_pattern_setup',
       mobile: mobile.trim(),
-      device_uuid: device.device_uuid,
-      platform: device.platform,
-    },
-  );
+    };
+  }
+
+  const device = await devicePayload();
+  let response;
+  try {
+    response = await apiClient.post<ApiSuccessResponse<Record<string, unknown>>>(
+      '/auth/login/resolve',
+      {
+        mobile: mobile.trim(),
+        device_uuid: device.device_uuid,
+        platform: device.platform,
+      },
+      {
+        headers: {
+          Accept: 'application/json',
+        },
+      },
+    );
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      loginResolveEndpointUnavailable = true;
+      return {
+        user_exists: true,
+        pattern_configured: false,
+        next_step: 'otp_then_pattern_setup',
+        mobile: mobile.trim(),
+      };
+    }
+    throw error;
+  }
 
   const data = response.data.data ?? {};
 

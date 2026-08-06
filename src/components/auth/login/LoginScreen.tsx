@@ -36,9 +36,7 @@ import {
   resolveRouteAfterMobileContinue,
   setAuthStartupPhase,
 } from '../../../auth/startup/AuthStartupController';
-import { APP_VARIANT } from '../../../config/env';
 import { useTranslation } from '../../../i18n/I18nContext';
-import { getCachedApiBaseUrl } from '../../../storage/apiConfigStorage';
 import { NETWORK_UNREACHABLE_MESSAGE } from '../../../utils/apiError';
 import { safeAuthGoBack } from '../../../navigation/safeAuthBack';
 import type { RootStackParamList } from '../../../navigation/types';
@@ -58,29 +56,10 @@ const COLORS = {
   login: '#0B4A2B',
   lime: '#B7E05A',
   error: '#B53B3B',
-  settingsBg: 'rgba(45, 52, 54, 0.88)',
 } as const;
 
 function cleanMobile(value: string): string {
   return value.replace(/\D/g, '').slice(0, 10);
-}
-
-function SettingsGearIcon() {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z"
-        stroke="#FFFFFF"
-        strokeWidth={1.8}
-      />
-      <Path
-        d="M19.4 13a7.8 7.8 0 0 0 .1-1 7.8 7.8 0 0 0-.1-1l2-1.55a.5.5 0 0 0 .12-.64l-1.9-3.28a.5.5 0 0 0-.6-.22l-2.35.94a7.3 7.3 0 0 0-1.73-1L14.7 2.5a.5.5 0 0 0-.5-.4h-3.8a.5.5 0 0 0-.5.4l-.34 2.45a7.3 7.3 0 0 0-1.73 1l-2.35-.94a.5.5 0 0 0-.6.22L2.68 8.81a.5.5 0 0 0 .12.64L4.8 11a7.8 7.8 0 0 0-.1 1 7.8 7.8 0 0 0 .1 1l-2 1.55a.5.5 0 0 0-.12.64l1.9 3.28a.5.5 0 0 0 .6.22l2.35-.94a7.3 7.3 0 0 0 1.73 1l.34 2.45a.5.5 0 0 0 .5.4h3.8a.5.5 0 0 0 .5-.4l.34-2.45a7.3 7.3 0 0 0 1.73-1l2.35.94a.5.5 0 0 0 .6-.22l1.9-3.28a.5.5 0 0 0-.12-.64L19.4 13z"
-        stroke="#FFFFFF"
-        strokeWidth={1.4}
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
 }
 
 function LoginScreenComponent({ navigation }: Props) {
@@ -109,11 +88,6 @@ function LoginScreenComponent({ navigation }: Props) {
 
   const mapAuthError = useCallback(
     (err: unknown): string => {
-      if (axios.isAxiosError(err) && !err.response) {
-        const apiBase = getCachedApiBaseUrl();
-        return `${t('mobileLogin.serverUnreachable')}\n\nAPI: ${apiBase}`;
-      }
-
       const message = getApiErrorMessage(err, t('mobileLogin.unableToContinue'));
       const normalized = message.toLowerCase();
 
@@ -130,9 +104,9 @@ function LoginScreenComponent({ navigation }: Props) {
 
       if (
         message === NETWORK_UNREACHABLE_MESSAGE
-        || /unable to connect to the bhuguard server/i.test(message)
+        || /no internet connection/i.test(message)
       ) {
-        return `${message}\n\nAPI: ${getCachedApiBaseUrl()}`;
+        return message;
       }
 
       return message;
@@ -230,22 +204,29 @@ function LoginScreenComponent({ navigation }: Props) {
         return;
       }
 
-      // Backend is authoritative: Pattern users skip OTP.
-      const decision = await resolveLoginRoute(mobile);
-      if (!mountedRef.current || navigatedRef.current) {
-        return;
-      }
+      // Backend is authoritative when /auth/login/resolve exists.
+      // Live deployments without this endpoint should continue with OTP flow.
+      try {
+        const decision = await resolveLoginRoute(mobile);
+        if (!mountedRef.current || navigatedRef.current) {
+          return;
+        }
 
-      if (decision.next_step === 'pattern_login' && decision.pattern_configured) {
-        navigatedRef.current = true;
-        setAuthStartupPhase('locked');
-        navigation.navigate('PatternLogin', {
-          mobile: decision.mobile ?? mobile,
-          name: decision.name,
-          role: (decision.role as AppLoginRole | undefined),
-          mode: 'login',
-        });
-        return;
+        if (decision.next_step === 'pattern_login' && decision.pattern_configured) {
+          navigatedRef.current = true;
+          setAuthStartupPhase('locked');
+          navigation.navigate('PatternLogin', {
+            mobile: decision.mobile ?? mobile,
+            name: decision.name,
+            role: (decision.role as AppLoginRole | undefined),
+            mode: 'login',
+          });
+          return;
+        }
+      } catch (resolveError) {
+        if (axios.isAxiosError(resolveError) && resolveError.response?.status !== 404) {
+          throw resolveError;
+        }
       }
 
       await requestLoginOtp(mobile);
@@ -319,12 +300,6 @@ function LoginScreenComponent({ navigation }: Props) {
     navigatedRef.current = false;
   }, []);
 
-  const openDevServerSettings = useCallback(() => {
-    if (APP_VARIANT === 'development') {
-      navigation.navigate('ApiServerSettings');
-    }
-  }, [navigation]);
-
   const onChangeMobile = useCallback((value: string) => {
     const next = cleanMobile(value);
     setMobile((current) => (current === next ? current : next));
@@ -355,15 +330,6 @@ function LoginScreenComponent({ navigation }: Props) {
             disabled={loading}
             onPress={() => safeAuthGoBack(navigation, 'LanguageSelection')}
           />
-          <Pressable
-            style={styles.settingsButton}
-            onPress={openDevServerSettings}
-            accessibilityRole="button"
-            accessibilityLabel="Settings"
-            hitSlop={8}
-          >
-            <SettingsGearIcon />
-          </Pressable>
         </View>
 
         <KeyboardAvoidingView
@@ -374,8 +340,6 @@ function LoginScreenComponent({ navigation }: Props) {
           <View style={[styles.layout, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             <View style={styles.brandBlock}>
               <Pressable
-                onLongPress={APP_VARIANT === 'development' ? openDevServerSettings : undefined}
-                delayLongPress={650}
                 accessibilityLabel="Bhuguard logo"
                 style={styles.logoWrap}
               >
@@ -512,19 +476,6 @@ const styles = StyleSheet.create({
     zIndex: 30,
     alignItems: 'flex-end',
     gap: 10,
-  },
-  settingsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.settingsBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOpacity: 0.22,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
   },
   layout: {
     flex: 1,

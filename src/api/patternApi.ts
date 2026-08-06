@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 import { apiClient } from './client';
-import { saveAuthToken, saveAuthUser } from '../utils/authStorage';
+import { saveAuthSession } from '../storage/authStorage';
+import type { UserType } from '../types/auth';
+import { saveAuthUser } from '../utils/authStorage';
 import { resolveUserRole } from '../utils/authRole';
 import type { AuthUser, LoginPasswordResult } from '../types/auth';
 
@@ -142,8 +144,8 @@ export async function verifyPattern(mobile: string, patternSequence: string): Pr
     if (!token || !user) {
       throw new Error('Invalid pattern verify response.');
     }
-    await saveAuthToken(token);
-    await saveAuthUser(user);
+    const role = (resolveUserRole(user) ?? user.user_type) as UserType;
+    await saveAuthSession(token, user, role);
     return {
       token,
       user,

@@ -166,7 +166,7 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
     const data = axiosError.response?.data;
 
     if (status === 401) {
-      return 'Your session has expired. Please log in again.';
+      return 'Your saved login has expired. Please log in again.';
     }
 
     if (status === 403) {
@@ -180,7 +180,7 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
 
     if (status === 404) {
       return fallback === 'Request failed.'
-        ? 'Requested resource was not found.'
+        ? 'The requested Bhuguard service is unavailable.'
         : fallback;
     }
 
@@ -236,7 +236,7 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
     }
 
     if (isTimeoutError(axiosError)) {
-      return 'The request took too long. Please try again with a stronger connection.';
+      return 'Bhuguard server is temporarily unavailable.';
     }
 
     // HTTP response present but unmapped — never fall through to "Unable to connect".
@@ -268,9 +268,9 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
 export const PENDING_API_MESSAGE =
   'This module is ready in mobile. Backend API is pending or no records exist yet.';
 
-export const NETWORK_ERROR_MESSAGE = 'Internet connection is unavailable.';
+export const NETWORK_ERROR_MESSAGE = 'No internet connection.';
 
-export const NETWORK_UNREACHABLE_MESSAGE = 'Unable to connect to the Bhuguard server.';
+export const NETWORK_UNREACHABLE_MESSAGE = 'No internet connection.';
 
 export function formatApiUnreachableMessage(_baseUrl: string): string {
   return NETWORK_UNREACHABLE_MESSAGE;

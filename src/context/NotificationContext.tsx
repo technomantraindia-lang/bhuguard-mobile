@@ -17,6 +17,8 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '../api/notificationsApi';
+import { getAuthStartupPhase } from '../auth/startup/AuthStartupController';
+import { getAuthToken, getAuthUser, getAuthUserType } from '../utils/authStorage';
 import type { ApiRecord } from '../utils/apiHelpers';
 
 const ACTIVE_SYNC_INTERVAL_MS = 15000;
@@ -35,6 +37,20 @@ interface NotificationContextValue {
 }
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
+
+async function canUseAuthenticatedApis(): Promise<boolean> {
+  if (getAuthStartupPhase() === 'loading') {
+    return false;
+  }
+
+  const [token, user, userType] = await Promise.all([
+    getAuthToken(),
+    getAuthUser(),
+    getAuthUserType(),
+  ]);
+
+  return Boolean(token && user && (userType || user.user_type));
+}
 
 function toCount(value: unknown): number {
   const count = typeof value === 'number' ? value : Number(value ?? 0);
@@ -55,6 +71,9 @@ export function NotificationProvider({ children, enabled = true }: { children: R
     if (!enabledRef.current) {
       return;
     }
+    if (!(await canUseAuthenticatedApis())) {
+      return;
+    }
 
     try {
       const data = await getUnreadNotificationCount();
@@ -66,6 +85,9 @@ export function NotificationProvider({ children, enabled = true }: { children: R
 
   const refresh = useCallback(async () => {
     if (!enabledRef.current) {
+      return;
+    }
+    if (!(await canUseAuthenticatedApis())) {
       return;
     }
 
@@ -195,6 +217,9 @@ export function useUnreadNotificationCount(enabled = true) {
 
   const fallbackRefresh = useCallback(async () => {
     if (!enabled || context) {
+      return;
+    }
+    if (!(await canUseAuthenticatedApis())) {
       return;
     }
 
