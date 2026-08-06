@@ -2,6 +2,7 @@ const appJson = require('./app.json');
 
 const PRODUCTION_API_URL = 'https://erp.bhuguard.com/api';
 const PRODUCTION_APP_URL = 'https://erp.bhuguard.com';
+const EAS_PROJECT_ID = '63730ff7-1af6-4886-89f1-7f1e54e9b64c';
 const appVariant = process.env.EXPO_PUBLIC_APP_VARIANT ?? 'production';
 const isDevClient = appVariant === 'development';
 const appScheme = appJson.expo?.scheme ?? 'bhuguard';
@@ -155,11 +156,25 @@ module.exports = ({ config }) => {
     },
     extra: {
       ...baseWithoutInvalid.extra,
+      eas: {
+        ...(baseWithoutInvalid.extra?.eas ?? {}),
+        projectId: EAS_PROJECT_ID,
+      },
       apiUrl,
       appUrl,
       appVariant,
       useNativeMaps: false,
       googleMapsApiKeyConfigured: false,
+    },
+    runtimeVersion: {
+      policy: 'appVersion',
+    },
+    updates: {
+      ...(baseWithoutInvalid.updates ?? {}),
+      enabled: true,
+      checkAutomatically: 'NEVER',
+      fallbackToCacheTimeout: 0,
+      url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
     },
   };
 };

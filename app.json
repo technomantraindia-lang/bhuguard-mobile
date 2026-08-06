@@ -91,6 +91,15 @@
       "useNativeMaps": false,
       "googleMapsApiKeyConfigured": false
     },
-    "owner": "techno2.0"
+    "owner": "techno2.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/63730ff7-1af6-4886-89f1-7f1e54e9b64c",
+      "enabled": true,
+      "checkAutomatically": "NEVER",
+      "fallbackToCacheTimeout": 0
+    }
   }
 }

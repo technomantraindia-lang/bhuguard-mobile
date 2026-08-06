@@ -16,13 +16,14 @@
         "EXPO_PUBLIC_MAPTILER_HYBRID_STYLE_ID": "hybrid-v4",
         "EXPO_PUBLIC_MAPTILER_STREET_STYLE_ID": "streets-v4",
         "EXPO_PUBLIC_MAPTILER_STYLE_ID": "hybrid-v4"
-      }
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
       "node": "22.14.0",
       "env": {
-        "EXPO_PUBLIC_APP_VARIANT": "demo",
+        "EXPO_PUBLIC_APP_VARIANT": "production",
         "EXPO_PUBLIC_APP_URL": "https://erp.bhuguard.com",
         "EXPO_PUBLIC_API_URL": "https://erp.bhuguard.com/api",
         "EXPO_PUBLIC_MAPTILER_API_KEY": "GYRP4k1halqDjv0SUQev",
@@ -36,7 +37,8 @@
       },
       "android": {
         "buildType": "apk"
-      }
+      },
+      "channel": "preview"
     },
     "demo": {
       "distribution": "internal",
@@ -54,16 +56,20 @@
         "EXPO_PUBLIC_MAPTILER_HYBRID_STYLE_ID": "hybrid-v4",
         "EXPO_PUBLIC_MAPTILER_STREET_STYLE_ID": "streets-v4",
         "EXPO_PUBLIC_MAPTILER_STYLE_ID": "hybrid-v4"
-      }
+      },
+      "channel": "preview"
     },
     "client-apk": {
-      "extends": "demo"
+      "extends": "demo",
+      "channel": "preview"
     },
     "production-apk": {
       "extends": "production",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "distribution": "internal",
+      "channel": "production"
     },
     "production": {
       "autoIncrement": true,
@@ -81,7 +87,8 @@
       },
       "android": {
         "buildType": "app-bundle"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {

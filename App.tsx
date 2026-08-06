@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import AnimatedLogoSplash from './src/components/AnimatedLogoSplash';
 import { I18nProvider } from './src/i18n/I18nContext';
 import { NotificationProvider } from './src/context/NotificationContext';
+import { AppUpdateProvider } from './src/context/AppUpdateContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { registerLivePhotoWatermarkProcessor } from './src/services/livePhotoWatermarkService';
 import { syncServerTime } from './src/services/serverTimeSync';
@@ -84,15 +85,17 @@ export default function App() {
         <ThemeProvider>
           <I18nProvider>
             <NotificationProvider>
-              {showAnimatedSplash ? (
-                <AnimatedLogoSplash onFinish={handleAnimatedSplashFinish} />
-              ) : (
-                <>
-                  <AppNavigator />
-                  <LivePhotoWatermarkHost />
-                </>
-              )}
-              <StatusBar style="auto" />
+              <AppUpdateProvider>
+                {showAnimatedSplash ? (
+                  <AnimatedLogoSplash onFinish={handleAnimatedSplashFinish} />
+                ) : (
+                  <>
+                    <AppNavigator />
+                    <LivePhotoWatermarkHost />
+                  </>
+                )}
+                <StatusBar style="auto" />
+              </AppUpdateProvider>
             </NotificationProvider>
           </I18nProvider>
         </ThemeProvider>
