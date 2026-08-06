@@ -8,5 +8,11 @@ export const DEMO_LOGIN_USERS = {
 } as const;
 
 export function isDemoLoginEnabled(): boolean {
+  if (process.env.EXPO_PUBLIC_APP_VARIANT === 'production') {
+    return false;
+  }
+  if (typeof __DEV__ !== 'undefined' && !__DEV__) {
+    return false;
+  }
   return process.env.EXPO_PUBLIC_ENABLE_DEMO_LOGIN === 'true';
 }

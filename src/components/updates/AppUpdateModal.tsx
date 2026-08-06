@@ -22,7 +22,7 @@ export function AppUpdateModal({ visible, status, unsafeToReload, onLater, onUpd
     ? 'Please wait while the latest update is downloaded.'
     : downloaded && unsafeToReload
       ? 'The update is ready. It will be applied after your current work is saved.'
-      : 'A new version of the Bhuguard app is ready. Update now to access the latest improvements.';
+      : 'A new version of Bhuguard is ready.';
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onLater}>

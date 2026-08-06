@@ -6,6 +6,9 @@ export function isDemoConsentOtpEnabled(): boolean {
   if (process.env.EXPO_PUBLIC_APP_VARIANT === 'production') {
     return false;
   }
+  if (typeof __DEV__ !== 'undefined' && !__DEV__) {
+    return false;
+  }
 
   return process.env.EXPO_PUBLIC_ENABLE_DEMO_CONSENT_OTP === 'true';
 }

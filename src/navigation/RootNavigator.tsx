@@ -16,7 +16,9 @@ const androidSafeAnimation = Platform.OS === 'android' ? ('none' as const) : und
 
 export function RootNavigator() {
   useEffect(() => {
-    console.log('[Bhuguard] RootNavigator mounted');
+    if (__DEV__) {
+      console.log('[Bhuguard] RootNavigator mounted');
+    }
   }, []);
 
   return (
