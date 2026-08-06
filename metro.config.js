@@ -23,4 +23,7 @@ const config = getDefaultConfig(projectRoot);
 
 config.resolver.unstable_enablePackageExports = false;
 
+// Keep Metro from crashing EAS workers when optional native stubs are missing.
+config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
+
 module.exports = config;
