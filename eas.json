@@ -21,7 +21,6 @@
     },
     "preview": {
       "distribution": "internal",
-      "environment": "preview",
       "ios": {
         "simulator": false
       },
