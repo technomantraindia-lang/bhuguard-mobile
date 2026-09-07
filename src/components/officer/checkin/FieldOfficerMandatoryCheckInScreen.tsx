@@ -22,6 +22,7 @@ import type {
 import { useLogout } from '../../../hooks/useLogout';
 import { useServerTimeSync } from '../../../hooks/useServerTimeSync';
 import { useTranslation } from '../../../i18n/I18nContext';
+import { mergeCheckInDisplayError } from '../../../utils/checkInDiagnostics';
 import { officerCardShadow, officerTheme } from '../../../theme/officerDashboardTheme';
 import type { AssignedLocationsPayload } from '../../../types/assignedLocations';
 
@@ -105,6 +106,16 @@ export function FieldOfficerMandatoryCheckInScreen({
   }
 
   const isStatusError = phase === 'statusError';
+  const displayError = useMemo(() => {
+    const normalizedStatusMessage = isStatusError
+      ? statusMessage ?? t('officer.checkIn.statusErrorFallback')
+      : statusMessage;
+    return mergeCheckInDisplayError(
+      normalizedStatusMessage,
+      submitError?.message ?? null,
+      isStatusError,
+    );
+  }, [isStatusError, statusMessage, submitError?.message, t]);
   const stageLabel =
     stage === 'locating'
       ? t('officer.checkIn.stageLocating')
@@ -139,22 +150,15 @@ export function FieldOfficerMandatoryCheckInScreen({
             ) : null}
           </View>
 
-          {isStatusError ? (
-            <View style={styles.banner}>
-              <BhuguardMaterialIcon name="cloud_off" size={18} color={officerTheme.error} />
-              <Text style={styles.bannerText}>{statusMessage ?? t('officer.checkIn.statusErrorFallback')}</Text>
-            </View>
-          ) : null}
-
-          {submitError ? (
+          {displayError ? (
             <View style={styles.banner}>
               <BhuguardMaterialIcon name="cloud_off" size={18} color={officerTheme.error} />
               <View style={styles.bannerCopy}>
-                <Text style={styles.bannerText}>{submitError.message}</Text>
+                <Text style={styles.bannerText}>{displayError}</Text>
                 {currentLocationLine ? (
                   <Text style={styles.bannerMeta}>Current location: {currentLocationLine}</Text>
                 ) : null}
-                {submitError.assignedSummary ? (
+                {submitError?.assignedSummary ? (
                   <Text style={styles.bannerMeta}>Assigned: {submitError.assignedSummary}</Text>
                 ) : null}
               </View>

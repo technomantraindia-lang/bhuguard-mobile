@@ -9,6 +9,8 @@ import {
 import { safeNetInfoIsConnected } from '../utils/safeNetInfo';
 import { captureHighAccuracyGps } from '../utils/officerGpsCapture';
 import { resolveAssignedVillageForCheckIn } from '../utils/resolveAssignedVillageForCheckIn';
+import { buildArtisanCheckInLocationPayload } from '../utils/artisanCheckInPayload';
+import { clearStaleWorkingAreaCache } from '../utils/clearStaleWorkingAreaCache';
 import { subscribeCheckInGateInvalidation } from '../utils/checkInGateEvents';
 import { normalizeAssignedArea, type ApiRecord } from '../utils/apiHelpers';
 import { getAuthUser } from '../utils/authStorage';
@@ -76,6 +78,7 @@ export function useArtisanMandatoryCheckIn() {
   }, []);
 
   useEffect(() => {
+    void clearStaleWorkingAreaCache();
     checkStatus();
   }, [checkStatus]);
 
@@ -132,18 +135,14 @@ export function useArtisanMandatoryCheckIn() {
       const triad = await resolveAssignedVillageForCheckIn(gps.latitude, gps.longitude, allocated);
       setAssignedAreaSummary(triad.assignedSummary);
 
+      const locationPayload = buildArtisanCheckInLocationPayload(triad);
+
       const payload = {
         latitude: gps.latitude,
         longitude: gps.longitude,
         accuracy: gps.accuracyM ?? null,
         gps_accuracy: gps.accuracyM ?? null,
-        district_id: triad.district_id,
-        taluka_id: triad.taluka_id,
-        village_id: triad.village_id,
-        district_name: triad.district_name ?? null,
-        taluka_name: triad.taluka_name ?? null,
-        village_name: triad.village_name ?? null,
-        state_name: triad.state_name ?? null,
+        ...locationPayload,
         activity_context: 'artisan_check_in',
         ...buildTimeAuditMetadata('artisan_check_in', {
           latitude: gps.latitude,
@@ -153,13 +152,12 @@ export function useArtisanMandatoryCheckIn() {
       };
 
       if (__DEV__) {
-        console.log('[Artisan check-in] submitting', {
-          endpoint: 'POST /artisan/check-in',
-          district_id: payload.district_id,
-          taluka_id: payload.taluka_id,
-          village_id: payload.village_id,
-          has_accuracy: payload.accuracy != null,
-          has_coords: Number.isFinite(payload.latitude) && Number.isFinite(payload.longitude),
+        console.log('[ARTISAN PRO CHECK-IN]', {
+          district_id: locationPayload.district_id,
+          taluka_id: locationPayload.taluka_id,
+          village_id: locationPayload.village_id ?? null,
+          working_area_scope: locationPayload.working_area_scope,
+          user_id: user?.id ?? null,
         });
       }
 

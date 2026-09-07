@@ -22,7 +22,8 @@ import {
   mapActivityRecord,
   type FarmerActivityViewModel,
 } from '../utils/farmerActivityHelpers';
-import { sumFarmLandTotals, formatLandAmount } from '../utils/farmerLandHelpers';
+import { formatHectares, sumFarmAreasHectares } from '../utils/farmAreaUnits';
+import { mapFarmRecord } from '../utils/farmMapHelpers';
 import { extractList, pickNestedString, pickString, type ApiRecord } from '../utils/apiHelpers';
 import { resolveMediaUrl } from '../utils/mediaUrl';
 
@@ -46,9 +47,7 @@ export interface FarmerDashboardViewModel {
   };
   projectName: string;
   landInfo: {
-    acresLabel: string;
     hectaresLabel: string;
-    bighaLabel: string;
   } | null;
   isVerified: boolean;
   verificationStatusLabel: string;
@@ -264,7 +263,8 @@ export function useFarmerDashboardData() {
         .sort((left, right) => right.sortKey - left.sortKey) as FarmerActivityViewModel[];
 
       const activitySummary = buildActivitiesSummary(mappedActivities, []);
-      const landTotals = sumFarmLandTotals(farms);
+      const farmViewModels = farms.map((farm) => mapFarmRecord(farm as ApiRecord));
+      const totalHectares = sumFarmAreasHectares(farmViewModels);
       const location = extractFarmerLocation(profileRoot);
 
       const name =
@@ -303,11 +303,9 @@ export function useFarmerDashboardData() {
           pincode: location.pincode !== '-' ? location.pincode : '',
         },
         projectName: 'Biochar',
-        landInfo: landTotals
+        landInfo: totalHectares > 0
           ? {
-              acresLabel: formatLandAmount(landTotals.acres, 'Acres'),
-              hectaresLabel: formatLandAmount(landTotals.hectares, 'Hectares'),
-              bighaLabel: formatLandAmount(landTotals.bigha, 'Bigha'),
+              hectaresLabel: formatHectares(totalHectares, 2),
             }
           : null,
         isVerified: isFarmerVerified(dashboard),

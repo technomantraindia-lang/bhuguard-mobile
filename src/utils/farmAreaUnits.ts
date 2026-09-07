@@ -1,5 +1,13 @@
-export const HECTARES_PER_ACRE = 0.4047;
-export const SQUARE_METERS_PER_ACRE = 4046.86;
+/**
+ * Canonical Farm area helpers for the Farmer module (hectare-first display).
+ *
+ * 1 hectare = 10,000 square meters
+ * 1 acre = 0.40468564224 hectares
+ */
+
+export const HECTARES_PER_ACRE = 0.40468564224;
+export const SQUARE_METERS_PER_HECTARE = 10_000;
+export const SQUARE_METERS_PER_ACRE = HECTARES_PER_ACRE * SQUARE_METERS_PER_HECTARE;
 
 export type CanonicalFarmAreaUnit = 'acre' | 'hectare' | 'square_meter';
 
@@ -11,33 +19,23 @@ export interface FarmAreaTriple {
 
 function parsePositiveNumber(value: unknown): number | null {
   const parsed = Number(value);
-
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return null;
   }
-
   return parsed;
 }
 
 function normalizeUnit(unit: string | null | undefined): CanonicalFarmAreaUnit | null {
   const normalized = String(unit ?? '').trim().toLowerCase();
-
   if (normalized.includes('hect')) {
     return 'hectare';
   }
-
   if (normalized.includes('sq') && (normalized.includes('m') || normalized.includes('meter'))) {
     return 'square_meter';
   }
-
   if (normalized.includes('acre') || normalized === 'acres') {
     return 'acre';
   }
-
-  if (normalized.includes('bigha')) {
-    return 'acre';
-  }
-
   return null;
 }
 
@@ -46,65 +44,90 @@ export function convertFarmArea(
   unit: string | null | undefined,
 ): FarmAreaTriple | null {
   const amount = parsePositiveNumber(value);
-  const canonicalUnit = normalizeUnit(unit) ?? 'acre';
-
   if (amount === null) {
     return null;
   }
 
-  let acres = amount;
+  const canonicalUnit = normalizeUnit(unit) ?? 'acre';
+  let hectares = amount;
 
-  if (canonicalUnit === 'hectare') {
-    acres = amount / HECTARES_PER_ACRE;
+  if (canonicalUnit === 'acre') {
+    hectares = amount * HECTARES_PER_ACRE;
   } else if (canonicalUnit === 'square_meter') {
-    acres = amount / SQUARE_METERS_PER_ACRE;
-  } else if (String(unit ?? '').toLowerCase().includes('bigha')) {
-    acres = amount / 1.613;
+    hectares = amount / SQUARE_METERS_PER_HECTARE;
   }
 
-  const hectares = acres * HECTARES_PER_ACRE;
-  const squareMeters = acres * SQUARE_METERS_PER_ACRE;
-
   return {
-    acres,
     hectares,
-    squareMeters,
+    acres: hectares / HECTARES_PER_ACRE,
+    squareMeters: hectares * SQUARE_METERS_PER_HECTARE,
   };
 }
 
-export function convertFarmAreaFromRecord(record: Record<string, unknown>): FarmAreaTriple | null {
-  const acreValue = parsePositiveNumber(record.area_acres ?? record.land_area_acres ?? record.acre);
-  const hectareValue = parsePositiveNumber(record.area_hectares ?? record.land_area_hectares ?? record.hectare);
-  const squareMeterValue = parsePositiveNumber(
-    record.square_meter ?? record.square_meters ?? record.area_square_meters,
+/**
+ * Preferred priority:
+ * 1. area_hectares
+ * 2. mapped polygon square meters
+ * 3. acre value
+ * 4. land_area + unit
+ */
+export function resolveFarmAreaHectares(record: Record<string, unknown> | null | undefined): number | null {
+  if (!record) {
+    return null;
+  }
+
+  const hectareValue = parsePositiveNumber(
+    record.area_hectares ?? record.land_area_hectares ?? record.hectare ?? record.mapped_area_hectares,
   );
-  const landArea = parsePositiveNumber(record.land_area);
-  const landUnit = String(record.land_area_unit ?? record.area_unit ?? '');
-
-  if (acreValue !== null) {
-    return convertFarmArea(acreValue, 'acre');
-  }
-
   if (hectareValue !== null) {
-    return convertFarmArea(hectareValue, 'hectare');
+    return hectareValue;
   }
 
+  const squareMeterValue = parsePositiveNumber(
+    record.polygon_area_sq_m
+      ?? record.mapped_area_sq_m
+      ?? record.area_sq_m
+      ?? record.area_square_meters
+      ?? record.square_meters
+      ?? record.square_meter
+      ?? record.calculated_area_sq_m,
+  );
   if (squareMeterValue !== null) {
-    return convertFarmArea(squareMeterValue, 'square_meter');
+    return squareMeterValue / SQUARE_METERS_PER_HECTARE;
   }
 
+  const acreValue = parsePositiveNumber(record.area_acres ?? record.land_area_acres ?? record.acre);
+  if (acreValue !== null) {
+    return acreValue * HECTARES_PER_ACRE;
+  }
+
+  const landArea = parsePositiveNumber(record.land_area ?? record.area ?? record.mapped_area ?? record.calculated_area);
   if (landArea !== null) {
-    return convertFarmArea(landArea, landUnit || 'acre');
+    const unit = String(record.land_area_unit ?? record.area_unit ?? '');
+    const triple = convertFarmArea(landArea, unit || 'acre');
+    return triple?.hectares ?? null;
   }
 
   return null;
+}
+
+export function convertFarmAreaFromRecord(record: Record<string, unknown>): FarmAreaTriple | null {
+  const hectares = resolveFarmAreaHectares(record);
+  if (hectares === null) {
+    return null;
+  }
+
+  return {
+    hectares,
+    acres: hectares / HECTARES_PER_ACRE,
+    squareMeters: hectares * SQUARE_METERS_PER_HECTARE,
+  };
 }
 
 function trimTrailingZeros(value: string): string {
   if (!value.includes('.')) {
     return value;
   }
-
   return value.replace(/\.?0+$/, '');
 }
 
@@ -112,39 +135,37 @@ function formatNumber(value: number, maxDecimals: number): string {
   return trimTrailingZeros(value.toFixed(maxDecimals));
 }
 
-export function formatFarmAreaAcre(triple: FarmAreaTriple | null): string {
-  if (!triple) {
-    return '—';
+export function formatHectares(value: number | null | undefined, maxDecimals = 2): string {
+  if (value == null || !Number.isFinite(value) || value <= 0) {
+    return 'Area not available';
   }
 
-  const value = formatNumber(triple.acres, 2);
-  const label = triple.acres === 1 ? 'Acre' : 'Acres';
-
-  return `${value} ${label}`;
+  const formatted = formatNumber(value, maxDecimals);
+  const label = Number(formatted) === 1 ? 'Hectare' : 'Hectares';
+  return `${formatted} ${label}`;
 }
 
-export function formatFarmAreaHectare(triple: FarmAreaTriple | null): string {
+export function formatFarmAreaAcre(triple: FarmAreaTriple | null): string {
   if (!triple) {
-    return '—';
+    return 'Area not available';
   }
+  const formatted = formatNumber(triple.acres, 2);
+  const label = Number(formatted) === 1 ? 'Acre' : 'Acres';
+  return `${formatted} ${label}`;
+}
 
-  const value = formatNumber(triple.hectares, 4);
-  const label = triple.hectares === 1 ? 'Hectare' : 'Hectares';
-
-  return `${value} ${label}`;
+export function formatFarmAreaHectare(triple: FarmAreaTriple | null, maxDecimals = 4): string {
+  if (!triple) {
+    return 'Area not available';
+  }
+  return formatHectares(triple.hectares, maxDecimals);
 }
 
 export function formatFarmAreaSquareMeter(triple: FarmAreaTriple | null): string {
   if (!triple) {
-    return '—';
+    return 'Area not available';
   }
-
-  const value = formatNumber(triple.squareMeters, 2);
-  const formatted = Number(value).toLocaleString('en-IN', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-
+  const formatted = formatNumber(triple.squareMeters, 2);
   return `${formatted} Square Meters`;
 }
 
@@ -154,10 +175,50 @@ export interface FarmAreaDisplayLabels {
   squareMeters: string;
 }
 
+/** Multi-unit labels for shared/FO use. Farmer UI should use hectares only via formatHectares. */
 export function formatFarmAreaDisplay(triple: FarmAreaTriple | null): FarmAreaDisplayLabels {
   return {
     acres: formatFarmAreaAcre(triple),
-    hectares: formatFarmAreaHectare(triple),
+    hectares: formatFarmAreaHectare(triple, 4),
     squareMeters: formatFarmAreaSquareMeter(triple),
   };
+}
+
+/** Farmer-module hectare-only labels (all three keys show hectares for safe drop-in). */
+export function formatFarmerHectareOnlyDisplay(triple: FarmAreaTriple | null): FarmAreaDisplayLabels {
+  const hectares = formatFarmAreaHectare(triple, 4);
+  return {
+    acres: hectares,
+    hectares,
+    squareMeters: hectares,
+  };
+}
+
+export function sumFarmAreasHectares(
+  farms: Array<Record<string, unknown> | { id?: number; areaTriple?: FarmAreaTriple | null }>,
+): number {
+  const seen = new Set<number>();
+  let total = 0;
+
+  for (const farm of farms) {
+    const id = Number((farm as { id?: number }).id);
+    if (Number.isFinite(id) && id > 0) {
+      if (seen.has(id)) {
+        continue;
+      }
+      seen.add(id);
+    }
+
+    const fromTriple = (farm as { areaTriple?: FarmAreaTriple | null }).areaTriple?.hectares;
+    const hectares =
+      fromTriple != null && Number.isFinite(fromTriple) && fromTriple > 0
+        ? fromTriple
+        : resolveFarmAreaHectares(farm as Record<string, unknown>);
+
+    if (hectares != null && hectares > 0) {
+      total += hectares;
+    }
+  }
+
+  return total;
 }

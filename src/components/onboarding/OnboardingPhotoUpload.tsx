@@ -9,7 +9,7 @@ import { fileAssetFromImagePickerAsset, validateOnboardingPhotoAsset } from '../
 
 interface OnboardingPhotoUploadProps {
   file: FileAsset | null;
-  onChange: (file: FileAsset | null) => void;
+  onChange: (file: FileAsset | null) => void | Promise<void>;
 }
 
 const PERMISSION_MESSAGE = 'Please allow camera permission to capture farmer photo.';
@@ -116,13 +116,14 @@ export function OnboardingPhotoUpload({ file, onChange }: OnboardingPhotoUploadP
     }
   };
 
-  const confirmPending = () => {
+  const confirmPending = async () => {
     if (!pendingAssetRef.current) {
       return;
     }
-    onChange(fileAssetFromImagePickerAsset(pendingAssetRef.current));
+    const asset = fileAssetFromImagePickerAsset(pendingAssetRef.current);
     pendingAssetRef.current = null;
     setPendingUri(null);
+    await onChange(asset);
   };
 
   const retryPending = () => {
@@ -151,7 +152,7 @@ export function OnboardingPhotoUpload({ file, onChange }: OnboardingPhotoUploadP
           </Pressable>
           <Pressable
             style={[styles.confirmButton, styles.okButton]}
-            onPress={confirmPending}
+            onPress={() => void confirmPending()}
             accessibilityRole="button"
             accessibilityLabel="Confirm photo"
           >

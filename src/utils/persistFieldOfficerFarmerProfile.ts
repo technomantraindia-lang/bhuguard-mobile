@@ -1,6 +1,9 @@
 import { updateFieldOfficerFarmer } from '../api/fieldOfficerApi';
 import type { OnboardingDraft } from '../context/OnboardingContext';
 import type { ApiRecord } from './apiHelpers';
+import { buildFormDataFilePart } from './liveEvidenceCapture';
+import { resolveOnboardingFileUri } from './onboardingFilePersistence';
+import { logOnboardingStep1Request } from './onboardingStep1Diagnostics';
 import { toPositiveEntityId } from './entityId';
 
 function appendScalar(formData: FormData, key: string, value: string) {
@@ -18,11 +21,12 @@ function appendFile(
     return;
   }
 
-  formData.append(key, {
-    uri: file.uri,
-    name: file.name,
-    type: file.mimeType || 'application/octet-stream',
-  } as unknown as Blob);
+  const part = buildFormDataFilePart(
+    resolveOnboardingFileUri(file),
+    file.name,
+    file.mimeType || 'image/jpeg',
+  );
+  formData.append(key, part as unknown as Blob);
 }
 
 /** Build multipart payload for PUT /field-officer/farmers/{id} from onboarding draft. */
@@ -55,5 +59,6 @@ export async function persistFieldOfficerFarmerProfile(
     return null;
   }
 
+  logOnboardingStep1Request(farmerId);
   return updateFieldOfficerFarmer(farmerId, buildFieldOfficerFarmerProfileFormData(draft));
 }

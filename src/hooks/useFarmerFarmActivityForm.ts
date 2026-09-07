@@ -17,6 +17,7 @@ import {
 import { getAuthUser } from '../storage/authStorage';
 import { extractList, pickString, type ApiRecord } from '../utils/apiHelpers';
 import { todayIsoDate } from '../utils/activityDateHelpers';
+import { formatHectares, resolveFarmAreaHectares } from '../utils/farmAreaUnits';
 import { appendClientStampMetadata, type LiveCapturedEvidence } from '../utils/liveEvidenceCapture';
 import { buildLivePhotoWatermarkMeta } from '../utils/livePhotoWatermarkFormat';
 import { captureHighAccuracyGps } from '../utils/officerGpsCapture';
@@ -74,8 +75,7 @@ function deviceUtcOffset(): string {
 }
 
 function mapLinkedFarm(record: ApiRecord): FarmerLinkedFarmOption {
-  const areaAcre = record.area_acre ?? record.area_acres;
-  const areaHectare = record.area_hectare ?? record.area_hectares;
+  const hectares = resolveFarmAreaHectares(record);
 
   return {
     farmId: Number(record.farm_id ?? record.id ?? 0),
@@ -88,12 +88,7 @@ function mapLinkedFarm(record: ApiRecord): FarmerLinkedFarmOption {
     taluka: pickString(record, 'taluka'),
     district: pickString(record, 'district'),
     state: pickString(record, 'state'),
-    areaLabel:
-      areaAcre && areaAcre !== '-'
-        ? `${areaAcre} acres`
-        : areaHectare && areaHectare !== '-'
-          ? `${areaHectare} ha`
-          : '—',
+    areaLabel: formatHectares(hectares, 4),
     ownershipType: pickString(record, 'ownership_type', 'ownershipType'),
     lastFarmUpdateDate: pickString(record, 'last_farm_update_date', 'lastFarmUpdateDate') || null,
     nextFarmUpdateDate: pickString(record, 'next_farm_update_date', 'nextFarmUpdateDate') || null,
@@ -511,8 +506,10 @@ export function useFarmerFarmActivityForm({ farmId, activityId }: UseFarmerFarmA
       if (gps.altitude != null) {
         setAltitude(gps.altitude);
       }
+      return true;
     } catch (gpsError) {
       Alert.alert('GPS capture failed', getApiErrorMessage(gpsError, 'Unable to capture GPS location.'));
+      return false;
     } finally {
       setCapturingGps(false);
     }
@@ -542,6 +539,10 @@ export function useFarmerFarmActivityForm({ farmId, activityId }: UseFarmerFarmA
 
       const formData = new FormData();
       formData.append('farm_id', String(selectedFarmId));
+      const resolvedFarmerId = farmerId ?? selectedFarm?.farmerId ?? null;
+      if (resolvedFarmerId) {
+        formData.append('farmer_id', String(resolvedFarmerId));
+      }
       formData.append('activity_date', activityDate);
       formData.append('captured_at', capturedAt);
       formData.append('timezone', timezone);
@@ -613,6 +614,7 @@ export function useFarmerFarmActivityForm({ farmId, activityId }: UseFarmerFarmA
       altitude,
       capturedAt,
       draftUuid,
+      farmerId,
       hasUsableEvidence,
       latitude,
       longitude,

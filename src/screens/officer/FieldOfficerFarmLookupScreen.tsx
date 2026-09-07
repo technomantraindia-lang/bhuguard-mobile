@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -19,6 +17,7 @@ import { searchFieldOfficerFarms } from '../../api/fieldOfficerApi';
 import { AssignedLocationFilters } from '../../components/location/AssignedLocationFilters';
 import { NoAssignmentState } from '../../components/location/NoAssignmentState';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { KeyboardAvoidingHost } from '../../components/layout/KeyboardSafeScrollView';
 import { useAssignedLocations } from '../../hooks/useAssignedLocations';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { colors, spacing } from '../../theme';
@@ -121,7 +120,7 @@ export function FieldOfficerFarmLookupScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader title="Find Farmer / Farm" onBackPress={() => navigation.goBack()} />
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingHost>
         <View style={styles.content}>
           <Text style={styles.helper}>
             Search only within Districts, Talukas and Villages assigned to you by Admin.
@@ -184,7 +183,7 @@ export function FieldOfficerFarmLookupScreen() {
             </>
           )}
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingHost>
     </SafeAreaView>
   );
 }

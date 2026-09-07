@@ -24,13 +24,6 @@ export const MOBILE_ROLES: RoleDefinition[] = [
     demoLogin: '9876543211',
   },
   {
-    id: 'artisan',
-    titleKey: 'role.artisanTitle',
-    descriptionKey: 'role.artisanDescription',
-    buttonKey: 'role.artisanButton',
-    demoLogin: '9876543214',
-  },
-  {
     id: 'artisan_pro',
     titleKey: 'role.artisanProTitle',
     descriptionKey: 'role.artisanProDescription',

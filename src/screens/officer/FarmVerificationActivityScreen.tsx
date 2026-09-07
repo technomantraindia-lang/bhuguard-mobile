@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Image,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,6 +23,7 @@ import {
 } from '../../api/fieldOfficerApi';
 import { getApiErrorMessage } from '../../api/authApi';
 import { AppButton } from '../../components/AppButton';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import {
   PremiumInfoPanel,
   PremiumReadonlyField,
@@ -828,21 +827,15 @@ export function FarmVerificationActivityScreen() {
       <SafeAreaView style={styles.safe} edges={['left', 'right']}>
         <PremiumActivityHeader title="Farm Activity" subtitle={subtitle} onBack={() => navigation.goBack()} />
 
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={8}
+        <KeyboardSafeScrollView
+          ref={scrollRef}
+          extraBottomPadding={0}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: insets.bottom + (showStartCheckinFooter ? 130 : 28) },
+          ]}
+          showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            ref={scrollRef}
-            style={styles.scroll}
-            contentContainerStyle={[
-              styles.content,
-              { paddingBottom: insets.bottom + (showStartCheckinFooter ? 130 : 28) },
-            ]}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
             <PremiumActivityProgressCard
               steps={FARM_VERIFICATION_STEPS}
               completedCount={completedCount}
@@ -1072,8 +1065,7 @@ export function FarmVerificationActivityScreen() {
                 )}
               </PremiumActivitySectionCard>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+          </KeyboardSafeScrollView>
 
         {showStartCheckinFooter ? (
           <PremiumActivityFooter

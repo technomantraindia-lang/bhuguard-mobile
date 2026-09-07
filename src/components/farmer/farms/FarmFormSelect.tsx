@@ -2,7 +2,9 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -10,6 +12,7 @@ import {
   View,
 } from 'react-native';
 
+import { useKeyboardOverlapInset } from '../../../hooks/useKeyboardOverlapInset';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
 
 export interface FarmSelectOption {
@@ -52,6 +55,7 @@ export function FarmFormSelect({
   disabled = false,
 }: FarmFormSelectProps) {
   const [open, setOpen] = useState(false);
+  const keyboardOverlap = useKeyboardOverlapInset();
   const trimmedSearch = searchValue.trim();
   const showCustomOption =
     searchable && trimmedSearch.length > 0 && onCustomValue && !options.some((item) => item.name.toLowerCase() === trimmedSearch.toLowerCase());
@@ -71,8 +75,11 @@ export function FarmFormSelect({
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <View style={styles.overlay}>
-          <View style={styles.sheet}>
+        <KeyboardAvoidingView
+          style={styles.overlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={[styles.sheet, Platform.OS === 'android' ? { marginBottom: keyboardOverlap } : null]}>
             <Text style={styles.sheetTitle}>{label}</Text>
 
             {searchable ? (
@@ -135,7 +142,7 @@ export function FarmFormSelect({
               <Text style={styles.closeText}>Close</Text>
             </Pressable>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

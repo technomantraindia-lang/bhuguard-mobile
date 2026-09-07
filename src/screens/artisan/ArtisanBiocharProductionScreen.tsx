@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,6 +12,7 @@ import {
 } from '../../components/officer/biochar/ArtisanBiocharProcessFormContent';
 import { ProductionRecordCard } from '../../components/officer/biochar/BiocharProductionSections';
 import { ErrorState } from '../../components/ErrorState';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { LoadingState } from '../../components/LoadingState';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { type BiocharEvidenceKey } from '../../constants/biocharProduction';
@@ -358,12 +359,10 @@ export function ArtisanBiocharProductionScreen() {
         showBrandLogo
         logoOnPress={() => navigation.navigate('ArtisanDashboard')}
       />
-      <ScrollView
+      <KeyboardSafeScrollView
+        extraBottomPadding={24}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        automaticallyAdjustKeyboardInsets
       >
         <ArtisanBiocharProcessFormContent
           form={form}
@@ -422,7 +421,7 @@ export function ArtisanBiocharProductionScreen() {
             </Pressable>
           </View>
         )}
-      </ScrollView>
+      </KeyboardSafeScrollView>
     </SafeAreaView>
   );
 }

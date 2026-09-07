@@ -3,7 +3,7 @@
     "name": "Bhuguard",
     "slug": "bhuguard-mobile",
     "scheme": "bhuguard",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
@@ -28,6 +28,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_FINE_LOCATION",
@@ -83,7 +84,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "63730ff7-1af6-4886-89f1-7f1e54e9b64c"
+        "projectId": "390d1a75-1bd5-4217-afea-717c64ccb477"
       },
       "apiUrl": "https://erp.bhuguard.com/api",
       "appUrl": "https://erp.bhuguard.com",
@@ -91,12 +92,12 @@
       "useNativeMaps": false,
       "googleMapsApiKeyConfigured": false
     },
-    "owner": "techno2.0",
+    "owner": "technomanta",
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/63730ff7-1af6-4886-89f1-7f1e54e9b64c",
+      "url": "https://u.expo.dev/390d1a75-1bd5-4217-afea-717c64ccb477",
       "enabled": true,
       "checkAutomatically": "NEVER",
       "fallbackToCacheTimeout": 0

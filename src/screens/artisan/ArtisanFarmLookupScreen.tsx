@@ -3,8 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -26,6 +24,7 @@ import {
 import { FormSelect, type SelectOption } from '../../components/FormSelect';
 import { NoAssignmentState } from '../../components/location/NoAssignmentState';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { KeyboardAvoidingHost } from '../../components/layout/KeyboardSafeScrollView';
 import { useArtisanWorkSession } from '../../context/ArtisanWorkSessionContext';
 import type { ArtisanStackParamList } from '../../navigation/types';
 import { findIncompleteBiocharProductionDraft } from '../../storage/biocharProductionDraftStorage';
@@ -43,7 +42,7 @@ import type {
 
 type Nav = NativeStackNavigationProp<ArtisanStackParamList, 'ArtisanFarmLookup'>;
 type Route = RouteProp<ArtisanStackParamList, 'ArtisanFarmLookup'>;
-type LookupPurpose = 'find' | 'production' | 'mixing' | 'application' | 'navigate';
+type LookupPurpose = 'find' | 'production' | 'mixing' | 'application' | 'navigate' | 'farm_finder' | 'farmer_finder';
 
 function toSelection(
   record: ArtisanFarmSearchRecord,
@@ -81,6 +80,23 @@ function toSelection(
   };
 }
 
+function farmDisplayIdFromRecord(record: ArtisanFarmSearchRecord): string {
+  return formatFarmDisplayId({
+    farm_display_id: record.farm_display_id ?? record.display_id ?? null,
+    farm_code: record.farm_code ?? null,
+    farm_id: record.farm_id,
+    display_id: record.display_id ?? null,
+  });
+}
+
+function farmerDisplayIdFromRecord(record: ArtisanFarmSearchRecord): string {
+  return formatFarmerDisplayId({
+    farmer_display_id: record.farmer_display_id ?? null,
+    farmer_code: record.farmer_code ?? null,
+    farmer_id: record.farmer_id,
+  });
+}
+
 function purposeCopy(purpose: LookupPurpose): {
   title: string;
   helper: string;
@@ -110,6 +126,18 @@ function purposeCopy(purpose: LookupPurpose): {
         title: 'Farm Navigator',
         helper: 'Search authorized farms by Farm ID or Farmer Name, then navigate using saved GPS or Google Maps.',
         sectionTitle: 'Authorized Farms',
+      };
+    case 'farm_finder':
+      return {
+        title: 'Farm Finder',
+        helper: 'Find farms within your authorized working area. Search by Farm ID, Farmer Name, Village, Taluka, or District.',
+        sectionTitle: 'Matching Farms',
+      };
+    case 'farmer_finder':
+      return {
+        title: 'Farmer Finder',
+        helper: 'Find farmers within your assigned working area. Search by Farmer Name, Farmer ID, Mobile, Village, or Taluka.',
+        sectionTitle: 'Matching Farmers',
       };
     default:
       return {
@@ -186,6 +214,8 @@ export function ArtisanFarmLookupScreen() {
 
     return summaries;
   }, [groupedByFarmer]);
+
+  const isFarmerGroupedPurpose = purpose === 'mixing' || purpose === 'application' || purpose === 'farmer_finder';
 
   useEffect(() => {
     if (purpose !== 'application' || selectedFarmerId == null) {
@@ -548,11 +578,11 @@ export function ArtisanFarmLookupScreen() {
     }
   };
 
-  const renderFarmerDrilldownResult = (kind: 'mixing' | 'application') => {
-    const onFarmerSelect = kind === 'mixing' ? handleMixingFarmerSelect : handleApplicationFarmerSelect;
-    const onFarmSelect = kind === 'mixing' ? handleMixingFarmSelect : handleApplicationFarmSelect;
-    const actionLabel = kind === 'mixing' ? 'Start Biochar Mixing' : 'Select Farm for Application';
-    const multiFarmLabel = kind === 'mixing' ? 'Select Farm for Mixing' : 'Select Farm for Application';
+  const renderFarmerDrilldownResult = (kind: 'mixing' | 'application' | 'farmer_finder') => {
+    const onFarmerSelect = kind === 'mixing' ? handleMixingFarmerSelect : kind === 'application' ? handleApplicationFarmerSelect : (farmerId: number) => setSelectedFarmerId(farmerId);
+    const onFarmSelect = kind === 'mixing' ? handleMixingFarmSelect : kind === 'application' ? handleApplicationFarmSelect : undefined;
+    const actionLabel = kind === 'mixing' ? 'Start Biochar Mixing' : kind === 'application' ? 'Select Farm for Application' : 'View Farms';
+    const multiFarmLabel = kind === 'mixing' ? 'Select Farm for Mixing' : kind === 'application' ? 'Select Farm for Application' : 'View Farms';
 
     if (selectedFarmerId != null) {
       const farmer = farmerSummaries.find((item) => item.farmerId === selectedFarmerId);
@@ -580,7 +610,7 @@ export function ArtisanFarmLookupScreen() {
 
           {selectedFarmerFarms.map((farm, index) => {
             const farmName = farm.farm_name?.trim() || `Farm ${farm.farm_id}`;
-            const farmId = formatFarmDisplayId(farm);
+            const farmId = farmDisplayIdFromRecord(farm);
             const village = farm.village?.trim() || '—';
             const area =
               farm.area_acre != null
@@ -591,7 +621,17 @@ export function ArtisanFarmLookupScreen() {
             const mappingStatus = farm.mapping_status ?? null;
 
             return (
-              <Pressable key={farm.farm_id} style={styles.card} onPress={() => onFarmSelect(farm)}>
+              <Pressable
+                key={farm.farm_id}
+                style={styles.card}
+                onPress={() => {
+                  if (kind === 'farmer_finder') {
+                    void navigateToFarm(toSelection(farm, farm.displayLabel));
+                    return;
+                  }
+                  onFarmSelect?.(farm);
+                }}
+              >
                 {kind === 'application' ? (
                   <Text style={styles.cardTitle}>Farm {index + 1}</Text>
                 ) : (
@@ -603,15 +643,25 @@ export function ArtisanFarmLookupScreen() {
                 <Text style={styles.cardMeta}>Village: {village}</Text>
                 {area ? <Text style={styles.cardMeta}>Area: {area}</Text> : null}
                 {mappingStatus ? <Text style={styles.cardMeta}>Mapping: {mappingStatus}</Text> : null}
+                {farm.biochar_status ? <Text style={styles.cardStatus}>Biochar: {farm.biochar_status}</Text> : null}
                 {kind === 'application' ? (
                   <Text style={styles.cardMeta}>
                     Eligible Mixing: {applicationEligibleMixingCounts[farm.farm_id] ?? '—'}
                   </Text>
                 ) : null}
                 <View style={styles.cardActions}>
-                  <Pressable style={styles.selectButton} onPress={() => onFarmSelect(farm)}>
-                    <Text style={styles.selectButtonText}>{actionLabel}</Text>
-                  </Pressable>
+                  {kind === 'farmer_finder' ? (
+                    <Pressable
+                      style={styles.secondarySelectButton}
+                      onPress={() => void navigateToFarm(toSelection(farm, farm.displayLabel))}
+                    >
+                      <Text style={styles.secondarySelectButtonText}>Navigate Farm</Text>
+                    </Pressable>
+                  ) : (
+                    <Pressable style={styles.selectButton} onPress={() => onFarmSelect?.(farm)}>
+                      <Text style={styles.selectButtonText}>{actionLabel}</Text>
+                    </Pressable>
+                  )}
                 </View>
               </Pressable>
             );
@@ -629,6 +679,11 @@ export function ArtisanFarmLookupScreen() {
             <Text style={styles.cardMeta}>Village: {farmer.village || '—'}</Text>
             <Text style={styles.cardMeta}>Total Farms: {farmer.farmCount}</Text>
           </>
+        ) : kind === 'farmer_finder' ? (
+          <>
+            <Text style={styles.cardMeta}>Village: {farmer.village || '—'}</Text>
+            <Text style={styles.cardMeta}>Total Farms: {farmer.farmCount}</Text>
+          </>
         ) : (
           <Text style={styles.cardMeta}>
             {farmer.farmCount} farm{farmer.farmCount === 1 ? '' : 's'}
@@ -638,7 +693,15 @@ export function ArtisanFarmLookupScreen() {
         <View style={styles.cardActions}>
           <Pressable style={styles.selectButton} onPress={() => onFarmerSelect(farmer.farmerId)}>
             <Text style={styles.selectButtonText}>
-              {kind === 'application' ? 'Select Farmer' : farmer.farmCount === 1 ? actionLabel : multiFarmLabel}
+              {kind === 'application'
+                ? 'Select Farmer'
+                : kind === 'farmer_finder'
+                  ? farmer.farmCount === 1
+                    ? 'View Farm'
+                    : 'View Farms'
+                  : farmer.farmCount === 1
+                    ? actionLabel
+                    : multiFarmLabel}
             </Text>
           </Pressable>
         </View>
@@ -655,20 +718,36 @@ export function ArtisanFarmLookupScreen() {
     const showProduction = purpose === 'find' || purpose === 'production';
     const showMixing = purpose === 'find' || purpose === 'mixing';
     const showApplication = purpose === 'find' || purpose === 'application';
-    const showNavigate = purpose === 'find' || purpose === 'navigate';
+    const showNavigate = purpose === 'find' || purpose === 'navigate' || purpose === 'farm_finder';
 
     return (
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>{item.farmer_name ?? 'Farmer'}</Text>
-        <Text style={styles.cardMeta}>
-          Farmer ID: {formatFarmerDisplayId(item)}
-        </Text>
-        <Text style={styles.cardMeta}>
-          Farm Name: {labeled?.displayLabel ?? item.farm_name ?? `Farm ${item.farm_id}`}
-        </Text>
-        <Text style={styles.cardMeta}>Farm ID: {formatFarmDisplayId(item)}</Text>
-        <Text style={styles.cardMeta}>Village: {item.village?.trim() || '—'}</Text>
-        {item.area_acre != null ? <Text style={styles.cardMeta}>Area: {item.area_acre} acre</Text> : null}
+        {purpose === 'farm_finder' ? (
+          <>
+            <Text style={styles.cardTitle}>{labeled?.displayLabel ?? item.farm_name ?? `Farm ${item.farm_id}`}</Text>
+            <Text style={styles.cardMeta}>Farm ID: {farmDisplayIdFromRecord(item)}</Text>
+            <Text style={styles.cardMeta}>Farmer Name: {item.farmer_name ?? '—'}</Text>
+            <Text style={styles.cardMeta}>
+              Village: {item.village?.trim() || '—'}
+              {item.taluka?.trim() ? ` · Taluka: ${item.taluka.trim()}` : ''}
+            </Text>
+            {item.district?.trim() ? <Text style={styles.cardMeta}>District: {item.district.trim()}</Text> : null}
+            {item.mapping_status ? <Text style={styles.cardMeta}>Mapping: {item.mapping_status}</Text> : null}
+          </>
+        ) : (
+          <>
+            <Text style={styles.cardTitle}>{item.farmer_name ?? 'Farmer'}</Text>
+            <Text style={styles.cardMeta}>
+              Farmer ID: {farmerDisplayIdFromRecord(item)}
+            </Text>
+            <Text style={styles.cardMeta}>
+              Farm Name: {labeled?.displayLabel ?? item.farm_name ?? `Farm ${item.farm_id}`}
+            </Text>
+            <Text style={styles.cardMeta}>Farm ID: {farmDisplayIdFromRecord(item)}</Text>
+            <Text style={styles.cardMeta}>Village: {item.village?.trim() || '—'}</Text>
+            {item.area_acre != null ? <Text style={styles.cardMeta}>Area: {item.area_acre} acre</Text> : null}
+          </>
+        )}
         {item.biochar_status ? <Text style={styles.cardStatus}>Biochar: {item.biochar_status}</Text> : null}
         {item.next_due_date ? <Text style={styles.cardMeta}>Next due: {item.next_due_date}</Text> : null}
 
@@ -736,9 +815,9 @@ export function ArtisanFarmLookupScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader title={copy.title} showBrandLogo={false} />
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingHost>
         <FlatList
-          data={purpose === 'mixing' || purpose === 'application' ? [] : results}
+          data={isFarmerGroupedPurpose ? [] : results}
           keyExtractor={(item) => `${item.farm_id}-${item.farmer_id}`}
           renderItem={renderResult}
           contentContainerStyle={styles.listContent}
@@ -750,11 +829,17 @@ export function ArtisanFarmLookupScreen() {
               {purpose === 'application' || purpose === 'mixing' ? null : (
                 <>
                   <Text style={styles.label}>
-                    {'Search by Farm ID or Farmer Name'}
+                    {purpose === 'farmer_finder'
+                      ? 'Search by Farmer Name, Farmer ID, Mobile, Village, or Taluka'
+                      : 'Search by Farm ID, Farmer Name, Village, Taluka, or District'}
                   </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder={'Search by Farm ID or Farmer Name'}
+                    placeholder={
+                      purpose === 'farmer_finder'
+                        ? 'Search by Farmer Name, Farmer ID, or Village'
+                        : 'Search by Farm ID or Farmer Name'
+                    }
                     value={query}
                     onChangeText={setQuery}
                     autoCapitalize="none"
@@ -806,24 +891,26 @@ export function ArtisanFarmLookupScreen() {
 
               {error ? <Text style={styles.error}>{error}</Text> : null}
               {!error && emptyMessage ? <Text style={styles.empty}>{emptyMessage}</Text> : null}
-              {(purpose === 'mixing' || purpose === 'application') && results.length > 0 ? (
+              {(purpose === 'mixing' || purpose === 'application' || purpose === 'farmer_finder') && results.length > 0 ? (
                 <Text style={styles.sectionTitle}>
                   {selectedFarmerId != null ? 'Select a farm' : `${copy.sectionTitle} (${farmerSummaries.length})`}
                 </Text>
               ) : null}
               {purpose === 'mixing' || purpose === 'application'
                 ? renderFarmerDrilldownResult(purpose)
-                : null}
-              {purpose !== 'mixing' && purpose !== 'application' && results.length > 0 ? (
+                : purpose === 'farmer_finder'
+                  ? renderFarmerDrilldownResult('farmer_finder')
+                  : null}
+              {!isFarmerGroupedPurpose && results.length > 0 ? (
                 <Text style={styles.sectionTitle}>
                   {copy.sectionTitle} ({results.length})
                 </Text>
               ) : null}
             </View>
           }
-          ListEmptyComponent={purpose === 'mixing' || purpose === 'application' ? null : undefined}
+          ListEmptyComponent={isFarmerGroupedPurpose ? null : undefined}
         />
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingHost>
     </SafeAreaView>
   );
 }

@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useAddressCascade } from '../hooks/useAddressCascade';
 import { useAutoAddressPincode } from '../hooks/useAutoAddressPincode';
 import { colors } from '../theme/colors';
 import { pickAutoPincode } from '../utils/addressPincodeHelpers';
+import { formatVillageEmptyMessage } from '../utils/addressVillageDiagnostics';
 import { AppButton } from './AppButton';
 import { ErrorState } from './ErrorState';
 import { FormSelect } from './FormSelect';
@@ -46,13 +47,23 @@ export function AddressSelector({
     if (value.district_id) {
       void address.loadTalukas(Number(value.district_id));
     }
-  }, [value.district_id]);
+  }, [value.district_id, address.loadTalukas]);
 
   useEffect(() => {
     if (value.taluka_id) {
-      void address.loadVillages(Number(value.taluka_id));
+      void address.loadVillages(Number(value.taluka_id), value.taluka_name);
+    } else {
+      address.setVillageSearch('');
     }
-  }, [value.taluka_id]);
+  }, [value.taluka_id, value.taluka_name, address.loadVillages, address.setVillageSearch]);
+
+  const handlePincodeChange = useCallback(
+    (next: string) => {
+      onChange({ pincode: next });
+      onPincodeChange?.(next);
+    },
+    [onChange, onPincodeChange],
+  );
 
   useAutoAddressPincode({
     talukaId: value.taluka_id,
@@ -60,10 +71,7 @@ export function AddressSelector({
     pincode,
     talukas: address.talukas,
     villages: address.villages,
-    onPincodeChange: (next) => {
-      onChange({ pincode: next });
-      onPincodeChange?.(next);
-    },
+    onPincodeChange: handlePincodeChange,
   });
 
   return (
@@ -119,14 +127,19 @@ export function AddressSelector({
         disabled={!value.taluka_id}
         searchable
         searchValue={address.villageSearch}
+        searchPlaceholder="Search village..."
+        emptyMessage={formatVillageEmptyMessage(value.taluka_name)}
         onSearchChange={address.setVillageSearch}
         onSelect={(option) => {
           const talukaOption = address.talukas.find((item) => String(item.id) === value.taluka_id);
+          const isEntireCity = option.scope === 'taluka' || option.id < 0;
 
           onChange({
             village_id: String(option.id),
             village_name: option.name,
-            pincode: pickAutoPincode(option.pincode, talukaOption?.pincode),
+            pincode: isEntireCity
+              ? pickAutoPincode(talukaOption?.pincode)
+              : pickAutoPincode(option.pincode, talukaOption?.pincode),
           });
         }}
       />

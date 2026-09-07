@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
+import { useKeyboardOverlapInset } from '../../hooks/useKeyboardOverlapInset';
+
 export interface KeyboardAwareScreenProps {
   children: ReactNode;
   /** Extra content below the scroll area (sticky footer / keypad). Not scrolled. */
@@ -21,7 +23,7 @@ export interface KeyboardAwareScreenProps {
   /** When false, only SafeArea + KeyboardAvoidingView (no ScrollView). Use for map screens. */
   scroll?: boolean;
   keyboardVerticalOffset?: number;
-  /** Android: prefer height so adjustResize + KAV work together. */
+  /** Android: omit KAV behavior when the window already resizes; iOS uses padding. */
   behavior?: 'padding' | 'height' | undefined;
 }
 
@@ -38,14 +40,18 @@ export function KeyboardAwareScreen({
   contentContainerStyle,
   scroll = true,
   keyboardVerticalOffset = Platform.OS === 'ios' ? 8 : 0,
-  behavior = Platform.OS === 'ios' ? 'padding' : 'height',
+  behavior = Platform.OS === 'ios' ? 'padding' : undefined,
 }: KeyboardAwareScreenProps) {
+  const overlap = useKeyboardOverlapInset();
+  const bottomPad = 32 + (Platform.OS === 'ios' ? 0 : overlap);
+
   const body = scroll ? (
     <ScrollView
       style={styles.flex}
-      contentContainerStyle={[styles.content, contentContainerStyle]}
+      contentContainerStyle={[styles.content, { paddingBottom: bottomPad }, contentContainerStyle]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
+      automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
       showsVerticalScrollIndicator={false}
       bounces={false}
     >
@@ -63,11 +69,18 @@ export function KeyboardAwareScreen({
         keyboardVerticalOffset={keyboardVerticalOffset}
       >
         {body}
-        {footer ? <View style={styles.footer}>{footer}</View> : null}
+        {footer ? (
+          <View style={[styles.footer, Platform.OS === 'android' ? { marginBottom: overlap } : null]}>
+            {footer}
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
+/** Preferred name for form/login screens. Same implementation as KeyboardAwareScreen. */
+export const KeyboardSafeScreen = KeyboardAwareScreen;
 
 const styles = StyleSheet.create({
   safe: {
@@ -78,7 +91,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    paddingBottom: 32,
   },
   footer: {
     flexShrink: 0,

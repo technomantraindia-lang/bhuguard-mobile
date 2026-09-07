@@ -1,4 +1,4 @@
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -6,6 +6,7 @@ import { FarmAddressFields } from '../../components/farmer/farms/FarmAddressFiel
 import { FarmAreaUnitPicker } from '../../components/farmer/farms/FarmAreaUnitPicker';
 import { FarmFormField } from '../../components/farmer/farms/FarmFormField';
 import { FarmerAddFarmHeader } from '../../components/farmer/farms/FarmerAddFarmHeader';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { SubmitActivityCard } from '../../components/farmer/SubmitActivityCard';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
 import { ErrorState } from '../../components/ErrorState';
@@ -72,7 +73,7 @@ export function FarmerEditFarmScreen({ navigation, route }: Props) {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <FarmerAddFarmHeader title="Edit Farm" onBack={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardSafeScrollView contentContainerStyle={styles.content} extraBottomPadding={24}>
         <FarmFormField
           label="Farm Name"
           value={form.name}
@@ -150,7 +151,7 @@ export function FarmerEditFarmScreen({ navigation, route }: Props) {
         >
           <Text style={styles.submitButtonText}>{submitting ? 'Saving…' : 'Save Farm'}</Text>
         </Pressable>
-      </ScrollView>
+      </KeyboardSafeScrollView>
     </SafeAreaView>
   );
 }

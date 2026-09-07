@@ -2,13 +2,20 @@ const appJson = require('./app.json');
 
 const PRODUCTION_API_URL = 'https://erp.bhuguard.com/api';
 const PRODUCTION_APP_URL = 'https://erp.bhuguard.com';
-const EAS_PROJECT_ID = '63730ff7-1af6-4886-89f1-7f1e54e9b64c';
+const EAS_PROJECT_ID =
+  process.env.EAS_PROJECT_ID
+  || appJson.expo?.extra?.eas?.projectId
+  || '390d1a75-1bd5-4217-afea-717c64ccb477';
 const appVariant = process.env.EXPO_PUBLIC_APP_VARIANT ?? 'production';
 const isDevClient = appVariant === 'development';
 const appScheme = appJson.expo?.scheme ?? 'bhuguard';
-const apiUrl = PRODUCTION_API_URL;
-const appUrl = PRODUCTION_APP_URL;
-const mapTilerApiKey = process.env.EXPO_PUBLIC_MAPTILER_API_KEY?.trim() || '';
+const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+const configuredAppUrl = process.env.EXPO_PUBLIC_APP_URL?.trim();
+const apiUrl = isDevClient && configuredApiUrl ? configuredApiUrl : PRODUCTION_API_URL;
+const appUrl = isDevClient && configuredAppUrl ? configuredAppUrl : PRODUCTION_APP_URL;
+const mapTilerApiKey =
+  process.env.EXPO_PUBLIC_MAPTILER_API_KEY?.trim()
+  || 'GYRP4k1halqDjv0SUQev';
 const mapTilerKeyLooksReal =
   mapTilerApiKey.length >= 16
   && !/your_|paste_|placeholder|maptiler_key|undefined|null/i.test(mapTilerApiKey);
@@ -77,6 +84,13 @@ function mergeRequiredPlugins(basePlugins) {
   ensurePlugin('expo-sharing');
   ensurePlugin('expo-system-ui');
   ensurePlugin('expo-secure-store');
+  // Pin to the complete NDK installed on the build machine. Expo's default
+  // 27.0 package is incomplete in this environment.
+  ensurePlugin('expo-build-properties', {
+    android: {
+      ndkVersion: '27.1.12297006',
+    },
+  });
   // expo-sqlite requires a native rebuild; offline queue uses AsyncStorage until then.
   ensurePlugin('@maplibre/maplibre-react-native');
 
@@ -163,6 +177,14 @@ module.exports = ({ config }) => {
       apiUrl,
       appUrl,
       appVariant,
+      mapTilerApiKey,
+      mapTilerApiKeyConfigured: mapTilerKeyLooksReal,
+      mapTilerHybridStyleId:
+        process.env.EXPO_PUBLIC_MAPTILER_HYBRID_STYLE_ID?.trim()
+        || process.env.EXPO_PUBLIC_MAPTILER_STYLE_ID?.trim()
+        || 'hybrid-v4',
+      mapTilerStreetStyleId:
+        process.env.EXPO_PUBLIC_MAPTILER_STREET_STYLE_ID?.trim() || 'streets-v4',
       useNativeMaps: false,
       googleMapsApiKeyConfigured: false,
     },

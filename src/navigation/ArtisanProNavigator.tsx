@@ -127,6 +127,14 @@ export function ArtisanProNavigator() {
               }
             />
             <Stack.Screen
+              name="ArtisanMixingRecords"
+              getComponent={() =>
+                safeScreen('ArtisanMixingRecordsScreen', () =>
+                  require('../screens/artisan/ArtisanMixingRecordsScreen'),
+                )
+              }
+            />
+            <Stack.Screen
               name="FullscreenImage"
               getComponent={() =>
                 safeScreen('FullscreenImageScreen', () =>

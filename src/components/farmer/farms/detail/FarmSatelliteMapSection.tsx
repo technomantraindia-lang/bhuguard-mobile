@@ -24,7 +24,7 @@ interface FarmSatelliteMapSectionProps {
   areaLabel: string;
   center: LatLng;
   polygonCoordinatesLabel: string;
-  onOpenGoogleMaps: () => void;
+  onOpenGoogleMaps?: () => void;
   onOpenFullScreen: () => void;
   onRefresh: () => void;
   onEditBoundary?: () => void;
@@ -166,7 +166,7 @@ export function FarmSatelliteMapSection({
       </View>
 
       <View style={styles.actions}>
-        <MapActionChip icon="map" label="Google Maps" onPress={onOpenGoogleMaps} />
+        {onOpenGoogleMaps ? <MapActionChip icon="map" label="Google Maps" onPress={onOpenGoogleMaps} /> : null}
         <MapActionChip icon="landscape" label="Full Screen" onPress={onOpenFullScreen} />
         <MapActionChip icon="location_on" label="Refresh" onPress={onRefresh} />
         {onEditBoundary ? <MapActionChip icon="assignment" label="Edit Boundary" onPress={onEditBoundary} /> : null}

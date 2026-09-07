@@ -13,6 +13,7 @@ interface OnboardingFormScreenProps {
   nextLoading?: boolean;
   nextDisabled?: boolean;
   footerError?: string | null;
+  footerExtra?: ReactNode;
 }
 
 /** @deprecated Prefer OnboardingStepShell directly. Wrapper kept for existing step screens. */
@@ -26,6 +27,7 @@ export function OnboardingFormScreen({
   nextLoading = false,
   nextDisabled = false,
   footerError = null,
+  footerExtra = null,
 }: OnboardingFormScreenProps) {
   return (
     <OnboardingStepShell
@@ -37,6 +39,7 @@ export function OnboardingFormScreen({
       nextLoading={nextLoading}
       nextDisabled={nextDisabled}
       footerError={footerError}
+      footerExtra={footerExtra}
     >
       {children}
     </OnboardingStepShell>

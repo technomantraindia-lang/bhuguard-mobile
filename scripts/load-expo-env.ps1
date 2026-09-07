@@ -52,7 +52,9 @@ foreach ($file in $files) {
 }
 
 if (-not $env:EXPO_PUBLIC_USE_NATIVE_MAPS) {
-  $env:EXPO_PUBLIC_USE_NATIVE_MAPS = 'true'
+  # MapTiler is the default map provider in app.config.js. Native Google Maps
+  # is optional and must not block a development build without a Google key.
+  $env:EXPO_PUBLIC_USE_NATIVE_MAPS = 'false'
 }
 
 function Test-RealGoogleMapsApiKey([string] $value) {
@@ -64,6 +66,13 @@ function Test-RealGoogleMapsApiKey([string] $value) {
 
 $hasRealApiKey = Test-RealGoogleMapsApiKey $env:EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
 
+# Do not make a Google key a hard requirement for development. The app uses
+# MapTiler when native Google Maps is unavailable.
+if (-not $hasRealApiKey -and $env:EXPO_PUBLIC_USE_NATIVE_MAPS -eq 'true') {
+  $env:EXPO_PUBLIC_USE_NATIVE_MAPS = 'false'
+  Write-Host 'No Google Maps key found; falling back to MapTiler for this build.' -ForegroundColor Yellow
+}
+
 Write-Host "Expo env: USE_NATIVE_MAPS=$($env:EXPO_PUBLIC_USE_NATIVE_MAPS), API key present=$hasRealApiKey"
 
 if ($env:EXPO_PUBLIC_USE_NATIVE_MAPS -ne 'true') {
@@ -71,5 +80,5 @@ if ($env:EXPO_PUBLIC_USE_NATIVE_MAPS -ne 'true') {
 }
 
 if (-not $hasRealApiKey) {
-  Write-Host 'WARNING: No real Google Maps API key loaded. Add it to .env.local or run: npm run setup:maps -- -ApiKey "YOUR_KEY"' -ForegroundColor Yellow
+  Write-Host 'WARNING: No Google Maps API key loaded; continuing with MapLibre/MapTiler.' -ForegroundColor Yellow
 }

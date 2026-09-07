@@ -14,7 +14,18 @@ function readRoleValue(value: unknown): string | null {
     return null;
   }
 
-  return value.trim().toLowerCase();
+  return normalizeRole(value);
+}
+
+/** Normalize backend/user-payload variants without converting legacy Artisan users. */
+export function normalizeRole(value: string): string {
+  const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, '_');
+
+  if (normalized === 'artisanpro' || normalized === 'artisan_pro') {
+    return 'artisan_pro';
+  }
+
+  return normalized;
 }
 
 /**
@@ -59,5 +70,5 @@ export function isAdminRole(role: string | null | undefined): boolean {
 
 /** Exact-match only — never use `.includes('artisan')`, it would also match `artisan_pro`. */
 export function isMobileAppRole(role: string | null | undefined): role is MobileAppRole {
-  return role === 'farmer' || role === 'field_officer' || role === 'artisan' || role === 'artisan_pro';
+  return role === 'farmer' || role === 'field_officer' || role === 'artisan_pro';
 }

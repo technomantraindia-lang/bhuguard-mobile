@@ -155,6 +155,12 @@ export function FarmerNavigator() {
         <Stack.Screen name="FarmerEditFarm" component={FarmerEditFarmScreen} />
         <Stack.Screen name="FarmerFarmSelection" component={FarmerFarmSelectionScreen} />
         <Stack.Screen name="FarmerFarmActivity" component={FarmerFarmActivityScreen} />
+        <Stack.Screen
+          name="FarmerFarmActivitiesList"
+          getComponent={() =>
+            require('../screens/farmer/FarmerFarmActivitiesListScreen').FarmerFarmActivitiesListScreen
+          }
+        />
         <Stack.Screen name="FarmerAddFarm" component={FarmerAddFarmScreen} />
         <Stack.Screen name="FarmerSubmitActivity" component={FarmerSubmitActivityScreen} />
         <Stack.Screen

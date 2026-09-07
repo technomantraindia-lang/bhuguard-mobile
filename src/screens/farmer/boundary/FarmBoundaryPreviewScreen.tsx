@@ -8,7 +8,7 @@ import { useBoundaryCapture } from '../../../context/BoundaryCaptureContext';
 import { useBoundaryMapType } from '../../../hooks/useBoundaryMapType';
 import type { FarmerStackParamList } from '../../../navigation/types';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
-import { openGoogleMaps } from '../../../utils/farmMapHelpers';
+import { formatHectares } from '../../../utils/farmAreaUnits';
 import { getBoundaryFlowRoutes } from '../../../utils/boundaryFlowRoutes';
 import { boundaryRouteParams } from '../../../utils/boundaryNavigation';
 
@@ -18,10 +18,6 @@ export function FarmBoundaryPreviewScreen({ navigation }: Props) {
   const boundary = useBoundaryCapture();
   const { isSatellite, toggleMapType } = useBoundaryMapType();
   const routes = getBoundaryFlowRoutes(boundary.sessionMode);
-  const center =
-    boundary.points[0] != null
-      ? { latitude: boundary.points[0].latitude, longitude: boundary.points[0].longitude }
-      : null;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -49,11 +45,7 @@ export function FarmBoundaryPreviewScreen({ navigation }: Props) {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Area Calculation</Text>
-          <Text style={styles.areaMain}>Area: {boundary.areaLabel}</Text>
-          <Text style={styles.meta}>{boundary.metrics.areaHectare.toFixed(2)} Hectare</Text>
-          <Text style={styles.meta}>
-            Sq ft: {boundary.metrics.areaSquareFeet.toLocaleString()}
-          </Text>
+          <Text style={styles.areaMain}>{formatHectares(boundary.metrics.areaHectare, 4)}</Text>
           <Text style={styles.meta}>Perimeter: {boundary.metrics.perimeterMeter} meters</Text>
           <Text style={styles.meta}>Total Points: {boundary.points.length}</Text>
           <Text style={styles.meta}>GPS Accuracy: {boundary.gpsAccuracyLabel}</Text>
@@ -110,11 +102,6 @@ export function FarmBoundaryPreviewScreen({ navigation }: Props) {
         >
           <Text style={styles.outlineButtonText}>Re-capture</Text>
         </Pressable>
-        {center ? (
-          <Pressable style={styles.outlineButton} onPress={() => void openGoogleMaps(center, boundary.farmName)}>
-            <Text style={styles.outlineButtonText}>Open in Google Maps</Text>
-          </Pressable>
-        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

@@ -5,7 +5,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
-import { getFieldOfficerFarmerDetail } from '../../../api/fieldOfficerApi';
+import { getFieldOfficerFarmerDetail, getFieldOfficerFarmers } from '../../../api/fieldOfficerApi';
 import { getApiErrorMessage } from '../../../api/authApi';
 import { AppCard } from '../../../components/AppCard';
 import { AppButton } from '../../../components/AppButton';
@@ -19,6 +19,7 @@ import { colors } from '../../../theme/colors';
 import { extractList, pickString, type ApiRecord } from '../../../utils/apiHelpers';
 import { beginAddNewFarmWithMapping } from '../../../utils/beginAddNewFarmFlow';
 import { formatFarmDisplayId, formatFarmerDisplayId } from '../../../utils/displayIds';
+import { resolveNumericFarmerId, toPositiveEntityId } from '../../../utils/entityId';
 import { isForbiddenError, isUnauthorizedError } from '../../../utils/apiError';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'OnboardedFarmerView'>;
@@ -41,22 +42,53 @@ export function OnboardedFarmerViewScreen() {
   const [addingFarm, setAddingFarm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<ApiRecord | null>(null);
-
-  const resolvedFarmerId: number | null =
-    route.params?.farmerDbId ?? route.params?.farmerId ?? (result?.farmer_id ? Number(result.farmer_id) : null);
+  const [resolvedFarmerId, setResolvedFarmerId] = useState<number | null>(
+    toPositiveEntityId(route.params?.farmerDbId)
+      ?? toPositiveEntityId(route.params?.farmerId)
+      ?? toPositiveEntityId(result?.farmer_id),
+  );
 
   const load = async () => {
-    if (!resolvedFarmerId) {
-      setError(route.params?.farmerDisplayId ? `Farmer not found (${route.params.farmerDisplayId}).` : 'Farmer not found.');
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      const data = await getFieldOfficerFarmerDetail(resolvedFarmerId);
-      setDetail((data.farmer as ApiRecord) ?? null);
+      let farmerId =
+        toPositiveEntityId(route.params?.farmerDbId)
+        ?? toPositiveEntityId(route.params?.farmerId)
+        ?? toPositiveEntityId(result?.farmer_id)
+        ?? resolvedFarmerId;
+
+      const displayHint = String(route.params?.farmerDisplayId ?? '').trim();
+
+      // When navigation only carried a universal display ID, resolve numeric DB id from farmers list.
+      if (!farmerId && displayHint) {
+        const farmersPayload = await getFieldOfficerFarmers();
+        const farmers = extractList(farmersPayload as ApiRecord, ['farmers', 'data']);
+        const match = farmers.find((farmer) => {
+          const displayId = formatFarmerDisplayId(farmer).toUpperCase();
+          const code = pickString(farmer, 'farmer_code', 'farmer_display_id', 'farmerDisplayId').toUpperCase();
+          const hint = displayHint.toUpperCase();
+          return displayId === hint || code === hint;
+        });
+        farmerId = resolveNumericFarmerId(match ?? null);
+      }
+
+      if (!farmerId) {
+        setResolvedFarmerId(null);
+        setDetail(null);
+        setError(displayHint ? `Farmer not found (${displayHint}).` : 'Farmer not found.');
+        return;
+      }
+
+      setResolvedFarmerId(farmerId);
+      const data = await getFieldOfficerFarmerDetail(farmerId);
+      const farmer = (data.farmer as ApiRecord) ?? null;
+      const nestedId = resolveNumericFarmerId(farmer);
+      if (nestedId != null) {
+        setResolvedFarmerId(nestedId);
+      }
+      setDetail(farmer);
     } catch (err) {
       if (isUnauthorizedError(err)) {
         setError('Session expired. Please log in again.');
@@ -64,7 +96,12 @@ export function OnboardedFarmerViewScreen() {
         setError('You are not authorized to view this farmer.');
       } else {
         const message = getApiErrorMessage(err, 'Failed to load farmer details.');
-        setError(message.includes('not found') ? 'Farmer not found.' : message);
+        const displayHint = String(route.params?.farmerDisplayId ?? '').trim();
+        setError(
+          message.toLowerCase().includes('not found')
+            ? (displayHint ? `Farmer not found (${displayHint}).` : 'Farmer not found.')
+            : message,
+        );
       }
     } finally {
       setLoading(false);
@@ -73,7 +110,8 @@ export function OnboardedFarmerViewScreen() {
 
   useEffect(() => {
     void load();
-  }, [resolvedFarmerId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when navigation farmer params change
+  }, [route.params?.farmerDbId, route.params?.farmerId, route.params?.farmerDisplayId, result?.farmer_id]);
 
   const primaryFarm = useMemo(() => resolvePrimaryFarm(detail), [detail]);
 

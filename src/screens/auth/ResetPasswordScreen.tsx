@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 
 import { getApiErrorMessage, resetPassword } from '../../api/authApi';
 import { AuthBrandHeader } from '../../components/auth/AuthBrandHeader';
@@ -54,11 +56,7 @@ export function ResetPasswordScreen({ navigation, route }: Props) {
     <View style={styles.root}>
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <AuthBrandHeader />
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <KeyboardSafeScrollView contentContainerStyle={styles.scroll} extraBottomPadding={32}>
             <ResetPasswordHeroIcon />
 
             <View style={styles.header}>
@@ -84,9 +82,7 @@ export function ResetPasswordScreen({ navigation, route }: Props) {
             <PasswordRequirementBanner />
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
-          </ScrollView>
 
-          <View style={styles.footer}>
             <Pressable
               style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, loading && styles.buttonDisabled]}
               onPress={submit}
@@ -94,8 +90,7 @@ export function ResetPasswordScreen({ navigation, route }: Props) {
             >
               <Text style={styles.buttonText}>{loading ? 'Resetting…' : 'Reset Password'}</Text>
             </Pressable>
-          </View>
-        </KeyboardAvoidingView>
+        </KeyboardSafeScrollView>
       </SafeAreaView>
     </View>
   );

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,6 +14,7 @@ import {
 } from '../../api/artisanApi';
 import { getApiErrorMessage } from '../../api/authApi';
 import { AppButton } from '../../components/AppButton';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { EvidenceStampedImageFrame } from '../../components/evidence/EvidenceStampedImageFrame';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { useArtisanWorkSession } from '../../context/ArtisanWorkSessionContext';
@@ -549,7 +550,7 @@ export function ArtisanBiocharApplicationScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader title="Biochar Application" showBrandLogo={false} />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardSafeScrollView contentContainerStyle={styles.content} extraBottomPadding={24}>
         <Text style={styles.sectionTitle}>Current date & time</Text>
         <Text style={styles.text}>{now.label}</Text>
 
@@ -658,7 +659,7 @@ export function ArtisanBiocharApplicationScreen() {
           disabled={submitting}
           onPress={() => void submit()}
         />
-      </ScrollView>
+      </KeyboardSafeScrollView>
     </SafeAreaView>
   );
 }

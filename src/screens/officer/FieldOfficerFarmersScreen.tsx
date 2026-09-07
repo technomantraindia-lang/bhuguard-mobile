@@ -15,7 +15,7 @@ import type { FieldOfficerStackParamList, FieldOfficerTabParamList } from '../..
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
 import { extractList, pickString, type ApiRecord } from '../../utils/apiHelpers';
 import { formatFarmerDisplayId } from '../../utils/displayIds';
-import { toPositiveEntityId } from '../../utils/entityId';
+import { resolveNumericFarmerId } from '../../utils/entityId';
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<FieldOfficerTabParamList, 'Farmers'>,
@@ -110,7 +110,7 @@ export function FieldOfficerFarmersScreen() {
             <OfficerListState kind="empty" title="No farmers yet" message="Registered farmers will appear here." />
           ) : (
             farmers.map((farmer) => {
-              const farmerId = toPositiveEntityId(farmer.farmer_id ?? farmer.id);
+              const farmerId = resolveNumericFarmerId(farmer);
               const farmerDisplayId = formatFarmerDisplayId(farmer);
               const farmCount = Number(farmer.farm_count ?? farmer.farms_count ?? 0);
               const village = pickString(farmer, 'village');

@@ -4,8 +4,9 @@ import type { ApiRecord } from './apiHelpers';
 import { pickString } from './apiHelpers';
 import {
   convertFarmAreaFromRecord,
-  formatFarmAreaAcre,
-  formatFarmAreaDisplay,
+  formatFarmerHectareOnlyDisplay,
+  formatHectares,
+  sumFarmAreasHectares,
   type FarmAreaDisplayLabels,
   type FarmAreaTriple,
 } from './farmAreaUnits';
@@ -32,6 +33,7 @@ export interface FarmerFarmViewModel {
   squareMeterLabel: string;
   areaDisplay: FarmAreaDisplayLabels;
   areaTriple: FarmAreaTriple | null;
+  imageUrl: string | null;
   cropLabel: string;
   soilLabel: string;
   verificationBadge: FarmVerificationBadge;
@@ -157,7 +159,7 @@ export function getFarmAreaTriple(farm: ApiRecord): FarmAreaTriple | null {
 }
 
 export function getFarmAreaLabel(farm: ApiRecord): string {
-  return formatFarmAreaAcre(getFarmAreaTriple(farm));
+  return formatHectares(getFarmAreaTriple(farm)?.hectares ?? null, 4);
 }
 
 export function getFarmCode(farm: ApiRecord): string {
@@ -187,14 +189,35 @@ export function getFarmLocationLabel(farm: ApiRecord): string {
   return parts.length > 0 ? parts.join(', ') : 'Location not set';
 }
 
+function resolveFarmImageUrl(farm: ApiRecord): string | null {
+  const candidates = [
+    farm.primary_image_url,
+    farm.farm_image_url,
+    farm.photo_url,
+    farm.cover_image_url,
+    farm.latest_image_url,
+    farm.image_url,
+  ];
+
+  for (const candidate of candidates) {
+    const value = typeof candidate === 'string' ? candidate.trim() : '';
+    if (value && !value.includes('evidence') && !value.includes('aadhaar') && !value.includes('pan')) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
 export function mapFarmRecord(farm: ApiRecord): FarmerFarmViewModel {
   const coordinates = resolveFarmMapCoordinate(farm);
   const mapped = isFarmMapped(farm);
   const areaTriple = getFarmAreaTriple(farm);
-  const areaDisplay = formatFarmAreaDisplay(areaTriple);
+  const areaDisplay = formatFarmerHectareOnlyDisplay(areaTriple);
+  const hectareLabel = formatHectares(areaTriple?.hectares ?? null, 4);
 
   return {
-    id: Number(farm.id),
+    id: Number(farm.id ?? farm.farm_id),
     name: pickString(farm, 'farm_name', 'name') !== '-' ? pickString(farm, 'farm_name', 'name') : `Farm ${farm.id}`,
     code: getFarmCode(farm),
     farmerName:
@@ -206,11 +229,12 @@ export function mapFarmRecord(farm: ApiRecord): FarmerFarmViewModel {
         ? pickString(farm, 'farmer_display_id', 'farmer_id', 'farmer_code')
         : '',
     village: pickString(farm, 'village') !== '-' ? pickString(farm, 'village') : '—',
-    areaLabel: areaDisplay.acres,
-    hectareLabel: areaDisplay.hectares,
-    squareMeterLabel: areaDisplay.squareMeters,
+    areaLabel: hectareLabel,
+    hectareLabel,
+    squareMeterLabel: hectareLabel,
     areaDisplay,
     areaTriple,
+    imageUrl: resolveFarmImageUrl(farm),
     cropLabel: pickString(farm, 'crop_type', 'current_crop') !== '-' ? pickString(farm, 'crop_type', 'current_crop') : '—',
     soilLabel: pickString(farm, 'soil_type') !== '-' ? pickString(farm, 'soil_type') : '—',
     verificationBadge: getFarmVerificationBadge(farm),
@@ -277,7 +301,6 @@ export async function openGoogleMaps(coordinates: FarmCoordinates, label?: strin
 }
 
 export function buildFarmSummary(farms: FarmerFarmViewModel[]) {
-  let totalAcres = 0;
   let verifiedCount = 0;
   let pendingCount = 0;
 
@@ -287,15 +310,13 @@ export function buildFarmSummary(farms: FarmerFarmViewModel[]) {
     } else {
       pendingCount += 1;
     }
-
-    if (farm.areaTriple) {
-      totalAcres += farm.areaTriple.acres;
-    }
   }
+
+  const totalHectares = sumFarmAreasHectares(farms);
 
   return {
     totalFarms: farms.length,
-    totalLandLabel: totalAcres > 0 ? formatFarmAreaAcre({ acres: totalAcres, hectares: totalAcres * 0.4047, squareMeters: totalAcres * 4046.86 }) : '—',
+    totalLandLabel: totalHectares > 0 ? formatHectares(totalHectares, 2) : '—',
     verifiedCount,
     pendingCount,
   };

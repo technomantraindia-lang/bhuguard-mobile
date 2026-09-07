@@ -1,8 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import {
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -18,6 +16,7 @@ import { getApiErrorMessage } from '../../api/authApi';
 import { closeSupportThread, getSupportThreadDetail, sendSupportMessage } from '../../api/supportApi';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorState } from '../../components/ErrorState';
+import { KeyboardAvoidingHost } from '../../components/layout/KeyboardSafeScrollView';
 import { LoadingState } from '../../components/LoadingState';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { SupportChatBubble } from '../../components/support/SupportChatBubble';
@@ -158,11 +157,7 @@ export function SupportChatScreen({ threadId }: SupportChatScreenProps) {
         </View>
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
-      >
+      <KeyboardAvoidingHost>
         <FlatList
           ref={listRef}
           data={messages}
@@ -233,7 +228,7 @@ export function SupportChatScreen({ threadId }: SupportChatScreenProps) {
             </View>
           )}
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingHost>
     </SafeAreaView>
   );
 }

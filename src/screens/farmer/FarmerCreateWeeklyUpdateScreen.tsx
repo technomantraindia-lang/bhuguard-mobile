@@ -1,10 +1,11 @@
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { LiveEvidenceCaptureCard } from '../../components/evidence/LiveEvidenceCaptureCard';
 import { FarmFormField } from '../../components/farmer/farms/FarmFormField';
 import { FarmerAddFarmHeader } from '../../components/farmer/farms/FarmerAddFarmHeader';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
@@ -104,7 +105,7 @@ export function FarmerCreateWeeklyUpdateScreen({ navigation, route }: Props) {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <FarmerAddFarmHeader title="Create Weekly Update" subtitle="Submit your weekly farm progress" onBack={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardSafeScrollView contentContainerStyle={styles.content} extraBottomPadding={24}>
         <OptionPicker
           label="Farm *"
           options={farmOptions}
@@ -191,7 +192,7 @@ export function FarmerCreateWeeklyUpdateScreen({ navigation, route }: Props) {
         >
           <Text style={styles.submitButtonText}>{submitting ? 'Submitting…' : 'Submit Update'}</Text>
         </Pressable>
-      </ScrollView>
+      </KeyboardSafeScrollView>
     </SafeAreaView>
   );
 }

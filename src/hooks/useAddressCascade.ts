@@ -2,11 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { getDistricts, getTalukas, getVillages, type AddressOption } from '../api/addressApi';
 import { getApiErrorMessage } from '../api/authApi';
+import { logVillageLoadDiagnostics } from '../utils/addressVillageDiagnostics';
+import {
+  buildGroupedVillageSelectOptions,
+  resolveEntireCityOptions,
+  type LocationSelectOption,
+} from '../utils/workingAreaScope';
 
 export function useAddressCascade(state = 'Gujarat') {
   const [districts, setDistricts] = useState<AddressOption[]>([]);
   const [talukas, setTalukas] = useState<AddressOption[]>([]);
-  const [allVillages, setAllVillages] = useState<AddressOption[]>([]);
+  const [allVillages, setAllVillages] = useState<LocationSelectOption[]>([]);
   const [loadingDistricts, setLoadingDistricts] = useState(false);
   const [loadingTalukas, setLoadingTalukas] = useState(false);
   const [loadingVillages, setLoadingVillages] = useState(false);
@@ -54,7 +60,7 @@ export function useAddressCascade(state = 'Gujarat') {
     }
   }, []);
 
-  const loadVillages = useCallback(async (talukaId: number) => {
+  const loadVillages = useCallback(async (talukaId: number, talukaName?: string) => {
     if (!talukaId) {
       setAllVillages([]);
       return;
@@ -65,7 +71,21 @@ export function useAddressCascade(state = 'Gujarat') {
     setVillageSearch('');
 
     try {
-      setAllVillages(await getVillages(talukaId));
+      const result = await getVillages(talukaId);
+      const entireCityOptions = resolveEntireCityOptions(talukaId, talukaName, result.entireCityOptions);
+      const merged = buildGroupedVillageSelectOptions(
+        [talukaId],
+        talukaName ? { [talukaId]: talukaName } : {},
+        entireCityOptions,
+        { [talukaId]: result.villages },
+      );
+      logVillageLoadDiagnostics({
+        talukaId,
+        talukaName,
+        count: result.villages.length,
+        entireCityOptions: entireCityOptions.length,
+      });
+      setAllVillages(merged);
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load villages.'));
       setAllVillages([]);

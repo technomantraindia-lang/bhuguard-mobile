@@ -16,9 +16,7 @@ interface FarmerHeroSummaryCardProps {
   };
   projectName: string;
   landInfo: {
-    acresLabel: string;
     hectaresLabel: string;
-    bighaLabel: string;
   } | null;
   isVerified: boolean;
   totalFarms: number;
@@ -172,13 +170,7 @@ export function FarmerHeroSummaryCard({
         <DashboardPressable variant="button" onPress={onTotalLandPress} style={styles.section}>
           <SectionHeader icon="agriculture" title="Total Land Area" showChevron />
           <View style={[styles.infoPanel, styles.landPanel]}>
-            <Text style={styles.landPrimary}>
-              {landInfo.acresLabel.replace(/\s*Acres?/i, '')}
-              <Text style={styles.landUnit}> Acres</Text>
-            </Text>
-            <View style={styles.landSecondaryRow}>
-              <Text style={styles.landSecondary}>{landInfo.hectaresLabel}</Text>
-            </View>
+            <Text style={styles.landPrimary}>{landInfo.hectaresLabel}</Text>
           </View>
         </DashboardPressable>
       ) : null}

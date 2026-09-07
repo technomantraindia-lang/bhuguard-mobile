@@ -10,6 +10,15 @@ export interface AssignedTaluka {
   district_name?: string;
 }
 
+export interface AssignedTalukaScope {
+  id: number;
+  name: string;
+  district_id?: number;
+  district_name?: string;
+  label?: string;
+  scope?: string;
+}
+
 export interface AssignedVillage {
   id: number;
   name: string;
@@ -24,6 +33,9 @@ export interface AssignedLocationsPayload {
   districts: AssignedDistrict[];
   talukas: AssignedTaluka[];
   villages: AssignedVillage[];
+  work_full_city_taluka_ids?: number[];
+  work_village_ids?: number[];
+  taluka_scopes?: AssignedTalukaScope[];
 }
 
 export interface AssignedFarmSearchRecord {

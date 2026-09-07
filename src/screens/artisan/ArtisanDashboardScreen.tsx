@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -16,11 +16,14 @@ import { getApiErrorMessage } from '../../api/authApi';
 import {
   defaultArtisanDashboard,
   getArtisanAllocatedLocations,
+  getArtisanBiocharMixingRecords,
   getArtisanDashboard,
   getArtisanProfile,
 } from '../../api/artisanApi';
+import { ArtisanProDashboardView } from '../../components/artisan/ArtisanProDashboardView';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
+import { OfficerScreenChrome } from '../../components/officer/OfficerScreenChrome';
 import { BhuguardLogo } from '../../components/shared/BhuguardLogo';
 import { BhuguardMaterialIcon, type BhuguardIconName } from '../../components/shared/BhuguardMaterialIcon';
 import { useArtisanWorkSession } from '../../context/ArtisanWorkSessionContext';
@@ -39,11 +42,12 @@ import {
 } from '../../services/biocharProductionSyncService';
 import { artisanTheme } from '../../theme/artisanTheme';
 import { spacing } from '../../theme';
-import { pickString, type ApiRecord } from '../../utils/apiHelpers';
+import { extractList, pickString, type ApiRecord } from '../../utils/apiHelpers';
 import { resolveUserRole } from '../../utils/authRole';
 import { getAuthUser } from '../../utils/authStorage';
 import { formatArtisanProDisplayId } from '../../utils/displayIds';
 import { openGoogleMaps } from '../../utils/farmMapHelpers';
+import { buildArtisanWorkingAreaSummary } from '../../utils/buildArtisanWorkingAreaSummary';
 import { getRoleDisplayName } from '../../utils/roleDisplay';
 
 function resolveArtisanDashboardError(err: unknown, roleLabel: string): string {
@@ -171,6 +175,7 @@ export function ArtisanDashboardScreen() {
   const [error, setError] = useState<string | null>(null);
   const [emptyNotice, setEmptyNotice] = useState(false);
   const [roleLabel, setRoleLabel] = useState('Artisan');
+  const [isArtisanPro, setIsArtisanPro] = useState(false);
   const hasLoadedRef = useRef(false);
   const dashboardLoadingRef = useRef(false);
   const lastDashboardLoadAtRef = useRef(0);
@@ -179,6 +184,16 @@ export function ArtisanDashboardScreen() {
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const [syncFailedCount, setSyncFailedCount] = useState(0);
   const [incompleteDraft, setIncompleteDraft] = useState<IncompleteBiocharProductionDraftSummary | null>(null);
+
+  useEffect(() => {
+    void getAuthUser().then((user) => {
+      const role = resolveUserRole(user) ?? user?.user_type;
+      setIsArtisanPro(role === 'artisan_pro');
+      if (role) {
+        setRoleLabel(getRoleDisplayName(role));
+      }
+    });
+  }, []);
 
   const load = useCallback(async (options?: { force?: boolean; silent?: boolean }) => {
     const force = options?.force === true;
@@ -205,8 +220,10 @@ export function ArtisanDashboardScreen() {
     try {
       const authUser = await getAuthUser();
       const artisanId = authUser?.artisan_profile?.id ?? null;
-      currentRoleLabel = getRoleDisplayName(resolveUserRole(authUser) ?? authUser?.user_type ?? 'artisan');
+      const resolvedRole = resolveUserRole(authUser) ?? authUser?.user_type ?? 'artisan';
+      currentRoleLabel = getRoleDisplayName(resolvedRole);
       setRoleLabel(currentRoleLabel);
+      setIsArtisanPro(resolvedRole === 'artisan_pro');
 
       if (!syncStartedRef.current) {
         syncStartedRef.current = true;
@@ -244,6 +261,28 @@ export function ArtisanDashboardScreen() {
           assigned_area: allocated,
           has_assignment: allocated.has_assignment,
         };
+      }
+
+      if (resolvedRole === 'artisan_pro') {
+        try {
+          const mixingPayload = await getArtisanBiocharMixingRecords();
+          const mixingRecords = extractList(mixingPayload as ApiRecord, [
+            'records',
+            'mixings',
+            'biochar_mixings',
+            'items',
+          ]);
+          const stats = (safeDashboard.stats as ApiRecord | undefined) ?? {};
+          safeDashboard = {
+            ...safeDashboard,
+            stats: {
+              ...stats,
+              biochar_mixing: mixingRecords.length,
+            },
+          };
+        } catch {
+          // Mixing counts stay at dashboard/default values when the list is unavailable.
+        }
       }
 
       setDashboard(safeDashboard);
@@ -378,65 +417,19 @@ export function ArtisanDashboardScreen() {
       ? ` · ${pendingSyncCount} pending sync${syncFailedCount > 0 ? `, ${syncFailedCount} failed` : ''}`
       : '';
 
-  const locationSummary = useMemo(() => {
-    const districts = Array.isArray(assigned?.locations?.districts)
-      ? assigned.locations.districts.map((item) => item.name).filter(Boolean)
-      : [];
-    const talukas = Array.isArray(assigned?.locations?.talukas)
-      ? assigned.locations.talukas.map((item) => item.name).filter(Boolean)
-      : [];
-    const villages = Array.isArray(assigned?.locations?.villages)
-      ? assigned.locations.villages.map((item) => item.name).filter(Boolean)
-      : [];
-
-    // Prefer dashboard assigned_area when allocated-locations is empty.
-    const fromDashboard = (dashboard?.assigned_area ?? dashboard?.assignedArea) as
-      | Record<string, unknown>
-      | undefined;
-    const dashDistricts = Array.isArray(fromDashboard?.districts)
-      ? (fromDashboard.districts as Array<{ name?: string }>).map((item) => item.name).filter(Boolean)
-      : [];
-    const dashTalukas = Array.isArray(fromDashboard?.talukas)
-      ? (fromDashboard.talukas as Array<{ name?: string }>).map((item) => item.name).filter(Boolean)
-      : [];
-    const dashVillages = Array.isArray(fromDashboard?.villages)
-      ? (fromDashboard.villages as Array<{ name?: string }>).map((item) => item.name).filter(Boolean)
-      : [];
-
-    const resolvedDistricts = districts.length ? districts : (dashDistricts as string[]);
-    const resolvedTalukas = talukas.length ? talukas : (dashTalukas as string[]);
-    const resolvedVillages = villages.length ? villages : (dashVillages as string[]);
-
-    if (resolvedDistricts.length || resolvedTalukas.length || resolvedVillages.length) {
-      const parts = [
-        resolvedDistricts.length
-          ? `${resolvedDistricts.length} district${resolvedDistricts.length === 1 ? '' : 's'}: ${resolvedDistricts.slice(0, 2).join(', ')}`
-          : '',
-        resolvedTalukas.length
-          ? `${resolvedTalukas.length} taluka${resolvedTalukas.length === 1 ? '' : 's'}: ${resolvedTalukas.slice(0, 2).join(', ')}`
-          : '',
-        resolvedVillages.length
-          ? `${resolvedVillages.length} village${resolvedVillages.length === 1 ? '' : 's'}: ${resolvedVillages.slice(0, 3).join(', ')}`
-          : '',
-      ].filter(Boolean);
-
-      return parts.join(' · ');
-    }
-
-    if (assigned.hasAssignment || Boolean(dashboard?.has_assignment)) {
-      return 'Assigned area configured · villages syncing';
-    }
-
-    if (assigned.error) {
-      return 'Unable to load assigned area · pull to refresh';
-    }
-
-    const village = pickString(profile ?? {}, 'village');
-
-    return village !== '-' ? village : 'No assigned area yet';
-  }, [assigned.error, assigned.hasAssignment, assigned.locations, dashboard, profile]);
+  const locationSummary = useMemo(
+    () => buildArtisanWorkingAreaSummary(assigned.locations, dashboard, profile),
+    [assigned.locations, dashboard, profile],
+  );
 
   if (loading && !hasLoadedRef.current) {
+    if (isArtisanPro) {
+      return (
+        <OfficerScreenChrome edges={[]}>
+          <LoadingState message="Loading Artisan Pro dashboard..." />
+        </OfficerScreenChrome>
+      );
+    }
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <LoadingState message={`Loading ${roleLabel} dashboard...`} />
@@ -445,10 +438,115 @@ export function ArtisanDashboardScreen() {
   }
 
   if (error && !hasLoadedRef.current) {
+    if (isArtisanPro) {
+      return (
+        <OfficerScreenChrome edges={[]}>
+          <ErrorState message={error} onRetry={() => void load({ force: true })} />
+        </OfficerScreenChrome>
+      );
+    }
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <ErrorState message={error} onRetry={() => void load({ force: true })} />
       </SafeAreaView>
+    );
+  }
+
+  const requireWorkingArea = (blockedMessage: string) => {
+    if (!ensureCheckedInOrPrompt()) {
+      return false;
+    }
+    if (!hasAssignment) {
+      Alert.alert('No working area', blockedMessage);
+      return false;
+    }
+    return true;
+  };
+
+  if (isArtisanPro) {
+    return (
+      <ArtisanProDashboardView
+        artisanName={artisanName}
+        artisanCode={artisanCode}
+        locationSummary={locationSummary}
+        unreadCount={unreadCount}
+        dashboard={dashboard}
+        error={error}
+        emptyNotice={emptyNotice}
+        hasAssignment={hasAssignment}
+        refreshing={loading}
+        pendingSyncCount={pendingSyncCount}
+        syncFailedCount={syncFailedCount}
+        incompleteDraft={incompleteDraft}
+        onRefresh={() => void load({ force: true, silent: true })}
+        onRetry={() => void load({ force: true })}
+        onResumeDraft={() => {
+          if (!ensureCheckedInOrPrompt()) {
+            return;
+          }
+          if (!incompleteDraft?.farmId) {
+            Alert.alert(
+              'Resume unavailable',
+              'This unfinished batch is missing a Farm ID. Open Biochar Production from farm lookup and continue the same farmer/farm.',
+            );
+            return;
+          }
+          navigation.navigate('ArtisanBiocharProduction', {
+            farmId: incompleteDraft.farmId,
+            farmerId: incompleteDraft.farmerId ?? undefined,
+            batchId: incompleteDraft.batchId ?? undefined,
+          });
+        }}
+        onOpenProduction={() => {
+          if (!requireWorkingArea('Ask Admin to assign your working area before production.')) {
+            return;
+          }
+          navigation.navigate('ArtisanFarmLookup', { purpose: 'production' });
+        }}
+        onOpenMixing={() => {
+          if (!requireWorkingArea('Ask Admin to assign your working area before mixing.')) {
+            return;
+          }
+          navigation.navigate('ArtisanFarmLookup', { purpose: 'mixing' });
+        }}
+        onOpenApplication={() => {
+          if (!requireWorkingArea('Ask Admin to assign your working area before application.')) {
+            return;
+          }
+          navigation.navigate('ArtisanFarmLookup', { purpose: 'application' });
+        }}
+        onOpenFarmNavigator={() => {
+          if (!requireWorkingArea('Ask Admin to assign your working area before navigation.')) {
+            return;
+          }
+          navigation.navigate('ArtisanFarmLookup', { purpose: 'navigate' });
+        }}
+        onOpenFindFarmerFarm={() => {
+          if (!requireWorkingArea('Ask Admin to assign your working area first.')) {
+            return;
+          }
+          navigation.navigate('ArtisanFarmLookup', { purpose: 'find' });
+        }}
+        onOpenWallet={() => navigation.navigate('ArtisanWallet')}
+        onOpenTraining={() => navigation.navigate('ArtisanTraining')}
+        onOpenHelpSupport={() => navigation.navigate('ArtisanHelpSupport')}
+        onOpenFarmerOnboarding={() => {
+          if (!requireWorkingArea('Ask Admin to assign your working area first.')) {
+            return;
+          }
+          navigation.navigate('FarmerOnboardingStart');
+        }}
+        onOpenFarmActivity={() => {
+          if (!requireWorkingArea('Ask Admin to assign your working area first.')) {
+            return;
+          }
+          navigation.navigate('FieldOfficerFarmActivityStart');
+        }}
+        onOpenSubmittedProduction={() =>
+          navigation.navigate('ArtisanProductionRecords', { status: 'submitted' })
+        }
+        onOpenSubmittedMixing={() => navigation.navigate('ArtisanMixingRecords')}
+      />
     );
   }
 
@@ -577,7 +675,7 @@ export function ArtisanDashboardScreen() {
           <Text style={styles.welcomeEyebrow}>Welcome</Text>
           <Text style={styles.welcomeName}>{artisanName}</Text>
           <Text style={styles.welcomeMeta}>
-            Artisan ID: {artisanCode !== '—' && artisanCode !== 'Loading…' ? artisanCode : '—'}
+            Artisan Pro ID: {artisanCode !== '—' && artisanCode !== 'Loading…' ? artisanCode : '—'}
           </Text>
           <Text style={styles.welcomeLocation} numberOfLines={2}>
             {locationSummary}

@@ -4,7 +4,7 @@ import { LOGO_SIZES } from '../../constants/branding';
 import { useProfilePhotoDisplay } from '../../hooks/useProfilePhotoDisplay';
 import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
 import { BhuguardLogo } from '../shared/BhuguardLogo';
-import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
+import { officerTheme } from '../../theme/officerDashboardTheme';
 
 interface OfficerDashboardHeaderProps {
   officerName: string;
@@ -88,11 +88,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: officerTheme.marginMobile,
-    paddingVertical: 10,
+    paddingVertical: 8,
     backgroundColor: officerTheme.surfaceLowest,
     borderBottomWidth: 1,
     borderBottomColor: officerTheme.outlineVariant,
-    ...officerCardShadow,
   },
   leading: {
     flexDirection: 'row',

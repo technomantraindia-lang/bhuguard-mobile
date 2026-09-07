@@ -96,9 +96,9 @@ Useful scripts from `package.json`:
 | Command | Purpose |
 |---------|---------|
 | `npm start` | Project start script |
-| `npm run start:go` | Expo Go on LAN port 8081 |
+| `npm run start:go` | Expo Go on LAN port 8081 (only for screens that use Expo Go-compatible native modules) |
 | `npm run start:tunnel` | Expo Go via tunnel |
-| `npm run start:dev-client` | Custom dev client |
+| `npm run start:dev-client` | Custom Bhuguard dev client on LAN port 8081 |
 
 ---
 

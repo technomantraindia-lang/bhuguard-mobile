@@ -5,7 +5,6 @@ import {
   Image,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -18,6 +17,7 @@ import Svg, { Path } from 'react-native-svg';
 import { BiocharRecordInfoCard } from '../../components/farmer/biochar/BiocharRecordInfoCard';
 import { FeedstockCollectionSuccessModal } from '../../components/farmer/biochar/FeedstockCollectionSuccessModal';
 import { FarmerFormScreenHeader } from '../../components/farmer/FarmerFormScreenHeader';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
 import {
   FEEDSTOCK_QUANTITY_UNITS,
@@ -83,7 +83,7 @@ export function FarmerFeedstockCollectionScreen({ navigation, route }: Props) {
         onProfilePress={() => navigation.navigate('FarmerProfile')}
       />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardSafeScrollView contentContainerStyle={styles.content} extraBottomPadding={24} showsVerticalScrollIndicator={false}>
         <BiocharRecordInfoCard
           fullName={form.recordContext.fullName}
           farmerCode={form.recordContext.farmerCode}
@@ -277,7 +277,7 @@ export function FarmerFeedstockCollectionScreen({ navigation, route }: Props) {
             </Text>
           </Pressable>
         </View>
-      </ScrollView>
+      </KeyboardSafeScrollView>
 
       <Modal visible={farmPickerOpen} animationType="slide" transparent onRequestClose={() => setFarmPickerOpen(false)}>
         <View style={styles.overlay}>

@@ -18,8 +18,6 @@ export function getDashboardRoute(userType: string): keyof RootStackParamList | 
       return 'FarmerApp';
     case 'field_officer':
       return 'FieldOfficerApp';
-    case 'artisan':
-      return 'ArtisanApp';
     case 'artisan_pro':
       return 'ArtisanProApp';
     default:

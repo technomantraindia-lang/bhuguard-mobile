@@ -1,6 +1,8 @@
 import { type ReactNode } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { KeyboardSafeScrollView } from '../../layout/KeyboardSafeScrollView';
 
 import { getLinearGradient } from '../../../utils/nativeGlass';
 import { PremiumActivityFooter } from './PremiumActivityFooter';
@@ -69,11 +71,10 @@ export function PremiumActivityWorkflowLayout({
 
       <PremiumActivityHeader title={title} subtitle={subtitle} onBack={onBack} />
 
-      <ScrollView
-        style={styles.scroll}
+      <KeyboardSafeScrollView
+        extraBottomPadding={0}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 130 }]}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
       >
         <PremiumActivityProgressCard
           steps={steps}
@@ -84,7 +85,7 @@ export function PremiumActivityWorkflowLayout({
           onStepPress={onStepPress}
         />
         {children}
-      </ScrollView>
+      </KeyboardSafeScrollView>
 
       <PremiumActivityFooter
         showPrevious={showPrevious && !viewOnly}

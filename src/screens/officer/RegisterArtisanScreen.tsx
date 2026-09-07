@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
@@ -9,12 +9,14 @@ import { getApiErrorMessage } from '../../api/authApi';
 import { createOfficerArtisan } from '../../api/fieldOfficerApi';
 import { AppButton } from '../../components/AppButton';
 import { AddressSelector, type AddressValue } from '../../components/AddressSelector';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { OfficerScreenChrome } from '../../components/officer/OfficerScreenChrome';
 import { WorkingAreaSelector, type WorkingAreaEntry } from '../../components/officer/WorkingAreaSelector';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerTheme } from '../../theme/officerDashboardTheme';
+import { buildWorkingAreaSubmitPayload } from '../../utils/workingAreaScope';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList, 'RegisterArtisan'>;
 
@@ -149,6 +151,8 @@ export function RegisterArtisanScreen() {
       return;
     }
 
+    const workingAreaPayload = buildWorkingAreaSubmitPayload(workingAreaEntries);
+
     const payload = new FormData();
     payload.append('name', form.name.trim());
     payload.append('mobile', form.mobile.trim());
@@ -157,19 +161,15 @@ export function RegisterArtisanScreen() {
     payload.append('taluka', homeAddress.taluka_name.trim());
     payload.append('district', homeAddress.district_name.trim());
     payload.append('state', (homeAddress.state || 'Gujarat').trim());
-    // Merged across every taluka the officer added — never a silent single-taluka replace.
-    // working_taluka_id is a single-taluka filter on the backend, so it is only sent when
-    // the working area is confined to one taluka; otherwise villages are authorized individually.
-    const uniqueDistrictIds = Array.from(new Set(workingAreaEntries.map((entry) => entry.districtId).filter((id) => id > 0)));
-    const uniqueTalukaIds = Array.from(new Set(workingAreaEntries.map((entry) => entry.talukaId).filter((id) => id > 0)));
-    if (uniqueTalukaIds.length === 1) {
-      payload.append('working_taluka_id', String(uniqueTalukaIds[0]));
+    if (workingAreaPayload.working_taluka_id != null) {
+      payload.append('working_taluka_id', String(workingAreaPayload.working_taluka_id));
     }
-    uniqueDistrictIds.forEach((id) => payload.append('working_district_ids[]', String(id)));
-    uniqueTalukaIds.forEach((id) => payload.append('working_taluka_ids[]', String(id)));
-    workingAreaEntries.forEach((entry) => {
-      entry.villageIds.forEach((id) => payload.append('working_village_ids[]', String(id)));
-    });
+    workingAreaPayload.working_district_ids.forEach((id) => payload.append('working_district_ids[]', String(id)));
+    workingAreaPayload.working_taluka_ids.forEach((id) => payload.append('working_taluka_ids[]', String(id)));
+    workingAreaPayload.working_village_ids.forEach((id) => payload.append('working_village_ids[]', String(id)));
+    workingAreaPayload.working_full_city_taluka_ids.forEach((id) =>
+      payload.append('working_full_city_taluka_ids[]', String(id)),
+    );
     appendFile(payload, 'profile_photo', profilePhoto);
     appendFile(payload, 'identity_document', identityDocument);
     appendFile(payload, 'training_certificate', trainingCertificate);
@@ -201,7 +201,7 @@ export function RegisterArtisanScreen() {
   return (
     <OfficerScreenChrome edges={['top']}>
       <ScreenHeader title="Register Artisan Pro" />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardSafeScrollView contentContainerStyle={styles.content} extraBottomPadding={24}>
         <Text style={styles.intro}>Register an Artisan Pro from your assigned working area. Submissions are sent for approval.</Text>
 
         <Text style={styles.sectionTitle}>Profile photo</Text>
@@ -225,8 +225,8 @@ export function RegisterArtisanScreen() {
 
         <Text style={styles.sectionTitle}>Working area</Text>
         <Text style={styles.sectionHint}>
-          Select a district and taluka, choose one or more villages, then tap Add. Adding another taluka merges it
-          into the working area — it never replaces villages you already added.
+          Select a district and taluka, choose villages or Entire City for city talukas, then tap Add.
+          Adding another taluka merges it into the working area.
         </Text>
         <WorkingAreaSelector
           state={homeAddress.state || 'Gujarat'}
@@ -239,7 +239,7 @@ export function RegisterArtisanScreen() {
         <DocumentUpload label="Training certificate" file={trainingCertificate} onPress={() => void chooseDocument('training')} />
 
         <AppButton label="Submit Artisan Pro Registration" onPress={() => void submit()} loading={submitting} style={styles.submitButton} />
-      </ScrollView>
+      </KeyboardSafeScrollView>
     </OfficerScreenChrome>
   );
 }

@@ -10,6 +10,8 @@ import { NativeModules } from 'react-native';
 
 type NetInfoStateLike = {
   isConnected: boolean | null;
+  isInternetReachable?: boolean | null;
+  type?: string | null;
 };
 
 type NetInfoModule = {
@@ -59,10 +61,70 @@ export async function safeNetInfoIsConnected(): Promise<boolean> {
 
   try {
     const state = await netInfo.fetch();
+    // LAN development APIs are valid without public internet — never use isInternetReachable alone.
     return state.isConnected !== false;
   } catch {
     return true;
   }
+}
+
+export interface NetInfoSnapshot {
+  isConnected: boolean | null;
+  isInternetReachable: boolean | null;
+  type: string | null;
+  available: boolean;
+}
+
+export async function fetchNetInfoSnapshot(): Promise<NetInfoSnapshot> {
+  const netInfo = await loadNetInfo();
+  if (!netInfo) {
+    return {
+      isConnected: null,
+      isInternetReachable: null,
+      type: null,
+      available: false,
+    };
+  }
+
+  try {
+    const state = await netInfo.fetch();
+    return {
+      isConnected: state.isConnected,
+      isInternetReachable: state.isInternetReachable ?? null,
+      type: state.type ?? null,
+      available: true,
+    };
+  } catch {
+    return {
+      isConnected: null,
+      isInternetReachable: null,
+      type: null,
+      available: false,
+    };
+  }
+}
+
+/** Human-readable snapshot for development diagnostics. */
+export async function describeNetInfoState(): Promise<string> {
+  const snapshot = await fetchNetInfoSnapshot();
+  if (!snapshot.available) {
+    return 'NetInfo unavailable (optimistic online)';
+  }
+
+  const parts = [
+    `isConnected=${String(snapshot.isConnected)}`,
+    `isInternetReachable=${String(snapshot.isInternetReachable ?? 'unknown')}`,
+    snapshot.type ? `type=${snapshot.type}` : null,
+  ].filter(Boolean);
+  return parts.join(', ');
+}
+
+/**
+ * True when the device has no active network interface.
+ * Local LAN APIs remain valid when Wi‑Fi is connected without public internet.
+ */
+export async function safeNetInfoHasDeviceNetwork(): Promise<boolean> {
+  return safeNetInfoIsConnected();
 }
 
 /** Subscribe to reconnect events. No-op when NetInfo is unavailable. */

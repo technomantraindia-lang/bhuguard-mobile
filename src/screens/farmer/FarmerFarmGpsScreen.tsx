@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Location from 'expo-location';
@@ -11,7 +11,7 @@ import { FarmerFarmsHeader } from '../../components/farmer/FarmerFarmsHeader';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
 import type { FarmerStackParamList } from '../../navigation/types';
 import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTheme';
-import { buildStaticMapUrl, openGoogleMaps } from '../../utils/farmMapHelpers';
+import { buildStaticMapUrl } from '../../utils/farmMapHelpers';
 
 type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmerFarmGps'>;
 
@@ -91,7 +91,7 @@ export function FarmerFarmGpsScreen({ navigation, route }: Props) {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Map Farm GPS</Text>
         <Text style={styles.subtitle}>
-          Capture the exact farm location so land size and boundaries can be verified on Google Maps.
+          Capture the exact farm location so land size and boundaries can be verified on the map.
         </Text>
 
         <View style={[styles.mapCard, dashboardShadow]}>
@@ -117,15 +117,6 @@ export function FarmerFarmGpsScreen({ navigation, route }: Props) {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <AppButton label="Capture Current Location" onPress={captureLocation} loading={capturing} variant="secondary" />
-
-        {latitude !== null && longitude !== null ? (
-          <Pressable
-            style={styles.mapsLink}
-            onPress={() => openGoogleMaps({ latitude, longitude }, `Farm ${farmId}`)}
-          >
-            <Text style={styles.mapsLinkText}>Preview in Google Maps</Text>
-          </Pressable>
-        ) : null}
 
         <AppButton label="Save Farm Location" onPress={saveLocation} loading={saving} />
       </ScrollView>

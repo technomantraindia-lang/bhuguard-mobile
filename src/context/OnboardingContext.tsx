@@ -6,12 +6,33 @@ import { DEFAULT_FIELD_OFFICER_SERVICE_INTERESTS } from '../constants/fieldOffic
 import type { AreaUnit, BoundaryPoint } from '../utils/boundaryGeometry';
 import { buildOnboardingBoundaryPayload } from '../utils/onboardingBoundary';
 import type { MappingStatus } from '../utils/landMappingHelpers';
+import { buildFormDataFilePart } from '../utils/liveEvidenceCapture';
+import {
+  clearOnboardingDraftFiles,
+  repairOnboardingDraftFiles,
+  resolveOnboardingFileUri,
+} from '../utils/onboardingFilePersistence';
+import {
+  ONBOARDING_DRAFT_STORAGE_KEY,
+  resetIncompleteFarmerOnboardingLocalState,
+  snapshotIncompleteOnboarding,
+  type IncompleteOnboardingResetResult,
+} from '../utils/resetIncompleteFarmerOnboarding';
+
+export type OnboardingFileUploadStatus = 'local_pending' | 'uploaded';
 
 export interface FileAsset {
   uri: string;
   name: string;
   mimeType: string;
   size?: number;
+  localUri?: string;
+  localMediaUuid?: string;
+  persistedAt?: string;
+  backendEvidenceId?: number | null;
+  uploadStatus?: OnboardingFileUploadStatus;
+  isStamped?: boolean;
+  capturedAt?: string;
 }
 
 export interface OnboardingResult {
@@ -83,6 +104,10 @@ export interface OnboardingDraft {
   agreement_verification_token: string;
   agreement_verified_at: string;
   agreement_verified_mobile: string;
+  /** Pending Consent OTP request id returned by live Send OTP (persists across step back/forward). */
+  agreement_otp_request_id: string;
+  /** Server-returned testing OTP only; never embed a fixed client OTP. */
+  agreement_otp_dev_otp: string;
   notes: string;
   farmer_photo: FileAsset | null;
   consent_form: FileAsset | null;
@@ -100,6 +125,8 @@ export interface OnboardingDraft {
   boundary_points: BoundaryPoint[];
   boundary_pending_reason: string;
   boundary_verification_status: string;
+  /** Stable local folder key for persisted onboarding files on device. */
+  onboarding_session_id: string;
 }
 
 const defaultDraft: OnboardingDraft = {
@@ -155,6 +182,8 @@ const defaultDraft: OnboardingDraft = {
   agreement_verification_token: '',
   agreement_verified_at: '',
   agreement_verified_mobile: '',
+  agreement_otp_request_id: '',
+  agreement_otp_dev_otp: '',
   notes: '',
   farmer_photo: null,
   consent_form: null,
@@ -170,6 +199,7 @@ const defaultDraft: OnboardingDraft = {
   boundary_points: [],
   boundary_pending_reason: '',
   boundary_verification_status: 'pending_review',
+  onboarding_session_id: '',
 };
 
 function appendFile(formData: FormData, key: string, file: FileAsset | null) {
@@ -177,11 +207,12 @@ function appendFile(formData: FormData, key: string, file: FileAsset | null) {
     return;
   }
 
-  formData.append(key, {
-    uri: file.uri,
-    name: file.name,
-    type: file.mimeType,
-  } as unknown as Blob);
+  const part = buildFormDataFilePart(
+    resolveOnboardingFileUri(file),
+    file.name,
+    file.mimeType || 'application/octet-stream',
+  );
+  formData.append(key, part as unknown as Blob);
 }
 
 function appendScalar(formData: FormData, key: string, value: string) {
@@ -196,13 +227,14 @@ interface OnboardingContextValue {
   updateDraft: (patch: Partial<OnboardingDraft>) => void;
   setResult: (result: OnboardingResult | null) => void;
   resetDraft: () => void;
+  /** Clears only the active incomplete onboarding draft (local device state). */
+  resetIncompleteOnboarding: (options?: { clearBoundaryDraft?: boolean }) => Promise<IncompleteOnboardingResetResult>;
   toFormData: () => FormData;
   /** Lean multipart for POST finalize-onboarding (token, consents, evidence only). */
   toFinalizeFormData: () => FormData;
 }
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
-const ONBOARDING_DRAFT_STORAGE_KEY = '@bhuguard/onboarding-draft-v1';
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState<OnboardingDraft>(defaultDraft);
@@ -219,7 +251,9 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         }
         const parsed = JSON.parse(raw) as { draft?: Partial<OnboardingDraft>; result?: OnboardingResult | null };
         if (parsed.draft && typeof parsed.draft === 'object') {
-          setDraft((prev) => ({ ...prev, ...parsed.draft }));
+          const merged = { ...defaultDraft, ...parsed.draft };
+          const repaired = await repairOnboardingDraftFiles(merged);
+          setDraft(repaired);
         }
         if (parsed.result !== undefined) {
           setResult(parsed.result);
@@ -251,9 +285,25 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       updateDraft: (patch) => setDraft((prev) => ({ ...prev, ...patch })),
       setResult,
       resetDraft: () => {
-        setDraft(defaultDraft);
+        setDraft((prev) => {
+          const sessionId = prev.onboarding_session_id?.trim();
+          if (sessionId) {
+            void clearOnboardingDraftFiles(sessionId);
+          }
+          return defaultDraft;
+        });
         setResult(null);
         void AsyncStorage.removeItem(ONBOARDING_DRAFT_STORAGE_KEY);
+      },
+      resetIncompleteOnboarding: async (options) => {
+        const snapshot = snapshotIncompleteOnboarding(draft);
+        const resetResult = await resetIncompleteFarmerOnboardingLocalState(snapshot, {
+          clearBoundaryDraft: options?.clearBoundaryDraft,
+          probeBackend: true,
+        });
+        setDraft(defaultDraft);
+        setResult(null);
+        return resetResult;
       },
       toFormData: () => {
         const formData = new FormData();

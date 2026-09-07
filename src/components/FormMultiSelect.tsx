@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -10,6 +12,7 @@ import {
   View,
 } from 'react-native';
 
+import { useKeyboardOverlapInset } from '../hooks/useKeyboardOverlapInset';
 import { BhuguardMaterialIcon } from './shared/BhuguardMaterialIcon';
 import type { SelectOption } from './FormSelect';
 import { colors } from '../theme/colors';
@@ -17,28 +20,35 @@ import { colors } from '../theme/colors';
 interface FormMultiSelectProps {
   label: string;
   placeholder?: string;
+  hint?: string;
   values: number[];
   options: SelectOption[];
   loading?: boolean;
   error?: string | null;
   disabled?: boolean;
   searchable?: boolean;
+  emptyMessage?: string;
+  searchPlaceholder?: string;
   onChange: (ids: number[]) => void;
 }
 
 export function FormMultiSelect({
   label,
   placeholder = 'Select...',
+  hint,
   values,
   options,
   loading = false,
   error,
   disabled = false,
   searchable = true,
+  emptyMessage = 'No villages found for this taluka.',
+  searchPlaceholder = 'Search village...',
   onChange,
 }: FormMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const keyboardOverlap = useKeyboardOverlapInset();
 
   const selectedNames = useMemo(() => {
     const selected = new Set(values);
@@ -87,21 +97,24 @@ export function FormMultiSelect({
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <View style={styles.overlay}>
-          <View style={styles.sheet}>
+        <KeyboardAvoidingView
+          style={styles.overlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={[styles.sheet, Platform.OS === 'android' ? { marginBottom: keyboardOverlap } : null]}>
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{label}</Text>
               <Pressable onPress={() => setOpen(false)}>
                 <Text style={styles.done}>Done</Text>
               </Pressable>
             </View>
-            <Text style={styles.hint}>Select one or more villages for the working area.</Text>
+            {hint ? <Text style={styles.hint}>{hint}</Text> : null}
             {searchable ? (
               <TextInput
                 style={styles.search}
                 value={search}
                 onChangeText={setSearch}
-                placeholder="Search village..."
+                placeholder={searchPlaceholder}
                 placeholderTextColor={colors.textMuted}
               />
             ) : null}
@@ -112,12 +125,23 @@ export function FormMultiSelect({
                 data={filtered}
                 keyExtractor={(item) => String(item.id)}
                 keyboardShouldPersistTaps="handled"
-                ListEmptyComponent={<Text style={styles.empty}>No villages found for this taluka.</Text>}
+                ListEmptyComponent={<Text style={styles.empty}>{emptyMessage}</Text>}
                 renderItem={({ item }) => {
                   const selected = values.includes(item.id);
+                  const isEntireCity = item.scope === 'taluka' || item.id < 0;
                   return (
-                    <Pressable style={[styles.option, selected && styles.optionSelected]} onPress={() => toggle(item.id)}>
-                      <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{item.name}</Text>
+                    <Pressable
+                      style={[
+                        styles.option,
+                        selected && styles.optionSelected,
+                        isEntireCity && styles.optionEntireCity,
+                      ]}
+                      onPress={() => toggle(item.id)}
+                    >
+                      <View style={styles.optionCopy}>
+                        {isEntireCity ? <Text style={styles.optionBadge}>Entire City</Text> : null}
+                        <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{item.name}</Text>
+                      </View>
                       {selected ? <BhuguardMaterialIcon name="check" size={20} color={colors.primary} /> : null}
                     </Pressable>
                   );
@@ -125,7 +149,7 @@ export function FormMultiSelect({
               />
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -191,6 +215,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 14,
+  },
+  optionEntireCity: {
+    backgroundColor: 'rgba(46, 125, 50, 0.04)',
+  },
+  optionCopy: {
+    flex: 1,
+    gap: 4,
+    paddingRight: 8,
+  },
+  optionBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.softGreen,
+    borderRadius: 999,
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   optionSelected: { backgroundColor: 'rgba(46, 125, 50, 0.06)' },
   optionText: { color: colors.text, flex: 1, fontSize: 15 },

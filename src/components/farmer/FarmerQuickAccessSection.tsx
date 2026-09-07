@@ -100,12 +100,12 @@ export function FarmerQuickAccessSection({
               <BhuguardMaterialIcon name="upload" size={20} color={farmerTheme.white} />
             </View>
             <View>
-              <Text style={styles.highlightTitle}>{t('farmer.dashboard.addBiocharActivity')}</Text>
+              <Text style={styles.highlightTitle}>{t('farmer.dashboard.addFarmActivity')}</Text>
               <Text style={styles.highlightSubtitle}>{t('farmer.dashboard.activityEvery25Days')}</Text>
             </View>
           </View>
           <View style={styles.submitButton} pointerEvents="none">
-            <Text style={styles.submitButtonText}>{t('farmer.dashboard.addBiocharActivity')}</Text>
+            <Text style={styles.submitButtonText}>{t('farmer.dashboard.addFarmActivity')}</Text>
           </View>
         </DashboardPressable>
       ) : null}

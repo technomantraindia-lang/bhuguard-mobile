@@ -7,11 +7,9 @@ $envFile = Join-Path $repoRoot ".env"
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 $env:PATH = "$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:PATH"
-$devApiUrl = if ($env:EXPO_PUBLIC_DEV_LOCAL_API_URL) { $env:EXPO_PUBLIC_DEV_LOCAL_API_URL } else { "http://192.168.1.11:8000/api" }
 $env:EXPO_PUBLIC_APP_VARIANT = "development"
-$env:EXPO_PUBLIC_APP_URL = if ($env:EXPO_PUBLIC_APP_URL) { $env:EXPO_PUBLIC_APP_URL } else { "http://192.168.1.11:8000" }
-$env:EXPO_PUBLIC_API_URL = $devApiUrl
-$env:EXPO_PUBLIC_DEV_LOCAL_API_URL = $devApiUrl
+$env:EXPO_PUBLIC_APP_URL = 'https://erp.bhuguard.com'
+$env:EXPO_PUBLIC_API_URL = 'https://erp.bhuguard.com/api'
 $env:NODE_ENV = "development"
 
 Write-Host "Building Bhuguard Android development client (API: $env:EXPO_PUBLIC_API_URL)" -ForegroundColor Cyan
@@ -19,6 +17,10 @@ Write-Host "Building Bhuguard Android development client (API: $env:EXPO_PUBLIC_
 Push-Location $repoRoot
 try {
   . (Join-Path $PSScriptRoot 'load-expo-env.ps1') -Root $repoRoot
+
+  # Development builds use the same reachable ERP backend as production.
+  # Metro's LAN address is only for JavaScript bundling, never for the API.
+  Remove-Item Env:EXPO_PUBLIC_DEV_LOCAL_API_URL -ErrorAction SilentlyContinue
 
   Write-Host "Regenerating native android/ with expo-dev-client and deep-link intent filters..." -ForegroundColor Yellow
   npx expo prebuild --platform android --clean --no-install
@@ -49,25 +51,12 @@ try {
   }
 
   $mapsApiKey = $env:EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
-  if ([string]::IsNullOrWhiteSpace($mapsApiKey) -or $mapsApiKey -eq 'USER_REAL_GOOGLE_MAPS_ANDROID_API_KEY' -or -not $mapsApiKey.StartsWith('AIza')) {
-    throw @"
-EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is missing.
-
-Run this once with your real Google Maps API key:
-  npm run setup:maps -- -ApiKey "YOUR_GOOGLE_MAPS_API_KEY"
-
-Then rebuild:
-  npm run build:dev-client
-"@
+  $useNativeMaps = $env:EXPO_PUBLIC_USE_NATIVE_MAPS -eq 'true'
+  if ([string]::IsNullOrWhiteSpace($mapsApiKey)) {
+    Write-Warning "Google Maps API key is not configured. Continuing with MapLibre/MapTiler."
+  } elseif ($useNativeMaps) {
+    Write-Host "Optional Google Maps key detected; MapLibre/MapTiler remains authoritative." -ForegroundColor Yellow
   }
-  if ($env:EXPO_PUBLIC_USE_NATIVE_MAPS -ne "true") {
-    Write-Host "WARNING: EXPO_PUBLIC_USE_NATIVE_MAPS is not true. Set it in .env for satellite farm mapping." -ForegroundColor Yellow
-  }
-  if ($manifest -notmatch 'com\.google\.android\.geo\.API_KEY') {
-    throw "Google Maps API metadata is missing from AndroidManifest.xml after prebuild. Ensure react-native-maps plugin is configured and EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is set."
-  }
-
-  Write-Host "Google Maps metadata verified in AndroidManifest.xml" -ForegroundColor Green
 
   Push-Location $androidDir
   .\gradlew --stop 2>$null
@@ -90,7 +79,7 @@ Then rebuild:
   Write-Host $dest
   Write-Host ""
   Write-Host "Deep link schemes: bhuguard:// and exp+bhuguard-mobile://" -ForegroundColor Cyan
-  Write-Host "Start Metro: npx expo start --dev-client --host lan --port 8085" -ForegroundColor Cyan
+  Write-Host "Start Metro: npm run start:dev-client:clear (LAN port 8081)" -ForegroundColor Cyan
 
   $adb = Join-Path $env:ANDROID_HOME "platform-tools\adb.exe"
   if (Test-Path $adb) {

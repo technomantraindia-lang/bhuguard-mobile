@@ -72,19 +72,9 @@ export function FarmerFarmListCard({ farm, onViewActivities }: FarmerFarmListCar
         </View>
       </View>
 
-      <View style={styles.metrics}>
-        <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>Acre</Text>
-          <Text style={styles.metricValue}>{farm.areaDisplay.acres}</Text>
-        </View>
-        <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>Hectare</Text>
-          <Text style={styles.metricValue}>{farm.areaDisplay.hectares}</Text>
-        </View>
-        <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>Square Meter</Text>
-          <Text style={styles.metricValue}>{farm.areaDisplay.squareMeters}</Text>
-        </View>
+      <View style={styles.areaBlock}>
+        <Text style={styles.metricLabel}>Area</Text>
+        <Text style={styles.metricValue}>{farm.hectareLabel}</Text>
       </View>
 
       <Pressable style={({ pressed }) => [styles.activityButton, pressed && styles.pressed]} onPress={onViewActivities}>
@@ -159,15 +149,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
-  metrics: {
-    flexDirection: 'row',
-    gap: 8,
+  areaBlock: {
     backgroundColor: dashboardTheme.surface,
     borderRadius: 8,
-    padding: 8,
-  },
-  metricItem: {
-    flex: 1,
+    padding: 10,
     gap: 2,
   },
   metricLabel: {
@@ -175,9 +160,9 @@ const styles = StyleSheet.create({
     color: dashboardTheme.outline,
   },
   metricValue: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '500',
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '600',
     color: dashboardTheme.onSurface,
   },
   activityButton: {

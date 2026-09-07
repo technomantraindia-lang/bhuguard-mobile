@@ -204,11 +204,11 @@ async function validateAgainstAddressMaster(raw: ResolvedCaptureLocation): Promi
       };
     }
 
-    const villages = await getVillages(
+    const villageLookup = await getVillages(
       matchedTaluka.id,
       raw.village !== UNKNOWN_LOCATION && raw.village !== '-' ? raw.village : undefined,
     );
-    const matchedVillage = findBestAddressMatch(raw.village, villages);
+    const matchedVillage = findBestAddressMatch(raw.village, villageLookup.villages);
 
     return {
       // Keep reverse-geocode / Unknown village when master data has no match — never blank.

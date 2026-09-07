@@ -11,8 +11,17 @@ import { ONBOARDING_NEXT_LABELS } from '../../../constants/onboardingSteps';
 import { useOnboarding } from '../../../context/OnboardingContext';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
+import { getCachedApiBaseUrl } from '../../../storage/apiConfigStorage';
 import { isValidEntityId } from '../../../utils/entityId';
+import {
+  classifyOnboardingStep1SaveError,
+  logOnboardingStep1Error,
+  logOnboardingStep1PhotoAttached,
+  logOnboardingStep1Response,
+  resolveOnboardingStep1ResponseStatus,
+} from '../../../utils/onboardingStep1Diagnostics';
 import { validateBasicDetails } from '../../../utils/onboardingValidation';
+import { attachPersistedOnboardingFile } from '../../../utils/onboardingFilePersistence';
 import { persistFieldOfficerFarmerProfile } from '../../../utils/persistFieldOfficerFarmerProfile';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
@@ -35,6 +44,7 @@ export function FarmerBasicDetailsScreen() {
   const { draft, updateDraft } = useOnboarding();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [photoSaving, setPhotoSaving] = useState(false);
 
   const next = async () => {
     const validationError = validateBasicDetails(draft);
@@ -49,10 +59,12 @@ export function FarmerBasicDetailsScreen() {
     if (isValidEntityId(draft.farmer_id)) {
       setLoading(true);
       try {
+        logOnboardingStep1PhotoAttached(Boolean(draft.farmer_photo));
         const updated = await persistFieldOfficerFarmerProfile(draft);
         if (!updated) {
           throw new Error('Unable to update farmer profile.');
         }
+        logOnboardingStep1Response(200);
         if (updated.farmer_name) {
           updateDraft({ farmer_name: String(updated.farmer_name) });
         }
@@ -63,7 +75,9 @@ export function FarmerBasicDetailsScreen() {
           updateDraft({ preferred_language: String(updated.preferred_language ?? '') });
         }
       } catch (err) {
-        setError(getApiErrorMessage(err, 'Unable to save farmer profile. Please try again.'));
+        logOnboardingStep1Error(err);
+        logOnboardingStep1Response(resolveOnboardingStep1ResponseStatus(err));
+        setError(classifyOnboardingStep1SaveError(err, getCachedApiBaseUrl()));
         return;
       } finally {
         setLoading(false);
@@ -82,13 +96,35 @@ export function FarmerBasicDetailsScreen() {
         void next();
       }}
       nextLabel={ONBOARDING_NEXT_LABELS[1]}
-      nextLoading={loading}
+      nextLoading={loading || photoSaving}
       footerError={error}
     >
       <OnboardingSectionCard>
         <OnboardingPhotoUpload
           file={draft.farmer_photo}
-          onChange={(file) => updateDraft({ farmer_photo: file })}
+          onChange={async (file) => {
+            if (!file) {
+              updateDraft({ farmer_photo: null });
+              return;
+            }
+
+            setPhotoSaving(true);
+            setError(null);
+            try {
+              const { file: persisted, sessionPatch } = await attachPersistedOnboardingFile(draft, 'profile', {
+                uri: file.uri,
+                name: file.name,
+                mimeType: file.mimeType,
+                size: file.size,
+                isStamped: false,
+              });
+              updateDraft({ ...sessionPatch, farmer_photo: persisted });
+            } catch {
+              setError('Unable to save profile photo on this device. Please capture it again.');
+            } finally {
+              setPhotoSaving(false);
+            }
+          }}
         />
 
         <OnboardingTextField

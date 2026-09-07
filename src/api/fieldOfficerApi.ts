@@ -400,7 +400,10 @@ export async function updateFieldOfficerFarmer(
     const response = await apiClient.post<ApiSuccessResponse<{ farmer: ApiRecord }>>(
       `/field-officer/farmers/${farmerId}`,
       payload,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
+      {
+        // Let React Native set multipart boundary — do not force Content-Type.
+        timeout: ONBOARDING_MULTIPART_TIMEOUT_MS,
+      },
     );
     return response.data.data?.farmer ?? (response.data.data as unknown as ApiRecord);
   }
@@ -683,7 +686,13 @@ export async function createOfficerArtisan(payload: FormData | ApiRecord) {
 
 export async function updateOfficerArtisanWorkingVillages(
   artisanId: number | string,
-  payload: { working_village_ids: number[]; working_taluka_id?: number },
+  payload: {
+    working_village_ids: number[];
+    working_full_city_taluka_ids?: number[];
+    working_district_ids?: number[];
+    working_taluka_ids?: number[];
+    working_taluka_id?: number;
+  },
 ) {
   return putApiData<{ artisan: ApiRecord }>(`/field-officer/artisans/${artisanId}/working-villages`, payload);
 }
@@ -785,18 +794,36 @@ export async function sendOnboardingAgreementOtp(mobile: string) {
     masked_mobile: string;
     message: string;
     resend_after_seconds: number;
+    request_id?: string | null;
+    expires_in?: number;
+    purpose?: string;
     dev_otp?: string | null;
   }>('/field-officer/onboard-farmer/agreement-otp/send', { mobile });
 }
 
-export async function verifyOnboardingAgreementOtp(mobile: string, otp: string) {
+export async function verifyOnboardingAgreementOtp(
+  mobile: string,
+  otp: string,
+  options?: {
+    requestId?: string | null;
+    farmerId?: number | null;
+    onboardingId?: number | null;
+  },
+) {
   return postApiData<{
     verified: boolean;
     agreement_verification_token: string;
     verified_mobile: string;
     masked_mobile: string;
     verified_at: string;
-  }>('/field-officer/onboard-farmer/agreement-otp/verify', { mobile, otp });
+  }>('/field-officer/onboard-farmer/agreement-otp/verify', {
+    mobile,
+    otp,
+    purpose: 'farmer_agreement_verification',
+    ...(options?.requestId ? { request_id: options.requestId } : {}),
+    ...(options?.farmerId != null ? { farmer_id: options.farmerId } : {}),
+    ...(options?.onboardingId != null ? { onboarding_id: options.onboardingId } : {}),
+  });
 }
 
 export async function saveOnboardingBasicDetails(payload: ApiRecord) {

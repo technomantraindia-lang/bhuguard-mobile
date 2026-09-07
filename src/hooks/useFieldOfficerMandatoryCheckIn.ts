@@ -6,7 +6,13 @@ import {
   buildTimeAuditMetadata,
   shouldBlockOfflineTimestampSubmit,
 } from '../services/serverTimeSync';
-import { safeNetInfoIsConnected } from '../utils/safeNetInfo';
+import { getCachedApiBaseUrl } from '../storage/apiConfigStorage';
+import {
+  logCheckInDiagnostics,
+  mapCheckInError,
+  shouldSkipCheckInConnectivityGate,
+} from '../utils/checkInDiagnostics';
+import { safeNetInfoHasDeviceNetwork } from '../utils/safeNetInfo';
 import { captureHighAccuracyGps } from '../utils/officerGpsCapture';
 import {
   resolveAssignedVillageForCheckIn,
@@ -99,6 +105,11 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
   const submitLockRef = useRef(false);
   const grantedRef = useRef(false);
   const assignmentRefreshLockRef = useRef(false);
+  const phaseRef = useRef<MandatoryCheckInPhase>(phase);
+
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   useEffect(() => {
     void getAuthUser().then((authUser) => {
@@ -134,6 +145,8 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
           grantedRef.current = false;
           setPhase('blocked');
         }
+        setStatusMessage(null);
+        setSubmitError(null);
       } catch (error) {
         if (statusRequestRef.current !== requestId) {
           return;
@@ -141,9 +154,16 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
 
         // Fail closed: never grant dashboard access when status cannot be verified.
         grantedRef.current = false;
-        setStatusMessage(
-          error instanceof Error ? error.message : 'Unable to verify your check-in status. Please try again.',
-        );
+        void logCheckInDiagnostics('/field-officer/check-in/status');
+        const hasDeviceNetwork = await safeNetInfoHasDeviceNetwork();
+        const mapped = mapCheckInError(error, {
+          hasDeviceNetwork,
+          apiBaseUrl: getCachedApiBaseUrl(),
+        });
+        if (__DEV__) {
+          console.log('[CHECK-IN] status error category:', mapped.category);
+        }
+        setStatusMessage(mapped.message);
         setPhase('statusError');
       }
     })();
@@ -172,10 +192,14 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
         parts.push(`${villageCount} assigned village${villageCount === 1 ? '' : 's'}`);
       }
       setAssignedAreaSummary(parts.join(' · ') || null);
+
+      if (phaseRef.current === 'statusError') {
+        checkStatus({ silent: true });
+      }
     } finally {
       assignmentRefreshLockRef.current = false;
     }
-  }, []);
+  }, [checkStatus]);
 
   useEffect(() => {
     checkStatus();
@@ -212,14 +236,20 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
     submitLockRef.current = true;
     setSubmitting(true);
     setSubmitError(null);
+    setStatusMessage(null);
     setStage('locating');
 
     try {
-      const isOnline = await safeNetInfoIsConnected();
-      if (!isOnline) {
-        throw new Error('No internet connection. Reconnect and tap Retry — offline check-in is not allowed.');
+      await logCheckInDiagnostics('/field-officer/check-in');
+
+      const skipConnectivityGate = shouldSkipCheckInConnectivityGate();
+      const hasDeviceNetwork = await safeNetInfoHasDeviceNetwork();
+
+      if (!skipConnectivityGate && !hasDeviceNetwork) {
+        throw new Error('No network connection on this device. Connect to Wi‑Fi or mobile data, then retry.');
       }
-      if (shouldBlockOfflineTimestampSubmit(isOnline)) {
+
+      if (!skipConnectivityGate && shouldBlockOfflineTimestampSubmit(hasDeviceNetwork)) {
         throw new Error(
           'Cannot check in offline without a recent server time sync. Reconnect, retry time sync, and try again.',
         );
@@ -335,6 +365,31 @@ export function useFieldOfficerMandatoryCheckIn(): UseFieldOfficerMandatoryCheck
       }
 
       const mapped = toSubmitError(error);
+      if (mapped.code === 'GENERIC') {
+        const classified = mapCheckInError(error, {
+          hasDeviceNetwork: await safeNetInfoHasDeviceNetwork(),
+          apiBaseUrl: getCachedApiBaseUrl(),
+        });
+        if (__DEV__) {
+          console.log('[CHECK-IN] submit error category:', classified.category);
+        }
+        if (ALREADY_CHECKED_IN_PATTERN.test(classified.message)) {
+          checkStatus();
+          return;
+        }
+        setSubmitError({
+          ...mapped,
+          message: classified.message,
+          code:
+            classified.category === 'gps'
+              ? 'POOR_GPS'
+              : classified.category === 'local_api_unreachable' || classified.category === 'api_unreachable'
+                ? 'GENERIC'
+                : mapped.code,
+        });
+        return;
+      }
+
       if (ALREADY_CHECKED_IN_PATTERN.test(mapped.message)) {
         checkStatus();
       } else {

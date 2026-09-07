@@ -15,6 +15,7 @@ import { officerCardShadow, officerTheme } from '../../theme/officerDashboardThe
 import { pickString, type ApiRecord } from '../../utils/apiHelpers';
 import { formatArtisanDisplayId } from '../../utils/displayIds';
 import { formatStatusLabel } from '../../utils/statusLabels';
+import { buildWorkingAreaSubmitPayload, entireCityOptionValue } from '../../utils/workingAreaScope';
 
 type Props = NativeStackScreenProps<FieldOfficerStackParamList, 'ArtisanDetail'>;
 
@@ -58,22 +59,54 @@ export function ArtisanDetailScreen({ route }: Props) {
   );
 
   const workingVillages = useMemo(() => {
-    const list = Array.isArray(artisan?.working_villages) ? (artisan?.working_villages as ApiRecord[]) : [];
-    return list
-      .map((item) => pickString(item, 'name'))
-      .filter((name) => name && name !== '-');
+    const villageLabels = Array.isArray(artisan?.working_villages)
+      ? (artisan?.working_villages as ApiRecord[])
+          .map((item) => pickString(item, 'name'))
+          .filter((name) => name && name !== '-')
+      : [];
+    const scopeLabels = Array.isArray(artisan?.working_taluka_scopes)
+      ? (artisan?.working_taluka_scopes as ApiRecord[])
+          .map((item) => pickString(item, 'label', 'name'))
+          .filter((name) => name && name !== '-')
+      : [];
+
+    return [...scopeLabels, ...villageLabels];
   }, [artisan]);
 
   const startEditWorkingArea = () => {
     // Seed one entry per taluka already on file so re-opening the editor and adding
     // more villages MERGES with the existing working area instead of replacing it.
     const villages = Array.isArray(artisan?.working_villages) ? (artisan?.working_villages as ApiRecord[]) : [];
+    const talukaScopes = Array.isArray(artisan?.working_taluka_scopes)
+      ? (artisan?.working_taluka_scopes as ApiRecord[])
+      : [];
     const byTaluka = new Map<number, WorkingAreaEntry>();
+
+    for (const scope of talukaScopes) {
+      const talukaId = Number(scope.taluka_id ?? scope.id);
+      if (!Number.isFinite(talukaId) || talukaId <= 0) {
+        continue;
+      }
+
+      const label = pickString(scope, 'label', 'name');
+      byTaluka.set(talukaId, {
+        districtId: Number(scope.district_id ?? 0),
+        districtName: pickString(scope, 'district_name') !== '-' ? pickString(scope, 'district_name') : '—',
+        talukaId,
+        talukaName: pickString(scope, 'name') !== '-' ? pickString(scope, 'name') : `Taluka ${talukaId}`,
+        villageIds: [entireCityOptionValue(talukaId)],
+        villageNames: [label !== '-' ? label : `Taluka ${talukaId}`],
+      });
+    }
 
     for (const item of villages) {
       const talukaId = Number(item.taluka_id);
       const villageId = Number(item.id);
       if (!Number.isFinite(talukaId) || talukaId <= 0 || !Number.isFinite(villageId) || villageId <= 0) {
+        continue;
+      }
+
+      if (byTaluka.get(talukaId)?.villageIds.some((id) => id < 0)) {
         continue;
       }
 
@@ -91,8 +124,8 @@ export function ArtisanDetailScreen({ route }: Props) {
       byTaluka.set(talukaId, {
         talukaId,
         talukaName: pickString(item, 'taluka_name') !== '-' ? pickString(item, 'taluka_name') : `Taluka ${talukaId}`,
-        districtId: Number.isFinite(districtId) && districtId > 0 ? districtId : undefined,
-        districtName: pickString(item, 'district_name') !== '-' ? pickString(item, 'district_name') : undefined,
+        districtId: Number.isFinite(districtId) && districtId > 0 ? districtId : 0,
+        districtName: pickString(item, 'district_name') !== '-' ? pickString(item, 'district_name') : '—',
         villageIds: [villageId],
         villageNames: [villageName !== '-' ? villageName : `Village ${villageId}`],
       });
@@ -108,17 +141,11 @@ export function ArtisanDetailScreen({ route }: Props) {
       return;
     }
 
-    const allVillageIds = workingAreaEntries.flatMap((entry) => entry.villageIds);
-    // working_taluka_id is a single-taluka filter on the backend; only send it when the
-    // working area is confined to one taluka so multi-taluka merges are not rejected.
-    const singleTalukaId = workingAreaEntries.length === 1 ? workingAreaEntries[0].talukaId : undefined;
+    const workingAreaPayload = buildWorkingAreaSubmitPayload(workingAreaEntries);
 
     setSavingWorkingArea(true);
     try {
-      const data = await updateOfficerArtisanWorkingVillages(artisanId, {
-        working_village_ids: allVillageIds,
-        working_taluka_id: singleTalukaId,
-      });
+      const data = await updateOfficerArtisanWorkingVillages(artisanId, workingAreaPayload);
       setArtisan(data.artisan);
       setEditingWorkingArea(false);
       Alert.alert('Updated', 'Working villages saved successfully.');
@@ -153,7 +180,7 @@ export function ArtisanDetailScreen({ route }: Props) {
 
   return (
     <OfficerScreenChrome edges={['top']}>
-      <ScreenHeader title="Artisan Details" />
+      <ScreenHeader title="Artisan Pro Details" />
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -161,7 +188,7 @@ export function ArtisanDetailScreen({ route }: Props) {
       >
         <View style={[styles.summaryCard, officerCardShadow]}>
           <Text style={styles.name}>{pickString(artisan, 'name')}</Text>
-          <Text style={styles.artisanId}>Artisan ID: {formatArtisanDisplayId(artisan)}</Text>
+          <Text style={styles.artisanId}>Artisan Pro ID: {formatArtisanDisplayId(artisan)}</Text>
           <Text style={styles.mobile}>{pickString(artisan, 'mobile', 'phone')}</Text>
           <View style={[styles.statusPill, status === 'rejected' && styles.statusRejected]}>
             <Text style={[styles.statusText, status === 'rejected' && styles.statusRejectedText]}>{formatStatusLabel(status)}</Text>

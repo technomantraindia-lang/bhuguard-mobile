@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -9,6 +9,7 @@ import { FarmFormField } from '../../components/farmer/farms/FarmFormField';
 import { FarmSuccessModal } from '../../components/farmer/farms/FarmSuccessModal';
 import { saveFarmerFarmMapping } from '../../api/farmerApi';
 import { FarmerAddFarmHeader } from '../../components/farmer/farms/FarmerAddFarmHeader';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { SubmitActivityCard } from '../../components/farmer/SubmitActivityCard';
 import { LandBoundaryVerificationSection } from '../../components/shared/LandBoundaryVerificationSection';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
@@ -97,7 +98,7 @@ export function FarmerAddFarmScreen({ navigation }: Props) {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <FarmerAddFarmHeader onBack={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardSafeScrollView contentContainerStyle={styles.content} extraBottomPadding={24} showsVerticalScrollIndicator={false}>
         <SubmitActivityCard title="Farm Details">
           <FarmFormField
             label="Farm Name"
@@ -235,7 +236,7 @@ export function FarmerAddFarmScreen({ navigation }: Props) {
           <BhuguardMaterialIcon name="photo_camera" size={20} color={dashboardTheme.primaryContainer} />
           <Text style={styles.cameraButtonText}>Capture Boundary with Camera</Text>
         </Pressable>
-      </ScrollView>
+      </KeyboardSafeScrollView>
 
       <FarmSuccessModal
         visible={successVisible}

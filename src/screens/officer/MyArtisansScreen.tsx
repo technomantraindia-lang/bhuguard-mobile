@@ -158,12 +158,20 @@ export function MyArtisansScreen() {
                   <Text style={styles.meta}>{location || 'Location not provided'}</Text>
                   <Text style={styles.meta}>
                     Working area:{' '}
-                    {Array.isArray(artisan.working_villages) && artisan.working_villages.length > 0
-                      ? (artisan.working_villages as ApiRecord[])
-                          .map((item) => pickString(item, 'name'))
-                          .filter((name) => name && name !== '-')
-                          .join(', ') || pickString(artisan, 'working_area')
-                      : pickString(artisan, 'working_area')}
+                    {(() => {
+                      const scopeLabels = Array.isArray(artisan.working_taluka_scopes)
+                        ? (artisan.working_taluka_scopes as ApiRecord[])
+                            .map((item) => pickString(item, 'label', 'name'))
+                            .filter((name) => name && name !== '-')
+                        : [];
+                      const villageLabels = Array.isArray(artisan.working_villages)
+                        ? (artisan.working_villages as ApiRecord[])
+                            .map((item) => pickString(item, 'name'))
+                            .filter((name) => name && name !== '-')
+                        : [];
+                      const combined = [...scopeLabels, ...villageLabels];
+                      return combined.length > 0 ? combined.join(', ') : pickString(artisan, 'working_area');
+                    })()}
                   </Text>
                 </Pressable>
               );

@@ -13,7 +13,6 @@ interface OfficerBiocharSummaryCardsProps {
   dueBiocharCount: number;
   overdueFarmersCount: number;
   myArtisansCount: number;
-  activeCheckinsCount: number;
   totalVisitsCount: number;
   artisanBiocharBatchesCount: number;
 }
@@ -49,7 +48,6 @@ export function OfficerBiocharSummaryCards({
   dueBiocharCount,
   overdueFarmersCount,
   myArtisansCount,
-  activeCheckinsCount,
   totalVisitsCount,
   artisanBiocharBatchesCount,
 }: OfficerBiocharSummaryCardsProps) {
@@ -59,7 +57,7 @@ export function OfficerBiocharSummaryCards({
     <View style={styles.wrap}>
       <View style={styles.header}>
         <BhuguardMaterialIcon name="agriculture" size={20} color={officerTheme.primary} />
-        <Text style={styles.title}>My Activity</Text>
+        <Text style={styles.title}>Farm Activity</Text>
       </View>
 
       <View style={styles.grid}>
@@ -77,7 +75,6 @@ export function OfficerBiocharSummaryCards({
           onPress={() => navigation.navigate('FieldOfficerBiocharDueOverdue', { initialFilter: 'overdue' })}
         />
         <SummaryCard label="My Artisan Pros" value={myArtisansCount} onPress={() => navigation.navigate('FieldOfficerTabs', { screen: 'MyArtisans' })} />
-        <SummaryCard label="Active Check-ins" value={activeCheckinsCount} />
         <SummaryCard label="Total Visits" value={totalVisitsCount} />
         <SummaryCard label="Biochar Batches of Artisan" value={artisanBiocharBatchesCount} tone="success" onPress={() => navigation.navigate('ArtisanBiocharBatches')} />
       </View>

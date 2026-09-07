@@ -31,6 +31,7 @@ export function FarmerDashboard() {
   const openNotifications = () => navigateStack('FarmerNotifications');
   const openFarms = () => navigateTab('Farms');
   const openFarmActivities = () => navigateTab('Activities');
+  const openAddFarmActivity = () => navigateStack('FarmerFarmActivity');
   const openAddressDetails = () => navigateStack('FarmerAddressDetails');
   const openChatSupport = () => navigateStack('ChatbotSupport', { supportRole: 'farmer', sourceModule: 'farmer_dashboard' });
   const openServices = () => navigateStack('FarmerServices');
@@ -38,7 +39,7 @@ export function FarmerDashboard() {
   const openWallet = () => navigateStack('FarmerWallet');
   if (loading && !data) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={[]}>
         <LoadingState message={t('farmer.dashboard.loading')} />
       </SafeAreaView>
     );
@@ -46,7 +47,7 @@ export function FarmerDashboard() {
 
   if (error && !data) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={[]}>
         <ErrorState message={error} onRetry={reload} />
       </SafeAreaView>
     );
@@ -55,17 +56,8 @@ export function FarmerDashboard() {
   const dashboard = data!;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={[]}>
       <RoleEnvironmentalBackground />
-      <FarmerDashboardHeader
-        firstName={dashboard.firstName}
-        fullName={dashboard.fullName}
-        photoUrl={dashboard.photoUrl}
-        unreadCount={unreadCount}
-        onNotificationsPress={openNotifications}
-        onProfilePress={openProfile}
-      />
-
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.container}
@@ -75,54 +67,65 @@ export function FarmerDashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={farmerTheme.actionGreen} />
         }
       >
-        <FarmerHeroSummaryCard
-          farmerCode={dashboard.farmerCode}
+        <FarmerDashboardHeader
+          firstName={dashboard.firstName}
           fullName={dashboard.fullName}
-          mobile={dashboard.mobile}
-          location={dashboard.location}
-          projectName="Biochar"
-          landInfo={dashboard.landInfo}
-          isVerified={dashboard.isVerified}
-          totalFarms={dashboard.totalFarmsCount}
-          mappedFarms={dashboard.mappedFarmsCount}
-          activitiesCount={dashboard.activitiesSubmittedCount}
-          verificationStatusLabel={dashboard.biocharServiceStatusLabel}
+          photoUrl={dashboard.photoUrl}
+          unreadCount={unreadCount}
+          onNotificationsPress={openNotifications}
           onProfilePress={openProfile}
-          onLocationPress={openAddressDetails}
-          onProjectPress={openServices}
-          onTotalLandPress={openFarms}
         />
 
-        <FarmerBiocharDashboardStats
-          serviceStatusLabel={dashboard.biocharServiceStatusLabel}
-          nextUpdateLabel={
-            dashboard.biocharNextUpdateLabel === 'Not Scheduled'
-              ? t('farmer.dashboard.notScheduled')
-              : dashboard.biocharNextUpdateLabel
-          }
-          cycleStatusLabel={t(`farmer.status.${dashboard.biocharCycleStatusKey}`)}
-          cycleTone={dashboard.biocharCycleTone}
-          walletAmountLabel={dashboard.walletAmountLabel}
-          cycleLoading={dashboard.biocharCycleLoading}
-          onServicePress={openServices}
-          onUpdatesPress={openBiocharUpdates}
-          onWalletPress={openWallet}
-        />
+        <View style={styles.contentBlock}>
+          <FarmerHeroSummaryCard
+            farmerCode={dashboard.farmerCode}
+            fullName={dashboard.fullName}
+            mobile={dashboard.mobile}
+            location={dashboard.location}
+            projectName="Biochar"
+            landInfo={dashboard.landInfo}
+            isVerified={dashboard.isVerified}
+            totalFarms={dashboard.totalFarmsCount}
+            mappedFarms={dashboard.mappedFarmsCount}
+            activitiesCount={dashboard.activitiesSubmittedCount}
+            verificationStatusLabel={dashboard.biocharServiceStatusLabel}
+            onProfilePress={openProfile}
+            onLocationPress={openAddressDetails}
+            onProjectPress={openServices}
+            onTotalLandPress={openFarms}
+          />
 
-        <FarmerQuickAccessSection
-          onServices={openServices}
-          onBiocharUpdates={openBiocharUpdates}
-          onWallet={openWallet}
-          onProfile={openProfile}
-          onSupport={openChatSupport}
-          onViewFarms={openFarms}
-          onSubmitActivity={openFarmActivities}
-        />
+          <FarmerBiocharDashboardStats
+            serviceStatusLabel={dashboard.biocharServiceStatusLabel}
+            nextUpdateLabel={
+              dashboard.biocharNextUpdateLabel === 'Not Scheduled'
+                ? t('farmer.dashboard.notScheduled')
+                : dashboard.biocharNextUpdateLabel
+            }
+            cycleStatusLabel={t(`farmer.status.${dashboard.biocharCycleStatusKey}`)}
+            cycleTone={dashboard.biocharCycleTone}
+            walletAmountLabel={dashboard.walletAmountLabel}
+            cycleLoading={dashboard.biocharCycleLoading}
+            onServicePress={openServices}
+            onUpdatesPress={openBiocharUpdates}
+            onWalletPress={openWallet}
+          />
 
-        <FarmerRecentActivitiesSection
-          activities={dashboard.recentActivities}
-          onViewAllPress={openFarmActivities}
-        />
+          <FarmerQuickAccessSection
+            onServices={openServices}
+            onBiocharUpdates={openAddFarmActivity}
+            onWallet={openWallet}
+            onProfile={openProfile}
+            onSupport={openChatSupport}
+            onViewFarms={openFarms}
+            onSubmitActivity={openAddFarmActivity}
+          />
+
+          <FarmerRecentActivitiesSection
+            activities={dashboard.recentActivities}
+            onViewAllPress={openFarmActivities}
+          />
+        </View>
 
         <View style={[styles.bottomSpacer, { height: scrollBottomPadding }]} />
       </ScrollView>
@@ -134,9 +137,12 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: 'transparent' },
   scroll: { flex: 1 },
   container: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 0,
     paddingBottom: 8,
+    gap: 16,
+  },
+  contentBlock: {
+    paddingHorizontal: 16,
     gap: 24,
   },
   bottomSpacer: { height: 24 },

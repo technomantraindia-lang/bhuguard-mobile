@@ -1,7 +1,8 @@
 import { useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useKeyboardOverlapInset } from '../../../hooks/useKeyboardOverlapInset';
 import { premiumWorkflowTheme } from './premiumActivityWorkflowTheme';
 
 interface PremiumActivityFooterProps {
@@ -26,6 +27,7 @@ export function PremiumActivityFooter({
   loadingLabel = 'Please wait...',
 }: PremiumActivityFooterProps) {
   const insets = useSafeAreaInsets();
+  const keyboardOverlap = useKeyboardOverlapInset();
   const ripple = useRef(new Animated.Value(1)).current;
 
   const handlePrimaryPress = () => {
@@ -37,7 +39,14 @@ export function PremiumActivityFooter({
   };
 
   return (
-    <View style={[styles.wrap, { paddingBottom: insets.bottom + 12 }]}>
+    <View
+      style={[
+        styles.wrap,
+        {
+          paddingBottom: insets.bottom + 12 + (Platform.OS === 'android' ? keyboardOverlap : 0),
+        },
+      ]}
+    >
       <View style={styles.bar}>
         {showPrevious ? (
           <Pressable

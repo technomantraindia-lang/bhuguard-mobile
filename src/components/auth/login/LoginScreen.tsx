@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -41,6 +42,7 @@ import { NETWORK_UNREACHABLE_MESSAGE } from '../../../utils/apiError';
 import { safeAuthGoBack } from '../../../navigation/safeAuthBack';
 import type { RootStackParamList } from '../../../navigation/types';
 import { BhuguardLogo } from '../../shared/BhuguardLogo';
+import { useKeyboardOverlapInset, useKeyboardVisible } from '../../../hooks/useKeyboardOverlapInset';
 import { ChangeLanguagePill } from './ChangeLanguagePill';
 import { LoginBackground } from './LoginBackground';
 import { PhoneInput } from './PhoneInput';
@@ -67,6 +69,8 @@ function LoginScreenComponent({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const width = useMemo(() => windowWidth, [windowWidth]);
+  const keyboardOverlap = useKeyboardOverlapInset();
+  const keyboardOpen = useKeyboardVisible();
 
   const [mobile, setMobile] = useState('');
   const [loading, setLoading] = useState(false);
@@ -84,7 +88,7 @@ function LoginScreenComponent({ navigation }: Props) {
   const prefilledRef = useRef(false);
 
   const formWidth = useMemo(() => Math.min(340, width * 0.82), [width]);
-  const logoSize = 112;
+  const logoSize = keyboardOpen ? 72 : 112;
 
   const mapAuthError = useCallback(
     (err: unknown): string => {
@@ -229,7 +233,7 @@ function LoginScreenComponent({ navigation }: Props) {
         }
       }
 
-      await requestLoginOtp(mobile);
+      const otpResponse = await requestLoginOtp(mobile);
       if (!mountedRef.current || navigatedRef.current) {
         return;
       }
@@ -238,6 +242,8 @@ function LoginScreenComponent({ navigation }: Props) {
       setAuthStartupPhase('otp_verification');
       navigation.navigate('OtpVerification', {
         mobile,
+        requestId: typeof otpResponse?.request_id === 'string' ? otpResponse.request_id : undefined,
+        devOtp: typeof otpResponse?.dev_otp === 'string' ? otpResponse.dev_otp : undefined,
         purpose: 'login',
         flowOrigin: 'auth',
       });
@@ -337,8 +343,23 @@ function LoginScreenComponent({ navigation }: Props) {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
         >
-          <View style={[styles.layout, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-            <View style={styles.brandBlock}>
+          <ScrollView
+            style={styles.flex}
+            contentContainerStyle={[
+              styles.layout,
+              keyboardOpen ? styles.layoutKeyboard : null,
+              {
+                paddingBottom:
+                  Math.max(insets.bottom, 12) + (Platform.OS === 'ios' ? 16 : keyboardOverlap),
+              },
+            ]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            <View style={[styles.brandBlock, keyboardOpen && styles.brandCompact]}>
               <Pressable
                 accessibilityLabel="Bhuguard logo"
                 style={styles.logoWrap}
@@ -450,7 +471,7 @@ function LoginScreenComponent({ navigation }: Props) {
                 .
               </Text>
             </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
@@ -478,13 +499,21 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   layout: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'space-between',
     paddingTop: 56,
+  },
+  layoutKeyboard: {
+    justifyContent: 'flex-start',
+    paddingTop: 16,
+    gap: 16,
   },
   brandBlock: {
     alignItems: 'center',
     paddingTop: 18,
+  },
+  brandCompact: {
+    paddingTop: 4,
   },
   logoWrap: {
     alignItems: 'center',

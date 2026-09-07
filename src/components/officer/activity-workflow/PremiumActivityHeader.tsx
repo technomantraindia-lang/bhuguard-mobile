@@ -17,7 +17,7 @@ export function PremiumActivityHeader({ title, subtitle, onBack }: PremiumActivi
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.wrap, { paddingTop: insets.top + 6 }]}>
+    <View style={[styles.wrap, { paddingTop: Math.max(insets.top, 0) + 6 }]}>
       <View style={styles.bar}>
         <Pressable
           style={({ pressed }) => [styles.backButton, pressed && styles.backPressed]}

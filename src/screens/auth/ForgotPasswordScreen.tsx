@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Svg, { Path } from 'react-native-svg';
 
 import { getApiErrorMessage, requestForgotPasswordOtp } from '../../api/authApi';
-import { useTranslation } from '../../i18n/I18nContext';
 import { AuthBackHeader } from '../../components/auth/AuthBackHeader';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
+import { useTranslation } from '../../i18n/I18nContext';
 import type { SecurityScreensParamList } from '../../navigation/types';
 import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 
@@ -50,11 +51,7 @@ export function ForgotPasswordScreen({ navigation, route }: Props) {
     <View style={styles.gradient}>
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <AuthBackHeader />
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <KeyboardSafeScrollView contentContainerStyle={styles.scroll} extraBottomPadding={32}>
             <View style={styles.header}>
               <Text style={styles.title}>Forgot Password?</Text>
               <Text style={styles.subtitle}>
@@ -101,8 +98,7 @@ export function ForgotPasswordScreen({ navigation, route }: Props) {
               </View>
               <Text style={styles.helpText}>{t('common.contactHelp')}</Text>
             </Pressable>
-          </ScrollView>
-        </KeyboardAvoidingView>
+        </KeyboardSafeScrollView>
       </SafeAreaView>
     </View>
   );

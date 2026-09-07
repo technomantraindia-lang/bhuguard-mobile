@@ -1,6 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -32,7 +34,8 @@ import {
   type MapStyleMode,
 } from '../../utils/foMapTiler';
 
-const MAP_HEIGHT = 240;
+const MAP_HEIGHT = 260;
+const MIN_SPAN_DEGREES = 0.012;
 
 export type FarmerFarmMapPin = FarmerFarmViewModel & {
   coordinates: NonNullable<FarmerFarmViewModel['coordinates']>;
@@ -41,7 +44,6 @@ export type FarmerFarmMapPin = FarmerFarmViewModel & {
 type FarmerFarmLocationsMapInnerProps = {
   farms: FarmerFarmMapPin[];
   farmerDisplayId?: string;
-  onOpenMaps: () => void;
 };
 
 function isMapLibreNativeAvailable(): boolean {
@@ -70,48 +72,78 @@ function FarmLocationPin({
   );
 }
 
-function FarmPinPopup({
+function FarmPreviewModal({
   farm,
   farmerDisplayId,
+  visible,
+  onClose,
 }: {
-  farm: FarmerFarmMapPin;
+  farm: FarmerFarmMapPin | null;
   farmerDisplayId?: string;
+  visible: boolean;
+  onClose: () => void;
 }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [farm?.id, farm?.imageUrl]);
+
+  if (!farm) {
+    return null;
+  }
+
   const farmerId = farmerDisplayId || farm.farmerDisplayId;
+  const mappingLabel = farm.mappingBadge === 'mapped' ? 'Mapped' : 'Mapping Pending';
+  const verificationLabel =
+    farm.verificationBadge === 'verified'
+      ? 'Verified'
+      : farm.verificationBadge === 'draft'
+        ? 'Draft'
+        : 'Pending';
 
   return (
-    <View style={styles.popupCard}>
-      <Text style={styles.popupLine}>
-        <Text style={styles.popupLabel}>Farm: </Text>
-        <Text style={styles.popupValue}>{farm.name}</Text>
-      </Text>
-      {farm.farmerName ? (
-        <Text style={styles.popupLine}>
-          <Text style={styles.popupLabel}>Farmer: </Text>
-          <Text style={styles.popupValue}>{farm.farmerName}</Text>
-        </Text>
-      ) : null}
-      {farmerId ? (
-        <Text style={styles.popupLine}>
-          <Text style={styles.popupLabel}>Farmer ID: </Text>
-          <Text style={styles.popupValue}>{farmerId}</Text>
-        </Text>
-      ) : null}
-      <Text style={styles.popupLine}>
-        <Text style={styles.popupLabel}>Farm ID: </Text>
-        <Text style={styles.popupValue}>{farm.code}</Text>
-      </Text>
-      <Text style={styles.popupArea}>{farm.areaDisplay.acres}</Text>
-      <Text style={styles.popupArea}>{farm.areaDisplay.hectares}</Text>
-      <Text style={styles.popupArea}>{farm.areaDisplay.squareMeters}</Text>
-    </View>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <Pressable style={styles.previewCard} onPress={(event) => event.stopPropagation()}>
+          <View style={styles.previewImageWrap}>
+            {farm.imageUrl && !imageFailed ? (
+              <Image
+                source={{ uri: farm.imageUrl }}
+                style={styles.previewImage}
+                resizeMode="contain"
+                onError={() => setImageFailed(true)}
+              />
+            ) : (
+              <View style={styles.previewPlaceholder}>
+                <BhuguardMaterialIcon name="agriculture" size={42} color={dashboardTheme.primaryContainer} />
+                <Text style={styles.previewPlaceholderText}>Bhuguard Farm</Text>
+              </View>
+            )}
+          </View>
+
+          <Text style={styles.previewTitle} numberOfLines={2}>
+            {farm.name}
+          </Text>
+          <Text style={styles.previewMeta}>Farm ID: {farm.code}</Text>
+          <Text style={styles.previewMeta}>Village: {farm.village}</Text>
+          <Text style={styles.previewMeta}>Area: {farm.hectareLabel}</Text>
+          <Text style={styles.previewMeta}>Mapping: {mappingLabel}</Text>
+          <Text style={styles.previewMeta}>Verification: {verificationLabel}</Text>
+          {farmerId ? <Text style={styles.previewMeta}>Farmer ID: {farmerId}</Text> : null}
+
+          <Pressable style={styles.closeButton} onPress={onClose}>
+            <Text style={styles.closeButtonText}>Close</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
 const FarmerFarmLocationsMapInner = memo(function FarmerFarmLocationsMapInner({
   farms,
   farmerDisplayId = '',
-  onOpenMaps,
 }: FarmerFarmLocationsMapInnerProps) {
   const cameraRef = useRef<CameraRef>(null);
   const mapRef = useRef<MapRef>(null);
@@ -135,16 +167,47 @@ const FarmerFarmLocationsMapInner = memo(function FarmerFarmLocationsMapInner({
   }, [farms]);
 
   const fitAllPins = useCallback(() => {
-    const points = farms.map((farm) => farm.coordinates);
-    const bounds = polygonBounds(points);
-    if (!bounds || !cameraRef.current || !styleLoaded) {
+    if (!cameraRef.current || !styleLoaded || farms.length === 0) {
       return;
     }
 
     try {
+      const points = farms.map((farm) => farm.coordinates);
+      const rawBounds = polygonBounds(points);
+      let west: number;
+      let south: number;
+      let east: number;
+      let north: number;
+
+      if (rawBounds) {
+        [west, south, east, north] = rawBounds;
+      } else {
+        const point = points[0];
+        west = point.longitude - MIN_SPAN_DEGREES / 2;
+        south = point.latitude - MIN_SPAN_DEGREES / 2;
+        east = point.longitude + MIN_SPAN_DEGREES / 2;
+        north = point.latitude + MIN_SPAN_DEGREES / 2;
+      }
+
+      const latSpan = Math.max(north - south, MIN_SPAN_DEGREES);
+      const lngSpan = Math.max(east - west, MIN_SPAN_DEGREES);
+      const centerLat = (north + south) / 2;
+      const centerLng = (east + west) / 2;
+      const bounds: [number, number, number, number] = [
+        centerLng - lngSpan / 2,
+        centerLat - latSpan / 2,
+        centerLng + lngSpan / 2,
+        centerLat + latSpan / 2,
+      ];
+
       cameraRef.current.fitBounds(bounds, {
         duration: MAP_ZOOM_ANIMATION_MS,
-        padding: { top: 48, right: 40, bottom: 96, left: 40 },
+        padding: {
+          top: farms.length === 1 ? 64 : 56,
+          right: farms.length === 1 ? 64 : 48,
+          bottom: farms.length === 1 ? 64 : 72,
+          left: farms.length === 1 ? 64 : 48,
+        },
       });
     } catch {
       // Ignore camera fit failures.
@@ -166,7 +229,7 @@ const FarmerFarmLocationsMapInner = memo(function FarmerFarmLocationsMapInner({
 
     const timer = setTimeout(() => {
       fitAllPins();
-    }, 250);
+    }, 280);
 
     return () => {
       clearTimeout(timer);
@@ -183,12 +246,7 @@ const FarmerFarmLocationsMapInner = memo(function FarmerFarmLocationsMapInner({
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Farm Locations Map</Text>
-        <Pressable style={styles.linkButton} onPress={onOpenMaps}>
-          <Text style={styles.linkText}>Open in Google Maps</Text>
-        </Pressable>
-      </View>
+      <Text style={styles.title}>Farm Locations Map</Text>
 
       <View style={[styles.mapCard, dashboardShadow]}>
         <Map
@@ -215,20 +273,10 @@ const FarmerFarmLocationsMapInner = memo(function FarmerFarmLocationsMapInner({
             >
               <FarmLocationPin
                 selected={selectedFarmId === farm.id}
-                onPress={() => setSelectedFarmId((current) => (current === farm.id ? null : farm.id))}
+                onPress={() => setSelectedFarmId(farm.id)}
               />
             </ViewAnnotation>
           ))}
-
-          {selectedFarm ? (
-            <ViewAnnotation
-              id="farm-popup"
-              lngLat={[selectedFarm.coordinates.longitude, selectedFarm.coordinates.latitude]}
-              anchor="top"
-            >
-              <FarmPinPopup farm={selectedFarm} farmerDisplayId={farmerDisplayId} />
-            </ViewAnnotation>
-          ) : null}
         </Map>
 
         {!styleLoaded ? (
@@ -253,6 +301,13 @@ const FarmerFarmLocationsMapInner = memo(function FarmerFarmLocationsMapInner({
           <Text style={styles.markerBadgeText}>{farms.length} mapped</Text>
         </View>
       </View>
+
+      <FarmPreviewModal
+        farm={selectedFarm}
+        farmerDisplayId={farmerDisplayId}
+        visible={selectedFarm != null}
+        onClose={() => setSelectedFarmId(null)}
+      />
     </View>
   );
 });
@@ -260,13 +315,11 @@ const FarmerFarmLocationsMapInner = memo(function FarmerFarmLocationsMapInner({
 type FarmerFarmLocationsMapProps = {
   farms: FarmerFarmViewModel[];
   farmerDisplayId?: string;
-  onOpenMaps: () => void;
 };
 
 export function FarmerFarmLocationsMap({
   farms,
   farmerDisplayId = '',
-  onOpenMaps,
 }: FarmerFarmLocationsMapProps) {
   const mappedFarms = useMemo(
     () =>
@@ -289,15 +342,10 @@ export function FarmerFarmLocationsMap({
   if (!hasMapTilerKey() || !isMapLibreNativeAvailable()) {
     return (
       <View style={styles.wrap}>
-        <View style={styles.headerRow}>
-          <Text style={styles.title}>Farm Locations Map</Text>
-          <Pressable style={styles.linkButton} onPress={onOpenMaps}>
-            <Text style={styles.linkText}>Open in Google Maps</Text>
-          </Pressable>
-        </View>
+        <Text style={styles.title}>Farm Locations Map</Text>
         <View style={[styles.mapCard, styles.emptyMap]}>
           <Text style={styles.emptyText}>
-            Interactive map is unavailable in this build. Use Open in Google Maps to view mapped farms.
+            Interactive map is unavailable in this build. Mapped farm locations remain available in Farm detail.
           </Text>
           <Text style={styles.emptyMeta}>{mappedFarms.length} mapped farm locations</Text>
         </View>
@@ -309,7 +357,6 @@ export function FarmerFarmLocationsMap({
     <FarmerFarmLocationsMapInner
       farms={mappedFarms}
       farmerDisplayId={farmerDisplayId}
-      onOpenMaps={onOpenMaps}
     />
   );
 }
@@ -320,25 +367,11 @@ const styles = StyleSheet.create({
   wrap: {
     gap: 12,
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
   title: {
     fontSize: 18,
     lineHeight: 24,
     fontWeight: '600',
     color: dashboardTheme.onSurface,
-  },
-  linkButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 2,
-  },
-  linkText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: dashboardTheme.primaryContainer,
   },
   mapCard: {
     height: MAP_HEIGHT,
@@ -430,39 +463,64 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  popupCard: {
-    maxWidth: 260,
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(11, 31, 18, 0.45)',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  previewCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
+    padding: 16,
+    gap: 8,
     borderWidth: 1,
     borderColor: dashboardTheme.outlineVariant,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 4,
-    marginTop: 8,
-    shadowColor: '#0B1F12',
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
   },
-  popupLine: {
-    fontSize: 12,
-    lineHeight: 17,
+  previewImageWrap: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: dashboardTheme.surfaceContainerLow,
+    marginBottom: 4,
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  previewPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  previewPlaceholderText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: dashboardTheme.primaryContainer,
+  },
+  previewTitle: {
+    fontSize: 18,
+    fontWeight: '700',
     color: dashboardTheme.onSurface,
   },
-  popupLabel: {
-    fontWeight: '700',
+  previewMeta: {
+    fontSize: 13,
+    lineHeight: 18,
     color: dashboardTheme.onSurfaceVariant,
   },
-  popupValue: {
-    fontWeight: '600',
-    color: dashboardTheme.onSurface,
-    flexShrink: 1,
+  closeButton: {
+    marginTop: 8,
+    alignSelf: 'flex-end',
+    backgroundColor: dashboardTheme.surfaceLow,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
-  popupArea: {
-    fontSize: 12,
-    fontWeight: '600',
+  closeButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
     color: dashboardTheme.primaryContainer,
   },
 });

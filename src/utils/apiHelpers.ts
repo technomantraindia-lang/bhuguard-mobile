@@ -1,5 +1,5 @@
 import type { ApiSuccessResponse } from '../types/auth';
-import type { AssignedLocationsPayload } from '../types/assignedLocations';
+import type { AssignedLocationsPayload, AssignedTalukaScope } from '../types/assignedLocations';
 
 import { apiClient } from '../api/client';
 
@@ -141,6 +141,24 @@ function asAssignedArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
+function asWorkVillageIdList(value: unknown): number[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (typeof item === 'number' && Number.isFinite(item)) {
+        return item;
+      }
+      if (typeof item === 'string' && item.trim() !== '' && Number.isFinite(Number(item))) {
+        return Number(item);
+      }
+      return null;
+    })
+    .filter((id): id is number => id != null && id !== 0);
+}
+
 function asIdList(value: unknown): number[] {
   if (!Array.isArray(value)) {
     return [];
@@ -251,7 +269,7 @@ export function normalizeAssignedArea(source: unknown): AssignedLocationsPayload
   const workTalukaIds = asIdList(
     area.work_taluka_ids ?? area.workTalukaIds ?? root.work_taluka_ids ?? data?.work_taluka_ids,
   );
-  const workVillageIds = asIdList(
+  const workVillageIds = asWorkVillageIdList(
     area.work_village_ids ??
       area.workVillageIds ??
       area.working_village_ids ??
@@ -259,6 +277,11 @@ export function normalizeAssignedArea(source: unknown): AssignedLocationsPayload
       data?.work_village_ids ??
       artisanProfile?.working_village_ids,
   );
+  const workFullCityTalukaIds = [
+    ...asIdList(area.work_full_city_taluka_ids ?? area.workFullCityTalukaIds ?? root.work_full_city_taluka_ids),
+    ...workVillageIds.filter((id) => id < 0).map((id) => Math.abs(id)),
+  ].filter((id, index, all) => all.indexOf(id) === index);
+  const talukaScopes = asAssignedArray<AssignedTalukaScope>(area.taluka_scopes ?? area.talukaScopes);
 
   if (districts.length === 0 && workDistrictIds.length > 0) {
     districts = locationEntriesFromIds(workDistrictIds);
@@ -286,12 +309,17 @@ export function normalizeAssignedArea(source: unknown): AssignedLocationsPayload
     villages.length > 0 ||
     workDistrictIds.length > 0 ||
     workTalukaIds.length > 0 ||
-    workVillageIds.length > 0;
+    workVillageIds.length > 0 ||
+    workFullCityTalukaIds.length > 0 ||
+    talukaScopes.length > 0;
 
   return {
     has_assignment: hasAssignment,
     districts,
     talukas,
     villages,
+    work_village_ids: workVillageIds,
+    work_full_city_taluka_ids: workFullCityTalukaIds,
+    taluka_scopes: talukaScopes,
   };
 }

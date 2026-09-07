@@ -21,6 +21,7 @@ import {
 import { OfficerListState } from '../../components/officer/OfficerListState';
 import { OfficerScreenChrome } from '../../components/officer/OfficerScreenChrome';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { BhuguardMaterialIcon } from '../../components/shared/BhuguardMaterialIcon';
 import { useAssignedLocations } from '../../hooks/useAssignedLocations';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
@@ -374,7 +375,8 @@ export function FieldOfficerScheduleScreen({ navigation }: Props) {
           onRetry={assigned.refresh}
         />
       ) : (
-        <ScrollView
+        <KeyboardSafeScrollView
+          extraBottomPadding={24}
           contentContainerStyle={styles.content}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={officerTheme.primary} />
@@ -601,7 +603,7 @@ export function FieldOfficerScheduleScreen({ navigation }: Props) {
               </View>
             </View>
           ) : null}
-        </ScrollView>
+        </KeyboardSafeScrollView>
       )}
     </OfficerScreenChrome>
   );

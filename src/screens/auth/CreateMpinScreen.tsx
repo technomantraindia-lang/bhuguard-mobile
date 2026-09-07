@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   BackHandler,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -18,6 +15,7 @@ import { AuthBackHeader } from '../../components/auth/AuthBackHeader';
 import { AuthFlowBackground } from '../../components/auth/AuthFlowBackground';
 import { PinBoxInput } from '../../components/auth/PinBoxInput';
 import { SecurityNoteBanner } from '../../components/auth/SecurityNoteBanner';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { BhuguardLogo } from '../../components/shared/BhuguardLogo';
 import { LOGO_SIZES } from '../../constants/branding';
 import { useTranslation } from '../../i18n/I18nContext';
@@ -121,11 +119,7 @@ export function CreateMpinScreen({ navigation, route }: Props) {
       <AuthFlowBackground />
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <AuthBackHeader onBack={handleBack} />
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <KeyboardSafeScrollView contentContainerStyle={styles.scroll} extraBottomPadding={32}>
             <View style={styles.card}>
               <View style={styles.logoWrap}>
                 <BhuguardLogo size={LOGO_SIZES.moduleHeader} />
@@ -186,8 +180,7 @@ export function CreateMpinScreen({ navigation, route }: Props) {
                 </Text>
               </Pressable>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+        </KeyboardSafeScrollView>
       </SafeAreaView>
     </View>
   );

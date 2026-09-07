@@ -9,7 +9,6 @@ import { FarmSatelliteMapSection } from '../../components/farmer/farms/detail/Fa
 import { useFarmDetailData } from '../../hooks/useFarmDetailData';
 import type { FarmerStackParamList } from '../../navigation/types';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
-import { openGoogleMaps } from '../../utils/farmMapHelpers';
 
 type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmerFarmMapFullScreen'>;
 
@@ -19,7 +18,7 @@ export function FarmerFarmMapFullScreen({ navigation, route }: Props) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={[]}>
         <LoadingState message="Loading farm map..." />
       </SafeAreaView>
     );
@@ -27,14 +26,14 @@ export function FarmerFarmMapFullScreen({ navigation, route }: Props) {
 
   if (error || !detail || !farmRecord) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={[]}>
         <ErrorState message={error ?? 'Farm map unavailable.'} onRetry={reload} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
       <FarmDetailHeader
         farmName={detail.farmName}
         onBack={() => navigation.goBack()}
@@ -48,7 +47,6 @@ export function FarmerFarmMapFullScreen({ navigation, route }: Props) {
           areaLabel={detail.areaLabel}
           center={detail.centerCoordinates}
           polygonCoordinatesLabel={detail.polygonCoordinatesLabel}
-          onOpenGoogleMaps={() => openGoogleMaps(detail.centerCoordinates, detail.farmName)}
           onOpenFullScreen={() => navigation.goBack()}
           onRefresh={() => void reload()}
           mapHeight={520}

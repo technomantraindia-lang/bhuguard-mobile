@@ -331,7 +331,7 @@
       "quickActionsSubtitle": "Farmers, artisan work, activities, and visits.",
       "quickActions": {
         "farmerOnboarding": "Farmer Onboarding",
-        "myActivity": "My Activity",
+        "myActivity": "Farm Activity",
         "myFarmers": "My Farmers",
         "inventory": "Inventory",
         "myArtisans": "My Artisan Pros",
@@ -424,7 +424,8 @@
       "activityDateLabel": "Activity Date",
       "nextFarmPhotoUploadDateLabel": "Next Farm Photo Upload Date",
       "comingSoonTitle": "Coming soon",
-      "servicesTitle": "Services"
+      "servicesTitle": "Services",
+      "addActivity": "Add Farm Activity"
     },
     "farmSelection": {
       "title": "Select Farm",
@@ -473,9 +474,21 @@
       "notes": "Notes (optional)",
       "notesPlaceholder": "Add optional notes",
       "submit": "Submit Farm Activity",
+      "submitting": "Submitting…",
       "submittedTitle": "Farm Activity Details",
       "submittedMessage": "Farm Activity submitted successfully",
-      "submitFailed": "Farm Activity could not be submitted. Your entered details and photo are still available. Please try again."
+      "submitFailed": "Farm Activity could not be submitted. Your entered details and photo are still available. Please try again.",
+      "noRegisteredFarm": "No registered Farm is available for activity submission.",
+      "selectFarmHelper": "Select one of your Farms to continue.",
+      "progress": "Farm Activity Progress",
+      "startActivity": "Start Farm Activity",
+      "checkIn": "Check-in",
+      "checkInLocked": "Complete Start Activity to unlock Check-in.",
+      "photoLocked": "Complete Check-in to unlock Upload Photo.",
+      "gpsPending": "Will capture on Check-in",
+      "capturePhoto": "Capture Photo",
+      "photoReady": "Photo ready",
+      "photoEmpty": "Photos: none yet"
     },
     "notifications": {
       "title": "Notifications",

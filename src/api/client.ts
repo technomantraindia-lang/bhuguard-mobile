@@ -13,11 +13,12 @@ import {
 } from '../utils/authStorage';
 import {
   extractApiErrorMessage,
-  NETWORK_UNREACHABLE_MESSAGE,
+  formatApiUnreachableMessage,
   isNetworkError,
   isTimeoutError,
   logSafeApiFailure,
 } from '../utils/apiError';
+import { getCachedApiBaseUrl } from '../storage/apiConfigStorage';
 import { isLoggingOut } from '../utils/logoutGuard';
 
 /** Public auth endpoints that must not send a stale bearer token. */
@@ -196,7 +197,8 @@ apiClient.interceptors.response.use(
 
     // Only true transport failures (no HTTP response) use the unreachable copy.
     if (error.response == null && isNetworkError(error)) {
-      return rejectMapped(extractApiErrorMessage(error, NETWORK_UNREACHABLE_MESSAGE));
+      const baseUrl = error.config?.baseURL ?? getCachedApiBaseUrl();
+      return rejectMapped(extractApiErrorMessage(error, formatApiUnreachableMessage(baseUrl)));
     }
 
     const requestUrl = typeof error.config?.url === 'string' ? error.config.url : '';

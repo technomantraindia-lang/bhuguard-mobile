@@ -1,3 +1,11 @@
+import {
+  getMapTilerApiKey,
+  MAPTILER_API_KEY,
+  MAPTILER_CONFIGURED,
+  MAPTILER_HYBRID_STYLE_ID,
+  MAPTILER_STREET_STYLE_ID,
+} from '../config/mapConfig';
+
 export type MapStyleMode = 'hybrid' | 'street';
 
 export const MAP_FALLBACK_CENTER: [number, number] = [73.19806, 22.22217];
@@ -25,35 +33,12 @@ export const MSG_UNAUTHORIZED = 'MapTiler key is invalid or restricted.';
 export const MSG_NOT_FOUND = 'Hybrid map style was not found.';
 export const MSG_NETWORK = 'Unable to reach MapTiler.';
 
-const PLACEHOLDER_KEYS = new Set([
-  '',
-  'your_maptiler_api_key_here',
-  'paste_the_real_provided_maptiler_key',
-  'maptiler_key',
-  'undefined',
-  'null',
-  'placeholder',
-]);
-
 function readMapTilerKey(): string {
-  const rawKey = process.env.EXPO_PUBLIC_MAPTILER_API_KEY;
-  const mapTilerKey = typeof rawKey === 'string' ? rawKey.trim() : '';
-  return mapTilerKey;
+  return MAPTILER_CONFIGURED ? MAPTILER_API_KEY : getMapTilerApiKey();
 }
 
 export function hasMapTilerKey(): boolean {
-  const key = readMapTilerKey();
-  if (!key) {
-    return false;
-  }
-  const lower = key.toLowerCase();
-  if (PLACEHOLDER_KEYS.has(lower)) {
-    return false;
-  }
-  if (lower.includes('your_') || lower.includes('paste_') || lower.includes('placeholder')) {
-    return false;
-  }
-  return true;
+  return MAPTILER_CONFIGURED && Boolean(readMapTilerKey());
 }
 
 export function getMaskedMapTilerKeyStatus(): string {
@@ -92,23 +77,16 @@ export function getMapTilerConfigurationIssue(): string | null {
   return hasMapTilerKey() ? null : MSG_MISSING_KEY;
 }
 
-function readStyleId(envKey: string, fallback: string): string {
-  const raw = process.env[envKey];
-  const value = typeof raw === 'string' ? raw.trim() : '';
-  return value || fallback;
-}
-
 /**
  * MapTiler style JSON URLs used by MapLibre (hybrid-v4 / streets-v4).
- * Style IDs come from EXPO_PUBLIC_MAPTILER_*_STYLE_ID when set.
+ * Style IDs come from EXPO_PUBLIC_MAPTILER_*_STYLE_ID / expo extra when set.
  */
 export function getMapTilerStyleUrl(mode: MapStyleMode = 'hybrid'): string | null {
   if (!hasMapTilerKey()) {
     return null;
   }
 
-  const rawKey = process.env.EXPO_PUBLIC_MAPTILER_API_KEY;
-  const mapTilerKey = typeof rawKey === 'string' ? rawKey.trim() : '';
+  const mapTilerKey = readMapTilerKey();
   const styleId = getActiveStyleId(mode);
 
   return `https://api.maptiler.com/maps/${styleId}/style.json?key=${encodeURIComponent(mapTilerKey)}`;
@@ -116,12 +94,9 @@ export function getMapTilerStyleUrl(mode: MapStyleMode = 'hybrid'): string | nul
 
 export function getActiveStyleId(mode: MapStyleMode): string {
   if (mode === 'street') {
-    return readStyleId('EXPO_PUBLIC_MAPTILER_STREET_STYLE_ID', 'streets-v4');
+    return MAPTILER_STREET_STYLE_ID;
   }
-  return readStyleId(
-    'EXPO_PUBLIC_MAPTILER_HYBRID_STYLE_ID',
-    readStyleId('EXPO_PUBLIC_MAPTILER_STYLE_ID', 'hybrid-v4'),
-  );
+  return MAPTILER_HYBRID_STYLE_ID;
 }
 
 export const MAPLIBRE_DEMO_STYLE_URL = 'https://demotiles.maplibre.org/style.json';

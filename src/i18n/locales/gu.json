@@ -311,7 +311,7 @@
       "quickActionsSubtitle": "ખેડૂતો, કારીગર કાર્ય, પ્રવૃત્તિઓ અને વિઝિટ.",
       "quickActions": {
         "farmerOnboarding": "ખેડૂત ઓનબોર્ડિંગ",
-        "myActivity": "મારી પ્રવૃત્તિ",
+        "myActivity": "ફાર્મ પ્રવૃત્તિ",
         "myFarmers": "મારા ખેડૂતો",
         "inventory": "ઇન્વેન્ટરી",
         "myArtisans": "મારા કારીગર Pro",
@@ -404,7 +404,8 @@
       "activityDateLabel": "પ્રવૃત્તિ તારીખ",
       "nextFarmPhotoUploadDateLabel": "આગલી ફાર્મ ફોટો અપલોડ તારીખ",
       "comingSoonTitle": "ટૂંક સમયમાં",
-      "servicesTitle": "સેવાઓ"
+      "servicesTitle": "સેવાઓ",
+      "addActivity": "ફાર્મ પ્રવૃત્તિ ઉમેરો"
     },
     "farmSelection": {
       "title": "ખેતર પસંદ કરો",
@@ -453,9 +454,21 @@
       "notes": "નોંધો (વૈકલ્પિક)",
       "notesPlaceholder": "વૈકલ્પિક નોંધો ઉમેરો",
       "submit": "ફાર્મ પ્રવૃત્તિ સબમિટ કરો",
+      "submitting": "સબમિટ થઈ રહ્યું છે…",
       "submittedTitle": "ફાર્મ પ્રવૃત્તિ વિગતો",
       "submittedMessage": "ફાર્મ પ્રવૃત્તિ સફળતાપૂર્વક સબમિટ થઈ",
-      "submitFailed": "ફાર્મ પ્રવૃત્તિ સબમિટ થઈ શકી નહીં. તમારી દાખલ કરેલી વિગતો અને ફોટો હજુ ઉપલબ્ધ છે. કૃપા કરીને ફરી પ્રયાસ કરો."
+      "submitFailed": "ફાર્મ પ્રવૃત્તિ સબમિટ થઈ શકી નહીં. તમારી દાખલ કરેલી વિગતો અને ફોટો હજુ ઉપલબ્ધ છે. કૃપા કરીને ફરી પ્રયાસ કરો.",
+      "noRegisteredFarm": "પ્રવૃત્તિ સબમિટ કરવા માટે કોઈ નોંધાયેલ ફાર્મ ઉપલબ્ધ નથી.",
+      "selectFarmHelper": "આગળ વધવા માટે તમારું એક ફાર્મ પસંદ કરો.",
+      "progress": "ફાર્મ પ્રવૃત્તિ પ્રગતિ",
+      "startActivity": "ફાર્મ પ્રવૃત્તિ શરૂ કરો",
+      "checkIn": "ચેક-ઇન",
+      "checkInLocked": "ચેક-ઇન ખોલવા માટે પહેલા પ્રવૃત્તિ શરૂ કરો.",
+      "photoLocked": "ફોટો અપલોડ ખોલવા માટે પહેલા ચેક-ઇન પૂર્ણ કરો.",
+      "gpsPending": "ચેક-ઇન પર કેપ્ચર થશે",
+      "capturePhoto": "ફોટો કેપ્ચર કરો",
+      "photoReady": "ફોટો તૈયાર છે",
+      "photoEmpty": "ફોટો: હજુ નથી"
     },
     "notifications": {
       "title": "સૂચનાઓ",

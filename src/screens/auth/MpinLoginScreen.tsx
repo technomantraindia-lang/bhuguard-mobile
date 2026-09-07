@@ -29,6 +29,7 @@ import { AuthFlowBackground } from '../../components/auth/AuthFlowBackground';
 import { MpinKeypad } from '../../components/auth/MpinKeypad';
 import { MpinPinInput } from '../../components/auth/MpinPinInput';
 import { BhuguardLogo } from '../../components/shared/BhuguardLogo';
+import { useKeyboardOverlapInset } from '../../hooks/useKeyboardOverlapInset';
 import { LOGO_SIZES } from '../../constants/branding';
 import { useTranslation } from '../../i18n/I18nContext';
 import { safeAuthGoBack } from '../../navigation/safeAuthBack';
@@ -87,6 +88,7 @@ function roleDisplayLabel(
 
 export function MpinLoginScreen({ navigation, route }: Props) {
   const { t, applyScopedLanguageForCurrentUser } = useTranslation();
+  const keyboardOverlap = useKeyboardOverlapInset();
   const selectedRole = route.params?.role;
   const unlockMode = route.params?.mode === 'unlock';
   const [mobile, setMobile] = useState(route.params?.mobile ?? '');
@@ -543,15 +545,19 @@ export function MpinLoginScreen({ navigation, route }: Props) {
 
         <KeyboardAvoidingView
           style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
         >
           <ScrollView
             style={styles.flex}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: styles.scrollContent.paddingBottom + (Platform.OS === 'ios' ? 0 : keyboardOverlap) },
+            ]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             bounces={false}
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
           >
             <View style={styles.card}>
               <View style={styles.logoWrap}>
@@ -679,7 +685,12 @@ export function MpinLoginScreen({ navigation, route }: Props) {
           </ScrollView>
 
           {keypadVisible ? (
-            <View style={styles.keypadPanel}>
+            <View
+              style={[
+                styles.keypadPanel,
+                Platform.OS === 'android' && keyboardOverlap > 0 ? { marginBottom: keyboardOverlap } : null,
+              ]}
+            >
               <MpinKeypad
                 compact={USE_COMPACT_KEYPAD}
                 onDigit={appendDigit}

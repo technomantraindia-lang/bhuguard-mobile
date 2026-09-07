@@ -40,6 +40,8 @@ export interface FarmerProfileViewModel {
   upiId: string;
   preferredLanguage: string;
   photoUrl: string | null;
+  hasMpin: boolean;
+  hasPassword: boolean;
 }
 
 function emptyField(): string {
@@ -97,6 +99,8 @@ function buildDefaultProfile(authName?: string, authMobile?: string): FarmerProf
     upiId: emptyField(),
     preferredLanguage: 'en',
     photoUrl: null,
+    hasMpin: false,
+    hasPassword: false,
   };
 }
 
@@ -170,6 +174,8 @@ export function useFarmerProfileForm() {
           bankRoot && pickString(bankRoot, 'account_type') !== '-' ? pickString(bankRoot, 'account_type') : emptyField(),
         upiId: bankRoot && pickString(bankRoot, 'upi_id') !== '-' ? pickString(bankRoot, 'upi_id') : emptyField(),
         photoUrl: resolveMediaUrl(pickString(farmerProfile, 'photo_url')),
+        hasMpin: Boolean(root.has_mpin ?? authUser?.has_mpin),
+        hasPassword: Boolean(root.has_password ?? (authUser as ApiRecord | null)?.has_password),
       });
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load profile.'));

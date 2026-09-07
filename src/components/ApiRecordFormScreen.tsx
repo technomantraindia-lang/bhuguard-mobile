@@ -1,9 +1,6 @@
 import { useState } from 'react';
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import { getApiErrorMessage } from '../api/authApi';
 import type { ApiFormConfig, ApiFormField } from '../config/stitchFormConfig';
+import { KeyboardSafeScrollView } from './layout/KeyboardSafeScrollView';
 import { colors, spacing } from '../theme';
 import type { ApiRecord } from '../utils/apiHelpers';
 import { AppButton } from './AppButton';
@@ -93,11 +91,7 @@ export function ApiRecordFormScreen({ config }: ApiRecordFormScreenProps) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <KeyboardSafeScrollView contentContainerStyle={styles.container} extraBottomPadding={32}>
           <ScreenHeader title={config.title} subtitle={config.subtitle} />
 
           {config.fields.map((field) => (
@@ -126,8 +120,7 @@ export function ApiRecordFormScreen({ config }: ApiRecordFormScreenProps) {
             onPress={() => void handleSubmit()}
             disabled={submitting}
           />
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardSafeScrollView>
     </SafeAreaView>
   );
 }

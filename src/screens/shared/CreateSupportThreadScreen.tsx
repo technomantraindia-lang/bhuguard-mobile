@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -7,6 +7,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getApiErrorMessage } from '../../api/authApi';
 import { createSupportThread } from '../../api/supportApi';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { SupportHeroBanner } from '../../components/support/SupportHeroBanner';
 import type { FarmerStackParamList, FieldOfficerStackParamList } from '../../navigation/types';
 import {
@@ -74,7 +75,7 @@ export function CreateSupportThreadScreen({ navigation, route }: Props) {
     <SafeAreaView style={styles.safe}>
       <ScreenHeader title="New Support Query" subtitle="Describe your issue" />
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardSafeScrollView contentContainerStyle={styles.content} extraBottomPadding={24}>
         <SupportHeroBanner title="Create Support Query" subtitle="Share details so our team can help you faster." />
 
         <View style={styles.sectionCard}>
@@ -148,7 +149,7 @@ export function CreateSupportThreadScreen({ navigation, route }: Props) {
         >
           <Text style={styles.submitButtonText}>{submitting ? 'Submitting...' : 'Submit Query'}</Text>
         </Pressable>
-      </ScrollView>
+      </KeyboardSafeScrollView>
     </SafeAreaView>
   );
 }

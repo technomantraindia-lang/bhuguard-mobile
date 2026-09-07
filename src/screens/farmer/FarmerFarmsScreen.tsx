@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import {
   FlatList,
   Pressable,
@@ -28,7 +28,6 @@ import { useScrollBottomPadding } from '../../hooks/useTabBarLayout';
 import { useUnreadNotificationCount } from '../../hooks/useUnreadNotificationCount';
 import type { FarmerStackParamList, FarmerTabParamList } from '../../navigation/types';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
-import { openGoogleMaps } from '../../utils/farmMapHelpers';
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<FarmerTabParamList, 'Farms'>,
@@ -67,17 +66,9 @@ export function FarmerFarmsScreen() {
     }, [reload]),
   );
 
-  const openFirstMappedFarm = async () => {
-    const first = allFarms.find((farm) => farm.coordinates);
-
-    if (first?.coordinates) {
-      await openGoogleMaps(first.coordinates, first.name);
-    }
-  };
-
   if (loading && allFarms.length === 0) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={[]}>
         <LoadingState message="Loading your farms..." />
       </SafeAreaView>
     );
@@ -85,19 +76,14 @@ export function FarmerFarmsScreen() {
 
   if (error && allFarms.length === 0) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={[]}>
         <ErrorState message={error} onRetry={reload} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <FarmerFarmsHeader
-        unreadCount={unreadCount}
-        onNotificationsPress={() => navigation.navigate('FarmerNotifications')}
-      />
-
+    <SafeAreaView style={styles.safe} edges={[]}>
       <FlatList
         data={farms}
         keyExtractor={(item) => String(item.id)}
@@ -108,54 +94,64 @@ export function FarmerFarmsScreen() {
         }
         ListHeaderComponent={
           <View style={styles.headerBlock}>
-            <FarmerFarmsSummaryCard
-              totalFarms={summary.totalFarms}
-              totalLandLabel={summary.totalLandLabel}
-              verifiedCount={summary.verifiedCount}
-              pendingCount={summary.pendingCount}
+            <FarmerFarmsHeader
+              unreadCount={unreadCount}
+              onNotificationsPress={() => navigation.navigate('FarmerNotifications')}
             />
 
-            <FarmerFarmsMapOverview
-              farms={allFarms}
-              farmerDisplayId={farmerDisplayId}
-              onOpenMaps={openFirstMappedFarm}
-            />
+            <View style={styles.paddedBlock}>
+              <FarmerFarmsSummaryCard
+                totalFarms={summary.totalFarms}
+                totalLandLabel={summary.totalLandLabel}
+                verifiedCount={summary.verifiedCount}
+                pendingCount={summary.pendingCount}
+              />
 
-            <View style={styles.searchRow}>
-              <View style={styles.searchInputWrap}>
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={styles.searchIcon}>
-                  <Path
-                    d="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.3-4.3"
-                    stroke={dashboardTheme.onSurfaceVariant}
-                    strokeWidth={2}
-                    strokeLinecap="round"
+              <FarmerFarmsMapOverview
+                farms={allFarms}
+                farmerDisplayId={farmerDisplayId}
+              />
+
+              <View style={styles.searchRow}>
+                <View style={styles.searchInputWrap}>
+                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={styles.searchIcon}>
+                    <Path
+                      d="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.3-4.3"
+                      stroke={dashboardTheme.onSurfaceVariant}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                    />
+                  </Svg>
+                  <TextInput
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder="Search farm by name or village"
+                    placeholderTextColor={dashboardTheme.outline}
+                    style={styles.searchInput}
                   />
-                </Svg>
-                <TextInput
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholder="Search farm by name or village"
-                  placeholderTextColor={dashboardTheme.outline}
-                  style={styles.searchInput}
-                />
+                </View>
+
+                <Pressable style={styles.filterButton} onPress={cycleFilter}>
+                  <BhuguardMaterialIcon name="menu" size={20} color={dashboardTheme.onSurfaceVariant} />
+                </Pressable>
               </View>
 
-              <Pressable style={styles.filterButton} onPress={cycleFilter}>
-                <BhuguardMaterialIcon name="menu" size={20} color={dashboardTheme.onSurfaceVariant} />
-              </Pressable>
+              <Text style={styles.filterHint}>{FILTER_LABELS[filterMode]}</Text>
             </View>
-
-            <Text style={styles.filterHint}>{FILTER_LABELS[filterMode]}</Text>
           </View>
         }
         renderItem={({ item }) => (
-          <FarmerFarmListCard
-            farm={item}
-            onViewActivities={() => navigation.navigate('Activities')}
-          />
+          <View style={styles.paddedItem}>
+            <FarmerFarmListCard
+              farm={item}
+              onViewActivities={() =>
+                navigation.navigate('FarmerFarmActivitiesList', { farmId: item.id, farmName: item.name })
+              }
+            />
+          </View>
         )}
         ListEmptyComponent={
-          <View style={styles.emptyWrap}>
+          <View style={[styles.emptyWrap, styles.paddedItem]}>
             <EmptyState
               title={searchQuery.trim() || filterMode !== 'all' ? 'No farms found' : 'No farm linked'}
               message={
@@ -167,7 +163,6 @@ export function FarmerFarmsScreen() {
           </View>
         }
       />
-
     </SafeAreaView>
   );
 }
@@ -178,13 +173,20 @@ const styles = StyleSheet.create({
     backgroundColor: dashboardTheme.background,
   },
   listContent: {
-    paddingHorizontal: dashboardTheme.marginMobile,
     gap: 12,
   },
   headerBlock: {
+    gap: 0,
+    paddingTop: 0,
+    paddingBottom: 8,
+  },
+  paddedBlock: {
+    paddingHorizontal: dashboardTheme.marginMobile,
     gap: 16,
     paddingTop: 16,
-    paddingBottom: 8,
+  },
+  paddedItem: {
+    paddingHorizontal: dashboardTheme.marginMobile,
   },
   searchRow: {
     flexDirection: 'row',
@@ -227,40 +229,5 @@ const styles = StyleSheet.create({
   emptyWrap: {
     gap: 12,
     paddingVertical: 8,
-  },
-  emptyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: dashboardTheme.primaryContainer,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  emptyButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: dashboardTheme.onPrimary,
-  },
-  fab: {
-    position: 'absolute',
-    right: dashboardTheme.marginMobile,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: dashboardTheme.primaryContainer,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 999,
-  },
-  fabPressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.96 }],
-  },
-  fabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: dashboardTheme.onPrimary,
   },
 });

@@ -102,5 +102,9 @@ export async function testApiConnection(_apiBaseUrl: string): Promise<{ ok: bool
 
 /** Startup migration to enforce live ERP URL without touching offline drafts/evidence. */
 export async function bootstrapApiBaseUrl(): Promise<string> {
+  if (__DEV__) {
+    console.log('[BhuGuard API] variant:', process.env.EXPO_PUBLIC_APP_VARIANT ?? 'production');
+    console.log('[BhuGuard API] base URL:', canonicalApiBaseUrl());
+  }
   return enforceCanonicalStorage();
 }

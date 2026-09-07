@@ -1,5 +1,5 @@
 import { useContext, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,6 +16,7 @@ import {
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { AppButton } from '../../components/AppButton';
 import { BIOCHAR_MIXING_EVIDENCE_SLOTS } from '../../constants/biocharMixing';
 import { ArtisanWorkSessionContext } from '../../context/ArtisanWorkSessionContext';
@@ -252,7 +253,7 @@ export function createBiocharMixingScreen<T extends MixingRouteParams>({
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <ScreenHeader title={title} />
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <KeyboardSafeScrollView contentContainerStyle={styles.content} extraBottomPadding={24} showsVerticalScrollIndicator={false}>
           <View style={styles.heroCard}>
             <Text style={styles.heroTitle}>Biochar Mixing</Text>
             <Text style={styles.heroMeta}>{form.heroMeta}</Text>
@@ -352,7 +353,7 @@ export function createBiocharMixingScreen<T extends MixingRouteParams>({
               />
             </View>
           ) : null}
-        </ScrollView>
+        </KeyboardSafeScrollView>
       </SafeAreaView>
     );
   };

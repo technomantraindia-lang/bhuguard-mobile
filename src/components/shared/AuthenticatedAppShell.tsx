@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useNavigationState, type NavigationState, type PartialState } from '@react-navigation/native';
+import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FraudWarningMarquee } from './FraudWarningMarquee';
 import { DeviceTimeWarningBanner } from './DeviceTimeWarningBanner';
@@ -9,6 +10,7 @@ import { useAppUpdate } from '../../context/AppUpdateContext';
 
 /** Routes where the fraud marquee would obstruct critical full-screen controls. */
 export const FRAUD_MARQUEE_HIDDEN_ROUTES = new Set([
+  'ArtisanDashboard',
   'FullscreenImage',
   'OfficerFullscreenImage',
   'ArtisanLiveEvidenceCamera',
@@ -66,6 +68,7 @@ const UNSAFE_RELOAD_ROUTES = new Set([
   'FarmerBiocharProduction',
   'FarmerBiocharMixing',
   'FarmerSubmitActivity',
+  'FarmerFarmActivity',
   'StitchScreen',
 ]);
 
@@ -101,6 +104,7 @@ type RoleAppLayoutProps = {
  * Nested navigators must not mount another copy.
  */
 function RoleAppLayoutComponent({ children }: RoleAppLayoutProps) {
+  const insets = useSafeAreaInsets();
   const routeName = useNavigationState((state) => getDeepestRouteName(state));
   const { state, markAppReady, dismissUpdate, downloadUpdate, applyUpdateNow } = useAppUpdate();
   const [shouldOpenModal, setShouldOpenModal] = useState(false);
@@ -109,6 +113,10 @@ function RoleAppLayoutComponent({ children }: RoleAppLayoutProps) {
     [routeName],
   );
   const unsafeToReload = Boolean(routeName && UNSAFE_RELOAD_ROUTES.has(routeName));
+  const bodyInsets = useMemo(
+    () => (showMarquee ? { ...insets, top: 0 } : insets),
+    [insets, showMarquee],
+  );
 
   useEffect(() => {
     markAppReady();
@@ -135,7 +143,9 @@ function RoleAppLayoutComponent({ children }: RoleAppLayoutProps) {
     <View style={styles.root}>
       <FraudWarningMarquee visible={showMarquee} />
       <DeviceTimeWarningBanner />
-      <View style={styles.body}>{children}</View>
+      <SafeAreaInsetsContext.Provider value={bodyInsets}>
+        <View style={styles.body}>{children}</View>
+      </SafeAreaInsetsContext.Provider>
       <AppUpdateModal
         visible={shouldOpenModal}
         status={state.status}

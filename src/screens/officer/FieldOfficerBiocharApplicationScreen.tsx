@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -15,6 +15,7 @@ import {
 } from '../../api/fieldOfficerApi';
 import { getApiErrorMessage } from '../../api/authApi';
 import { AppButton } from '../../components/AppButton';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import {
@@ -424,7 +425,7 @@ export function FieldOfficerBiocharApplicationScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScreenHeader title="Biochar Application" showBrandLogo={false} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardSafeScrollView contentContainerStyle={styles.content} extraBottomPadding={24}>
         <Text style={styles.text}>Application time: {now.label} (Asia/Kolkata)</Text>
         <Text style={styles.stepHint}>
           {step === 'farmers'
@@ -592,7 +593,7 @@ export function FieldOfficerBiocharApplicationScreen() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {loading ? <Text style={styles.text}>Loading…</Text> : null}
-      </ScrollView>
+      </KeyboardSafeScrollView>
     </SafeAreaView>
   );
 }

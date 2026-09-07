@@ -316,7 +316,7 @@
       "quickActionsSubtitle": "किसान, कारीगर कार्य, गतिविधियाँ और विज़िट।",
       "quickActions": {
         "farmerOnboarding": "किसान ऑनबोर्डिंग",
-        "myActivity": "मेरी गतिविधि",
+        "myActivity": "फार्म गतिविधि",
         "myFarmers": "मेरे किसान",
         "inventory": "इन्वेंटरी",
         "myArtisans": "मेरे कारीगर Pro",
@@ -409,7 +409,8 @@
       "activityDateLabel": "गतिविधि तिथि",
       "nextFarmPhotoUploadDateLabel": "अगली फार्म फोटो अपलोड तिथि",
       "comingSoonTitle": "जल्द आ रहा है",
-      "servicesTitle": "सेवाएँ"
+      "servicesTitle": "सेवाएँ",
+      "addActivity": "फार्म गतिविधि जोड़ें"
     },
     "farmSelection": {
       "title": "खेत चुनें",
@@ -458,9 +459,21 @@
       "notes": "नोट्स (वैकल्पिक)",
       "notesPlaceholder": "वैकल्पिक नोट्स जोड़ें",
       "submit": "फार्म गतिविधि जमा करें",
+      "submitting": "जमा हो रहा है…",
       "submittedTitle": "फार्म गतिविधि विवरण",
       "submittedMessage": "फार्म गतिविधि सफलतापूर्वक जमा हो गई",
-      "submitFailed": "फार्म गतिविधि जमा नहीं हो सकी। आपके दर्ज विवरण और फोटो अभी उपलब्ध हैं। कृपया फिर कोशिश करें।"
+      "submitFailed": "फार्म गतिविधि जमा नहीं हो सकी। आपके दर्ज विवरण और फोटो अभी उपलब्ध हैं। कृपया फिर कोशिश करें।",
+      "noRegisteredFarm": "गतिविधि जमा करने के लिए कोई पंजीकृत फार्म उपलब्ध नहीं है।",
+      "selectFarmHelper": "जारी रखने के लिए अपना एक फार्म चुनें।",
+      "progress": "फार्म गतिविधि प्रगति",
+      "startActivity": "फार्म गतिविधि शुरू करें",
+      "checkIn": "चेक-इन",
+      "checkInLocked": "चेक-इन खोलने के लिए पहले गतिविधि शुरू करें।",
+      "photoLocked": "फोटो अपलोड खोलने के लिए पहले चेक-इन पूरा करें।",
+      "gpsPending": "चेक-इन पर कैप्चर होगा",
+      "capturePhoto": "फोटो कैप्चर करें",
+      "photoReady": "फोटो तैयार है",
+      "photoEmpty": "फोटो: अभी नहीं"
     },
     "notifications": {
       "title": "सूचनाएँ",

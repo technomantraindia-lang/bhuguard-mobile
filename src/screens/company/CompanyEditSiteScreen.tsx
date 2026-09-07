@@ -1,9 +1,10 @@
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 
 import { AppButton } from '../../components/AppButton';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { ScreenHeader } from '../../components/ScreenHeader';
@@ -74,8 +75,7 @@ export function CompanyEditSiteScreen({ route }: Props) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <KeyboardSafeScrollView contentContainerStyle={styles.container} extraBottomPadding={16}>
           <ScreenHeader
             title={isEdit ? 'Edit Site' : 'Add Site'}
             subtitle={isEdit ? `PUT /company/sites/${siteId}` : 'POST /company/sites'}
@@ -97,8 +97,7 @@ export function CompanyEditSiteScreen({ route }: Props) {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <AppButton label={saving ? 'Saving…' : isEdit ? 'Update Site' : 'Create Site'} onPress={() => void handleSubmit()} disabled={saving} />
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardSafeScrollView>
     </SafeAreaView>
   );
 }

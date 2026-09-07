@@ -23,6 +23,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
+import { useKeyboardOverlapInset } from '../../hooks/useKeyboardOverlapInset';
+
 import {
   getApiErrorMessage,
   requestForgotMpinOtp,
@@ -68,10 +70,13 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
   const { t, language, setLanguage } = useTranslation();
   const { width: windowWidth } = useWindowDimensions();
   const width = useMemo(() => windowWidth, [windowWidth]);
+  const keyboardOverlap = useKeyboardOverlapInset();
 
   const mobile = route.params?.mobile ?? '';
+  const [requestId, setRequestId] = useState(() => route.params?.requestId ?? '');
   const purpose = route.params?.purpose ?? 'forgot_password';
   const role = route.params?.role;
+  const [devOtp, setDevOtp] = useState(() => route.params?.devOtp ?? '');
   const flowOrigin = route.params?.flowOrigin;
 
   const [otp, setOtp] = useState('');
@@ -271,7 +276,7 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
 
     try {
       if (purpose === 'login') {
-        const result = await verifyLoginOtp(mobile, otp.trim());
+        const result = await verifyLoginOtp(mobile, otp.trim(), requestId || undefined);
         if (!mountedRef.current) {
           return;
         }
@@ -342,7 +347,13 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
 
     try {
       if (purpose === 'login') {
-        await requestLoginOtp(mobile);
+        const response = await requestLoginOtp(mobile);
+        if (mountedRef.current && typeof response?.request_id === 'string') {
+          setRequestId(response.request_id);
+        }
+        if (mountedRef.current && typeof response?.dev_otp === 'string') {
+          setDevOtp(response.dev_otp);
+        }
       } else if (purpose === 'forgot_mpin' || purpose === 'forgot_pattern') {
         await requestForgotMpinOtp(mobile);
       } else {
@@ -389,12 +400,17 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
 
         <KeyboardAvoidingView
           style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
         >
           <ScrollView
-            contentContainerStyle={styles.scroll}
+            contentContainerStyle={[
+              styles.scroll,
+              { paddingBottom: 28 + (Platform.OS === 'ios' ? 0 : keyboardOverlap) },
+            ]}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
@@ -439,6 +455,16 @@ export function OtpVerificationScreen({ navigation, route }: Props) {
                   inactiveBorderColor={loginTheme.inputBorder}
                   digitColor={loginTheme.darkText}
                 />
+
+                {/^[0-9]{4,8}$/.test(devOtp) ? (
+                  <View style={styles.devOtpPanel}>
+                    <Text style={[styles.devOtpTitle, semiFont ? { fontFamily: semiFont } : null]}>Development Mode</Text>
+                    <Text style={[styles.devOtpValue, titleFont ? { fontFamily: titleFont } : null]}>OTP: {devOtp}</Text>
+                    <Pressable onPress={() => setOtp(devOtp)} style={styles.devOtpButton} accessibilityRole="button">
+                      <Text style={[styles.devOtpButtonText, semiFont ? { fontFamily: semiFont } : null]}>Fill OTP</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
 
                 {error ? (
                   <Text style={[styles.error, semiFont ? { fontFamily: semiFont } : null]}>
@@ -574,6 +600,35 @@ const styles = StyleSheet.create({
   },
   resendDisabled: {
     opacity: 0.4,
+  },
+  devOtpPanel: {
+    marginTop: 14,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#E8F5ED',
+    alignItems: 'center',
+    gap: 6,
+  },
+  devOtpTitle: {
+    color: '#17633D',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  devOtpValue: {
+    color: '#123B2A',
+    fontSize: 20,
+    letterSpacing: 2,
+  },
+  devOtpButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#1E7A4D',
+  },
+  devOtpButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
   securityHelper: {
     marginTop: 14,

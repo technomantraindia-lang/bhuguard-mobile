@@ -48,9 +48,13 @@ export function OfficerSummaryCard({ dashboard }: { dashboard: FieldOfficerDashb
       <View style={styles.summaryRow}>
         <View style={styles.summaryLeft}>
           <Text style={styles.summaryName}>{dashboard.officerName}</Text>
-import { formatFieldOfficerDisplayId } from '../../utils/displayIds';
-...
-          <Text style={styles.summaryCode}>ID: {formatFieldOfficerDisplayId({ officer_code: dashboard.officerCode, field_officer_id: dashboard.officerCode })}</Text>
+          <Text style={styles.summaryCode}>
+            ID:{' '}
+            {formatFieldOfficerDisplayId({
+              officer_code: dashboard.officerCode,
+              field_officer_id: dashboard.officerCode,
+            })}
+          </Text>
           <View style={styles.regionPill}>
             <BhuguardMaterialIcon name="location_on" size={14} color={officerTheme.onSecondaryFixedVariant} />
             <Text style={styles.regionText}>{dashboard.regionLabel}</Text>
@@ -406,33 +410,20 @@ export function OfficerMapCoverage({
 }
 
 export function OfficerPerformanceSection({ dashboard }: { dashboard: FieldOfficerDashboardViewModel }) {
-  if (dashboard.monthlyRating <= 0 && dashboard.accuracyPercent <= 0) {
+  if (dashboard.monthlyRating <= 0) {
     return null;
   }
 
   return (
     <View style={styles.performanceWrap}>
-      {dashboard.monthlyRating > 0 ? (
-        <View style={[styles.ratingCard, officerShadow]}>
-          <View style={styles.ratingCopy}>
-            <Text style={styles.ratingTitle}>Monthly Rating</Text>
-            <Text style={styles.ratingSubtitle}>Based on approved verification reports.</Text>
-          </View>
-          <View style={styles.ratingValueWrap}>
-            <Text style={styles.ratingValue}>{dashboard.monthlyRating.toFixed(1)}</Text>
-            <Text style={styles.ratingStars}>★★★★☆</Text>
-          </View>
+      <View style={[styles.ratingCard, officerShadow]}>
+        <View style={styles.ratingCopy}>
+          <Text style={styles.ratingTitle}>Monthly Rating</Text>
+          <Text style={styles.ratingSubtitle}>Based on approved verification reports.</Text>
         </View>
-      ) : null}
-
-      <View style={styles.performanceGrid}>
-        <View style={[styles.performanceStat, officerCardShadow]}>
-          <Text style={styles.performanceLabel}>Accuracy</Text>
-          <Text style={styles.performanceValue}>{dashboard.accuracyPercent}%</Text>
-        </View>
-        <View style={[styles.performanceStat, officerCardShadow]}>
-          <Text style={styles.performanceLabel}>Report Rate</Text>
-          <Text style={styles.performanceValue}>{dashboard.reportRateLabel}</Text>
+        <View style={styles.ratingValueWrap}>
+          <Text style={styles.ratingValue}>{dashboard.monthlyRating.toFixed(1)}</Text>
+          <Text style={styles.ratingStars}>★★★★☆</Text>
         </View>
       </View>
     </View>

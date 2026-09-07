@@ -197,21 +197,18 @@ export function FarmRecentActivitiesSection({ activities, onActivityPress }: Far
 }
 
 interface FarmDetailActionButtonsProps {
-  onOpenGoogleMaps: () => void;
   onEditFarm: () => void;
   onAddActivity: () => void;
   onBiocharUpdates: () => void;
 }
 
 export function FarmDetailActionButtons({
-  onOpenGoogleMaps,
   onEditFarm,
   onAddActivity,
   onBiocharUpdates,
 }: FarmDetailActionButtonsProps) {
   return (
     <View style={styles.actionGrid}>
-      <ActionButton label="Open in Google Maps" icon="map" onPress={onOpenGoogleMaps} variant="outline" />
       <ActionButton label="Edit Farm" icon="assignment" onPress={onEditFarm} variant="outline" />
       <ActionButton label="Add Activity" icon="add_circle" onPress={onAddActivity} variant="solid" />
       <ActionButton label="Biochar Updates" icon="event_note" onPress={onBiocharUpdates} variant="outline" />
@@ -226,7 +223,7 @@ function ActionButton({
   variant,
 }: {
   label: string;
-  icon: 'map' | 'assignment' | 'add_circle' | 'event_note';
+  icon: 'assignment' | 'add_circle' | 'event_note';
   onPress: () => void;
   variant: 'solid' | 'outline';
 }) {

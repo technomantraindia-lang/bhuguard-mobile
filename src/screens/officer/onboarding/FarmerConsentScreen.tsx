@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, BackHandler, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -22,15 +22,13 @@ import { useOnboarding } from '../../../context/OnboardingContext';
 import { useLiveEvidenceCapture } from '../../../hooks/useLiveEvidenceCapture';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { dashboardTheme } from '../../../theme/bhuguardDashboardTheme';
-import {
-  getDemoConsentOtpCode,
-  isDemoConsentOtpEnabled,
-  isDemoConsentOtpMatch,
-} from '../../../utils/demoConsentOtp';
 import { formatFarmDisplayCode, formatFarmerDisplayCode, isValidEntityId } from '../../../utils/entityId';
 import { validateConsent } from '../../../utils/onboardingValidation';
+import { attachPersistedOnboardingFile } from '../../../utils/onboardingFilePersistence';
 import { sanitizeOnboardingApiError } from '../../../utils/assignmentErrorMessage';
-import { safeNetInfoIsConnected } from '../../../utils/safeNetInfo';
+import { usesLocalDevelopmentApi } from '../../../utils/localApiNetwork';
+import { safeNetInfoHasDeviceNetwork } from '../../../utils/safeNetInfo';
+import { getCachedApiBaseUrl } from '../../../storage/apiConfigStorage';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
 
@@ -40,8 +38,15 @@ type EligibilityItem = {
   ok: boolean;
 };
 
-function toAsset(uri: string, name: string, mimeType: string, size?: number): FileAsset {
-  return { uri, name, mimeType, size };
+function toAsset(
+  uri: string,
+  name: string,
+  mimeType: string,
+  size?: number,
+  isStamped = false,
+  capturedAt?: string,
+): FileAsset {
+  return { uri, name, mimeType, size, isStamped, capturedAt };
 }
 
 function maskMobile(mobile: string): string {
@@ -133,12 +138,33 @@ export function FarmerConsentScreen() {
   const [sendInfo, setSendInfo] = useState<string | null>(null);
   const [maskedMobile, setMaskedMobile] = useState(maskMobile(draft.mobile));
   const [resendAfter, setResendAfter] = useState(0);
+  const [otpRequestId, setOtpRequestId] = useState<string | null>(
+    draft.agreement_otp_request_id.trim() || null,
+  );
+  const [serverDevOtp, setServerDevOtp] = useState<string | null>(
+    draft.agreement_otp_dev_otp.trim() || null,
+  );
+  const [otpSessionReady, setOtpSessionReady] = useState(
+    Boolean(draft.agreement_otp_request_id.trim()) || draft.agreement_otp_verified,
+  );
+  const [persistingEvidence, setPersistingEvidence] = useState(false);
   const verifyingRef = useRef(false);
   const navigatingRef = useRef(false);
   const hydratedIdsRef = useRef(false);
   const evidenceCapture = useLiveEvidenceCapture({ defaultName: 'agreement-evidence.jpg', allowsEditing: false });
-  const demoConsentOtpEnabled = isDemoConsentOtpEnabled();
-  const demoConsentOtpCode = getDemoConsentOtpCode();
+
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (navigation.canGoBack()) {
+          navigation.goBack();
+          return true;
+        }
+        return true;
+      });
+      return () => subscription.remove();
+    }, [navigation]),
+  );
 
   // Refresh Farmer/Farm IDs from navigation params after land/farm creation (never blocks Continue).
   useEffect(() => {
@@ -188,23 +214,41 @@ export function FarmerConsentScreen() {
   }, [resendAfter]);
 
   const ensureOnline = async (): Promise<boolean> => {
-    if (demoConsentOtpEnabled) {
+    if (usesLocalDevelopmentApi(getCachedApiBaseUrl())) {
       return true;
     }
-    const online = await safeNetInfoIsConnected();
+
+    const online = await safeNetInfoHasDeviceNetwork();
     if (!online) {
-      setError('Internet connection is required to send and verify the Farmer Agreement OTP.');
+      setError('No network connection on this device. Connect to Wi‑Fi or mobile data, then retry.');
       return false;
     }
     return true;
   };
 
-  const addEvidence = (file: FileAsset) => {
-    updateDraft({
-      onboarding_evidences: [...draft.onboarding_evidences, file],
-      consent_documents: [...draft.consent_documents, file],
-      consent_form: draft.consent_form ?? file,
-    });
+  const addEvidence = async (incoming: FileAsset) => {
+    setPersistingEvidence(true);
+    setError(null);
+    try {
+      const { file, sessionPatch } = await attachPersistedOnboardingFile(draft, 'evidence', {
+        uri: incoming.uri,
+        name: incoming.name,
+        mimeType: incoming.mimeType,
+        size: incoming.size,
+        isStamped: incoming.isStamped,
+        capturedAt: incoming.capturedAt,
+      });
+      updateDraft({
+        ...sessionPatch,
+        onboarding_evidences: [...draft.onboarding_evidences, file],
+        consent_documents: [...draft.consent_documents, file],
+        consent_form: draft.consent_form ?? file,
+      });
+    } catch {
+      setError('Unable to save agreement evidence on this device. Please capture it again.');
+    } finally {
+      setPersistingEvidence(false);
+    }
   };
 
   const captureEvidence = async () => {
@@ -213,7 +257,9 @@ export function FarmerConsentScreen() {
     if (!captured) {
       return;
     }
-    addEvidence(toAsset(captured.uri, captured.name, captured.type));
+    await addEvidence(
+      toAsset(captured.uri, captured.name, captured.type, undefined, true, captured.capturedAt),
+    );
   };
 
   const uploadEvidence = async () => {
@@ -230,7 +276,7 @@ export function FarmerConsentScreen() {
     if (!asset) {
       return;
     }
-    addEvidence(toAsset(asset.uri, asset.name, asset.mimeType ?? 'image/jpeg', asset.size));
+    await addEvidence(toAsset(asset.uri, asset.name, asset.mimeType ?? 'image/jpeg', asset.size, false));
   };
 
   const removeEvidence = (index: number) => {
@@ -258,32 +304,44 @@ export function FarmerConsentScreen() {
     setSending(true);
     setError(null);
     setSendInfo(null);
+    setServerDevOtp(null);
+    setOtp('');
+    setOtpSessionReady(false);
     try {
-      if (demoConsentOtpEnabled) {
-        try {
-          const response = await sendOnboardingAgreementOtp(draft.mobile.trim());
-          setMaskedMobile(response.masked_mobile || maskMobile(draft.mobile));
-          setResendAfter(Number(response.resend_after_seconds ?? 60));
-        } catch {
-          setMaskedMobile(maskMobile(draft.mobile));
-          setResendAfter(60);
-        }
-        setSendInfo(`Development OTP generated. Use ${demoConsentOtpCode}.`);
-      } else {
-        const response = await sendOnboardingAgreementOtp(draft.mobile.trim());
-        setMaskedMobile(response.masked_mobile || maskMobile(draft.mobile));
-        setResendAfter(Number(response.resend_after_seconds ?? 60));
-        setSendInfo(response.message || null);
-      }
+      const response = await sendOnboardingAgreementOtp(draft.mobile.trim());
+      setMaskedMobile(response.masked_mobile || maskMobile(draft.mobile));
+      setResendAfter(Number(response.resend_after_seconds ?? response.expires_in ?? 60));
+      const nextRequestId = response.request_id ? String(response.request_id) : null;
+      setOtpRequestId(nextRequestId);
+      setOtpSessionReady(true);
+      const returnedDevOtp =
+        typeof response.dev_otp === 'string' && /^\d{4,8}$/.test(response.dev_otp.trim())
+          ? response.dev_otp.trim()
+          : null;
+      setServerDevOtp(returnedDevOtp);
+      setSendInfo(response.message || 'Consent OTP generated successfully.');
 
       updateDraft({
         agreement_otp_verified: false,
         agreement_verification_token: '',
         agreement_verified_at: '',
         agreement_verified_mobile: '',
+        agreement_otp_request_id: nextRequestId ?? '',
+        agreement_otp_dev_otp: returnedDevOtp ?? '',
       });
     } catch (err) {
-      setError(sanitizeOnboardingApiError(getApiErrorMessage(err, 'Unable to send Agreement OTP.')));
+      setOtpRequestId(null);
+      setServerDevOtp(null);
+      setOtpSessionReady(false);
+      updateDraft({
+        agreement_otp_request_id: '',
+        agreement_otp_dev_otp: '',
+      });
+      setError(
+        sanitizeOnboardingApiError(
+          getApiErrorMessage(err, 'Consent OTP could not be generated. Please try again.'),
+        ),
+      );
     } finally {
       setSending(false);
     }
@@ -291,6 +349,10 @@ export function FarmerConsentScreen() {
 
   const verifyOtp = async () => {
     if (verifyingRef.current) {
+      return;
+    }
+    if (!otpSessionReady) {
+      setError('Generate an OTP before verification.');
       return;
     }
     if (!/^\d{6}$/.test(otp)) {
@@ -305,48 +367,39 @@ export function FarmerConsentScreen() {
     setVerifying(true);
     setError(null);
     try {
-      if (isDemoConsentOtpMatch(otp)) {
-        try {
-          let response;
-          try {
-            response = await verifyOnboardingAgreementOtp(draft.mobile.trim(), otp);
-          } catch {
-            await sendOnboardingAgreementOtp(draft.mobile.trim());
-            response = await verifyOnboardingAgreementOtp(draft.mobile.trim(), otp);
-          }
-          updateDraft({
-            agreement_otp_verified: true,
-            agreement_verification_token: response.agreement_verification_token,
-            agreement_verified_at: response.verified_at,
-            agreement_verified_mobile: response.masked_mobile || maskMobile(draft.mobile),
-          });
-          setMaskedMobile(response.masked_mobile || maskMobile(draft.mobile));
-          setOtp('');
-          setSendInfo(null);
-          Alert.alert('Verified', 'Consent OTP verified successfully.');
-          return;
-        } catch (err) {
-          setError(sanitizeOnboardingApiError(getApiErrorMessage(err, 'OTP verification failed.')));
-          return;
-        }
-      }
-
-      const response = await verifyOnboardingAgreementOtp(draft.mobile.trim(), otp);
+      const response = await verifyOnboardingAgreementOtp(draft.mobile.trim(), otp, {
+        requestId: otpRequestId,
+        farmerId: draft.farmer_id,
+      });
       updateDraft({
         agreement_otp_verified: true,
         agreement_verification_token: response.agreement_verification_token,
         agreement_verified_at: response.verified_at,
         agreement_verified_mobile: response.masked_mobile || maskMobile(draft.mobile),
+        agreement_otp_request_id: otpRequestId ?? draft.agreement_otp_request_id,
+        agreement_otp_dev_otp: '',
       });
       setMaskedMobile(response.masked_mobile || maskMobile(draft.mobile));
       setOtp('');
       setSendInfo(null);
+      setServerDevOtp(null);
       Alert.alert('Verified', 'Consent OTP verified successfully.');
     } catch (err) {
       setError(sanitizeOnboardingApiError(getApiErrorMessage(err, 'OTP verification failed.')));
     } finally {
       verifyingRef.current = false;
       setVerifying(false);
+    }
+  };
+
+  const copyDevOtp = async () => {
+    if (!serverDevOtp) {
+      return;
+    }
+    try {
+      await Share.share({ message: serverDevOtp, title: 'Developer OTP' });
+    } catch {
+      Alert.alert('Developer OTP', serverDevOtp);
     }
   };
 
@@ -520,8 +573,23 @@ export function FarmerConsentScreen() {
                   {sending ? 'Sending…' : resendAfter > 0 ? `Resend OTP in ${resendAfter}s` : 'Send OTP'}
                 </Text>
               </Pressable>
-              {demoConsentOtpEnabled ? (
-                <Text style={styles.demoHint}>Development OTP: {demoConsentOtpCode}</Text>
+              {serverDevOtp ? (
+                <View style={styles.devOtpCard}>
+                  <Text style={styles.devOtpTitle}>Developer OTP</Text>
+                  <Text style={styles.devOtpCode}>{serverDevOtp}</Text>
+                  <View style={styles.devOtpActions}>
+                    <Pressable style={styles.devOtpButton} onPress={() => void copyDevOtp()}>
+                      <Text style={styles.devOtpButtonText}>Copy OTP</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.devOtpButton}
+                      onPress={() => setOtp(serverDevOtp.replace(/\D/g, '').slice(0, 6))}
+                    >
+                      <Text style={styles.devOtpButtonText}>Fill OTP</Text>
+                    </Pressable>
+                  </View>
+                  <Text style={styles.devOtpHint}>Testing only — still press Verify OTP.</Text>
+                </View>
               ) : null}
               {sendInfo ? <Text style={styles.sendInfo}>{sendInfo}</Text> : null}
               <TextInput
@@ -534,15 +602,15 @@ export function FarmerConsentScreen() {
                 placeholderTextColor={dashboardTheme.onSurfaceVariant}
               />
               <Pressable
-                style={[styles.verifyButton, (verifying || !otpReady) && styles.disabled]}
-                disabled={verifying || !otpReady}
+                style={[styles.verifyButton, (verifying || !otpReady || !otpSessionReady) && styles.disabled]}
+                disabled={verifying || !otpReady || !otpSessionReady}
                 onPress={() => void verifyOtp()}
               >
                 <Text style={styles.verifyButtonText}>{verifying ? 'Verifying…' : 'Verify OTP'}</Text>
               </Pressable>
             </>
           ) : (
-            <Text style={styles.verified}>Agreement Status: OTP Verified</Text>
+            <Text style={styles.verified}>OTP Verified ✓</Text>
           )}
         </View>
       ) : null}
@@ -602,18 +670,32 @@ const styles = StyleSheet.create({
   removeText: { color: '#B91C1C', fontWeight: '700' },
   otpCard: { gap: 10, marginTop: 4 },
   otpHelp: { color: dashboardTheme.onSurfaceVariant, fontSize: 13 },
-  demoHint: {
-    color: '#92400E',
-    backgroundColor: '#FEF3C7',
-    borderColor: '#F59E0B',
+  devOtpCard: {
+    gap: 8,
     borderWidth: 1,
-    borderRadius: 8,
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
-    fontWeight: '700',
+    borderColor: '#F59E0B',
+    backgroundColor: '#FEF3C7',
+    borderRadius: 10,
+    padding: 12,
   },
+  devOtpTitle: { color: '#92400E', fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
+  devOtpCode: {
+    color: '#78350F',
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: 6,
+    textAlign: 'center',
+  },
+  devOtpActions: { flexDirection: 'row', gap: 8 },
+  devOtpButton: {
+    flex: 1,
+    backgroundColor: '#F59E0B',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  devOtpButtonText: { color: '#78350F', fontWeight: '700', fontSize: 13 },
+  devOtpHint: { color: '#92400E', fontSize: 12 },
   sendInfo: { color: '#047857', fontSize: 13, fontWeight: '600' },
   otpInput: {
     borderWidth: 1,

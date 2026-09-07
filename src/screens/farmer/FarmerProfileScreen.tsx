@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -8,17 +8,20 @@ import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 
-import { getApiErrorMessage } from '../../api/authApi';
 import {
   removeFarmerProfilePhoto,
   updateFarmerProfileMpin,
   updateFarmerProfilePassword,
   updateFarmerProfilePhoto,
 } from '../../api/farmerApi';
+import { getApiErrorMessage, setupMpin } from '../../api/authApi';
+import { getBiometricLoginEnabled, setBiometricLoginEnabled } from '../../storage/biometricPreference';
+import { authenticateWithBiometrics, isBiometricHardwareAvailable } from '../../utils/biometricLogin';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { FarmerIdentityCard } from '../../components/farmer/profile/FarmerIdentityCard';
 import { FarmerProfileHeader } from '../../components/farmer/profile/FarmerProfileHeader';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { ProfileAccordionSection } from '../../components/farmer/profile/ProfileAccordionSection';
 import { ProfileActionModal } from '../../components/farmer/profile/ProfileActionModal';
 import { ProfileDocumentCard } from '../../components/farmer/profile/ProfileDocumentCard';
@@ -210,10 +213,23 @@ export function FarmerProfileScreen() {
   const [mpinUpdating, setMpinUpdating] = useState(false);
   const [mpinApiError, setMpinApiError] = useState<string | null>(null);
 
-  const [biometricEnabled, setBiometricEnabled] = useState(true);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [securityPanel, setSecurityPanel] = useState<'mpin' | 'password' | null>(null);
   const activePencilEditsRef = useRef(0);
   const [hasActivePencilEdit, setHasActivePencilEdit] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      const [available, enabled] = await Promise.all([
+        isBiometricHardwareAvailable(),
+        getBiometricLoginEnabled(),
+      ]);
+      setBiometricAvailable(available);
+      setBiometricEnabled(enabled);
+    })();
+  }, []);
 
   const handlePencilEditingChange = useCallback((editing: boolean) => {
     activePencilEditsRef.current = Math.max(0, activePencilEditsRef.current + (editing ? 1 : -1));
@@ -358,8 +374,9 @@ export function FarmerProfileScreen() {
 
   const handleUpdatePassword = async () => {
     setPasswordApiError(null);
+    const hasPassword = Boolean(profile?.hasPassword);
 
-    if (!currentPassword.trim()) {
+    if (hasPassword && !currentPassword.trim()) {
       setPasswordApiError('Current password is required.');
       return;
     }
@@ -378,14 +395,21 @@ export function FarmerProfileScreen() {
 
     try {
       await updateFarmerProfilePassword({
-        current_password: currentPassword,
+        ...(hasPassword ? { current_password: currentPassword } : {}),
         password: newPassword,
         password_confirmation: confirmPassword,
       });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      showSuccess('Password Updated', 'Your password has been updated successfully.');
+      setSecurityPanel(null);
+      await reload();
+      showSuccess(
+        hasPassword ? 'Password Updated' : 'Password Set',
+        hasPassword
+          ? 'Your password has been updated successfully.'
+          : 'Your password has been set successfully.',
+      );
     } catch (err) {
       setPasswordApiError(getApiErrorMessage(err, 'Failed to update password.'));
     } finally {
@@ -395,8 +419,9 @@ export function FarmerProfileScreen() {
 
   const handleUpdateMpin = async () => {
     setMpinApiError(null);
+    const hasMpin = Boolean(profile?.hasMpin);
 
-    if (currentMpin.length !== 6) {
+    if (hasMpin && currentMpin.length !== 6) {
       setMpinApiError('Enter your current 6-digit MPIN.');
       return;
     }
@@ -411,23 +436,54 @@ export function FarmerProfileScreen() {
       return;
     }
 
+    if (/^(\d)\1{5}$/.test(newMpin) || newMpin === '123456' || newMpin === '000000') {
+      setMpinApiError('Choose a stronger MPIN. Avoid repeated or sequential digits.');
+      return;
+    }
+
     setMpinUpdating(true);
 
     try {
-      await updateFarmerProfileMpin({
-        current_mpin: currentMpin,
-        mpin: newMpin,
-        mpin_confirmation: confirmMpin,
-      });
+      if (hasMpin) {
+        await updateFarmerProfileMpin({
+          current_mpin: currentMpin,
+          mpin: newMpin,
+          mpin_confirmation: confirmMpin,
+        });
+      } else {
+        await setupMpin(newMpin);
+      }
       setCurrentMpin('');
       setNewMpin('');
       setConfirmMpin('');
-      showSuccess('MPIN Updated', 'Your MPIN has been updated successfully.');
+      setSecurityPanel(null);
+      await reload();
+      showSuccess(
+        hasMpin ? 'MPIN Updated' : 'MPIN Set',
+        hasMpin ? 'Your MPIN has been updated successfully.' : 'Your MPIN has been set successfully.',
+      );
     } catch (err) {
       setMpinApiError(getApiErrorMessage(err, 'Failed to update MPIN.'));
     } finally {
       setMpinUpdating(false);
     }
+  };
+
+  const handleBiometricToggle = async (nextValue: boolean) => {
+    if (!biometricAvailable) {
+      Alert.alert('Biometrics unavailable', 'Set up fingerprint or face unlock on your device first.');
+      return;
+    }
+
+    if (nextValue) {
+      const authenticated = await authenticateWithBiometrics(t('farmerLogin.biometricOption'));
+      if (!authenticated) {
+        return;
+      }
+    }
+
+    await setBiometricLoginEnabled(nextValue);
+    setBiometricEnabled(nextValue);
   };
 
 
@@ -452,7 +508,7 @@ export function FarmerProfileScreen() {
 
   if (loading && !profile) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={[]}>
         <LoadingState message="Loading your profile..." />
       </SafeAreaView>
     );
@@ -460,24 +516,27 @@ export function FarmerProfileScreen() {
 
   if (error && !profile) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={[]}>
         <ErrorState message={error} onRetry={reload} />
       </SafeAreaView>
     );
   }
 
   const data = profile!;
+  const hasMpin = Boolean(data.hasMpin);
+  const hasPassword = Boolean(data.hasPassword);
   const passwordMismatch = confirmPassword.length > 0 && newPassword !== confirmPassword;
   const mpinMismatch = confirmMpin.length > 0 && newMpin !== confirmMpin;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={[]}>
       <FarmerProfileHeader
         onBack={() => navigation.navigate('Home')}
         onNotificationsPress={() => navigation.navigate('FarmerNotifications')}
       />
 
-      <ScrollView
+      <KeyboardSafeScrollView
+        extraBottomPadding={24}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -606,15 +665,6 @@ export function FarmerProfileScreen() {
               status={document.status}
               rejectionReason={document.rejectionReason}
               actionsEnabled
-              onView={
-                document.previewUrl
-                  ? () =>
-                      navigation.navigate('FullscreenImage', {
-                        uri: document.previewUrl!,
-                        title: document.title,
-                      })
-                  : undefined
-              }
               onReplace={document.canReplace ? () => void replaceDocument(document.id) : undefined}
               onDelete={
                 document.canDelete
@@ -641,11 +691,62 @@ export function FarmerProfileScreen() {
             onPress={() => navigation.navigate('ChangePattern')}
           />
 
+          <ProfileLinkRow
+            label={hasMpin ? 'Change MPIN' : 'Set MPIN'}
+            onPress={() => setSecurityPanel((current) => (current === 'mpin' ? null : 'mpin'))}
+          />
+          {securityPanel === 'mpin' ? (
+            <SecurityCard title={hasMpin ? 'Change MPIN' : 'Set MPIN'}>
+              {hasMpin ? (
+                <ProfileMpinInput label="Current MPIN" value={currentMpin} onChange={setCurrentMpin} />
+              ) : null}
+              <ProfileMpinInput label="New MPIN" value={newMpin} onChange={setNewMpin} />
+              <ProfileMpinInput label="Confirm New MPIN" value={confirmMpin} onChange={setConfirmMpin} />
+              {mpinApiError ? <Text style={styles.helperError}>{mpinApiError}</Text> : null}
+              <SectionButton
+                label={mpinUpdating ? 'Saving…' : hasMpin ? 'Update MPIN' : 'Set MPIN'}
+                onPress={() => void handleUpdateMpin()}
+                loading={mpinUpdating}
+              />
+            </SecurityCard>
+          ) : null}
+
+          <ProfileLinkRow
+            label={hasPassword ? 'Change Password' : 'Set Password'}
+            onPress={() => setSecurityPanel((current) => (current === 'password' ? null : 'password'))}
+          />
+          {securityPanel === 'password' ? (
+            <SecurityCard title={hasPassword ? 'Change Password' : 'Set Password'}>
+              {hasPassword ? (
+                <ProfileSecureField
+                  label="Current Password"
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                />
+              ) : null}
+              <ProfileSecureField label="New Password" value={newPassword} onChangeText={setNewPassword} />
+              <ProfileSecureField
+                label="Confirm New Password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+              {passwordApiError ? <Text style={styles.helperError}>{passwordApiError}</Text> : null}
+              <SectionButton
+                label={passwordUpdating ? 'Saving…' : hasPassword ? 'Update Password' : 'Set Password'}
+                onPress={() => void handleUpdatePassword()}
+                loading={passwordUpdating}
+              />
+            </SecurityCard>
+          ) : null}
+
           <ProfileToggleRow
             label="Biometric Login"
             value={biometricEnabled}
-            onValueChange={setBiometricEnabled}
+            onValueChange={(value) => void handleBiometricToggle(value)}
           />
+          {!biometricAvailable ? (
+            <Text style={styles.helperText}>Biometrics are not available on this device.</Text>
+          ) : null}
         </ProfileAccordionSection>
 
         <ProfileAccordionSection
@@ -699,7 +800,7 @@ export function FarmerProfileScreen() {
             variant="outline"
           />
         </ProfileAccordionSection>
-      </ScrollView>
+      </KeyboardSafeScrollView>
 
       <ProfileLanguageSheet
         visible={languageSheetOpen}
@@ -804,6 +905,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: dashboardTheme.onSurfaceVariant,
+  },
+  helperError: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: dashboardTheme.error,
   },
   subtitle: {
     fontSize: 15,

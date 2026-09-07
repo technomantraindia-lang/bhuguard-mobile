@@ -1,6 +1,7 @@
 import axios, { type AxiosError } from 'axios';
 
 import type { ApiErrorResponse } from '../types/auth';
+import { isDevelopmentBuild, usesLocalDevelopmentApi } from './localApiNetwork';
 
 function looksLikeHtml(value: unknown): boolean {
   if (typeof value !== 'string') {
@@ -81,6 +82,21 @@ function firstValidationFieldNames(errors: Record<string, string[] | string> | u
   }
 
   return Object.keys(errors).slice(0, 12);
+}
+
+export function extractValidationFieldKeys(error: unknown): string[] {
+  const axiosError = axios.isAxiosError(error)
+    ? error
+    : error instanceof Error && axios.isAxiosError(error.cause)
+      ? error.cause
+      : null;
+
+  if (!axiosError) {
+    return [];
+  }
+
+  const data = axiosError.response?.data as ApiErrorResponse | undefined;
+  return firstValidationFieldNames(data?.errors as Record<string, string[] | string> | undefined);
 }
 
 export function logSafeApiFailure(error: unknown, context?: string): void {
@@ -245,6 +261,10 @@ export function extractApiErrorMessage(error: unknown, fallback = 'Request faile
     }
 
     if (isNetworkError(axiosError)) {
+      const baseUrl = axiosError.config?.baseURL ?? '';
+      if (usesLocalDevelopmentApi(baseUrl)) {
+        return LOCAL_DEV_TRANSPORT_MESSAGE;
+      }
       return NETWORK_UNREACHABLE_MESSAGE;
     }
 
@@ -272,7 +292,20 @@ export const NETWORK_ERROR_MESSAGE = 'No internet connection.';
 
 export const NETWORK_UNREACHABLE_MESSAGE = 'No internet connection.';
 
-export function formatApiUnreachableMessage(_baseUrl: string): string {
+export const LOCAL_DEV_TRANSPORT_MESSAGE = 'Unable to reach local development server.';
+
+/** @deprecated Use LOCAL_DEV_TRANSPORT_MESSAGE — kept for imports that expect the old name. */
+export const LOCAL_API_UNREACHABLE_MESSAGE = LOCAL_DEV_TRANSPORT_MESSAGE;
+
+export function formatApiUnreachableMessage(baseUrl: string): string {
+  if (usesLocalDevelopmentApi(baseUrl)) {
+    return LOCAL_DEV_TRANSPORT_MESSAGE;
+  }
+
+  if (isDevelopmentBuild()) {
+    return `${NETWORK_UNREACHABLE_MESSAGE}\n\nAPI: ${baseUrl}`;
+  }
+
   return NETWORK_UNREACHABLE_MESSAGE;
 }
 

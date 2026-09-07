@@ -22,7 +22,7 @@ export async function removeFarmerProfilePhoto() {
 }
 
 export async function updateFarmerProfilePassword(payload: {
-  current_password: string;
+  current_password?: string;
   password: string;
   password_confirmation: string;
 }) {
@@ -30,7 +30,7 @@ export async function updateFarmerProfilePassword(payload: {
 }
 
 export async function updateFarmerProfileMpin(payload: {
-  current_mpin: string;
+  current_mpin?: string;
   mpin: string;
   mpin_confirmation: string;
 }) {
@@ -45,8 +45,22 @@ export async function getFarmerMyFarms() {
   return fetchApiData<{ farms: ApiRecord[] }>('/farmer/my-farms');
 }
 
-export async function getFarmerFarmActivities(status?: 'draft' | 'submitted') {
-  return fetchApiData<{ farm_activities: ApiRecord[] }>('/farmer/farm-activities', status ? { status } : undefined);
+export async function getFarmerFarmActivities(status?: 'draft' | 'submitted', farmId?: number) {
+  const params: Record<string, string | number> = {};
+  if (status) {
+    params.status = status;
+  }
+  if (farmId) {
+    params.farm_id = farmId;
+  }
+  return fetchApiData<{ farm_activities: ApiRecord[] }>(
+    '/farmer/farm-activities',
+    Object.keys(params).length > 0 ? params : undefined,
+  );
+}
+
+export async function getFarmerFarmActivityHistory(farmId: number | string) {
+  return fetchApiData<{ history: ApiRecord[]; summary?: ApiRecord }>(`/farmer/farms/${farmId}/farm-activities`);
 }
 
 export async function getFarmerFarmActivity(id: number | string) {

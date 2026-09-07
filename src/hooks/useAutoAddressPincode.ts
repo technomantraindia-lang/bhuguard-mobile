@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import type { AddressOption } from '../api/addressApi';
 import { getTalukaPincode } from '../api/addressApi';
@@ -21,6 +21,9 @@ export function useAutoAddressPincode({
   villages,
   onPincodeChange,
 }: UseAutoAddressPincodeOptions): void {
+  const onPincodeChangeRef = useRef(onPincodeChange);
+  onPincodeChangeRef.current = onPincodeChange;
+
   useEffect(() => {
     if (!talukaId) {
       return;
@@ -31,7 +34,7 @@ export function useAutoAddressPincode({
     const resolved = pickAutoPincode(village?.pincode, taluka?.pincode);
 
     if (resolved && resolved !== pincode) {
-      onPincodeChange(resolved);
+      onPincodeChangeRef.current(resolved);
       return;
     }
 
@@ -50,7 +53,7 @@ export function useAutoAddressPincode({
         const next = pickAutoPincode(fetched);
 
         if (next) {
-          onPincodeChange(next);
+          onPincodeChangeRef.current(next);
         }
       })
       .catch(() => undefined);
@@ -58,5 +61,5 @@ export function useAutoAddressPincode({
     return () => {
       cancelled = true;
     };
-  }, [talukaId, villageId, pincode, talukas, villages, onPincodeChange]);
+  }, [talukaId, villageId, pincode, talukas, villages]);
 }

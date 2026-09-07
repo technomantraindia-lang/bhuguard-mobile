@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -16,10 +15,12 @@ import { getApiErrorMessage } from '../../api/authApi';
 import {
   createFieldOfficerVisit,
   getFieldOfficerFarmerDetail,
+  getFieldOfficerFarmerFarms,
   getFieldOfficerFarmers,
 } from '../../api/fieldOfficerApi';
 import { AppButton } from '../../components/AppButton';
 import { FormSelect } from '../../components/FormSelect';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { NoAssignmentState } from '../../components/location/NoAssignmentState';
 import { OfficerListState } from '../../components/officer/OfficerListState';
 import { OfficerScreenChrome } from '../../components/officer/OfficerScreenChrome';
@@ -28,6 +29,8 @@ import { useAssignedLocations } from '../../hooks/useAssignedLocations';
 import type { FieldOfficerStackParamList } from '../../navigation/types';
 import { officerCardShadow, officerTheme } from '../../theme/officerDashboardTheme';
 import { extractList, pickString, type ApiRecord } from '../../utils/apiHelpers';
+import { resolveNumericFarmerId, toPositiveEntityId } from '../../utils/entityId';
+import { formatFarmerDisplayId } from '../../utils/displayIds';
 
 type Props = NativeStackScreenProps<FieldOfficerStackParamList, 'FieldOfficerCreateVisit'>;
 
@@ -66,8 +69,15 @@ export function FieldOfficerCreateVisitScreen({ route, navigation }: Props) {
   const [loadingFarms, setLoadingFarms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const [farmerId, setFarmerId] = useState(initialFarmerId ? String(initialFarmerId) : '');
+  const [farmerId, setFarmerId] = useState(
+    initialFarmerId && Number.isFinite(Number(initialFarmerId)) && Number(initialFarmerId) > 0
+      ? String(initialFarmerId)
+      : '',
+  );
+  const [farmerLabel, setFarmerLabel] = useState('');
   const [farmId, setFarmId] = useState('');
+  const [farmSearch, setFarmSearch] = useState('');
+  const [farmerSearch, setFarmerSearch] = useState('');
   const [districtId, setDistrictId] = useState('');
   const [districtName, setDistrictName] = useState('');
   const [talukaId, setTalukaId] = useState('');
@@ -107,21 +117,55 @@ export function FieldOfficerCreateVisitScreen({ route, navigation }: Props) {
 
   const farmerOptions = useMemo(
     () =>
-      farmers.map((farmer) => ({
-        id: Number(farmer.farmer_id ?? farmer.id),
-        name: `${pickString(farmer, 'name')} (${pickString(farmer, 'farmer_code', 'id')})`,
-      })),
+      farmers
+        .map((farmer) => {
+          const id = resolveNumericFarmerId(farmer);
+          if (id == null) {
+            return null;
+          }
+          const displayId = formatFarmerDisplayId(farmer);
+          const name = pickString(farmer, 'name');
+          return {
+            id,
+            name: `${name !== '-' ? name : 'Farmer'} (${displayId})`,
+          };
+        })
+        .filter((item): item is { id: number; name: string } => item != null),
     [farmers],
   );
 
+  const filteredFarmerOptions = useMemo(() => {
+    const query = farmerSearch.trim().toLowerCase();
+    if (!query) {
+      return farmerOptions;
+    }
+    return farmerOptions.filter((item) => item.name.toLowerCase().includes(query));
+  }, [farmerOptions, farmerSearch]);
+
   const farmOptions = useMemo(
     () =>
-      farms.map((farm) => ({
-        id: Number(farm.id ?? farm.farm_id),
-        name: pickString(farm, 'farm_name', 'name', 'farm_code'),
-      })),
+      farms
+        .map((farm) => {
+          const id = toPositiveEntityId(farm.id ?? farm.farm_id);
+          if (id == null) {
+            return null;
+          }
+          return {
+            id,
+            name: pickString(farm, 'farm_name', 'name', 'farm_code', 'location_name'),
+          };
+        })
+        .filter((item): item is { id: number; name: string } => item != null),
     [farms],
   );
+
+  const filteredFarmOptions = useMemo(() => {
+    const query = farmSearch.trim().toLowerCase();
+    if (!query) {
+      return farmOptions;
+    }
+    return farmOptions.filter((item) => item.name.toLowerCase().includes(query));
+  }, [farmOptions, farmSearch]);
 
   const loadFarmers = useCallback(async () => {
     setLoadingFarmers(true);
@@ -136,24 +180,45 @@ export function FieldOfficerCreateVisitScreen({ route, navigation }: Props) {
   }, []);
 
   const loadFarmsForFarmer = useCallback(async (id: string) => {
-    if (!id) {
+    const numericFarmerId = toPositiveEntityId(id);
+    if (!numericFarmerId) {
       setFarms([]);
       return;
     }
 
     setLoadingFarms(true);
     try {
-      const data = await getFieldOfficerFarmerDetail(id);
-      const farmer = (data.farmer ?? data) as ApiRecord;
-      setFarms(extractList(farmer, ['farms', 'data']));
+      let nextFarms: ApiRecord[] = [];
+      try {
+        const farmsPayload = await getFieldOfficerFarmerFarms(numericFarmerId);
+        nextFarms = extractList(farmsPayload as ApiRecord | ApiRecord[], ['farms', 'data']);
+      } catch {
+        nextFarms = [];
+      }
 
-      if (!districtId && pickString(farmer, 'district') !== '-') {
-        const match = assigned.locations.districts.find(
-          (item) => item.name.toLowerCase() === pickString(farmer, 'district').toLowerCase(),
-        );
-        if (match) {
-          setDistrictId(String(match.id));
-          setDistrictName(match.name);
+      // Fallback to nested farms on farmer detail when dedicated farms endpoint is empty/unavailable.
+      if (nextFarms.length === 0) {
+        const detailPayload = await getFieldOfficerFarmerDetail(numericFarmerId);
+        const farmer = (detailPayload.farmer ?? detailPayload) as ApiRecord;
+        nextFarms = extractList(farmer, ['farms', 'data']);
+
+        const districtLabel = pickString(farmer, 'district');
+        if (districtLabel !== '-') {
+          const match = assigned.locations.districts.find(
+            (item) => item.name.toLowerCase() === districtLabel.toLowerCase(),
+          );
+          if (match) {
+            setDistrictId((current) => current || String(match.id));
+            setDistrictName((current) => current || match.name);
+          }
+        }
+      }
+
+      setFarms(nextFarms);
+      if (nextFarms.length === 1) {
+        const onlyId = toPositiveEntityId(nextFarms[0]?.id ?? nextFarms[0]?.farm_id);
+        if (onlyId != null) {
+          setFarmId(String(onlyId));
         }
       }
     } catch (err) {
@@ -163,7 +228,7 @@ export function FieldOfficerCreateVisitScreen({ route, navigation }: Props) {
     } finally {
       setLoadingFarms(false);
     }
-  }, [assigned.locations.districts, districtId]);
+  }, [assigned.locations.districts]);
 
   useEffect(() => {
     void loadFarmers();
@@ -172,8 +237,21 @@ export function FieldOfficerCreateVisitScreen({ route, navigation }: Props) {
   useEffect(() => {
     if (farmerId) {
       void loadFarmsForFarmer(farmerId);
+    } else {
+      setFarms([]);
+      setFarmId('');
     }
   }, [farmerId, loadFarmsForFarmer]);
+
+  useEffect(() => {
+    if (!farmerId || farmerLabel) {
+      return;
+    }
+    const match = farmerOptions.find((item) => String(item.id) === farmerId);
+    if (match) {
+      setFarmerLabel(match.name);
+    }
+  }, [farmerId, farmerLabel, farmerOptions]);
 
   const captureGps = async () => {
     setCapturingGps(true);
@@ -202,7 +280,8 @@ export function FieldOfficerCreateVisitScreen({ route, navigation }: Props) {
       return;
     }
 
-    if (!farmerId) {
+    const numericFarmerId = toPositiveEntityId(farmerId);
+    if (!numericFarmerId) {
       Alert.alert('Farmer required', 'Select a farmer for this visit.');
       return;
     }
@@ -230,9 +309,11 @@ export function FieldOfficerCreateVisitScreen({ route, navigation }: Props) {
         }
       }
 
+      const numericFarmId = toPositiveEntityId(farmId);
+
       const payload: ApiRecord = {
-        farmer_id: Number(farmerId),
-        farm_id: farmId ? Number(farmId) : undefined,
+        farmer_id: numericFarmerId,
+        farm_id: numericFarmId ?? undefined,
         district_id: Number(districtId),
         taluka_id: Number(talukaId),
         village_id: Number(villageId),
@@ -269,7 +350,11 @@ export function FieldOfficerCreateVisitScreen({ route, navigation }: Props) {
       ]);
     } catch (err) {
       const message = getApiErrorMessage(err, 'Failed to create visit.');
-      Alert.alert('Error', /outside|assigned working area|not authorized/i.test(message) ? OUTSIDE_ZONE_MESSAGE : message);
+      if (/farmer.?id.*required|required.*farmer.?id/i.test(message)) {
+        Alert.alert('Farmer required', 'Please select a valid farmer and try again.');
+      } else {
+        Alert.alert('Error', /outside|assigned working area|not authorized/i.test(message) ? OUTSIDE_ZONE_MESSAGE : message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -291,7 +376,7 @@ export function FieldOfficerCreateVisitScreen({ route, navigation }: Props) {
   return (
     <OfficerScreenChrome edges={['top']}>
       <ScreenHeader title="Schedule Visit" showBrandLogo={false} />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardSafeScrollView contentContainerStyle={styles.content} extraBottomPadding={24}>
         <View style={[styles.card, officerCardShadow]}>
           <Text style={styles.sectionTitle}>When</Text>
           <Text style={styles.label}>Date (YYYY-MM-DD)</Text>
@@ -370,25 +455,38 @@ export function FieldOfficerCreateVisitScreen({ route, navigation }: Props) {
               placeholder="Select farmer"
               value={farmerId}
               displayValue={
-                farmerOptions.find((item) => String(item.id) === farmerId)?.name
+                farmerLabel
+                || filteredFarmerOptions.find((item) => String(item.id) === farmerId)?.name
+                || farmerOptions.find((item) => String(item.id) === farmerId)?.name
               }
-              options={farmerOptions}
+              options={filteredFarmerOptions}
               searchable
+              searchValue={farmerSearch}
+              onSearchChange={setFarmerSearch}
               onSelect={(option) => {
                 setFarmerId(String(option.id));
+                setFarmerLabel(option.name);
                 setFarmId('');
+                setFarmSearch('');
+                setFarmerSearch('');
               }}
             />
           )}
           <FormSelect
             label="Farm (optional)"
-            placeholder="Select farm"
+            placeholder={loadingFarms ? 'Loading farms…' : 'Select farm'}
             value={farmId}
             displayValue={farmOptions.find((item) => String(item.id) === farmId)?.name}
-            options={farmOptions}
+            options={filteredFarmOptions}
+            searchable
+            searchValue={farmSearch}
+            onSearchChange={setFarmSearch}
             loading={loadingFarms}
-            disabled={!farmerId}
-            onSelect={(option) => setFarmId(String(option.id))}
+            disabled={!farmerId || loadingFarms}
+            onSelect={(option) => {
+              setFarmId(String(option.id));
+              setFarmSearch('');
+            }}
           />
           <FormSelect
             label="Purpose"
@@ -445,7 +543,7 @@ export function FieldOfficerCreateVisitScreen({ route, navigation }: Props) {
         </View>
 
         <AppButton label={submitting ? 'Scheduling…' : 'Schedule Visit'} onPress={() => void handleCreate()} loading={submitting} />
-      </ScrollView>
+      </KeyboardSafeScrollView>
     </OfficerScreenChrome>
   );
 }

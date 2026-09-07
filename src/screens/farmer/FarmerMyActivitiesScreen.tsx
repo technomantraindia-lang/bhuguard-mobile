@@ -1,15 +1,15 @@
-import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { FARMER_UPCOMING_SERVICE_MESSAGE } from '../../constants/farmerActivityServices';
+import { FarmerActivitiesFab } from '../../components/farmer/activities/FarmerActivitiesFab';
 import { FarmerActivitiesHeader } from '../../components/farmer/activities/FarmerActivitiesHeader';
-import { FarmerActivityServiceCard } from '../../components/farmer/activities/FarmerActivityServiceCard';
 import { useFarmerActivitiesHubData } from '../../hooks/useFarmerActivitiesHubData';
 import { useUnreadNotificationCount } from '../../hooks/useUnreadNotificationCount';
+import { useScrollBottomPadding } from '../../hooks/useTabBarLayout';
 import type { FarmerStackParamList, FarmerTabParamList } from '../../navigation/types';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 import { pickString, type ApiRecord } from '../../utils/apiHelpers';
@@ -33,22 +33,21 @@ function statusTone(status: string): string {
 export function FarmerMyActivitiesScreen() {
   const { t, language } = useTranslation();
   const navigation = useNavigation<Nav>();
-  const { services, farmActivities, loading, error, reload } = useFarmerActivitiesHubData();
+  const { farmActivities, loading, error, reload } = useFarmerActivitiesHubData();
   const { unreadCount } = useUnreadNotificationCount();
+  const scrollBottomPadding = useScrollBottomPadding(100);
 
-  const openFarmActivityStatus = () => {
-    Alert.alert(
-      'Farm Activity',
-      'Your Field Officer completes Farm Activity visits. You can review status and history here.',
-    );
+  const openAddFarmActivity = () => {
+    navigation.navigate('FarmerFarmActivity', {});
   };
 
-  const handleServicePress = (serviceCode: string) => {
-    if (serviceCode === 'BIOCHAR') {
-      return;
-    }
-
-    Alert.alert(t('farmer.activities.comingSoonTitle'), FARMER_UPCOMING_SERVICE_MESSAGE);
+  const openFarmActivity = (record: ApiRecord) => {
+    const id = Number(record.id ?? record.activity_id);
+    const farmId = Number(record.farm_id ?? record.farmId);
+    navigation.navigate('FarmerFarmActivity', {
+      ...(Number.isFinite(id) && id > 0 ? { activityId: id } : {}),
+      ...(Number.isFinite(farmId) && farmId > 0 ? { farmId } : {}),
+    });
   };
 
   const renderFarmActivityRecord = (record: ApiRecord) => {
@@ -70,12 +69,14 @@ export function FarmerMyActivitiesScreen() {
     const overdue =
       farmUpdateStatus === 'overdue'
       || dueLabel.toLowerCase().includes('overdue');
+    const performedBy = pickString(record, 'created_by_role', 'performed_by_role');
 
     return (
-      <View
+      <Pressable
         key={String(id)}
         style={styles.recordCard}
-        accessibilityRole="text"
+        accessibilityRole="button"
+        onPress={() => openFarmActivity(record)}
       >
         <View style={styles.recordHeader}>
           <Text style={styles.recordTitle}>Farm Activity</Text>
@@ -92,6 +93,9 @@ export function FarmerMyActivitiesScreen() {
         <Text style={styles.recordMeta}>
           Activity Date: {formatLocalizedDate(activityDate, language)}
         </Text>
+        {performedBy && performedBy !== '-' ? (
+          <Text style={styles.recordMeta}>Performed by role: {performedBy}</Text>
+        ) : null}
         {dueLabel && dueLabel !== '-' ? (
           <Text style={styles.recordMeta}>Due status: {dueLabel}</Text>
         ) : null}
@@ -99,30 +103,29 @@ export function FarmerMyActivitiesScreen() {
           Farm Photo Upload Date:{' '}
           {formatLocalizedDate(photoUploadDate || nextFarmPhotoUploadDate, language)}
         </Text>
-        <Text style={styles.recordHint}>View only — Field Officer completes visits</Text>
-      </View>
+      </Pressable>
     );
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <FarmerActivitiesHeader
-        unreadCount={unreadCount}
-        onNotificationsPress={() => navigation.navigate('FarmerNotifications')}
-        onProfilePress={() => navigation.navigate('FarmerProfile')}
-      />
-
+    <SafeAreaView style={styles.safe} edges={[]}>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPadding }]}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={reload} tintColor={dashboardTheme.primary} />}
       >
+        <FarmerActivitiesHeader
+          unreadCount={unreadCount}
+          onNotificationsPress={() => navigation.navigate('FarmerNotifications')}
+          onProfilePress={() => navigation.navigate('FarmerProfile')}
+        />
+
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>{t('farmer.activities.title')}</Text>
-            <Pressable onPress={openFarmActivityStatus}>
-              <Text style={styles.linkText}>View status</Text>
+            <Pressable onPress={openAddFarmActivity}>
+              <Text style={styles.linkText}>{t('farmer.activities.addActivity')}</Text>
             </Pressable>
           </View>
 
@@ -140,26 +143,16 @@ export function FarmerMyActivitiesScreen() {
             </>
           )}
         </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('farmer.activities.servicesTitle')}</Text>
-          {services.map((service) => (
-            <FarmerActivityServiceCard
-              key={service.code}
-              service={service.code === 'BIOCHAR' ? { ...service, canOpen: false, statusLabel: 'Active' } : service}
-              displayOnly={service.code === 'BIOCHAR'}
-              onPress={() => handleServicePress(service.code)}
-            />
-          ))}
-        </View>
       </ScrollView>
+
+      <FarmerActivitiesFab onPress={openAddFarmActivity} />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: dashboardTheme.background },
-  content: { padding: dashboardTheme.marginMobile, gap: 20, paddingBottom: 120 },
+  content: { paddingHorizontal: dashboardTheme.marginMobile, gap: 20, paddingTop: 0 },
   section: { gap: 12 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: dashboardTheme.onSurface },
@@ -177,7 +170,6 @@ const styles = StyleSheet.create({
   recordTitle: { fontSize: 15, fontWeight: '700', color: dashboardTheme.onSurface },
   statusBadge: { fontSize: 12, fontWeight: '700' },
   recordMeta: { fontSize: 13, color: dashboardTheme.textMuted },
-  recordHint: { fontSize: 12, fontWeight: '600', color: dashboardTheme.primaryContainer, marginTop: 4 },
   emptyCard: {
     backgroundColor: dashboardTheme.surfaceLow,
     borderRadius: 16,

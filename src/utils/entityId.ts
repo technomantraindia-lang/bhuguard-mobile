@@ -64,6 +64,35 @@ export function toPositiveEntityId(value: unknown): number | null {
 }
 
 /**
+ * Prefer numeric DB ids over universal display codes (e.g. BHG-KISHAN-03).
+ * Tries common FO farmer payload keys in a safe order.
+ */
+export function resolveNumericFarmerId(
+  record: Record<string, unknown> | null | undefined,
+): number | null {
+  if (!record || typeof record !== 'object') {
+    return null;
+  }
+
+  const preferredKeys = [
+    'id',
+    'farmer_db_id',
+    'farmerDbId',
+    'farmer_id',
+    'farmerId',
+  ];
+
+  for (const key of preferredKeys) {
+    const resolved = toPositiveEntityId(record[key]);
+    if (resolved != null) {
+      return resolved;
+    }
+  }
+
+  return null;
+}
+
+/**
  * NEVER fabricates a display ID locally. Prefer server display ID helpers.
  */
 export function formatFarmerDisplayCode(

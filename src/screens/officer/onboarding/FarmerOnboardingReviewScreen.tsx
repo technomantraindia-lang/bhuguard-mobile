@@ -1,13 +1,13 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { createFarmerOnboarding, finalizePreparedFarmerOnboarding, updateFieldOfficerFarmMapping } from '../../../api/fieldOfficerApi';
-import { getApiErrorMessage } from '../../../api/authApi';
 import { AppCard } from '../../../components/AppCard';
 import { OnboardingReviewPhoto } from '../../../components/onboarding/OnboardingReviewPhoto';
 import { ONBOARDING_NEXT_LABELS } from '../../../constants/onboardingSteps';
+import { useBoundaryCapture } from '../../../context/BoundaryCaptureContext';
 import { useOnboarding, type OnboardingResult } from '../../../context/OnboardingContext';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
@@ -21,8 +21,26 @@ import {
 import { calculateTurfBoundaryMetrics, polygonCentroid } from '../../../utils/manualBoundaryGeometry';
 import { validateSubmit, getSubmitEligibility } from '../../../utils/onboardingValidation';
 import { OnboardingFormScreen } from './OnboardingFormScreen';
-import { logSafeApiFailure, NETWORK_UNREACHABLE_MESSAGE } from '../../../utils/apiError';
+import { logSafeApiFailure } from '../../../utils/apiError';
 import { getCachedApiBaseUrl } from '../../../storage/apiConfigStorage';
+import {
+  auditOnboardingDraftFiles,
+  type OnboardingFileAuditItem,
+} from '../../../utils/onboardingFilePersistence';
+import {
+  classifyOnboardingSubmitError,
+  logFinalSubmitDiagnostics,
+  logFinalSubmitError,
+  logFinalSubmitRequest,
+  logFinalSubmitResponse,
+  resolveFinalRegistrationResponseStatus,
+  validateOnboardingSubmitAttachments,
+} from '../../../utils/onboardingSubmitDiagnostics';
+import { isDevelopmentBuild } from '../../../utils/localApiNetwork';
+import {
+  shouldClearBoundaryDraftForOnboardingReset,
+  snapshotIncompleteOnboarding,
+} from '../../../utils/resetIncompleteFarmerOnboarding';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
 
@@ -77,9 +95,27 @@ function reviewMappingStatusLabel(status: string, hasBoundary: boolean): string 
 
 export function FarmerOnboardingReviewScreen() {
   const navigation = useNavigation<Nav>();
-  const { draft, toFormData, toFinalizeFormData, setResult, updateDraft } = useOnboarding();
+  const boundary = useBoundaryCapture();
+  const { draft, toFormData, toFinalizeFormData, setResult, updateDraft, resetIncompleteOnboarding } = useOnboarding();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const submitInFlightRef = useRef(false);
+  const [fileAuditItems, setFileAuditItems] = useState<OnboardingFileAuditItem[]>([]);
+  const preparedDraft = draftAlreadyHasFarmerFarm(draft);
+  const showDevResetOnboarding = isDevelopmentBuild();
+
+  useEffect(() => {
+    let active = true;
+    void auditOnboardingDraftFiles(draft, preparedDraft).then((items) => {
+      if (active) {
+        setFileAuditItems(items);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [draft, preparedDraft]);
 
   const mappingCompleted =
     draft.boundary_points.length >= 3
@@ -154,6 +190,10 @@ export function FarmerOnboardingReviewScreen() {
   };
 
   const submit = async () => {
+    if (submitInFlightRef.current || loading) {
+      return;
+    }
+
     const validationError = validateSubmit(draft);
 
     if (validationError) {
@@ -166,8 +206,31 @@ export function FarmerOnboardingReviewScreen() {
       return;
     }
 
+    submitInFlightRef.current = true;
     setLoading(true);
     setError(null);
+
+    const attachmentCheck = await validateOnboardingSubmitAttachments(draft, preparedDraft);
+    if (!attachmentCheck.ok) {
+      setFileAuditItems(attachmentCheck.items);
+      setError(attachmentCheck.message || 'Some required files are missing. Re-capture them and retry.');
+      submitInFlightRef.current = false;
+      setLoading(false);
+      return;
+    }
+
+    const apiBase = getCachedApiBaseUrl();
+    const farmerIdForLog = toPositiveEntityId(draft.farmer_id);
+    const { apiProbeOk } = await logFinalSubmitDiagnostics({
+      apiBaseUrl: apiBase,
+      farmerId: farmerIdForLog,
+      preparedDraft,
+    });
+
+    const registrationEndpoint = preparedDraft && farmerIdForLog != null
+      ? `/field-officer/farmers/${farmerIdForLog}/finalize-onboarding`
+      : '/field-officer/farmers';
+    const isMultipartSubmit = true;
 
     try {
       let farmerId = toPositiveEntityId(draft.farmer_id);
@@ -214,7 +277,13 @@ export function FarmerOnboardingReviewScreen() {
         }
 
         const finalizeForm = toFinalizeFormData();
+        logFinalSubmitRequest({
+          apiBaseUrl: apiBase,
+          endpoint: registrationEndpoint,
+          method: 'POST',
+        });
         const finalized = await finalizePreparedFarmerOnboarding(farmerId, finalizeForm);
+        logFinalSubmitResponse(200);
         farmerName = String(finalized.farmer_name ?? draft.farmer_name);
         mobile = String(finalized.mobile ?? draft.mobile);
         village = finalized.village ? String(finalized.village) : draft.village_name;
@@ -237,7 +306,13 @@ export function FarmerOnboardingReviewScreen() {
             : draft.farm_display_id,
         });
       } else {
+        logFinalSubmitRequest({
+          apiBaseUrl: apiBase,
+          endpoint: registrationEndpoint,
+          method: 'POST',
+        });
         const farmer = await createFarmerOnboarding(toFormData());
+        logFinalSubmitResponse(200);
         farmerId = toPositiveEntityId(farmer.farmer_id);
         farmId = toPositiveEntityId(farmer.farm_id);
         farmerName = String(farmer.farmer_name ?? draft.farmer_name);
@@ -286,20 +361,19 @@ export function FarmerOnboardingReviewScreen() {
       setResult(result);
       navigation.navigate('FarmerOnboardingSuccess');
     } catch (err) {
+      logFinalSubmitError(err);
+      logFinalSubmitResponse(resolveFinalRegistrationResponseStatus(err));
       logSafeApiFailure(err, 'farmer-onboarding-submit');
-      const baseMessage = getApiErrorMessage(err, 'Onboarding failed. Check required fields and try again.');
-      const apiBase = getCachedApiBaseUrl();
-      if (
-        baseMessage === NETWORK_UNREACHABLE_MESSAGE
-        || /unable to connect to the bhuguard server/i.test(baseMessage)
-      ) {
-        setError(
-          `${NETWORK_UNREACHABLE_MESSAGE}\n\nAPI: ${apiBase}\nBhuguard uses the live ERP server only. Please check internet connectivity and retry.`,
-        );
-      } else {
-        setError(baseMessage);
+      const { category, message } = classifyOnboardingSubmitError(err, apiBase, {
+        apiProbeOk,
+        isMultipartSubmit,
+      });
+      if (__DEV__) {
+        console.log('[FINAL SUBMIT] error category:', category);
       }
+      setError(message);
     } finally {
+      submitInFlightRef.current = false;
       setLoading(false);
     }
   };
@@ -307,6 +381,73 @@ export function FarmerOnboardingReviewScreen() {
   const edit = (screen: EditScreen) => {
     navigation.navigate(screen);
   };
+
+  const confirmResetOnboarding = () => {
+    Alert.alert(
+      'Reset this incomplete Farmer Onboarding?',
+      'All unsaved onboarding details, mapping and captured files for this draft will be removed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset & Start Again',
+          style: 'destructive',
+          onPress: () => {
+            void handleResetOnboarding();
+          },
+        },
+      ],
+    );
+  };
+
+  const handleResetOnboarding = async () => {
+    if (resetting) {
+      return;
+    }
+
+    setResetting(true);
+    submitInFlightRef.current = false;
+    setLoading(false);
+    setError(null);
+
+    try {
+      const snapshot = snapshotIncompleteOnboarding(draft);
+      const clearBoundaryDraft = shouldClearBoundaryDraftForOnboardingReset(snapshot, {
+        sessionMode: boundary.sessionMode,
+        farmerId: boundary.farmerId,
+        farmId: boundary.farmId,
+      });
+
+      await resetIncompleteOnboarding({ clearBoundaryDraft });
+
+      if (clearBoundaryDraft) {
+        boundary.clearSession();
+      }
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'FarmerBasicDetails' }],
+      });
+    } catch (resetErr) {
+      if (__DEV__) {
+        console.log('[RESET ONBOARDING] failed:', resetErr);
+      }
+      setError('Could not reset onboarding draft. Please try again.');
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const devResetFooter = showDevResetOnboarding ? (
+    <Pressable
+      style={({ pressed }) => [styles.resetButton, pressed && styles.resetPressed, (loading || resetting) && styles.resetDisabled]}
+      onPress={confirmResetOnboarding}
+      disabled={loading || resetting}
+      accessibilityRole="button"
+      accessibilityLabel="Reset onboarding"
+    >
+      <Text style={styles.resetLabel}>{resetting ? 'Resetting…' : 'Reset Onboarding'}</Text>
+    </Pressable>
+  ) : null;
 
   return (
     <OnboardingFormScreen
@@ -316,8 +457,9 @@ export function FarmerOnboardingReviewScreen() {
       onNext={submit}
       nextLabel={ONBOARDING_NEXT_LABELS[9] ?? 'Submit Registration'}
       nextLoading={loading}
-      nextDisabled={!submitEligibility.canSubmit || loading}
+      nextDisabled={!submitEligibility.canSubmit || loading || resetting}
       footerError={error}
+      footerExtra={devResetFooter}
     >
       {false && __DEV__ ? (
         <View style={styles.devDiagnostics}>
@@ -468,12 +610,56 @@ export function FarmerOnboardingReviewScreen() {
         <Line label="Accuracy" value={draft.gps_accuracy ? `${draft.gps_accuracy} m` : undefined} />
         <Line label="Captured at" value={draft.gps_captured_at} />
       </ReviewSection>
-      <ReviewSection title="Documents" onEdit={() => edit('FarmerProofUpload')}>
-        <Line label="Ownership Document" value={draft.proof_of_land_ownership?.name} />
-        <Line label="Farm Photos" value={draft.farmer_documents.length ? `${draft.farmer_documents.length} photo(s)` : undefined} />
-        <Line label="Farmer with Farm Photo" value={draft.farmer_with_farm_photo?.name} />
+      <ReviewSection title="Documents & files" onEdit={() => edit('FarmerProofUpload')}>
+        {fileAuditItems.length === 0 ? (
+          <>
+            <Line label="Ownership Document" value={draft.proof_of_land_ownership?.name} />
+            <Line label="Farm Photos" value={draft.farmer_documents.length ? `${draft.farmer_documents.length} photo(s)` : undefined} />
+            <Line label="Farmer with Farm Photo" value={draft.farmer_with_farm_photo?.name} />
+          </>
+        ) : (
+          fileAuditItems.map((item) => (
+            <FileAvailabilityRow
+              key={item.id}
+              item={item}
+              onRecapture={() => edit(item.editScreen)}
+            />
+          ))
+        )}
       </ReviewSection>
     </OnboardingFormScreen>
+  );
+}
+
+function FileAvailabilityRow({
+  item,
+  onRecapture,
+}: {
+  item: OnboardingFileAuditItem;
+  onRecapture: () => void;
+}) {
+  const statusLabel =
+    item.status === 'available'
+      ? 'Available'
+      : item.status === 'remote'
+        ? 'Uploaded'
+        : 'Missing';
+
+  const statusColor =
+    item.status === 'available' || item.status === 'remote'
+      ? '#0B6B3A'
+      : '#B45309';
+
+  return (
+    <View style={styles.fileRow}>
+      <Text style={styles.fileLabel}>{item.label}</Text>
+      <Text style={[styles.fileStatus, { color: statusColor }]}>{statusLabel}</Text>
+      {item.status === 'missing' ? (
+        <Pressable onPress={onRecapture}>
+          <Text style={styles.recapture}>Re-capture</Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -523,6 +709,27 @@ const styles = StyleSheet.create({
   devTitle: { fontSize: 12, fontWeight: '800', color: '#9A3412' },
   devLine: { fontSize: 11, color: '#9A3412' },
   devMissing: { fontSize: 11, fontWeight: '700', color: '#C2410C' },
+  resetButton: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resetPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.99 }],
+  },
+  resetDisabled: {
+    opacity: 0.65,
+  },
+  resetLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#B91C1C',
+  },
   identityCard: {
     backgroundColor: colors.surface,
     borderRadius: 16,
@@ -574,5 +781,27 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
+  },
+  fileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+    flexWrap: 'wrap',
+  },
+  fileLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.text,
+    minWidth: 140,
+  },
+  fileStatus: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  recapture: {
+    color: colors.primary,
+    fontWeight: '700',
+    fontSize: 13,
   },
 });

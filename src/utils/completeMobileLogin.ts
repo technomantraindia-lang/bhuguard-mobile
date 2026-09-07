@@ -3,7 +3,7 @@ import type { RootStackParamList } from '../navigation/types';
 import type { AuthUser } from '../types/auth';
 import { saveAuthSession } from '../storage/authStorage';
 
-import { ADMIN_WEB_ONLY_MESSAGE, COMPANY_WEB_ONLY_MESSAGE, isAdminRole, isCompanyRole, resolveUserRole } from './authRole';
+import { ADMIN_WEB_ONLY_MESSAGE, COMPANY_WEB_ONLY_MESSAGE, isAdminRole, isCompanyRole, normalizeRole, resolveUserRole } from './authRole';
 import { getDashboardRoute, isMobileSupportedRole, type MobileLoginRole } from './authRouting';
 
 export type LoginCompletionErrorCode =
@@ -36,7 +36,8 @@ export async function completeMobileLogin({
   user,
   expectedRole,
 }: CompleteMobileLoginOptions): Promise<CompleteMobileLoginResult> {
-  const resolvedRole = resolveUserRole(user) ?? user.user_type;
+  const resolvedRole = normalizeRole(resolveUserRole(user) ?? user.user_type);
+  const normalizedExpectedRole = expectedRole ? normalizeRole(expectedRole) : undefined;
 
   if (isAdminRole(resolvedRole)) {
     return { ok: false, code: 'admin_web_only', message: ADMIN_WEB_ONLY_MESSAGE };
@@ -50,7 +51,7 @@ export async function completeMobileLogin({
     return { ok: false, code: 'unsupported_account', message: 'This account is not supported on mobile.' };
   }
 
-  if (expectedRole && resolvedRole !== expectedRole) {
+  if (normalizedExpectedRole && resolvedRole !== normalizedExpectedRole) {
     return {
       ok: false,
       code: 'role_mismatch',

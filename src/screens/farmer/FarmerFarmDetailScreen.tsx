@@ -19,7 +19,7 @@ import {
 import { useFarmDetailData } from '../../hooks/useFarmDetailData';
 import type { FarmerStackParamList } from '../../navigation/types';
 import { dashboardTheme } from '../../theme/bhuguardDashboardTheme';
-import { openGoogleMaps, isFarmMapped } from '../../utils/farmMapHelpers';
+import { isFarmMapped } from '../../utils/farmMapHelpers';
 
 type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmerFarmDetail'>;
 
@@ -29,7 +29,7 @@ export function FarmerFarmDetailScreen({ navigation, route }: Props) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={[]}>
         <LoadingState message="Loading farm details..." />
       </SafeAreaView>
     );
@@ -37,20 +37,16 @@ export function FarmerFarmDetailScreen({ navigation, route }: Props) {
 
   if (error || !detail || !farmRecord) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={[]}>
         <ErrorState message={error ?? 'Farm not found.'} onRetry={reload} />
       </SafeAreaView>
     );
   }
 
-  const openMaps = () => {
-    void openGoogleMaps(detail.centerCoordinates, detail.farmName);
-  };
-
   const boundaryMapped = isFarmMapped(farmRecord);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={[]}>
       <FarmDetailHeader
         farmName={detail.farmName}
         onBack={() => navigation.goBack()}
@@ -74,7 +70,6 @@ export function FarmerFarmDetailScreen({ navigation, route }: Props) {
           areaLabel={detail.areaLabel}
           center={detail.centerCoordinates}
           polygonCoordinatesLabel={detail.polygonCoordinatesLabel}
-          onOpenGoogleMaps={openMaps}
           onOpenFullScreen={() =>
             boundaryMapped
               ? navigation.navigate('FarmerFarmBoundaryView', {
@@ -120,7 +115,12 @@ export function FarmerFarmDetailScreen({ navigation, route }: Props) {
 
         <FarmActivitySummaryCard
           summary={detail.activitySummary}
-          onViewActivities={() => navigation.navigate('FarmerActivityLogs')}
+          onViewActivities={() =>
+            navigation.navigate('FarmerFarmActivitiesList', {
+              farmId,
+              farmName: detail.farmName,
+            })
+          }
         />
 
         <FarmVerificationTimeline steps={detail.verificationSteps} />
@@ -133,7 +133,6 @@ export function FarmerFarmDetailScreen({ navigation, route }: Props) {
         />
 
         <FarmDetailActionButtons
-          onOpenGoogleMaps={openMaps}
           onEditFarm={() => navigation.navigate('FarmerEditFarm', { farmId })}
           onAddActivity={() => navigation.navigate('FarmerFarmActivity', { farmId })}
           onBiocharUpdates={() => navigation.navigate('FarmerBiocharUpdates')}

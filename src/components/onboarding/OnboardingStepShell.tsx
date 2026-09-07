@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import Svg, { Path } from 'react-native-svg';
 
 import { ONBOARDING_STEP_TOTAL } from '../../constants/onboardingSteps';
+import { useKeyboardOverlapInset } from '../../hooks/useKeyboardOverlapInset';
 import { dashboardShadow, dashboardTheme } from '../../theme/bhuguardDashboardTheme';
 import { BhuguardMaterialIcon } from '../shared/BhuguardMaterialIcon';
 
@@ -19,6 +20,7 @@ interface OnboardingStepShellProps {
   nextLoading?: boolean;
   nextDisabled?: boolean;
   footerError?: string | null;
+  footerExtra?: ReactNode;
 }
 
 export function OnboardingStepShell({
@@ -32,8 +34,10 @@ export function OnboardingStepShell({
   nextLoading = false,
   nextDisabled = false,
   footerError = null,
+  footerExtra = null,
 }: OnboardingStepShellProps) {
   const navigation = useNavigation();
+  const keyboardOverlap = useKeyboardOverlapInset();
 
   return (
     <View style={styles.root}>
@@ -63,10 +67,12 @@ export function OnboardingStepShell({
           <View style={styles.headerSpacer} />
         </View>
 
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView
-            contentContainerStyle={styles.scroll}
+            contentContainerStyle={[styles.scroll, { paddingBottom: 24 + keyboardOverlap }]}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.pageHeader}>
@@ -77,8 +83,9 @@ export function OnboardingStepShell({
             <View style={styles.form}>{children}</View>
           </ScrollView>
 
-          <View style={[styles.footer, dashboardShadow]}>
+          <View style={[styles.footer, dashboardShadow, Platform.OS === 'android' ? { marginBottom: keyboardOverlap } : null]}>
             {footerError ? <Text style={styles.footerError}>{footerError}</Text> : null}
+            {footerExtra}
             <Pressable
               style={({ pressed }) => [
                 styles.nextButton,
@@ -159,7 +166,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: dashboardTheme.marginMobile,
-    paddingBottom: 120,
+    paddingBottom: 24,
     gap: 24,
   },
   pageHeader: {
@@ -196,10 +203,7 @@ const styles = StyleSheet.create({
     marginBottom: -4,
   },
   footer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flexShrink: 0,
     backgroundColor: dashboardTheme.surfaceLowest,
     borderTopWidth: 1,
     borderTopColor: dashboardTheme.outlineVariant,

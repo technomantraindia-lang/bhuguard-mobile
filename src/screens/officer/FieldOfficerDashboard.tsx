@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { RefreshControl, ScrollView, StyleSheet } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { CompositeNavigationProp } from '@react-navigation/native';
@@ -19,13 +19,11 @@ import {
   OfficerPerformanceSection,
   OfficerQuickActionCards,
   OfficerRecentActivity,
-  OfficerTodaysVisits,
 } from '../../components/officer/OfficerDashboardSections';
 import { OfficerListState } from '../../components/officer/OfficerListState';
 import { OfficerQuickAccessSection } from '../../components/officer/OfficerQuickAccessSection';
 import { OfficerScreenChrome } from '../../components/officer/OfficerScreenChrome';
 import { useFieldOfficerDashboardData } from '../../hooks/useFieldOfficerDashboardData';
-import type { OfficerDashboardVisit } from '../../hooks/useFieldOfficerDashboardData';
 import { useScrollBottomPadding } from '../../hooks/useTabBarLayout';
 import type { FieldOfficerStackParamList, FieldOfficerTabParamList } from '../../navigation/types';
 import { officerTheme } from '../../theme/officerDashboardTheme';
@@ -54,17 +52,6 @@ export function FieldOfficerDashboard() {
     }, 600);
   };
 
-  const handleVisitPress = (visit: OfficerDashboardVisit) => {
-    guardedNavigate(() => {
-      if (visit.assignmentId) {
-        navigation.navigate('FieldOfficerAssignmentDetail', { assignmentId: visit.assignmentId });
-        return;
-      }
-
-      navigation.navigate('Visits');
-    });
-  };
-
   const handleOnboardFarmer = () => {
     guardedNavigate(() => navigation.navigate('FarmerOnboardingStart'));
   };
@@ -75,7 +62,7 @@ export function FieldOfficerDashboard() {
 
   if (loading && !data) {
     return (
-      <OfficerScreenChrome edges={['top']}>
+      <OfficerScreenChrome edges={[]}>
         <OfficerListState kind="loading" message="Loading field verification dashboard..." />
       </OfficerScreenChrome>
     );
@@ -83,7 +70,7 @@ export function FieldOfficerDashboard() {
 
   if (error && !data) {
     return (
-      <OfficerScreenChrome edges={['top']}>
+      <OfficerScreenChrome edges={[]}>
         <ErrorState message={error} onRetry={reload} />
       </OfficerScreenChrome>
     );
@@ -96,93 +83,87 @@ export function FieldOfficerDashboard() {
   };
 
   return (
-    <OfficerScreenChrome edges={['top']}>
-      <OfficerDashboardHeader
-        officerName={dashboard.officerName}
-        photoUrl={dashboard.photoUrl}
-        unreadCount={unreadCount}
-        onProfilePress={() => guardedNavigate(() => navigation.navigate('Profile'))}
-        onNotificationsPress={() =>
-          guardedNavigate(() => navigation.navigate('FieldOfficerNotifications'))
-        }
-      />
-
+    <OfficerScreenChrome edges={[]}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.container, { paddingBottom: scrollBottomPadding }]}
+        contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={officerTheme.primary} />
         }
       >
-        <OfficerGreetingSection greeting={dashboard.greeting} officerName={dashboard.officerName} />
-        <FieldOfficerLiveCheckInCard />
-        <OfficerFarmerOnboardingHero onOpenFarmerOnboarding={handleOnboardFarmer} />
-        <OfficerBiocharSummaryCards
-          assignedFarmersCount={dashboard.assignedFarmersCount}
-          dueBiocharCount={dashboard.dueBiocharCount}
-          overdueFarmersCount={dashboard.overdueFarmersCount}
-          myArtisansCount={dashboard.myArtisansCount}
-          activeCheckinsCount={dashboard.activeCheckinsCount}
-          totalVisitsCount={dashboard.totalVisitsCount}
-          artisanBiocharBatchesCount={dashboard.artisanBiocharBatchesCount}
-        />
-        <OfficerQuickActionCards
-          onOpenMyFarmers={() => guardedNavigate(() => navigation.navigate('Farmers'))}
-          onOpenFarmActivity={openFarmActivity}
-          onOpenInventory={() =>
-            guardedNavigate(() => navigation.navigate('FieldOfficerInventoryMovement'))
-          }
-          onOpenMyArtisans={() =>
-            guardedNavigate(() => navigation.navigate('FieldOfficerTabs', { screen: 'MyArtisans' }))
-          }
-          onOpenArtisanBiocharBatches={() =>
-            guardedNavigate(() => navigation.navigate('ArtisanBiocharBatches'))
-          }
-          onOpenFarmerOnboarding={handleOnboardFarmer}
-          onOpenScheduleVisit={() =>
-            guardedNavigate(() => navigation.navigate('FieldOfficerSchedule'))
+        <OfficerDashboardHeader
+          officerName={dashboard.officerName}
+          photoUrl={dashboard.photoUrl}
+          unreadCount={unreadCount}
+          onProfilePress={() => guardedNavigate(() => navigation.navigate('Profile'))}
+          onNotificationsPress={() =>
+            guardedNavigate(() => navigation.navigate('FieldOfficerNotifications'))
           }
         />
-        <OfficerTodaysVisits
-          visits={dashboard.visits}
-          onVisitPress={handleVisitPress}
-          onSeeSchedule={() => guardedNavigate(() => navigation.navigate('FieldOfficerSchedule'))}
-          onNewFarmer={handleOnboardFarmer}
-        />
-        <OfficerArtisanApprovalPipeline
-          dashboard={dashboard}
-          onPress={() =>
-            guardedNavigate(() => navigation.navigate('FieldOfficerTabs', { screen: 'MyArtisans' }))
-          }
-        />
-        <OfficerMapCoverage
-          dashboard={dashboard}
-          onViewFullMap={() => guardedNavigate(() => navigation.navigate('Map'))}
-          onVisitPress={(assignmentId) =>
-            guardedNavigate(() =>
-              navigation.navigate('FieldOfficerAssignmentDetail', { assignmentId }),
-            )
-          }
-        />
-        <OfficerPerformanceSection dashboard={dashboard} />
-        <OfficerRecentActivity activities={dashboard.recentActivities} />
-        <OfficerEmergencyActions
-          onCallFarmer={handleCallFarmer}
-          onNavigate={() => guardedNavigate(() => navigation.navigate('FieldOfficerNavigate'))}
-        />
+        <View style={styles.container}>
+          <OfficerGreetingSection greeting={dashboard.greeting} officerName={dashboard.officerName} />
+          <FieldOfficerLiveCheckInCard />
+          <OfficerFarmerOnboardingHero onOpenFarmerOnboarding={handleOnboardFarmer} />
+          <OfficerBiocharSummaryCards
+            assignedFarmersCount={dashboard.assignedFarmersCount}
+            dueBiocharCount={dashboard.dueBiocharCount}
+            overdueFarmersCount={dashboard.overdueFarmersCount}
+            myArtisansCount={dashboard.myArtisansCount}
+            totalVisitsCount={dashboard.totalVisitsCount}
+            artisanBiocharBatchesCount={dashboard.artisanBiocharBatchesCount}
+          />
+          <OfficerQuickActionCards
+            onOpenMyFarmers={() => guardedNavigate(() => navigation.navigate('Farmers'))}
+            onOpenFarmActivity={openFarmActivity}
+            onOpenInventory={() =>
+              guardedNavigate(() => navigation.navigate('FieldOfficerInventoryMovement'))
+            }
+            onOpenMyArtisans={() =>
+              guardedNavigate(() => navigation.navigate('FieldOfficerTabs', { screen: 'MyArtisans' }))
+            }
+            onOpenArtisanBiocharBatches={() =>
+              guardedNavigate(() => navigation.navigate('ArtisanBiocharBatches'))
+            }
+            onOpenFarmerOnboarding={handleOnboardFarmer}
+            onOpenScheduleVisit={() =>
+              guardedNavigate(() => navigation.navigate('FieldOfficerSchedule'))
+            }
+          />
+          <OfficerArtisanApprovalPipeline
+            dashboard={dashboard}
+            onPress={() =>
+              guardedNavigate(() => navigation.navigate('FieldOfficerTabs', { screen: 'MyArtisans' }))
+            }
+          />
+          <OfficerMapCoverage
+            dashboard={dashboard}
+            onViewFullMap={() => guardedNavigate(() => navigation.navigate('Map'))}
+            onVisitPress={(assignmentId) =>
+              guardedNavigate(() =>
+                navigation.navigate('FieldOfficerAssignmentDetail', { assignmentId }),
+              )
+            }
+          />
+          <OfficerPerformanceSection dashboard={dashboard} />
+          <OfficerRecentActivity activities={dashboard.recentActivities} />
+          <OfficerEmergencyActions
+            onCallFarmer={handleCallFarmer}
+            onNavigate={() => guardedNavigate(() => navigation.navigate('FieldOfficerNavigate'))}
+          />
 
-        <OfficerQuickAccessSection
-          onProfile={() => guardedNavigate(() => navigation.navigate('FieldOfficerProfile'))}
-          onSupport={() =>
-            guardedNavigate(() =>
-              navigation.navigate('ChatbotSupport', {
-                supportRole: 'field_officer',
-                sourceModule: 'officer_dashboard',
-              }),
-            )
-          }
-        />
+          <OfficerQuickAccessSection
+            onProfile={() => guardedNavigate(() => navigation.navigate('FieldOfficerProfile'))}
+            onSupport={() =>
+              guardedNavigate(() =>
+                navigation.navigate('ChatbotSupport', {
+                  supportRole: 'field_officer',
+                  sourceModule: 'officer_dashboard',
+                }),
+              )
+            }
+          />
+        </View>
       </ScrollView>
     </OfficerScreenChrome>
   );
@@ -194,6 +175,7 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingHorizontal: officerTheme.marginMobile,
-    paddingTop: 16,
+    paddingTop: 12,
+    gap: 12,
   },
 });

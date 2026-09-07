@@ -13,6 +13,7 @@ import { getApiErrorMessage } from '../../api/authApi';
 import { askChatbot, requestSupportAgent, requestSupportCall } from '../../api/chatbotApi';
 import { getSupportThreadDetail } from '../../api/supportApi';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
+import { KeyboardAvoidingHost } from '../../components/layout/KeyboardSafeScrollView';
 import {
   AgentHandoffCard,
   AssistantWelcomeCard,
@@ -268,7 +269,8 @@ export function ChatbotSupportScreen({ supportRole, sourceModule }: ChatbotSuppo
   const aiAnswered = messages.some((message) => message.senderType === 'ai_bot');
 
   return (
-    <ScreenContainer keyboardAvoiding backgroundColor={dashboardTheme.background}>
+    <ScreenContainer keyboardAvoiding={false} backgroundColor={dashboardTheme.background}>
+      <KeyboardAvoidingHost>
       <ChatbotSupportHeader />
 
       <ScrollView
@@ -324,6 +326,7 @@ export function ChatbotSupportScreen({ supportRole, sourceModule }: ChatbotSuppo
         bottomInset={0}
         footer={<ChatbotBottomNav onHistory={openTicketInbox} />}
       />
+      </KeyboardAvoidingHost>
     </ScreenContainer>
   );
 }

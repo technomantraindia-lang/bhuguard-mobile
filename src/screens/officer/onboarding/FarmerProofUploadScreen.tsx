@@ -12,13 +12,10 @@ import { useLiveEvidenceCapture } from '../../../hooks/useLiveEvidenceCapture';
 import type { FieldOfficerStackParamList } from '../../../navigation/types';
 import { colors } from '../../../theme/colors';
 import { validateDocuments } from '../../../utils/onboardingValidation';
+import { attachPersistedOnboardingFile } from '../../../utils/onboardingFilePersistence';
 import { OnboardingFormScreen } from './OnboardingFormScreen';
 
 type Nav = NativeStackNavigationProp<FieldOfficerStackParamList>;
-
-function toAsset(uri: string, name: string, mimeType: string, size?: number): FileAsset {
-  return { uri, name, mimeType, size };
-}
 
 function formatFileSize(bytes?: number): string {
   if (!bytes) {
@@ -45,6 +42,7 @@ export function FarmerProofUploadScreen() {
   const navigation = useNavigation<Nav>();
   const { draft, updateDraft } = useOnboarding();
   const [error, setError] = useState<string | null>(null);
+  const [persisting, setPersisting] = useState(false);
 
   const ownershipCapture = useLiveEvidenceCapture({ defaultName: 'ownership-document.jpg', allowsEditing: false });
   const farmPhotoCapture = useLiveEvidenceCapture({ defaultName: 'farm-photo.jpg', allowsEditing: false });
@@ -55,8 +53,23 @@ export function FarmerProofUploadScreen() {
   const captureOwnershipDocument = async () => {
     setError(null);
     const captured = await ownershipCapture.captureEvidence();
-    if (captured) {
-      updateDraft({ proof_of_land_ownership: toAsset(captured.uri, captured.name, captured.type) });
+    if (!captured) {
+      return;
+    }
+    setPersisting(true);
+    try {
+      const { file, sessionPatch } = await attachPersistedOnboardingFile(draft, 'ownership', {
+        uri: captured.uri,
+        name: captured.name,
+        mimeType: captured.type,
+        isStamped: true,
+        capturedAt: captured.capturedAt,
+      });
+      updateDraft({ ...sessionPatch, proof_of_land_ownership: file });
+    } catch {
+      setError('Unable to save ownership document on this device. Please capture it again.');
+    } finally {
+      setPersisting(false);
     }
   };
 
@@ -76,9 +89,21 @@ export function FarmerProofUploadScreen() {
       return;
     }
     ownershipCapture.clearEvidence();
-    updateDraft({
-      proof_of_land_ownership: toAsset(asset.uri, asset.name, asset.mimeType ?? 'application/octet-stream', asset.size),
-    });
+    setPersisting(true);
+    try {
+      const { file, sessionPatch } = await attachPersistedOnboardingFile(draft, 'ownership', {
+        uri: asset.uri,
+        name: asset.name,
+        mimeType: asset.mimeType ?? 'application/octet-stream',
+        size: asset.size,
+        isStamped: false,
+      });
+      updateDraft({ ...sessionPatch, proof_of_land_ownership: file });
+    } catch {
+      setError('Unable to save ownership document on this device. Please upload it again.');
+    } finally {
+      setPersisting(false);
+    }
   };
 
   const removeOwnershipDocument = () => {
@@ -89,11 +114,27 @@ export function FarmerProofUploadScreen() {
   const addFarmPhoto = async () => {
     setError(null);
     const captured = await farmPhotoCapture.captureEvidence();
-    if (captured) {
+    if (!captured) {
+      return;
+    }
+    setPersisting(true);
+    try {
+      const { file, sessionPatch } = await attachPersistedOnboardingFile(draft, 'farm', {
+        uri: captured.uri,
+        name: captured.name,
+        mimeType: captured.type,
+        isStamped: true,
+        capturedAt: captured.capturedAt,
+      });
       updateDraft({
-        farmer_documents: [...draft.farmer_documents, toAsset(captured.uri, captured.name, captured.type)],
+        ...sessionPatch,
+        farmer_documents: [...draft.farmer_documents, file],
       });
       farmPhotoCapture.clearEvidence();
+    } catch {
+      setError('Unable to save farm photo on this device. Please capture it again.');
+    } finally {
+      setPersisting(false);
     }
   };
 
@@ -104,8 +145,23 @@ export function FarmerProofUploadScreen() {
   const captureFarmerWithFarm = async () => {
     setError(null);
     const captured = await farmerWithFarmCapture.captureEvidence();
-    if (captured) {
-      updateDraft({ farmer_with_farm_photo: toAsset(captured.uri, captured.name, captured.type) });
+    if (!captured) {
+      return;
+    }
+    setPersisting(true);
+    try {
+      const { file, sessionPatch } = await attachPersistedOnboardingFile(draft, 'farmer-with-farm', {
+        uri: captured.uri,
+        name: captured.name,
+        mimeType: captured.type,
+        isStamped: true,
+        capturedAt: captured.capturedAt,
+      });
+      updateDraft({ ...sessionPatch, farmer_with_farm_photo: file });
+    } catch {
+      setError('Unable to save farmer with farm photo on this device. Please capture it again.');
+    } finally {
+      setPersisting(false);
     }
   };
 
@@ -139,7 +195,8 @@ export function FarmerProofUploadScreen() {
       subtitle="Capture supporting evidence in order."
       onNext={next}
       nextLabel={ONBOARDING_NEXT_LABELS[6]}
-      nextDisabled={!canContinue}
+      nextDisabled={!canContinue || persisting}
+      nextLoading={persisting}
       footerError={displayError}
     >
       <Text style={styles.sectionTitle}>1. Ownership Document</Text>

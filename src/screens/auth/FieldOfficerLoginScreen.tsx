@@ -1,8 +1,9 @@
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { getApiErrorMessage, loginBiometricToken } from '../../api/authApi';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { LoginOptionCard } from '../../components/auth/LoginOptionCard';
 import { BhuguardLogo } from '../../components/shared/BhuguardLogo';
 import { LOGO_SIZES } from '../../constants/branding';
@@ -77,7 +78,7 @@ export function FieldOfficerLoginScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      <KeyboardSafeScrollView contentContainerStyle={styles.container} extraBottomPadding={24} showsVerticalScrollIndicator={false}>
         <Pressable onPress={() => navigation.navigate('RoleSelection')} style={styles.backButton}>
           <Text style={styles.backText}>← {t('fieldOfficerLogin.changeRole')}</Text>
         </Pressable>
@@ -115,7 +116,7 @@ export function FieldOfficerLoginScreen({ navigation }: Props) {
         <Pressable onPress={() => navigation.navigate('ForgotPassword')}>
           <Text style={styles.link}>{t('passwordLogin.forgotPassword')}</Text>
         </Pressable>
-      </ScrollView>
+      </KeyboardSafeScrollView>
     </SafeAreaView>
   );
 }

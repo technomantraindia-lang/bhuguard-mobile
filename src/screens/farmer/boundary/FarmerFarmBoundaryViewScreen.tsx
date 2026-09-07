@@ -19,6 +19,7 @@ import {
   type FarmIdentityLabelData,
 } from '../../../utils/farmIdentityMapLabel';
 import { calculateTurfBoundaryMetrics } from '../../../utils/manualBoundaryGeometry';
+import { formatHectares, resolveFarmAreaHectares } from '../../../utils/farmAreaUnits';
 import { getAuthUser } from '../../../utils/authStorage';
 
 type Props = NativeStackScreenProps<FarmerStackParamList, 'FarmerFarmBoundaryView'>;
@@ -215,9 +216,9 @@ export function FarmerFarmBoundaryViewScreen({ navigation, route }: Props) {
               ? { latitude: centerLat, longitude: centerLng }
               : null,
           );
-          const acres = Number(farmRecord.area_acres ?? farmRecord.land_area ?? 0);
-          if (acres > 0) {
-            setDeclaredAreaLabel(`${acres % 1 === 0 ? acres.toFixed(0) : acres.toFixed(2)} Acre`);
+          const hectares = resolveFarmAreaHectares(farmRecord);
+          if (hectares != null) {
+            setDeclaredAreaLabel(formatHectares(hectares, 4));
           }
           if (savedPoints.length < 3 && (lat == null || lng == null)) {
             setError('Mapping unavailable for this farm.');
@@ -313,7 +314,13 @@ export function FarmerFarmBoundaryViewScreen({ navigation, route }: Props) {
           {declaredAreaLabel ? <Line label="Declared Area" value={declaredAreaLabel} /> : null}
           <Line
             label="Mapped Area"
-            value={metrics ? `${metrics.areaAcre.toFixed(4)} acres` : points.length > 0 ? '—' : 'Not available'}
+            value={
+              metrics
+                ? formatHectares(metrics.areaHectare, 4)
+                : points.length > 0
+                  ? '—'
+                  : 'Area not available'
+            }
           />
           <Line label="Boundary Points" value={points.length > 0 ? String(points.length) : 'None'} />
         </View>

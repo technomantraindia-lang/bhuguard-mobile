@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,6 +16,7 @@ import {
 } from '../../components/officer/biochar/BiocharProductionSections';
 import { OfficerBiocharProductionHeader } from '../../components/officer/biochar/OfficerBiocharProductionHeader';
 import { ErrorState } from '../../components/ErrorState';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { LoadingState } from '../../components/LoadingState';
 import { type BiocharEvidenceKey } from '../../constants/biocharProduction';
 import { useBiocharProductionForm } from '../../hooks/useBiocharProductionForm';
@@ -126,7 +127,7 @@ export function FieldOfficerBiocharProductionScreen() {
         onProfilePress={() => navigation.navigate('FieldOfficerProfile')}
       />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardSafeScrollView contentContainerStyle={styles.content} extraBottomPadding={24} showsVerticalScrollIndicator={false}>
         <BiocharProcessFormContent
           form={form}
           readOnly={readOnly}
@@ -220,7 +221,7 @@ export function FieldOfficerBiocharProductionScreen() {
             <Text style={styles.readOnlyText}>This record has been submitted and can no longer be edited.</Text>
           </View>
         )}
-      </ScrollView>
+      </KeyboardSafeScrollView>
 
       <BiocharProductionSuccessModal
         visible={successVisible}

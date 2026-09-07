@@ -12,6 +12,8 @@ export type ForgotPasswordParams = {
 
 export type OtpVerificationParams = {
   mobile: string;
+  requestId?: string;
+  devOtp?: string;
   purpose?: 'forgot_password' | 'forgot_mpin' | 'forgot_pattern' | 'login';
   role?: AppLoginRole;
   flowOrigin?: SecurityFlowOrigin;
@@ -82,8 +84,8 @@ export type RootStackParamList = {
   ResetPassword: ResetPasswordParams;
   ArtisanLogin: ArtisanLoginParams;
   ArtisanProLogin: ArtisanLoginParams;
-  FarmerApp: undefined;
-  FieldOfficerApp: undefined;
+  FarmerApp: NavigatorScreenParams<FarmerStackParamList> | undefined;
+  FieldOfficerApp: NavigatorScreenParams<FieldOfficerStackParamList> | undefined;
   ArtisanApp: undefined;
   ArtisanProApp: undefined;
   ApiHealthCheck: undefined;
@@ -120,10 +122,10 @@ export type ArtisanStackParamList = {
   ArtisanHelpSupport: undefined;
   ArtisanWallet: undefined;
   ArtisanTraining: undefined;
-  ArtisanModuleUnavailable: { module: 'wallet' | 'training' };
+  ArtisanModuleUnavailable: { module: 'wallet' | 'training' | 'artisan_registration' };
   ArtisanFarmLookup:
     | {
-        purpose?: 'find' | 'production' | 'mixing' | 'application' | 'navigate';
+        purpose?: 'find' | 'production' | 'mixing' | 'application' | 'navigate' | 'farm_finder' | 'farmer_finder';
       }
     | undefined;
   ArtisanBiocharApplication:
@@ -195,6 +197,7 @@ export type ArtisanStackParamList = {
     recordId?: number;
   };
   ArtisanProductionRecords: { status: 'submitted' };
+  ArtisanMixingRecords: undefined;
   FullscreenImage: { uri: string; title?: string };
   FieldOfficerFarmActivityStart: FieldOfficerStackParamList['FieldOfficerFarmActivityStart'];
   FarmVerificationActivity: FieldOfficerStackParamList['FarmVerificationActivity'];
@@ -255,7 +258,8 @@ export type FarmerStackParamList = {
   BoundaryPhotoGallery: { farmId: number };
   FarmerAddFarm: undefined;
   FarmerFarmSelection: undefined;
-  FarmerFarmActivity: { farmId?: number; activityId?: number };
+  FarmerFarmActivity: { farmId?: number; activityId?: number } | undefined;
+  FarmerFarmActivitiesList: { farmId: number; farmName?: string };
   FarmerWeeklyUpdates: undefined;
   FarmerBiocharUpdates: undefined;
   FarmerBiocharActivities: undefined;

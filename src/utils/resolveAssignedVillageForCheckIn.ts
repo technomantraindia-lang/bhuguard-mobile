@@ -6,7 +6,7 @@ import {
 } from './livePhotoLocation';
 
 export type AssignedVillageTriad = {
-  village_id: number;
+  village_id: number | null;
   taluka_id: number;
   district_id: number;
   village_name: string | null;
@@ -16,6 +16,7 @@ export type AssignedVillageTriad = {
   state_name?: string | null;
   assignedSummary: string;
   matchMethod: 'village_id' | 'village_name' | 'locality_alias' | 'taluka_scope' | 'district_scope';
+  working_area_scope?: 'village' | 'city';
 };
 
 export type CheckInCurrentLocation = {
@@ -136,6 +137,7 @@ function toTriad(
     locality,
     assignedSummary: summary,
     matchMethod,
+    working_area_scope: 'village',
   };
 }
 
@@ -187,8 +189,8 @@ async function matchLocalityViaAddressMaster(
 ): Promise<AssignedVillage | null> {
   for (const candidate of candidates) {
     try {
-      const options = await getVillages(talukaId, candidate);
-      for (const option of options) {
+      const lookup = await getVillages(talukaId, candidate);
+      for (const option of lookup.villages) {
         const assigned = villages.find((village) => Number(village.id) === Number(option.id));
         if (assigned) {
           return assigned;
@@ -220,14 +222,67 @@ async function hasFullTalukaCoverage(villages: AssignedVillage[], talukaId: numb
 
   try {
     const master = await getVillages(talukaId);
-    if (master.length === 0) {
+    if (master.villages.length === 0) {
       return false;
     }
     const assignedIds = new Set(assignedInTaluka.map((village) => Number(village.id)));
-    return master.every((option) => assignedIds.has(Number(option.id)));
+    return master.villages.every((option) => assignedIds.has(Number(option.id)));
   } catch {
     return false;
   }
+}
+
+function assignedFullCityTalukaIds(payload: AssignedLocationsPayload): number[] {
+  const explicit = (payload.work_full_city_taluka_ids ?? [])
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id) && id > 0);
+  const fromSentinels = (payload.work_village_ids ?? [])
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id) && id < 0)
+    .map((id) => Math.abs(id));
+  const fromScopes = (payload.taluka_scopes ?? [])
+    .map((scope) => Number(scope.id))
+    .filter((id) => Number.isFinite(id) && id > 0);
+
+  return [...new Set([...explicit, ...fromSentinels, ...fromScopes])];
+}
+
+function matchByFullCityTalukaScope(
+  payload: AssignedLocationsPayload,
+  resolved: ValidatedCaptureLocation,
+  summary: string,
+  locality: string | null,
+  fullTalukaIds: number[],
+): AssignedVillageTriad | null {
+  const talukaId =
+    resolved.talukaId && resolved.talukaId > 0
+      ? resolved.talukaId
+      : resolved.villageId && resolved.villageId > 0
+        ? null
+        : null;
+
+  if (!talukaId || !fullTalukaIds.includes(talukaId)) {
+    return null;
+  }
+
+  const taluka = (payload.talukas ?? []).find((entry) => Number(entry.id) === talukaId);
+  const districtId =
+    resolved.districtId && resolved.districtId > 0
+      ? resolved.districtId
+      : Number(taluka?.district_id ?? 0);
+
+  return {
+    village_id: null,
+    taluka_id: talukaId,
+    district_id: districtId,
+    village_name: resolved.resolved && !isUnknownLabel(resolved.village) ? resolved.village : null,
+    taluka_name: !isUnknownLabel(resolved.taluka) ? resolved.taluka : (taluka?.name ?? null),
+    district_name: !isUnknownLabel(resolved.district) ? resolved.district : null,
+    locality,
+    assignedSummary: summary,
+    matchMethod: 'taluka_scope',
+    working_area_scope: 'city',
+  };
 }
 
 async function matchByTalukaOrDistrictScope(
@@ -320,9 +375,10 @@ export async function resolveAssignedVillageForCheckIn(
 ): Promise<AssignedVillageTriad> {
   const villages = validAssignedVillages(allocated);
   const payload = allocated ?? { districts: [], talukas: [], villages: [] };
+  const fullTalukaIds = assignedFullCityTalukaIds(payload);
   const summary = assignedSummary(payload, villages);
 
-  if (villages.length === 0) {
+  if (villages.length === 0 && fullTalukaIds.length === 0) {
     const hasArea =
       payload.has_assignment === true ||
       (payload.talukas?.length ?? 0) > 0 ||
@@ -354,6 +410,11 @@ export async function resolveAssignedVillageForCheckIn(
   const byId = matchByCanonicalId(villages, resolved);
   if (byId) {
     return toTriad(byId, locality, summary, 'village_id');
+  }
+
+  const byFullCity = matchByFullCityTalukaScope(payload, resolved, summary, locality, fullTalukaIds);
+  if (byFullCity) {
+    return byFullCity;
   }
 
   const byName = matchByName(villages, candidates, resolved.talukaId, resolved.districtId);

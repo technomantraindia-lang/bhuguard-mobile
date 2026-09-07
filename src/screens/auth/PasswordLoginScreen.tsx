@@ -1,19 +1,12 @@
 import { useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { getApiErrorMessage, login } from '../../api/authApi';
 import { AuthField } from '../../components/auth/AuthField';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { BhuguardLogo } from '../../components/shared/BhuguardLogo';
 import { LOGO_SIZES } from '../../constants/branding';
 import { getDemoLoginForRole, type AppLoginRole } from '../../config/authRoles';
@@ -143,8 +136,7 @@ export function PasswordLoginScreen({ navigation, route }: Props) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <KeyboardSafeScrollView contentContainerStyle={styles.container} extraBottomPadding={32}>
           <Pressable onPress={() => navigation.navigate(getBackRoute(role))} style={styles.backButton}>
             <Text style={styles.backText}>← {t('common.back')}</Text>
           </Pressable>
@@ -206,8 +198,7 @@ export function PasswordLoginScreen({ navigation, route }: Props) {
               <Text style={styles.infoText}>{t('farmerLogin.noRegistration')}</Text>
             </View>
           ) : null}
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardSafeScrollView>
     </SafeAreaView>
   );
 }

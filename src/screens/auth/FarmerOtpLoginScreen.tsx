@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { getApiErrorMessage, requestLoginOtp } from '../../api/authApi';
 import { AuthField } from '../../components/auth/AuthField';
+import { KeyboardAwareScreen } from '../../components/layout/KeyboardAwareScreen';
 import { BhuguardLogo } from '../../components/shared/BhuguardLogo';
 import { LOGO_SIZES } from '../../constants/branding';
 import { useTranslation } from '../../i18n/I18nContext';
@@ -29,9 +29,11 @@ export function FarmerOtpLoginScreen({ navigation }: Props) {
     setLoading(true);
 
     try {
-      await requestLoginOtp(cleaned);
+      const otpResponse = await requestLoginOtp(cleaned);
       navigation.navigate('OtpVerification', {
         mobile: cleaned,
+        requestId: typeof otpResponse?.request_id === 'string' ? otpResponse.request_id : undefined,
+        devOtp: typeof otpResponse?.dev_otp === 'string' ? otpResponse.dev_otp : undefined,
         purpose: 'login',
         role: 'farmer',
         flowOrigin: 'auth',
@@ -44,48 +46,41 @@ export function FarmerOtpLoginScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>← {t('common.back')}</Text>
-        </Pressable>
+    <KeyboardAwareScreen edges={['top', 'bottom']} backgroundColor="#F6FAF4" contentContainerStyle={styles.container}>
+      <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Text style={styles.backText}>← {t('common.back')}</Text>
+      </Pressable>
 
-        <View style={styles.header}>
-          <BhuguardLogo size={LOGO_SIZES.login} />
-          <Text style={styles.title}>{t('otpLogin.title')}</Text>
-          <Text style={styles.subtitle}>{t('otpLogin.subtitle')}</Text>
-        </View>
+      <View style={styles.header}>
+        <BhuguardLogo size={LOGO_SIZES.login} />
+        <Text style={styles.title}>{t('otpLogin.title')}</Text>
+        <Text style={styles.subtitle}>{t('otpLogin.subtitle')}</Text>
+      </View>
 
-        <AuthField
-          label={t('otpLogin.mobileLabel')}
-          value={mobile}
-          onChangeText={setMobile}
-          keyboardType="phone-pad"
-          placeholder="9876543210"
-          editable={!loading}
-        />
+      <AuthField
+        label={t('otpLogin.mobileLabel')}
+        value={mobile}
+        onChangeText={setMobile}
+        keyboardType="phone-pad"
+        placeholder="9876543210"
+        editable={!loading}
+      />
 
-        <Pressable
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={() => void handleSendOtp()}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>{loading ? t('otpLogin.sendingOtp') : t('otpLogin.sendOtp')}</Text>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+      <Pressable
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={() => void handleSendOtp()}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>{loading ? t('otpLogin.sendingOtp') : t('otpLogin.sendOtp')}</Text>
+      </Pressable>
+    </KeyboardAwareScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: '#F6FAF4',
-  },
   container: {
     paddingHorizontal: spacing.xxl,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.xxxl,
     gap: spacing.lg,
   },
   backButton: {

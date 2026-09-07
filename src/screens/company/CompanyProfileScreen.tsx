@@ -1,7 +1,4 @@
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton } from '../../components/AppButton';
+import { KeyboardSafeScrollView } from '../../components/layout/KeyboardSafeScrollView';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { ScreenHeader } from '../../components/ScreenHeader';
@@ -75,8 +73,7 @@ export function CompanyProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <KeyboardSafeScrollView contentContainerStyle={styles.container} extraBottomPadding={16}>
           <ScreenHeader title="My Profile" subtitle="Company account — edit your company details" />
 
           <ProfileField
@@ -148,8 +145,7 @@ export function CompanyProfileScreen() {
 
           <AppButton label={saving ? 'Saving…' : 'Save Profile'} onPress={() => void save()} disabled={saving} />
           <AppButton label="Logout" onPress={logout} variant="danger" />
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardSafeScrollView>
     </SafeAreaView>
   );
 }

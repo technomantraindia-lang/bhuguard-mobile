@@ -1,11 +1,12 @@
 import { useEffect, type ComponentType } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Alert, Linking, Platform, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { PreloaderScreen } from '../screens/auth/PreloaderScreen';
 import { navigationRef } from './navigationRef';
 import type { RootStackParamList } from './types';
+import { createBhuguardDeepLinkAction, parseBhuguardDeepLink, type BhuguardDeepLinkTarget } from './bhuguardDeepLinks';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const ENABLE_SERVER_DIAGNOSTICS =
@@ -19,6 +20,85 @@ export function RootNavigator() {
     if (__DEV__) {
       console.log('[Bhuguard] RootNavigator mounted');
     }
+  }, []);
+
+  useEffect(() => {
+    let pendingTarget: BhuguardDeepLinkTarget | null = null;
+    let disposed = false;
+
+    const showInvalidQr = () => {
+      if (!disposed) {
+        Alert.alert('QR code unavailable', 'Invalid or unsupported BhuGuard QR code.');
+      }
+    };
+
+    const flushPendingTarget = () => {
+      if (disposed || !pendingTarget || !navigationRef.isReady()) {
+        return;
+      }
+
+      // Let the normal auth startup finish before routing an external QR link.
+      const currentRoute = navigationRef.getCurrentRoute()?.name;
+      if (!currentRoute || !['FarmerApp', 'FieldOfficerApp', 'ArtisanApp', 'ArtisanProApp'].includes(currentRoute)) {
+        return;
+      }
+
+      const target = pendingTarget;
+      try {
+        if (__DEV__) {
+          console.log('[QR Scan] navigating to internal target', target.route, target.params.screen);
+        }
+        pendingTarget = null;
+        navigationRef.dispatch(createBhuguardDeepLinkAction(target));
+      } catch (error) {
+        pendingTarget = null;
+        if (__DEV__) {
+          console.warn('[QR Scan] navigation failed', error);
+        }
+        showInvalidQr();
+      }
+    };
+
+    const receiveQrOrDeepLink = (value: string | null) => {
+      try {
+        if (!value || disposed) {
+          return;
+        }
+
+        if (__DEV__) {
+          console.log('[QR Scan] received internal link');
+        }
+        const target = parseBhuguardDeepLink(value);
+        if (!target) {
+          showInvalidQr();
+          return;
+        }
+
+        pendingTarget = target;
+        flushPendingTarget();
+      } catch (error) {
+        if (__DEV__) {
+          console.warn('[QR Scan] failed to handle scan result', error);
+        }
+        pendingTarget = null;
+        showInvalidQr();
+      }
+    };
+
+    void Linking.getInitialURL()
+      .then(receiveQrOrDeepLink)
+      .catch(() => undefined);
+
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      receiveQrOrDeepLink(url);
+    });
+    const stateSubscription = navigationRef.addListener('state', flushPendingTarget);
+
+    return () => {
+      disposed = true;
+      subscription.remove();
+      stateSubscription();
+    };
   }, []);
 
   return (

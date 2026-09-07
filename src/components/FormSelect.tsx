@@ -2,7 +2,9 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -10,12 +12,14 @@ import {
   View,
 } from 'react-native';
 
+import { useKeyboardOverlapInset } from '../hooks/useKeyboardOverlapInset';
 import { colors } from '../theme/colors';
 
 export interface SelectOption {
   id: number;
   name: string;
   pincode?: string | null;
+  scope?: 'taluka' | 'village';
 }
 
 interface FormSelectProps {
@@ -31,6 +35,8 @@ interface FormSelectProps {
   onSearchChange?: (text: string) => void;
   onSelect: (option: SelectOption) => void;
   disabled?: boolean;
+  emptyMessage?: string;
+  searchPlaceholder?: string;
 }
 
 export function FormSelect({
@@ -46,8 +52,11 @@ export function FormSelect({
   onSearchChange,
   onSelect,
   disabled = false,
+  emptyMessage = 'No options found',
+  searchPlaceholder = 'Search...',
 }: FormSelectProps) {
   const [open, setOpen] = useState(false);
+  const keyboardOverlap = useKeyboardOverlapInset();
 
   return (
     <View style={styles.field}>
@@ -64,15 +73,18 @@ export function FormSelect({
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <View style={styles.overlay}>
-          <View style={styles.sheet}>
+        <KeyboardAvoidingView
+          style={styles.overlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={[styles.sheet, Platform.OS === 'android' ? { marginBottom: keyboardOverlap } : null]}>
             <Text style={styles.sheetTitle}>{label}</Text>
             {searchable ? (
               <TextInput
                 style={styles.search}
                 value={searchValue}
                 onChangeText={onSearchChange}
-                placeholder="Search village..."
+                placeholder={searchPlaceholder}
               />
             ) : null}
             {loading ? (
@@ -81,25 +93,31 @@ export function FormSelect({
               <FlatList
                 data={options}
                 keyExtractor={(item) => String(item.id)}
-                ListEmptyComponent={<Text style={styles.empty}>No options found</Text>}
-                renderItem={({ item }) => (
-                  <Pressable
-                    style={styles.option}
-                    onPress={() => {
-                      onSelect(item);
-                      setOpen(false);
-                    }}
-                  >
-                    <Text style={styles.optionText}>{item.name}</Text>
-                  </Pressable>
-                )}
+                ListEmptyComponent={<Text style={styles.empty}>{emptyMessage}</Text>}
+                renderItem={({ item }) => {
+                  const isEntireCity = item.scope === 'taluka' || item.id < 0;
+                  return (
+                    <Pressable
+                      style={[styles.option, isEntireCity && styles.optionEntireCity]}
+                      onPress={() => {
+                        onSelect(item);
+                        setOpen(false);
+                      }}
+                    >
+                      <View style={styles.optionCopy}>
+                        {isEntireCity ? <Text style={styles.optionBadge}>Entire City</Text> : null}
+                        <Text style={styles.optionText}>{item.name}</Text>
+                      </View>
+                    </Pressable>
+                  );
+                }}
               />
             )}
             <Pressable style={styles.closeBtn} onPress={() => setOpen(false)}>
               <Text style={styles.closeText}>Close</Text>
             </Pressable>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -148,6 +166,22 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  optionEntireCity: {
+    backgroundColor: 'rgba(46, 125, 50, 0.04)',
+  },
+  optionCopy: {
+    gap: 4,
+  },
+  optionBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.softGreen,
+    borderRadius: 999,
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   optionText: { fontSize: 16, color: colors.text },
   empty: { textAlign: 'center', color: colors.textMuted, padding: 24 },
